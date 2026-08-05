@@ -23,6 +23,7 @@ import { toast } from "@/lib/toast"
 import { flowApi, assetApi, Flow, FlowNode, FlowEdge as ApiFlowEdge, Asset, ValidationError } from "@/services/flowBuilderApi"
 import { FlowQuestionNode, type FlowQuestionNodeData } from "@/components/flow-builder/FlowQuestionNode"
 import { FlowNodePanel } from "@/components/flow-builder/FlowNodePanel"
+import { ChatWidget } from "@/components/ChatWidget"
 
 const nodeTypes = { question: FlowQuestionNode }
 
@@ -547,6 +548,19 @@ function FlowEditorInner() {
         onDeleteAsset={categoryId && categoryId !== "generic" ? handleDeleteAsset : undefined}
         canUploadAssets={!!categoryId && categoryId !== "generic"}
       />
+
+      {/* Chat Widget preview — same as SettingsPage */}
+      {workspace && workspace.channelStatus !== false && (
+        <ChatWidget
+          workspaceId={workspace.id}
+          title={workspace.widgetTitle}
+          primaryColor={workspace.widgetPrimaryColor}
+          icon={workspace.widgetIcon}
+          useChannelLogo={workspace.widgetUseChannelLogo}
+          useWindowConfig={false}
+          language={workspace.widgetLanguage}
+        />
+      )}
     </div>
   )
 }

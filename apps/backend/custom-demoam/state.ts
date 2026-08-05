@@ -44,12 +44,6 @@ export interface SessionState {
   phone?: string
   address?: string
 
-  // True once the escalate tool has already forced the explicit flow
-  // decision ("start a matching flow or declare no_matching_flow") for this
-  // session — the checkpoint fires exactly once, so a declared no-match
-  // doesn't loop forever.
-  flowCheckOffered?: boolean
-
   // True once the FAQ-not-found short-circuit (steps.md 2-B.3) was taken:
   // the pre-operator gate's technical fields were deliberately skipped, so
   // the operator briefing must say so rather than showing them as merely
@@ -57,9 +51,16 @@ export interface SessionState {
   // when in fact the case was never a technical diagnosis.
   skippedTechnicalGate?: boolean
 
-  // True once intake's 3-attempt serial number limit was hit. Tells
-  // nextPreOperatorStep to skip serialNumber instead of re-asking it.
+  // True once intake's 3-attempt serial number limit was hit. Makes the
+  // pre-operator checklist treat serialNumber as done instead of re-asking.
   serialNumberExhausted?: boolean
+
+  // True once the Human Support flow has run to one of its terminals. The
+  // flow IS the pre-operator technical check, so escalate_to_operator forces
+  // it before handing over — and this flag is what stops it forcing the same
+  // flow again on the escalate call that follows the flow's own ESCALATE
+  // terminal, which would loop forever.
+  humanSupportFlowDone?: boolean
 
   // Open ISO 2-letter language code — decided by the LLM via the ⟦LANG:xx⟧
   // trailer, never a regex detector on user text (CLAUDE.md §14).
@@ -75,15 +76,6 @@ export interface SessionState {
   // every hop. 'returning' also carries whether the customer was away long
   // enough for welcome-back wording (see WELCOME_BACK_STALE_MS in agent.ts).
   greeting?: 'new' | 'returning' | 'none'
-
-  // The pre-operator gate field escalate_to_operator most recently dictated
-  // a question for. Cleared once remember actually saves that field.
-  pendingGateField?: string
-
-  // True once escalate_to_operator has already forced start_flow on the
-  // shared Human Support flow for this incident — fires once, so a completed
-  // (or abandoned) attempt doesn't loop back into forcing it again.
-  humanSupportFlowOffered?: boolean
 
   // Flows already entered in this session. A flow-to-flow answer refuses to
   // hand over to one that is already here, so A→B→A cannot spin forever.
@@ -209,10 +201,6 @@ export function detachFlow(sessionId: string): void {
   e.state.activeFlowHash = undefined
   e.state.activeFlowGraphSnapshot = undefined
   e.state.currentNodeId = undefined
-}
-
-export function setPendingGateField(sessionId: string, field: string | undefined): void {
-  entry(sessionId).state.pendingGateField = field
 }
 
 export function resetState(sessionId: string): void {

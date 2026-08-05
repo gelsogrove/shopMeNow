@@ -2,7 +2,7 @@
 // steps.md's Step 2. Kept out of agent.ts so the gate logic is unit-testable
 // in isolation, same reasoning as custom-demorobot/flow-selection.ts.
 
-import { attachFlow, getState, SessionState } from './state.js'
+import { attachFlow, getState, hasVisitedFlow, SessionState } from './state.js'
 import { buildFlowGraph, rootNodeId } from './flow-machine.js'
 
 export interface FlowSummary {
@@ -158,6 +158,25 @@ export async function startFlow(
     }
   }
 
+  // Andrea 2026-08-05, seen live: ERROR 001 ran to its ESCALATE terminal and
+  // was correctly detached — and the model immediately called start_flow on
+  // that same flow again, restarting it from its root. From there it pretended
+  // to follow it while inventing questions that exist in no node ("is the
+  // robot in a cool shaded place?"). A flow already walked in this session is
+  // exhausted: whatever it had to offer, the conversation already got it.
+  // hasVisitedFlow already guarded the flow-to-flow handoff for exactly this
+  // reason (A→B→A loops); a direct start_flow needs the same guard.
+  if (hasVisitedFlow(ctx.sessionId, flowId)) {
+    return {
+      ok: false,
+      error: 'flow_already_visited',
+      instruction:
+        `"${match.title}" has already been walked through in this conversation — it is exhausted, and ` +
+        'restarting it would repeat questions the customer already answered. Call escalate_to_operator ' +
+        'instead, and never invent extra diagnostic questions of your own.',
+    }
+  }
+
   // Andrea 2026-08-05, seen live: the model attached ERROR 001 on the very
   // first message ("il mio robot mi da errore 001") before ever asking for
   // the serial number — the case had a matching flow so start_flow won the
@@ -258,7 +277,7 @@ export function nextIntakeStep(
   for (const field of INTAKE_ORDER) {
     // A serial exhausted after 3 failed attempts (content-guards.ts) is
     // "done asking", the same as answered — never re-requested here either,
-    // same reasoning as nextPreOperatorStep below.
+    // same reasoning as preOperatorAnswered below.
     if (field === 'serialNumber' && state.serialNumberExhausted) continue
 
     const answered =
@@ -345,38 +364,57 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
 export type PreOperatorField =
   | 'serialNumber'
   | 'problemDescription'
+  | 'problemStartedWhen'
   | 'robotPoweredOn'
   | 'wifiActive'
   | 'cutSchedulingActive'
   | 'batterySufficient'
   | 'name'
 
-export interface PreOperatorStep {
-  field: PreOperatorField
-  question: string
-  /** True when no other field in the gate would still be asked after this one. */
-  isLastStep: boolean
+/**
+ * What the incident needs before a human sees it.
+ *
+ * 'technical' — there is a device to diagnose: the full checklist.
+ * 'no_device' — a complaint about something that already happened, a question
+ * no FAQ answers, or a bare "put me through to a person" with no problem
+ * described. Nothing to diagnose, so only the name, enough to greet them and
+ * hand over.
+ */
+export type CaseShape = 'technical' | 'no_device'
+
+export function caseShapeFor(reason: string): CaseShape {
+  return reason === 'complaint' || reason === 'faq_not_found' || reason === 'requested_operator'
+    ? 'no_device'
+    : 'technical'
 }
 
 /**
- * The order confirmed with Andrea (2026-08-03, steps.md): serial number,
- * problem description, then the three technical checks, battery last among
- * the technical checks, name last of all — so the customer is not asked for
- * personal details before we know whether the problem is self-fixable.
+ * The order confirmed with Andrea (2026-08-03, steps.md), narrowed
+ * 2026-08-06: the four technical booleans (robotPoweredOn, wifiActive,
+ * cutSchedulingActive, batterySufficient) are NOT here any more — they are
+ * nodes of the Human Support flow, which asks them with real branches and a
+ * corrective LOOP on "No". Asking them here too would put the same question
+ * to the customer twice, from two different mechanisms.
+ *
+ * What stays is exactly what the flow engine cannot do:
+ * - intake (serial, description, when) runs BEFORE any flow exists — it is
+ *   what the flow is chosen from
+ * - `name` is free text, and answer_step only classifies fixed edge labels
+ *
+ * Name last of all, so the customer is not asked for personal details before
+ * we know whether the problem is self-fixable.
  */
-const PRE_OPERATOR_ORDER: PreOperatorField[] = [
-  'serialNumber',
-  'problemDescription',
-  'robotPoweredOn',
-  'wifiActive',
-  'cutSchedulingActive',
-  'batterySufficient',
-  'name',
-]
+const CHECKLIST: Record<CaseShape, PreOperatorField[]> = {
+  technical: ['serialNumber', 'problemDescription', 'problemStartedWhen', 'name'],
+  no_device: ['name'],
+}
 
 function preOperatorAnswered(state: SessionState, field: PreOperatorField): boolean {
   if (field === 'name') return !!state.name?.trim()
-  if (field === 'serialNumber') return !!state.serialNumber?.trim()
+  // A serial exhausted after 3 failed attempts counts as answered: it will
+  // never arrive, and blocking a customer out of a human over it is worse
+  // than a briefing that says "not provided after 3 attempts".
+  if (field === 'serialNumber') return !!state.serialNumber?.trim() || !!state.serialNumberExhausted
   return state.collectedData?.[field] !== undefined
 }
 
@@ -393,45 +431,60 @@ export interface GateQuestions {
 }
 
 /**
- * The next unanswered pre-operator check, or null when the gate is satisfied.
+ * What the pre-operator gate wants to happen next. One ordered checklist,
+ * scanned in order — the first field that still needs asking IS the next
+ * question. No branches, no flags consumed along the way.
+ *
+ * PURE: this reads state, it never writes it. The caller applies the effects
+ * (registerFieldRequest) AFTER acting on the returned action. Deciding and
+ * mutating in the same step is what let a gate mark itself "already offered"
+ * before the thing it was gating had actually happened — a whole family of
+ * bugs (Andrea, 2026-08-05: the Human Support gate marked itself done, the
+ * model ignored the instruction, and the name question landed on a customer
+ * who had never been asked the technical checks).
  *
  * `askedCounts` carries how many times each field has already been requested.
- * A field asked more than `maxAsks` times is skipped — the customer either
+ * A field asked `maxAsks` times is treated as done — the customer either
  * cannot or will not answer it, and blocking access to a human over an
  * unanswered checkbox is worse than a thinner briefing. Counted, never
  * phrase-detected (CLAUDE.md §14).
- *
- * When `skipTechnical` is set (the FAQ-not-found short-circuit, steps.md
- * 2-B.3), only `name` is asked — serial/description/the three checks are
- * skipped entirely, not merely deprioritised, because there is no technical
- * case to diagnose in that path.
  */
-export function nextPreOperatorStep(
+export type PreOperatorAction =
+  | { kind: 'ask'; field: PreOperatorField; question: string; isLastStep: boolean; alreadyAsked: boolean }
+  | { kind: 'escalate' }
+
+export function nextPreOperatorAction(
   state: SessionState,
   questions: GateQuestions | null | undefined,
   askedCounts: Readonly<Record<string, number>> | undefined,
-  opts: { maxAsks?: number; skipTechnical?: boolean } = {},
-): PreOperatorStep | null {
-  const { maxAsks = 2, skipTechnical = false } = opts
-  const order = skipTechnical ? (['name'] as PreOperatorField[]) : PRE_OPERATOR_ORDER
+  shape: CaseShape,
+  opts: { maxAsks?: number } = {},
+): PreOperatorAction {
+  const { maxAsks = 2 } = opts
+  const checklist = CHECKLIST[shape]
 
   const askable = (field: PreOperatorField): boolean => {
     if (preOperatorAnswered(state, field)) return false
-    if (field === 'serialNumber' && state.serialNumberExhausted) return false
     if (!questions?.[field]?.trim()) return false
     if ((askedCounts?.[field] ?? 0) >= maxAsks) return false
     return true
   }
 
-  for (let i = 0; i < order.length; i++) {
-    const field = order[i]
-    if (!askable(field)) continue
+  const idx = checklist.findIndex(askable)
+  if (idx === -1) return { kind: 'escalate' }
 
-    const question = questions![field]!.trim()
-    const noRemainingFieldsAreAskable = !order.slice(i + 1).some(askable)
-    return { field, question, isLastStep: noRemainingFieldsAreAskable }
+  const field = checklist[idx]
+  return {
+    kind: 'ask',
+    field,
+    question: questions![field]!.trim(),
+    isLastStep: !checklist.slice(idx + 1).some(askable),
+    // Already put to the customer at least once and still not saved: the
+    // answer may well be sitting unsaved in the transcript, so the caller
+    // tells the model to save it rather than ask again. The ask cap above
+    // is what stops this from looping.
+    alreadyAsked: (askedCounts?.[field] ?? 0) > 0,
   }
-  return null
 }
 
 export function formatPreOperatorInstruction(step: {
@@ -439,10 +492,10 @@ export function formatPreOperatorInstruction(step: {
   question: string
   /**
    * True only when the caller KNOWS no other check remains after this one
-   * (nextPreOperatorStep computes this for the real gate). Defaults to false
-   * — the safe assumption for intake steps (case_details_required), which
-   * are always followed by the technical checks and are never actually the
-   * last thing before the operator.
+   * (nextPreOperatorAction computes this for the real gate). Defaults to
+   * false — the safe assumption for intake steps, which are always followed
+   * by the technical checks and are never actually the last thing before
+   * the operator.
    */
   isLastStep?: boolean
 }): string {

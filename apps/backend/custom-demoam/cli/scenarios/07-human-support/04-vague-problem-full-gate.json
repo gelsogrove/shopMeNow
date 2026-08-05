@@ -1,0 +1,20 @@
+{
+  "description": "Problema descritto vagamente ('non taglia bene', nessun error code) — nessun flow specifico matcha, quindi il gate pre-operatore completo deve essere eseguito fino in fondo: seriale, descrizione, quando, acceso, wifi, cut-scheduling, batteria, POI il nome — mai chiamare escalate_to_operator con successo prima che tutti i campi siano raccolti, e mai saltare la richiesta del nome.",
+  "contractRule": "Nessun flow trovato → gate pre-operatore completo, tutti i 7 campi in ordine, il nome è sempre l'ultimo prima dell'handing-off message e della calling function.",
+  "phone": "+391110000703",
+  "newSession": true,
+  "turns": [
+    { "message": "Ciao non mi funziona il robot" },
+    { "message": "HKA4OB100LQ26050197" },
+    { "message": "non taglia bene" },
+    { "message": "ieri" },
+    { "message": "si" },
+    { "message": "SI" },
+    { "message": "no non sta tagliando ora" },
+    { "message": "sì la batteria è carica" },
+    { "message": "Marco Bianchi" }
+  ],
+  "expect": {
+    "replyContains": ["Marco"]
+  }
+}

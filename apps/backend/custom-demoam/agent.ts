@@ -25,7 +25,6 @@ import {
   resolveGreeting,
   seedLanguageIfNeeded,
   SessionState,
-  setPendingGateField,
   updateState,
 } from './state.js'
 import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-machine.js'
@@ -34,12 +33,13 @@ import {
   formatFlowStepBlock,
   formatIntakeBlock,
   formatPreOperatorInstruction,
+  caseShapeFor,
   nextIntakeStep,
-  nextPreOperatorStep,
+  nextPreOperatorAction,
   startFlow,
 } from './gate.js'
 import type { FlowSummary, GateQuestions, ListFlowsHandler, LoadFlowHandler } from './gate.js'
-import { validateProblemDescription, validateSerialNumber } from './content-guards.js'
+import { validateCustomerName, validateProblemDescription, validateSerialNumber } from './content-guards.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -369,6 +369,16 @@ interface ToolContext {
   serialNumberFormatHint?: string
   currentMessage?: string
   humanSupportFlowId?: string
+  /**
+   * The hand-off text, already resolved from workspace messages / settings
+   * with {{customerName}} substituted. escalate_to_operator returns it as
+   * dictated text so the good-bye is the configured sentence, not one the
+   * model composes: it used to reach the customer only through
+   * handoffFallback, i.e. ONLY when the model produced no text of its own
+   * (agent.ts's escalated branch) — so in the normal case the customer read
+   * an improvised farewell while settings.humanSupportMessage sat unused.
+   */
+  handoffMessage?: string
 }
 
 interface ToolResult {
@@ -382,7 +392,18 @@ function recordEscalation(params: { ticketId: string; reason: string; summary: s
   console.error(`[demoam][escalation] ${ticketId} reason=${reason}\n${summary}`)
 }
 
-function terminalFlowNodeResult(sessionId: string, node: FlowGraphNodeSnapshot): ToolResult {
+function terminalFlowNodeResult(
+  sessionId: string,
+  node: FlowGraphNodeSnapshot,
+  finishedFlowId?: string,
+  humanSupportFlowId?: string,
+): ToolResult {
+  // Marked BEFORE detaching: once detached the session no longer knows which
+  // flow just ended, and escalate_to_operator would force the Human Support
+  // flow again on the very call this terminal is telling the model to make.
+  if (finishedFlowId && humanSupportFlowId && finishedFlowId === humanSupportFlowId) {
+    updateState(sessionId, { humanSupportFlowDone: true }, { mirror: false })
+  }
   detachFlow(sessionId)
 
   if (node.terminalType === 'ESCALATE') {
@@ -506,9 +527,25 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       const nextNodeIsLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
       if (!nextNodeIsLeaf) return { ok: true, next_node_id: result.nextNodeId, dictates_text: true }
 
-      return terminalFlowNodeResult(ctx.sessionId, nextNode!)
+      return terminalFlowNodeResult(
+        ctx.sessionId,
+        nextNode!,
+        getState(ctx.sessionId).activeFlowId,
+        ctx.humanSupportFlowId,
+      )
     }
 
+    // triggersEscalation edge: the flow ends here without visiting a terminal
+    // node. Same bookkeeping as terminalFlowNodeResult — otherwise this exit
+    // would leave humanSupportFlowDone unset and escalate_to_operator would
+    // send the customer back through the flow it just finished.
+    if (
+      getState(ctx.sessionId).activeFlowId &&
+      ctx.humanSupportFlowId &&
+      getState(ctx.sessionId).activeFlowId === ctx.humanSupportFlowId
+    ) {
+      updateState(ctx.sessionId, { humanSupportFlowDone: true }, { mirror: false })
+    }
     detachFlow(ctx.sessionId)
     return { ok: true, escalate: true }
   }
@@ -533,19 +570,21 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       if (guardResult) return guardResult
     }
 
-    // Andrea 2026-08-05, seen live: with the Human Support flow attached and
-    // its root node asking "Is the robot powered on?", the model called
-    // remember({key:'robotPoweredOn', ...}) — and four more remember calls
-    // for the OTHER flow fields in the very same hop — instead of answer_step
-    // on the actual pending question. Every value was invented: none of it
-    // came from anything the customer had said. Narrowing the guard to only
-    // the CURRENT node's field let the model route around it by calling
-    // remember on the flow's OTHER fields instead — those aren't "pending"
-    // yet, but they still belong to nodes further down the same graph, and
-    // answering them before the flow ever asks is the same invention. Any
-    // fieldKey anywhere in the attached flow's graph is off-limits to
-    // remember while that flow is active: the only door in is answer_step,
-    // one node at a time, in the order the flow actually presents them.
+    if (key === 'name') {
+      const guardResult = validateCustomerName(String(value).trim())
+      if (guardResult) return guardResult
+    }
+
+    // Andrea 2026-08-05, seen live: with a flow attached and its current node
+    // asking a question, the model called remember() for that node's field —
+    // and for the flow's OTHER fields in the very same hop — instead of
+    // answer_step. Every value was invented: none of it came from anything
+    // the customer had said. Narrowing the guard to only the CURRENT node's
+    // field let the model route around it by writing the later fields
+    // instead, which is the same invention one step ahead. Any fieldKey
+    // anywhere in the attached flow's graph is off-limits to remember while
+    // that flow is active: the only door in is answer_step, one node at a
+    // time, in the order the flow actually presents them.
     {
       const liveState = getState(ctx.sessionId)
       if (liveState.currentNodeId && liveState.activeFlowGraphSnapshot) {
@@ -572,10 +611,6 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       updateState(ctx.sessionId, { [key]: String(value) })
     } else {
       mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
-    }
-
-    if (getState(ctx.sessionId).pendingGateField === key) {
-      setPendingGateField(ctx.sessionId, undefined)
     }
 
     if (nameWasRequestedByPreOperatorGate) {
@@ -642,100 +677,42 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     const state = getState(ctx.sessionId)
 
     if (reason !== 'emergency') {
-      // steps.md 2-B.3: the FAQ-not-found path never collected a technical
-      // case, so the gate only asks for the name — not the full 7 fields.
-      // Complaints (2-A) are the same: unhappy about something that already
-      // happened has no device to diagnose, so no serial number and no
-      // technical checks either — only the name, to greet them and hand off.
-      // A bare "I want to talk to a person" with no problem described yet is
-      // the same shape again: nothing to diagnose until they say what is
-      // wrong, so don't make them sit through a gate for a case that was
-      // never opened.
-      const skipTechnical = reason === 'faq_not_found' || reason === 'complaint' || reason === 'requested_operator'
-      if (skipTechnical && !state.skippedTechnicalGate) {
+      // One ordered checklist decides everything here. The shape says which
+      // checklist applies; nextPreOperatorAction says which field is next.
+      // This function used to be five nested gates that both READ and WROTE
+      // the same handful of flags — the order of the ifs WAS the logic, so
+      // every guard added to fix one symptom shifted the balance and exposed
+      // the next (Andrea, 2026-08-05: thirteen fixes in one evening, each
+      // revealing another). Decide first, mutate after.
+      const shape = caseShapeFor(reason)
+
+      // Recorded for the operator briefing: "no technical details" must read
+      // as "there was no device to diagnose", not "the customer refused".
+      if (shape === 'no_device' && !state.skippedTechnicalGate) {
         updateState(ctx.sessionId, { skippedTechnicalGate: true }, { mirror: false })
       }
 
-      const technicalCase = !skipTechnical && !state.skippedTechnicalGate
-
-      // 1. The CASE comes first (steps.md 2-C.1/2.2): serial, description,
-      // when — the model used to skip "when" entirely by escalating early,
-      // because only the 7-field gate was enforced here. Complaints (2-A)
-      // are exempt from "when": there is no fault timeline to collect.
-      if (technicalCase && reason !== 'complaint') {
-        const intakeStep = nextIntakeStep(state, ctx.gateQuestions)
-        if (intakeStep && (getAskedCounts(ctx.sessionId)[intakeStep.field] ?? 0) < 2) {
-          registerFieldRequest(ctx.sessionId, intakeStep.field)
-          return {
-            ok: false,
-            error: 'case_details_required',
-            dictates_text: true,
-            instruction: formatPreOperatorInstruction(intakeStep),
-          }
-        }
-      }
-
-      // 2. The FLOW decision (Andrea 2026-08-04/2026-08-05, seen live twice:
-      // a flow for ERROR 001 sat in the catalogue while the model walked the
-      // whole gate and never considered it — once because flowCheckOffered
-      // was set to true on the REFUSAL itself, so a model that ignored the
-      // instruction and called escalate_to_operator again with the same
-      // reason sailed straight through on the second try, never having
-      // called start_flow at all). flowCheckOffered is now set only once the
-      // model has ACTUALLY declared no_matching_flow — not on the refusal —
-      // so an ignored instruction keeps re-triggering this same refusal
-      // instead of silently expiring after one try. The refusal carries NO
-      // dictates_text, so tool forcing stays on: the model can only answer
-      // with start_flow or escalate(reason='no_matching_flow').
-      if (
-        technicalCase &&
-        reason !== 'complaint' &&
-        !state.flowCheckOffered &&
-        (ctx.availableFlows?.length ?? 0) > 0
-      ) {
-        if (reason === 'no_matching_flow') {
-          updateState(ctx.sessionId, { flowCheckOffered: true }, { mirror: false })
-        } else {
-          return {
-            ok: false,
-            error: 'flow_check_required',
-            instruction:
-              'Before handing over: one of the AVAILABLE FLOWS may cover this exact problem. ' +
-              'If one matches, call start_flow with its id NOW — the customer must get the guided ' +
-              'procedure, not an operator queue. ONLY if none genuinely matches, call ' +
-              'escalate_to_operator again immediately with reason "no_matching_flow".',
-          }
-        }
-      }
-
-      // 2.5. The shared Human Support flow — acceso/wifi/scheduling/batteria
-      // as a real flow-builder flow (protected, editable, not deletable, see
-      // Andrea's contract) instead of code-owned questions. Runs once per
-      // incident and only while at least one of its fields is still missing —
-      // completing it (or abandoning it) sets state.currentNodeId to
-      // undefined, so this cannot re-trigger mid-flow or loop after done.
-      const technicalFieldsStillMissing = (['robotPoweredOn', 'wifiActive', 'cutSchedulingActive', 'batterySufficient'] as const).some(
-        (field) => state.collectedData?.[field] === undefined,
-      )
-      if (
-        technicalCase &&
-        reason !== 'complaint' &&
-        !state.humanSupportFlowOffered &&
-        ctx.humanSupportFlowId &&
-        technicalFieldsStillMissing
-      ) {
-        updateState(ctx.sessionId, { humanSupportFlowOffered: true }, { mirror: false })
+      // A technical case goes through the Human Support flow before a human
+      // sees it: that flow IS the pre-operator technical check (powered on,
+      // wifi, cut scheduling, battery), with real branches and a corrective
+      // LOOP on "No". Only once it reaches its ESCALATE terminal does the
+      // gate below ask the last thing the flow engine cannot capture — the
+      // customer's name — and hand over.
+      //
+      // 'no_device' (complaint / faq_not_found / requested_operator) skips it
+      // entirely: there is no device to diagnose, so the only question is the
+      // name. Naming the tool by function name rather than "the instruction
+      // above" keeps this unambiguous in every language.
+      const technicalFlowStillDue =
+        shape === 'technical' &&
+        !!ctx.humanSupportFlowId &&
+        !state.humanSupportFlowDone &&
+        !state.currentNodeId
+      if (technicalFlowStillDue) {
         return {
           ok: false,
           error: 'human_support_flow_required',
-          // force_tool, not just an instruction: the model was seen ignoring
-          // this exact prose and writing "what's your name?" instead of
-          // calling start_flow — humanSupportFlowOffered was already true by
-          // then, so the gate never got a second chance to re-insist, and the
-          // pre-operator name question landed on a customer who was never
-          // asked the technical checks first. A vague reference "or the
-          // instruction above" would not survive translation; naming the
-          // tool by function name is unambiguous in every language.
+          dictates_text: false,
           force_tool: 'start_flow',
           instruction:
             `Before handing over: call start_flow with flowId '${ctx.humanSupportFlowId}' NOW — it runs ` +
@@ -744,37 +721,34 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         }
       }
 
-      // 3. Only then the pre-operator gate. A field stuck at its ask cap
-      // does not block forever — it counts as "asked enough", same
-      // fails-toward-silence rule as an unconfigured question.
-      const step = nextPreOperatorStep(state, ctx.gateQuestions, getAskedCounts(ctx.sessionId), {
-        skipTechnical: skipTechnical || state.skippedTechnicalGate,
-      })
+      const action = nextPreOperatorAction(
+        getState(ctx.sessionId),
+        ctx.gateQuestions,
+        getAskedCounts(ctx.sessionId),
+        shape,
+      )
 
-      const gateFieldStillUnanswered = state.pendingGateField && state.pendingGateField === step?.field
-      if (gateFieldStillUnanswered) {
-        return {
-          ok: false,
-          error: 'previous_answer_not_saved',
-          dictates_text: false,
-          instruction:
-            `The customer already answered the "${step.field}" question. Call ` +
-            `remember({key:'${step.field}', value:'...'}) with that answer FIRST — do not ask the ` +
-            'question again — then call escalate_to_operator again in the same turn.',
+      if (action.kind === 'ask') {
+        if (action.alreadyAsked) {
+          return {
+            ok: false,
+            error: 'previous_answer_not_saved',
+            instruction:
+              `The "${action.field}" question was already put to the customer. If they answered it, call ` +
+              `remember({key:'${action.field}', value:'...'}) with that answer FIRST — do not ask again — ` +
+              'then call escalate_to_operator again in the same turn. Only ask it again if they genuinely ' +
+              'never answered.',
+          }
         }
-      }
 
-      if (step) {
-        registerFieldRequest(ctx.sessionId, step.field)
-        setPendingGateField(ctx.sessionId, step.field)
+        registerFieldRequest(ctx.sessionId, action.field)
         return {
           ok: false,
           error: 'pre_operator_check_required',
           dictates_text: true,
-          instruction: formatPreOperatorInstruction(step),
+          instruction: formatPreOperatorInstruction(action),
         }
       }
-      setPendingGateField(ctx.sessionId, undefined)
     }
 
     const isFirst = markEscalationOnce(ctx.sessionId, reason)
@@ -784,7 +758,25 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
 
     const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`
     recordEscalation({ ticketId, reason, summary: rawSummary })
-    return { ok: true, ticket_id: ticketId, eta_minutes: 15, customer_name: state.name }
+    // The hand-off sentence is configuration, not something the model writes
+    // (CLAUDE.md §1A). dictates_text only when one is actually configured —
+    // with nothing to dictate the model still needs to close the turn itself.
+    const handoff = substituteCustomerName(ctx.handoffMessage, state.name)
+    return {
+      ok: true,
+      ticket_id: ticketId,
+      eta_minutes: 15,
+      customer_name: state.name,
+      ...(handoff
+        ? {
+            dictates_text: true,
+            instruction:
+              'Escalation done. Reply with THIS text, translated into the customer\'s language, ' +
+              'and nothing else — do not add questions, promises or a response time:\n\n' +
+              handoff,
+          }
+        : {}),
+    }
   }
 
   return { ok: false, error: `unknown tool: ${name}` }
@@ -853,20 +845,6 @@ interface CallLLMParams {
    * the only thing the model is capable of producing this hop.
    */
   forceTextOnly?: boolean
-  /**
-   * Forces tool_choice onto ONE named tool — a stronger guarantee than
-   * forceToolChoice's "any tool", for the cases where "any tool" was not
-   * enough. Andrea 2026-08-05, seen live: the human_support_flow_required
-   * refusal said "call start_flow NOW" in prose, tool_choice was 'required'
-   * (any tool), and the model called something else (or just wrote text
-   * alongside a tool call) instead of start_flow — the flow never attached,
-   * and the pre-operator gate's name question landed out of sequence, before
-   * the technical checks the customer was never actually asked. Naming the
-   * function directly in tool_choice removes the model's ability to pick a
-   * different tool structurally, the same way forceTextOnly removes its
-   * ability to avoid tools altogether.
-   */
-  forceSpecificTool?: string
 }
 
 async function callLLM({
@@ -885,7 +863,6 @@ async function callLLM({
   greetingOnlyHop,
   forceToolChoice,
   forceTextOnly,
-  forceSpecificTool,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -937,11 +914,7 @@ async function callLLM({
   }
   if (!forceTextOnly) {
     body.tools = buildToolsForTurn(state, currentStepLabels, faqCount)
-    body.tool_choice = forceSpecificTool
-      ? { type: 'function', function: { name: forceSpecificTool } }
-      : forceToolChoice
-        ? 'required'
-        : 'auto'
+    body.tool_choice = forceToolChoice ? 'required' : 'auto'
   }
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -1156,10 +1129,14 @@ interface TurnResult {
 // loop didn't produce usable text), so nothing else ever substitutes the
 // placeholder. resolveGreetingText already does this substitution for the
 // greeting; this mirrors it for the same reason.
+function substituteCustomerName(raw: string | undefined, customerName: string | undefined): string | null {
+  const text = raw?.trim()
+  if (!text) return null
+  return text.replace(/\{\{\s*customerName\s*\}\}/gi, customerName?.trim() || '').replace(/\s{2,}/g, ' ').trim() || null
+}
+
 function handoffFallback(messages: WorkspaceMessages | undefined, settings: Settings, customerName: string | undefined): string | null {
-  const raw = (messages?.humanSupport ?? settings.humanSupportMessage)?.trim()
-  if (!raw) return null
-  return raw.replace(/\{\{\s*customerName\s*\}\}/gi, customerName?.trim() || '').replace(/\s{2,}/g, ' ').trim() || null
+  return substituteCustomerName(messages?.humanSupport ?? settings.humanSupportMessage, customerName)
 }
 
 async function agentTurnInternal(
@@ -1217,7 +1194,6 @@ async function agentTurnInternal(
   }
 
   let awaitingDictatedReply = false
-  let forceSpecificTool: string | undefined
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
@@ -1245,9 +1221,7 @@ async function agentTurnInternal(
       greetingAlreadyDelivered: !!greetingToTranslate,
       forceToolChoice: mustForceToolChoice,
       forceTextOnly: awaitingDictatedReply,
-      forceSpecificTool,
     })
-    forceSpecificTool = undefined
 
     if (toolCalls.length === 0) {
       if (mustForceToolChoice) {
@@ -1295,9 +1269,6 @@ async function agentTurnInternal(
 
       if (result.dictates_text === true) {
         awaitingDictatedReply = true
-      }
-      if (typeof result.force_tool === 'string') {
-        forceSpecificTool = result.force_tool
       }
 
       if (call.function.name === 'answer_step' && !result.ok && result.error === 'unrecognized_answer' && answeringNodeId) {
@@ -1467,6 +1438,11 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       serialNumberPattern: settings.serialNumberPattern,
       serialNumberFormatHint: settings.serialNumberFormatHint,
       humanSupportFlowId: settings.humanSupportFlowId,
+      // RAW on purpose — {{customerName}} is substituted at escalation time,
+      // not here: the name is normally collected DURING that very turn (it is
+      // the last gate step), so resolving it now would blank the placeholder
+      // in exactly the case the message needs it.
+      handoffMessage: (input.config.messages?.humanSupport ?? settings.humanSupportMessage) ?? undefined,
     }
 
     hydrateState(sessionId, input.context.persistedState)
@@ -1528,14 +1504,15 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       try {
         const flows = await listFlows({ workspaceId: input.config.workspaceId })
         // ctx.availableFlows keeps ALL flows, and is loaded even while a flow
-        // is already attached: startFlow validates against it both when
-        // escalate_to_operator forces the Human Support flow and when an
-        // answer hands over to another flow mid-conversation.
+        // is already attached: startFlow validates against it when an answer
+        // hands over to another flow mid-conversation.
         ctx.availableFlows = flows
         // The "AVAILABLE FLOWS" catalogue the model may pick from while
         // classifying the problem: only offered when no flow is running yet,
-        // and never including Human Support (a code-dictated destination,
-        // never a diagnostic match).
+        // and never including Human Support. escalate_to_operator no longer
+        // attaches that flow (the pre-operator checks live in CHECKLIST), so
+        // its only remaining role here is to stay out of the catalogue — it
+        // is a destination, never a diagnostic match.
         if (!getState(sessionId).activeFlowId) {
           const selectableFlows = flows.filter((f) => f.flowId !== ctx.humanSupportFlowId)
           flowsBlock = formatFlowsBlock(selectableFlows)

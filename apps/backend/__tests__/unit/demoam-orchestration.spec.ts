@@ -17,7 +17,7 @@
 import fs from 'fs'
 import path from 'path'
 
-import { nextPreOperatorStep } from '../../custom-demoam/gate'
+import { nextPreOperatorAction } from '../../custom-demoam/gate'
 
 const MODULE_DIR = path.join(__dirname, '..', '..', 'custom-demoam')
 
@@ -45,16 +45,15 @@ describe('demoam carries no hardcoded customer-facing copy', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(MODULE_DIR, 'settings.json'), 'utf8'))
 
     expect(settings.gateQuestions).toBeDefined()
-    for (const field of [
-      'serialNumber',
-      'problemDescription',
-      'robotPoweredOn',
-      'wifiActive',
-      'cutSchedulingActive',
-      'batterySufficient',
-      'name',
-    ]) {
+    // Only the fields the gate still owns. The four technical booleans moved
+    // into the Human Support flow on 2026-08-06 (asked there with real
+    // branches and a corrective LOOP), so wording for them here would be
+    // dead, editable-looking config — the same reason wipMessage is absent.
+    for (const field of ['serialNumber', 'problemDescription', 'problemStartedWhen', 'name']) {
       expect(settings.gateQuestions[field]).toBeTruthy()
+    }
+    for (const movedToFlow of ['robotPoweredOn', 'wifiActive', 'cutSchedulingActive', 'batterySufficient']) {
+      expect(settings.gateQuestions[movedToFlow]).toBeUndefined()
     }
   })
 
@@ -74,8 +73,11 @@ describe('demoam carries no hardcoded customer-facing copy', () => {
   })
 
   it('asks nothing at all when no gate wording is configured — fails toward silence', () => {
-    expect(nextPreOperatorStep({}, undefined, {})).toBeNull()
-    expect(nextPreOperatorStep({}, {}, {})).toBeNull()
+    // Nothing configured to ask means nothing is asked: the customer reaches
+    // a human rather than being sent untranslated English (CLAUDE.md §1A).
+    expect(nextPreOperatorAction({}, undefined, {}, 'technical').kind).toBe('escalate')
+    expect(nextPreOperatorAction({}, {}, {}, 'technical').kind).toBe('escalate')
+    expect(nextPreOperatorAction({}, {}, {}, 'no_device').kind).toBe('escalate')
   })
 
   it('never emits an untranslated hardcoded hand-off apology', () => {

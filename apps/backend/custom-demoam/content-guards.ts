@@ -40,6 +40,33 @@ export function validateSerialNumber(
   }
 }
 
+// Andrea 2026-08-05, seen live: with the gate waiting on the customer's name
+// and escalate_to_operator refusing without it, the model called
+// remember({key:'name', value:'unknown'}) — invented a placeholder instead
+// of asking, and the refusal cleared, letting escalate_to_operator succeed
+// with a customer who was never actually asked their name. Same class of bug
+// as the invented technical-field values: a plausible-looking value that
+// satisfies the tool's shape without coming from the customer at all.
+const NAME_PLACEHOLDERS = new Set([
+  'unknown', 'n/a', 'na', 'none', 'null', 'undefined', 'anonymous', 'anonymous customer',
+  'sconosciuto', 'nessuno', 'non lo so', 'non specificato', 'anonimo',
+])
+
+export function validateCustomerName(candidate: string): GuardResult | null {
+  const trimmed = candidate.trim()
+  if (trimmed.length >= 2 && !NAME_PLACEHOLDERS.has(trimmed.toLowerCase())) return null
+
+  return {
+    ok: false,
+    error: 'invalid_name',
+    dictates_text: true,
+    instruction:
+      `"${candidate}" is not a real name — it looks like a placeholder, not something the customer ` +
+      'actually said. Ask them for their name; if they refuse or truly have not answered, ask again ' +
+      'rather than inventing one. Never pass a placeholder to remember for this field.',
+  }
+}
+
 const MIN_PROBLEM_DESCRIPTION_CHARS = 8
 const MAX_PROBLEM_DESCRIPTION_ATTEMPTS = 2
 const PROBLEM_DESCRIPTION_ATTEMPTS_KEY = 'problemDescription_vague'

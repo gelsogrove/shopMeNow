@@ -1,35 +1,35 @@
 {
-  "sessionId": "cli-391110000601-1785961805672",
+  "sessionId": "cli-391110000601-1785966060492",
   "history": [
     {
       "role": "user",
       "content": "il robot non funziona",
-      "timestamp": "2026-08-05T20:30:05.672Z"
+      "timestamp": "2026-08-05T21:41:00.492Z"
     },
     {
       "role": "assistant",
-      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nCapisco, il robot non funziona. Per aiutarti a risolvere il problema, mi serve il numero di serie del dispositivo.\n\nDove lo trovi? Di solito è scritto su un'etichetta sotto il robot o nella documentazione che hai ricevuto.",
-      "timestamp": "2026-08-05T20:30:09.542Z"
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande come posso aiutarti oggi?\n\nCapisco, il robot non funziona. Per aiutarti a risolvere il problema, mi serve il numero di serie del dispositivo.\n\nDove lo trovi? Di solito è scritto su un'etichetta sotto il robot o nella documentazione che hai ricevuto.",
+      "timestamp": "2026-08-05T21:41:05.046Z"
     },
     {
       "role": "user",
       "content": "HKA4OB100LQ26050501",
-      "timestamp": "2026-08-05T20:30:09.544Z"
+      "timestamp": "2026-08-05T21:41:05.048Z"
     },
     {
       "role": "assistant",
       "content": "Perfetto, grazie. Ora mi serve capire meglio il problema: puoi descrivermi brevemente cosa sta succedendo con il robot?",
-      "timestamp": "2026-08-05T20:30:13.647Z"
+      "timestamp": "2026-08-05T21:41:08.197Z"
     },
     {
       "role": "user",
       "content": "il display mostra ERROR 001 e lampeggia una luce rossa",
-      "timestamp": "2026-08-05T20:30:13.649Z"
+      "timestamp": "2026-08-05T21:41:08.199Z"
     },
     {
       "role": "assistant",
       "content": "E quando hai notato questo problema — oggi, ieri, o più tempo fa?",
-      "timestamp": "2026-08-05T20:30:17.421Z"
+      "timestamp": "2026-08-05T21:41:11.844Z"
     }
   ],
   "persistedState": {

@@ -36,6 +36,67 @@ e imporante lanciamo la calling function per human support in questo momento qua
 e' tutto nel flow di default che non deve essere cancellato
 editato si cancellarlo mai !
 
+[NOTA 2026-08-05 — verificato sul DB di produzione]
+Stato del codice: `escalate_to_operator` NON attacca più il flow. Passa
+direttamente per `nextPreOperatorAction` (gate.ts), e il flow Human Support
+è escluso dal catalogo offerto al modello (agent.ts, filtro su
+`humanSupportFlowId`) perché non è un match diagnostico. Il flow builder
+contiene 2 dei 4 booleani (robotPoweredOn, wifiActive); tutti e 4 sono
+comunque chiesti dal gate, quindi oggi il percorso pre-operatore è UNO solo:
+il gate. `PRE_OPERATOR_ORDER` non esiste più — l'ordine è `CHECKLIST` in
+gate.ts, con `maxAsks` per campo.
+
+Il vincolo che ha portato qui: il compiler rifiuta `converging_edge_targets`
+("ogni risposta deve portare da qualche parte di diverso"). Una checklist non
+ha percorsi diversi per Sì e No — la risposta va solo salvata per il
+briefing — quindi non è modellabile come flow senza duplicare i nodi per
+ogni combinazione (4 campi = 16 rami identici).
+
+Divisione dei ruoli, da tenere:
+- flow builder = DIAGNOSTICA (ogni risposta cambia il percorso)
+- gate testuale = CHECKLIST lineare + tutto ciò che il motore non sa fare
+
+Due limiti del motore che il gate copre e il flow non può coprire:
+1. l'intake (serial, descrizione, quando) precede il flow — serve a SCEGLIERLO
+2. `name` è testo libero: `answer_step` classifica etichette fisse, non cattura
+
+[DA FARE — deciso con Andrea 2026-08-05, script pronto, NON eseguito]
+Portare cutSchedulingActive e batterySufficient nel flow come nodi
+DIAGNOSTICI (non checklist): No → nodo correttivo "attivalo/caricala" →
+back-edge, che il compiler accetta perché il ciclo si chiude su un nodo
+`terminalType: 'LOOP'` (primitiva già esistente, vedi flow-compiler.types.ts
+e flow-machine.ts). Tetto 2 tentativi per nodo, poi si prosegue comunque
+verso ESCALATE — un cliente che non può attivarlo non deve restare
+bloccato fuori dall'operatore (stessa logica di `maxAsks`).
+
+Script pronto: `apps/backend/scripts/update-amrobots-human-support-flow.ts`
+(aggiorna il flow esistente, non lo ricrea). Attende l'OK di Andrea sulla
+scrittura in produzione.
+
+⚠️ I due passi vanno fatti INSIEME, mai uno solo:
+1. eseguire lo script (flow: 4 booleani con i 2 LOOP)
+2. ri-attaccare il flow in escalate_to_operator + ridurre
+   `CHECKLIST.technical` a serial / descrizione / quando / nome
+Solo (2) → scheduling e batteria non le chiede più nessuno.
+Solo (1) → vengono chieste due volte, dal flow e dal gate.
+
+[SPEGNIMENTO CHATBOT — verificato 2026-08-05, FUNZIONA]
+`recordEscalation` nel modulo fa solo un console.error, ma lo spegnimento
+avviene lato host: whatsapp-inbound.pipeline.ts manda la mail all'operatore
+e poi setta `activeChatbot: false` sul customer, quindi i messaggi
+successivi non arrivano più all'LLM. L'humanSupportMessage ("disattivo il
+chatbot") dice il vero.
+
+La condizione lato host è `shouldEscalate && escalationSummary`: un summary
+vuoto disinnescherebbe sia la mail sia lo spegnimento. Non può succedere,
+per due guardie indipendenti:
+1. `escalate_to_operator` rifiuta un summary vuoto (agent.ts, ok:false)
+2. all'uscita del modulo il summary ha comunque un default non-vuoto
+   (agent.ts: `|| "Session ... escalated (no briefing captured)"`), che
+   copre anche il fallback maxToolHops — quel percorso non passa da
+   escalate_to_operator e quindi non è coperto dalla guardia 1.
+Se una delle due viene toccata, lo spegnimento torna probabilistico.
+
 **IMPO**
 
 - in tutto questo abbiamo un file settings.json che si popola al salvataggio dei setting dentro l'app, che mette dentro i testi con variabili tradotte
@@ -103,6 +164,26 @@ PROSSIMO — da pianificare, non ancora iniziato
   (supportato da OpenAI/OpenRouter: {type:'function', function:{name:...}}),
   da propagare in callLLM/agentTurnInternal — stessa portata del gap
   ORCHESTRATOR sopra, non un fix mirato.
+  [FATTO 2026-08-05] implementato forceSpecificTool in callLLM/agentTurnInternal
+  (agent.ts), usato dal refusal human_support_flow_required (gate.ts).
+- [2026-08-05] remember accettava valori chiaramente inventati per campi
+  obbligatori — visto live: il modello chiamava remember({key:'name',
+  value:'unknown'}) quando il cliente non aveva ancora detto il proprio nome,
+  e con quel placeholder salvato escalate_to_operator andava a segno subito,
+  saltando la domanda vera e l'handing-off message. Stesso problema visto per
+  i campi tecnici del flow Human Support (robotPoweredOn ecc. inventati in
+  una raffica di remember invece di rispondere via answer_step, nodo per
+  nodo). [FATTO 2026-08-05] due guard aggiunti: validateCustomerName
+  (content-guards.ts, rifiuta placeholder come "unknown"/"n/a"/stringa vuota
+  per key:'name') e un guard in agent.ts che rifiuta remember su qualunque
+  fieldKey appartenente al grafo del flow attivo — quei campi possono
+  arrivare SOLO da answer_step. Residuo NON risolto: quando più remember
+  vengono rifiutati nello stesso hop (es. cutSchedulingActive + name insieme,
+  entrambi placeholder), il turno può produrre una reply VUOTA invece del
+  testo dettato dal guard — visto in
+  custom-demoam/cli/scenarios/07-human-support/04-vague-problem-full-gate.json.
+  Non ancora isolata la causa esatta (probabile interazione tra due
+  dictates_text:true nello stesso hop, l'ultimo vince e il testo si perde).
 
 **non toccare questo file se non hiil pemesso utente**
 

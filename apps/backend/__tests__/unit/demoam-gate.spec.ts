@@ -16,7 +16,7 @@
  *      customer through on every remaining field (CLAUDE.md §14: counted,
  *      never phrase-detected).
  */
-import { formatFlowsBlock, formatPreOperatorInstruction, nextPreOperatorStep, startFlow } from '../../custom-demoam/gate'
+import { caseShapeFor, formatFlowsBlock, formatPreOperatorInstruction, nextPreOperatorAction, startFlow } from '../../custom-demoam/gate'
 import { getState, resetState, SessionState } from '../../custom-demoam/state'
 
 const FLOWS = [
@@ -138,87 +138,105 @@ describe('demoam start_flow tool', () => {
   })
 })
 
-describe('demoam pre-operator gate — 7-field order', () => {
+describe('demoam pre-operator gate — the fields the flow engine cannot ask', () => {
+  // Narrowed 2026-08-06 (Andrea): the four technical booleans are nodes of
+  // the Human Support flow now, which asks them with real branches and a
+  // corrective LOOP on "No". What is left in the gate is exactly what the
+  // flow engine cannot do: intake (it runs BEFORE a flow is chosen — it is
+  // what the flow is chosen FROM) and `name` (free text, while answer_step
+  // only classifies fixed edge labels).
   const QUESTIONS = {
     serialNumber: 'Serial number?',
     problemDescription: "What's happening?",
-    robotPoweredOn: 'Is it powered on?',
-    wifiActive: 'Is wifi active?',
-    cutSchedulingActive: 'On schedule cutting?',
-    batterySufficient: 'Battery sufficient?',
+    problemStartedWhen: 'When did it start?',
     name: 'Your name?',
   }
 
-  it('asks the 7 fields in the order confirmed with Andrea', () => {
+  it('asks intake then the name, in that order — name last of all', () => {
     const order: string[] = []
     let state: SessionState = {}
 
-    for (let i = 0; i < 7; i++) {
-      const step = nextPreOperatorStep(state, QUESTIONS, {})
-      if (!step) break
-      order.push(step.field)
-      if (step.field === 'serialNumber') state = { ...state, serialNumber: 'HK123' }
-      else if (step.field === 'name') state = { ...state, name: 'Andrea' }
-      else state = { ...state, collectedData: { ...(state.collectedData ?? {}), [step.field]: 'x' } }
+    for (let i = 0; i < 8; i++) {
+      const action = nextPreOperatorAction(state, QUESTIONS, {}, 'technical')
+      if (action.kind !== 'ask') break
+      order.push(action.field)
+      if (action.field === 'serialNumber') state = { ...state, serialNumber: 'HK123' }
+      else if (action.field === 'name') state = { ...state, name: 'Andrea' }
+      else state = { ...state, collectedData: { ...(state.collectedData ?? {}), [action.field]: 'x' } }
     }
 
-    expect(order).toEqual([
-      'serialNumber',
-      'problemDescription',
-      'robotPoweredOn',
-      'wifiActive',
-      'cutSchedulingActive',
-      'batterySufficient',
-      'name',
-    ])
+    expect(order).toEqual(['serialNumber', 'problemDescription', 'problemStartedWhen', 'name'])
   })
 
-  it('returns null once every field is answered', () => {
+  it('never asks the four booleans the Human Support flow owns', () => {
+    // Even when wording for them is configured, the gate must not ask them —
+    // otherwise the customer gets the same question from two mechanisms.
+    const withBooleans = {
+      ...QUESTIONS,
+      robotPoweredOn: 'Is it powered on?',
+      wifiActive: 'Is wifi active?',
+      cutSchedulingActive: 'On schedule cutting?',
+      batterySufficient: 'Battery sufficient?',
+    }
+    const asked: string[] = []
+    let state: SessionState = {}
+
+    for (let i = 0; i < 10; i++) {
+      const action = nextPreOperatorAction(state, withBooleans, {}, 'technical')
+      if (action.kind !== 'ask') break
+      asked.push(action.field)
+      if (action.field === 'serialNumber') state = { ...state, serialNumber: 'HK123' }
+      else if (action.field === 'name') state = { ...state, name: 'Andrea' }
+      else state = { ...state, collectedData: { ...(state.collectedData ?? {}), [action.field]: 'x' } }
+    }
+
+    expect(asked).not.toContain('robotPoweredOn')
+    expect(asked).not.toContain('wifiActive')
+    expect(asked).not.toContain('cutSchedulingActive')
+    expect(asked).not.toContain('batterySufficient')
+  })
+
+  it('escalates once every field is answered', () => {
     const state: SessionState = {
       serialNumber: 'HK123',
       name: 'Andrea',
-      collectedData: {
-        problemDescription: 'x',
-        robotPoweredOn: 'yes',
-        wifiActive: 'yes',
-        cutSchedulingActive: 'no',
-        batterySufficient: 'yes',
-      },
+      collectedData: { problemDescription: 'x', problemStartedWhen: 'today' },
     }
 
-    expect(nextPreOperatorStep(state, QUESTIONS, {})).toBeNull()
+    expect(nextPreOperatorAction(state, QUESTIONS, {}, 'technical').kind).toBe('escalate')
   })
 
   it('never re-asks a field already answered', () => {
     const state: SessionState = { serialNumber: 'HK123' }
-    const step = nextPreOperatorStep(state, QUESTIONS, {})
+    const action = nextPreOperatorAction(state, QUESTIONS, {}, 'technical')
 
-    expect(step?.field).not.toBe('serialNumber')
-    expect(step?.field).toBe('problemDescription')
+    expect(action.kind).toBe('ask')
+    expect(action.kind === 'ask' && action.field).toBe('problemDescription')
   })
 
   it('treats a field with no configured wording as satisfied — fails toward silence', () => {
-    const partialQuestions = { ...QUESTIONS, robotPoweredOn: undefined }
-    const state: SessionState = { serialNumber: 'HK1', collectedData: { problemDescription: 'x' } }
+    const partialQuestions = { ...QUESTIONS, problemDescription: undefined }
+    const state: SessionState = { serialNumber: 'HK1' }
 
-    const step = nextPreOperatorStep(state, partialQuestions, {})
-    // Skips the unconfigured robotPoweredOn and moves to the next real one.
-    expect(step?.field).toBe('wifiActive')
+    const action = nextPreOperatorAction(state, partialQuestions, {}, 'technical')
+    // Skips the unconfigured problemDescription and moves to the next real one.
+    expect(action.kind === 'ask' && action.field).toBe('problemStartedWhen')
   })
 
   it('skips a field once it has been asked maxAsks times', () => {
-    const state: SessionState = { serialNumber: 'HK1', collectedData: { problemDescription: 'x' } }
-    const askedCounts = { robotPoweredOn: 2 }
+    const state: SessionState = { serialNumber: 'HK1' }
+    const askedCounts = { problemDescription: 2 }
 
-    const step = nextPreOperatorStep(state, QUESTIONS, askedCounts, { maxAsks: 2 })
+    const action = nextPreOperatorAction(state, QUESTIONS, askedCounts, 'technical', { maxAsks: 2 })
 
-    // robotPoweredOn is skipped (asked twice already, the customer won't/can't answer).
-    expect(step?.field).toBe('wifiActive')
+    // problemDescription is skipped: asked twice already, the customer won't
+    // or can't answer, and an unanswered checkbox must not block a human.
+    expect(action.kind === 'ask' && action.field).toBe('problemStartedWhen')
   })
 
   it('asks nothing when no questions are configured at all', () => {
-    expect(nextPreOperatorStep({}, undefined, {})).toBeNull()
-    expect(nextPreOperatorStep({}, {}, {})).toBeNull()
+    expect(nextPreOperatorAction({}, undefined, {}, 'technical').kind).toBe('escalate')
+    expect(nextPreOperatorAction({}, {}, {}, 'technical').kind).toBe('escalate')
   })
 })
 
@@ -227,23 +245,44 @@ describe('demoam pre-operator gate — FAQ-not-found short-circuit (steps.md 2-B
     serialNumber: 'Serial number?',
     problemDescription: "What's happening?",
     robotPoweredOn: 'Is it powered on?',
-    wifiActive: 'Is wifi active?',
-    cutSchedulingActive: 'On schedule cutting?',
-    batterySufficient: 'Battery sufficient?',
+    problemStartedWhen: 'When did it start?',
     name: 'Your name?',
   }
 
-  it('asks ONLY the name, skipping all 6 technical fields', () => {
-    const step = nextPreOperatorStep({}, QUESTIONS, {}, { skipTechnical: true })
+  // Andrea 2026-08-06: an unhappy customer goes STRAIGHT to the name, then
+  // the hand-off message, then the chatbot is switched off. No serial, no
+  // description, no technical checks — there is no device to diagnose, and
+  // interrogating someone who is already annoyed is the wrong answer.
+  it.each(['complaint', 'faq_not_found', 'requested_operator'])(
+    'routes %s to the no_device shape — nothing to diagnose',
+    (reason) => {
+      expect(caseShapeFor(reason)).toBe('no_device')
+    },
+  )
 
-    expect(step?.field).toBe('name')
+  it('asks ONLY the name, skipping intake entirely', () => {
+    const action = nextPreOperatorAction({}, QUESTIONS, {}, 'no_device')
+
+    expect(action.kind === 'ask' && action.field).toBe('name')
   })
 
-  it('still returns null once the name is known — no technical fields sneak back in', () => {
-    const state: SessionState = { name: 'Andrea' }
-    const step = nextPreOperatorStep(state, QUESTIONS, {}, { skipTechnical: true })
+  it('marks the name as the last step, so the hand-off follows immediately', () => {
+    const action = nextPreOperatorAction({}, QUESTIONS, {}, 'no_device')
 
-    expect(step).toBeNull()
+    expect(action.kind === 'ask' && action.isLastStep).toBe(true)
+  })
+
+  it('escalates once the name is known — no intake field sneaks back in', () => {
+    const state: SessionState = { name: 'Andrea' }
+    const action = nextPreOperatorAction(state, QUESTIONS, {}, 'no_device')
+
+    expect(action.kind).toBe('escalate')
+  })
+
+  it('a technical case keeps the full intake — the shortcut is only for no_device', () => {
+    const action = nextPreOperatorAction({}, QUESTIONS, {}, 'technical')
+
+    expect(action.kind === 'ask' && action.field).toBe('serialNumber')
   })
 })
 

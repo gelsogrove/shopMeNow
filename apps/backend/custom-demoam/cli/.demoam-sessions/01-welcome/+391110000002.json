@@ -1,32 +1,35 @@
 {
-  "sessionId": "cli-391110000002-1785961555301",
+  "sessionId": "cli-391110000002-1785965816602",
   "history": [
     {
       "role": "user",
       "content": "ciao, sono Mario Rossi",
-      "timestamp": "2026-08-05T20:25:55.301Z"
+      "timestamp": "2026-08-05T21:36:56.602Z"
     },
     {
       "role": "assistant",
-      "content": "Ciao Mario, mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande. Come posso aiutarti oggi?\n\nPer aiutarti al meglio, mi serve il numero di serie del tuo robot. Dove lo trovi?",
-      "timestamp": "2026-08-05T19:24:19.044Z"
+      "content": "Ciao Mario, mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande. Come posso aiutarti oggi?",
+      "timestamp": "2026-08-05T20:35:25.097Z"
     },
     {
       "role": "user",
       "content": "ciao sono di nuovo io, il robot fa ancora rumore",
-      "timestamp": "2026-08-05T20:25:59.045Z"
+      "timestamp": "2026-08-05T21:37:05.097Z"
     },
     {
       "role": "assistant",
-      "content": "Ciao Mario! 👋\n\nMi dispiace che il robot continui a fare rumore. Sono qui per aiutarti a capire cosa sta succedendo.\n\nPer prima cosa, mi serve il **numero di serie** del tuo robot — lo trovi sull'etichetta sotto il dispositivo. Puoi leggerlo per me?\n\nCapisco, il robot fa ancora rumore. Abbiamo un flusso di diagnostica proprio per questo.\n\nPer iniziare, mi serve il numero di serie del tuo robot. Lo trovi sull'etichetta sotto il dispositivo — è una combinazione di lettere e numeri. Qual è?",
-      "timestamp": "2026-08-05T20:26:04.425Z"
+      "content": "Ciao Mario! Mi dispiace che il robot continui a fare rumore. Sono qui per aiutarti a capire cosa sta succedendo.\n\nPer iniziare, mi serve il **numero di serie** del tuo robot. Lo trovi sull'etichetta sotto il dispositivo. Puoi leggerlo per me?\n\nCapisco, il robot continua a fare rumore. Per aiutarti al meglio, mi serve il numero di serie del tuo robot. Dove lo trovi?",
+      "timestamp": "2026-08-05T21:37:12.424Z"
     }
   ],
   "persistedState": {
     "state": {
       "greeting": "returning",
       "language": "it",
-      "name": "Mario Rossi"
+      "name": "Mario Rossi",
+      "collectedData": {
+        "problemDescription": "il robot fa rumore"
+      }
     },
     "patches": []
   }

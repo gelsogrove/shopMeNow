@@ -29,10 +29,6 @@
     "serialNumber": "To look into this properly, can you give me the device's serial number?",
     "problemDescription": "Thanks — can you briefly describe what's happening with the robot?",
     "problemStartedWhen": "And when did you first notice this — today, yesterday, or longer ago?",
-    "robotPoweredOn": "Let's make sure the robot is properly powered on — can you confirm that for me?",
-    "wifiActive": "To connect you with support, we need to check the wifi is connected — could you check that it's on?",
-    "cutSchedulingActive": "One more check — is it currently in the middle of a scheduled cutting cycle?",
-    "batterySufficient": "And is the battery charged enough right now?",
     "name": "Last thing before I bring in a colleague — what's your name?"
   },
   "similarityThreshold": 0.7,
