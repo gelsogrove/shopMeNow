@@ -1,5 +1,6 @@
 {
-  "description": "Problema NON presente nel flow builder (es. errore 999, inventato) — deve dichiarare onestamente che non ha una procedura specifica, mai inventarne una, e andare al gate pre-operatore / Human operator flow.",
+  "description": "Problema NON presente nel flow builder (errore 999 non esiste tra i flow reali 001-006) — deve dichiarare onestamente che non ha una procedura specifica, mai inventarne una, e andare al gate pre-operatore / Human operator flow.",
+  "contractRule": "CONTRACT.md riga 15: \"NON DEVI INVENTARE, OGNI RISPOSTA DEVE ARRIVARE DA UNA FONTE (faq o Flow)\"; riga 14: \"se non trova né faq né flow parte con Human operator flow spiegando che non abbiamo la ifo ma non inventi\"; GUARDS riga 64: \"se il cliente cita un codice errore diverso da quello del flow scelto, il flow viene rifiutato\"",
   "phone": "+391110000007",
   "newSession": true,
   "turns": [

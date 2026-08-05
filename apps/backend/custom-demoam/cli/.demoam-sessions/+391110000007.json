@@ -1,0 +1,124 @@
+{
+  "sessionId": "cli-391110000007-1785943382425",
+  "history": [
+    {
+      "role": "user",
+      "content": "il mio robot mostra errore 999 sul display",
+      "timestamp": "2026-08-05T15:23:02.425Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?\n\nGrazie per avermi contattato. Purtroppo non riconosco l'errore 999 nel nostro catalogo di problemi noti.\n\nPer aiutarti al meglio, ho bisogno di alcune informazioni. Innanzitutto, puoi darmi il numero di serie del dispositivo?",
+      "timestamp": "2026-08-05T15:23:07.574Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050200",
+      "timestamp": "2026-08-05T15:23:07.577Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Perfetto, grazie. Ora devo fare alcune verifiche prima di passarti a un collega specializzato.\n\n**Il robot è acceso in questo momento?**",
+      "timestamp": "2026-08-05T15:23:22.520Z"
+    },
+    {
+      "role": "user",
+      "content": "il display lampeggia con la scritta ERROR 999 e il robot non si muove",
+      "timestamp": "2026-08-05T15:23:22.521Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Capito, il robot è acceso e mostra l'errore. Grazie per la conferma.\n\nOra, per continuare la diagnosi: **il wifi è attivo e il robot è connesso alla rete?**",
+      "timestamp": "2026-08-05T15:23:27.057Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "en",
+      "serialNumber": "HKA4OB100LQ26050200",
+      "collectedData": {
+        "problemDescription": "Robot displays error 999 on display",
+        "problemStartedWhen": "unknown",
+        "robotPoweredOn": "Yes"
+      },
+      "flowCheckOffered": true,
+      "humanSupportFlowOffered": true,
+      "activeFlowId": "cmsfavpet0000qwngacwdutj6",
+      "activeFlowHash": "021bf9925591af5762f6d2c68f691895844c455e6043142e64501d733c8f39e3",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "hf_powered_on",
+          "question": "Is the robot powered on?",
+          "fieldKey": "robotPoweredOn",
+          "fieldType": "boolean",
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "hf_wifi",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "hf_handoff_powered_off",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "hf_wifi",
+          "question": "Is the wifi active?",
+          "fieldKey": "wifiActive",
+          "fieldType": "boolean",
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "hf_handoff_wifi_on",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "hf_handoff_wifi_off",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "hf_handoff_powered_off",
+          "question": "This flow has reached its escalation point — the robot is off, which may itself be part of the issue.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "hf_handoff_wifi_off",
+          "question": "This flow has reached its escalation point — the robot's wifi is off, which may itself be part of the issue.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "hf_handoff_wifi_on",
+          "question": "This flow has reached its escalation point — wifi is active, so the issue is something else.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "hf_wifi",
+      "visitedFlowIds": [
+        "cmsfavpet0000qwngacwdutj6"
+      ]
+    },
+    "patches": []
+  }
+}

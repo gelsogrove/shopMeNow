@@ -1,5 +1,6 @@
 {
-  "description": "Utente fa una domanda (FAQ) — deve rispondere SOLO col contenuto della FAQ esistente, mai inventare, mai aggiungere raccomandazioni proprie.",
+  "description": "Utente fa una domanda (FAQ 'How can I clean my robot?', reale in DB) — deve rispondere SOLO col contenuto della FAQ, mai inventare, mai aggiungere raccomandazioni proprie.",
+  "contractRule": "CONTRACT.md riga 11: \"se riconosciamo che è una faq rispondiamo con la risposta\"; riga 9: \"se è una faq non c'è bisogno del numero di serie\"; GUARDS riga 61: \"le risposte alle FAQ passano da un tool che verifica che la FAQ citata esista davvero\"",
   "phone": "+391110000003",
   "newSession": true,
   "turns": [

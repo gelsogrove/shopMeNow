@@ -1,5 +1,6 @@
 {
-  "description": "Utente sbaglia 3 volte il serial number — dopo 3 tentativi falliti il gate deve smettere di richiederlo (serialNumberExhausted) e passare oltre senza bloccare la conversazione.",
+  "description": "Utente sbaglia 3 volte il serial number (formato reale richiesto: serialNumberPattern ^HK.{17}$, 19 caratteri con HK, da settings.json) — dopo 3 tentativi falliti il gate deve smettere di richiederlo (serialNumberExhausted) e passare oltre senza bloccare la conversazione.",
+  "contractRule": "CONTRACT.md riga 10: \"il numero di serie deve essere di 19 caratteri, deve essere validato; dopo 3 volte contatta operatore\"; GUARDS riga 52: \"il numero di serie viene validato dal codice (formato/lunghezza), mai dal modello; dopo 3 tentativi falliti si passa oltre e non viene richiesto di nuovo nel gate finale\"",
   "phone": "+391110000009",
   "newSession": true,
   "turns": [

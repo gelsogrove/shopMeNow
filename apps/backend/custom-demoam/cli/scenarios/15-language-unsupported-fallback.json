@@ -1,5 +1,6 @@
 {
-  "description": "Lingua non esistente/non supportata (testo in una lingua a caso non nella lista abilitata, es. giapponese) — il sistema deve rispondere nella lingua di default del workspace (en), mai in giapponese e mai inventare supporto che non ha.",
+  "description": "Lingua non abilitata per il workspace (giapponese, non in enabledLanguages=['en']) — il sistema deve rispondere nella lingua di default del workspace (en), mai in giapponese e mai inventare un supporto linguistico che non ha.",
+  "contractRule": "CONTRACT.md riga 5: \"...altrimenti usa lignua di degault\"; CLAUDE.md §14 (NO hardcoded phrase/language detection): la scelta lingua è dell'LLM via trailer ⟦LANG:xx⟧, poi filtrata da resolveEnabledLanguage contro enabledLanguages — mai un detector per-lingua nel codice.",
   "phone": "+391110000015",
   "newSession": true,
   "turns": [

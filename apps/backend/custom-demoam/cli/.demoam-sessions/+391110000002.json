@@ -1,0 +1,102 @@
+{
+  "sessionId": "cli-391110000002-1785943448412",
+  "history": [
+    {
+      "role": "user",
+      "content": "ciao, sono Mario Rossi",
+      "timestamp": "2026-08-05T15:24:08.412Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?\n\nGrazie per avermi contattato, Mario! Come posso aiutarti oggi?",
+      "timestamp": "2026-08-05T14:22:31.821Z"
+    },
+    {
+      "role": "user",
+      "content": "ciao sono di nuovo io, il robot fa ancora rumore",
+      "timestamp": "2026-08-05T15:24:11.821Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao Mario! Mi dispiace sentire che il robot continua a fare rumore. Sono qui per aiutarti a risolvere il problema.\n\nPer poter procedere, mi serve il **numero di serie del dispositivo**. Puoi trovararlo solitamente sulla parte inferiore o posteriore del robot. Come è?\n\nCapito, Mario. Allora, per aiutarti al meglio: il rumore viene dalle lame (la parte inferiore del robot) o da un'altra parte?",
+      "timestamp": "2026-08-05T15:24:21.881Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "returning",
+      "language": "en",
+      "name": "Mario Rossi",
+      "collectedData": {
+        "problemDescription": "robot makes unusual noise while operating"
+      },
+      "activeFlowId": "cmsg4rtnr00033cngis1pyqvw",
+      "activeFlowHash": "fa3a94eb54f0c3195100b584a359bc1bf911f264033485660deaa74c04f9ed48",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "e003_where",
+          "question": "Il rumore viene dalla parte inferiore del robot (lame) o da un'altra parte?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Lame",
+              "targetNodeId": "e003_debris",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "Altra parte",
+              "targetNodeId": "e003_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e003_debris",
+          "question": "Hai controllato se ci sono rametti, sassi o altri oggetti incastrati vicino alle lame?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e003_clear",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e003_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e003_clear",
+          "question": "Rimuovi con cautela a robot spento qualsiasi oggetto incastrato, poi riavvia il robot. Se il rumore continua, contattaci di nuovo.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "e003_escalate",
+          "question": "Questo tipo di rumore va controllato da un tecnico, meglio non continuare a farlo lavorare.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "e003_where",
+      "visitedFlowIds": [
+        "cmsg4rtnr00033cngis1pyqvw"
+      ]
+    },
+    "patches": []
+  }
+}

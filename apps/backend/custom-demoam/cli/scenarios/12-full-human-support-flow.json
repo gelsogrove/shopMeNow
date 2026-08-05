@@ -1,5 +1,6 @@
 {
-  "description": "Esempio completo di Human Support — errore non presente nel flow, gate tecnico completo (SN, on, wifi, cut scheduling, batteria), nome, handing-off message, e verifica che la calling function di escalation sia stata chiamata SOLO nel turno dell'handoff reale.",
+  "description": "Esempio completo di Human Support — errore non presente nel flow: SN, descrizione, poi il flow grafico protetto 'Human operator flow' (powered_on/wifi come nodi Sì/No reali), poi il gate testuale per cut_scheduling/batteria/nome, handing-off message, e verifica che la calling function di escalation sia stata chiamata SOLO nel turno dell'handoff reale.",
+  "contractRule": "CONTRACT.md righe 21-36 (sezione 'Human operator flow'): SN già chiesto, poi acceso/wifi/cut scheduling/batteria, poi nome, poi handing-off message; riga 33: \"lanciamo la calling function per human support in questo momento quando c'e' il handing-off message\"; riga 35-36: \"e' tutto nel flow di default che non deve essere cancellato editato si cancellarlo mai\"",
   "phone": "+391110000012",
   "newSession": true,
   "turns": [

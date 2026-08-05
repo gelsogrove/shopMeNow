@@ -1,5 +1,6 @@
 {
-  "description": "Problema PRESENTE nel flow builder (ERROR 001) — deve trovare il flow giusto e seguirlo nodo per nodo, iniziando dal nodo radice corretto ('c'è una luce rossa accesa?'), mai saltare al secondo nodo.",
+  "description": "Problema PRESENTE nel flow builder (ERROR 001, reale in DB) — deve trovare il flow giusto e seguirlo nodo per nodo, iniziando dal nodo radice corretto ('c'è una luce rossa accesa?', node_3ylhrbne), mai saltare al secondo nodo.",
+  "contractRule": "CONTRACT.md riga 6-7: \"cerchiamo il problmema dentro flow se non lo trovi allora passa a human support flow; se lo trova seguie ogni passaggio\"; riga 69: \"prende il testo del nodo corrente, lo dà al cliente ... un nodo alla volta, mai più di uno per messaggio\". Regressione specifica risolta oggi: il flow saltava il nodo radice e apriva sul secondo nodo.",
   "phone": "+391110000006",
   "newSession": true,
   "turns": [

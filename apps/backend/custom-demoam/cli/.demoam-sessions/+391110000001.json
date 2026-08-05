@@ -1,0 +1,22 @@
+{
+  "sessionId": "cli-391110000001-1785943444075",
+  "history": [
+    {
+      "role": "user",
+      "content": "ciao",
+      "timestamp": "2026-08-05T15:24:04.075Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?\n\nCiao! 👋 Come posso aiutarti oggi?",
+      "timestamp": "2026-08-05T15:24:08.410Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "en"
+    },
+    "patches": []
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "sessionId": "cli-391110000008-1785943407058",
+  "history": [
+    {
+      "role": "user",
+      "content": "il mio robot mi da errore 002, è surriscaldato",
+      "timestamp": "2026-08-05T15:23:27.058Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?",
+      "timestamp": "2026-08-05T15:23:33.511Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "en",
+      "activeFlowId": "cmsg4rtsl00043cnggjbq1hyi",
+      "activeFlowHash": "9acf2609fa4edeb8c337355668b4a1638c9b8b56e6d155ea97c21634c8a08a85",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "e002_hot_light",
+          "question": "È accesa una luce rossa fissa sul robot?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e002_noise",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e002_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e002_noise",
+          "question": "Il robot fa anche un rumore strano mentre lavora?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": null,
+              "targetFlowId": "cmsg4rtnr00033cngis1pyqvw",
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e002_cooldown",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e002_cooldown",
+          "question": "Hai lasciato il robot spento e all'ombra per almeno 15 minuti — la luce rossa si è spenta?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e002_ok",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e002_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e002_ok",
+          "question": "Perfetto, il surriscaldamento era temporaneo. Riavvia il robot e riprova — se il problema si ripete spesso, evita di farlo lavorare nelle ore più calde della giornata.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "e002_escalate",
+          "question": "Il surriscaldamento non si risolve da solo, meglio farlo controllare da un tecnico.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "e002_hot_light",
+      "visitedFlowIds": [
+        "cmsg4rtsl00043cnggjbq1hyi"
+      ]
+    },
+    "patches": []
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "sessionId": "cli-391110000004-1785943467220",
+  "history": [
+    {
+      "role": "user",
+      "content": "il mio robot non funziona bene",
+      "timestamp": "2026-08-05T15:24:27.220Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?\n\nGrazie per avermi contattato. Per aiutarti al meglio, ho bisogno di alcune informazioni.\n\nInnanzitutto, puoi darmi il numero di serie del dispositivo?",
+      "timestamp": "2026-08-05T15:24:31.250Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050197",
+      "timestamp": "2026-08-05T15:24:31.251Z"
+    },
+    {
+      "role": "assistant",
+      "content": "{{customerName}}, I'm putting you through to our operator, they'll get back to you shortly.\n\n**👤 Human Support message**\n\n📌 **Reason:** diagnostic_exhausted\n\n**Customer**\n• Name: —\n• Language: en\n\n**Case**\n• Serial number: HKA4OB100LQ26050197\n• Troubleshooting flow: cmsfavpet0000qwngacwdutj6\n\n**Answers collected**\n• problemDescription: il robot non funziona bene\n• problemStartedWhen: <UNKNOWN>\n\n**Summary**\nThe assistant could not resolve this conversation automatically (tool-hop limit reached).\nCustomer message: HKA4OB100LQ26050197\nSerial number: HKA4OB100LQ26050197\nActive flow: cmsfavpet0000qwngacwdutj6\nCollected data: {\"problemDescription\":\"il robot non funziona bene\",\"problemStartedWhen\":\"<UNKNOWN>\"}",
+      "timestamp": "2026-08-05T15:24:41.528Z"
+    },
+    {
+      "role": "user",
+      "content": "il robot si ferma dopo pochi minuti di lavoro senza motivo apparente",
+      "timestamp": "2026-08-05T15:24:41.529Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Grazie per i dettagli. Ho trovato un percorso diagnostico che potrebbe aiutarci.\n\nÈ accesa una luce rossa fissa sul robot?",
+      "timestamp": "2026-08-05T15:24:46.870Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "en",
+      "serialNumber": "HKA4OB100LQ26050197",
+      "collectedData": {
+        "problemDescription": "il robot si ferma dopo pochi minuti di lavoro senza motivo apparente",
+        "problemStartedWhen": "<UNKNOWN>"
+      },
+      "flowCheckOffered": true,
+      "humanSupportFlowOffered": true,
+      "activeFlowId": "cmsg4rtsl00043cnggjbq1hyi",
+      "activeFlowHash": "9acf2609fa4edeb8c337355668b4a1638c9b8b56e6d155ea97c21634c8a08a85",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "e002_hot_light",
+          "question": "È accesa una luce rossa fissa sul robot?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e002_noise",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e002_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e002_noise",
+          "question": "Il robot fa anche un rumore strano mentre lavora?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": null,
+              "targetFlowId": "cmsg4rtnr00033cngis1pyqvw",
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e002_cooldown",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e002_cooldown",
+          "question": "Hai lasciato il robot spento e all'ombra per almeno 15 minuti — la luce rossa si è spenta?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e002_ok",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e002_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e002_ok",
+          "question": "Perfetto, il surriscaldamento era temporaneo. Riavvia il robot e riprova — se il problema si ripete spesso, evita di farlo lavorare nelle ore più calde della giornata.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "e002_escalate",
+          "question": "Il surriscaldamento non si risolve da solo, meglio farlo controllare da un tecnico.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "e002_hot_light",
+      "visitedFlowIds": [
+        "cmsfavpet0000qwngacwdutj6",
+        "cmsg4rtsl00043cnggjbq1hyi"
+      ]
+    },
+    "patches": []
+  }
+}

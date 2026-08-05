@@ -1,5 +1,6 @@
 {
   "description": "Utente si lamenta (complaint) — deve saltare la raccolta tecnica (no 'quando è successo') e andare al gate pre-operatore, poi collegarlo a un operatore dopo aver chiesto il nome e mandato l'handing-off message SOLO nel turno in cui l'operatore è davvero contattato.",
+  "contractRule": "CONTRACT.md riga 12: \"se riconosciamo lo scontento dell'utente lo colleghiamo a un operatore\"; riga 13: \"Prima di collegare con l'operatore chiediamo il nome e facciamo l'handing-off message\"; GUARDS riga 59: \"l'annuncio del passaggio all'operatore può avvenire solo nel turno in cui l'operatore è stato davvero contattato, mai prima\"",
   "phone": "+391110000005",
   "newSession": true,
   "turns": [
