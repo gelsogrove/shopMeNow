@@ -11,6 +11,7 @@ import {
   deleteFlow,
   duplicateFlow,
   getFlowGraph,
+  listAllFlows,
   listFlows,
   saveFlowGraph,
 } from '../../../application/flow-builder/flow-graph.service'
@@ -96,6 +97,18 @@ export class FlowBuilderController {
       res.json({ flows })
     } catch (error) {
       logger.error('[flow-builder] listFlows error:', error)
+      res.status(500).json({ error: 'Failed to list flows' })
+    }
+  }
+
+  /** Every flow in the workspace, across categories — populates the "go to another flow" picker. */
+  async listAllFlows(req: Request, res: Response): Promise<void> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const flows = await listAllFlows(workspaceId)
+      res.json({ flows })
+    } catch (error) {
+      logger.error('[flow-builder] listAllFlows error:', error)
       res.status(500).json({ error: 'Failed to list flows' })
     }
   }

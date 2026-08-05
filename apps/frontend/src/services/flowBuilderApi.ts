@@ -51,6 +51,8 @@ export interface FlowEdge {
   id: string
   sourceNodeId: string
   targetNodeId?: string | null
+  // Hands over to another flow instead of a node here. Excludes targetNodeId.
+  targetFlowId?: string | null
   label: string
   triggersEscalation: boolean
 }
@@ -111,6 +113,12 @@ export const flowApi = {
     const response = await api.get(`/workspaces/${workspaceId}/demorobot/flows`, {
       params: { robotModelId: flowCategoryId ?? undefined, generic: flowCategoryId === null ? "true" : undefined },
     })
+    return response.data?.flows ?? []
+  },
+  // Every flow in the workspace, across categories — for the "go to another
+  // flow" picker on an answer, which is not scoped to the flow being edited.
+  listAll: async (workspaceId: string): Promise<Array<{ id: string; title: string; flowCategoryId: string | null }>> => {
+    const response = await api.get(`/workspaces/${workspaceId}/demorobot/flows/all`)
     return response.data?.flows ?? []
   },
   create: async (workspaceId: string, data: { title: string; robotModelId: string | null; description?: string }): Promise<Flow> => {

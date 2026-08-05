@@ -50,10 +50,13 @@ function apiEdgeToFlowEdge(e: ApiFlowEdge): Edge {
   return {
     id: e.id,
     source: e.sourceNodeId,
+    // A flow-to-flow answer has no node in THIS canvas to point at — target
+    // stays empty, same as an unwired answer, and targetFlowId in data
+    // carries the real destination.
     target: e.targetNodeId ?? "",
     sourceHandle: e.id,
-    label: e.label,
-    data: { triggersEscalation: e.triggersEscalation, label: e.label },
+    label: e.targetFlowId ? `${e.label} ↪` : e.label,
+    data: { triggersEscalation: e.triggersEscalation, label: e.label, targetFlowId: e.targetFlowId ?? null },
     style: e.triggersEscalation ? { stroke: "#f59e0b" } : undefined,
   }
 }
@@ -72,6 +75,7 @@ function FlowEditorInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowQuestionNodeData>>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [assets, setAssets] = useState<Asset[]>([])
+  const [allFlows, setAllFlows] = useState<Array<{ id: string; title: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
@@ -108,6 +112,11 @@ function FlowEditorInner() {
     if (!workspaceId || !categoryId || categoryId === "generic") return
     assetApi.list(workspaceId, categoryId).then(setAssets).catch(() => {})
   }, [workspaceId, categoryId])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    flowApi.listAll(workspaceId).then(setAllFlows).catch(() => {})
+  }, [workspaceId])
 
   // specs/flow-graph-editor "Adding an answer creates a linked child node":
   // one atomic action — create the FlowEdge, auto-create a connected child
@@ -301,7 +310,8 @@ function FlowEditorInner() {
   // "Go to" dropdown in the side panel — an alternative to canvas drag for
   // pointing an answer at an existing node, or creating a brand new one.
   // targetNodeId === "__new__" creates a fresh empty node (same placement
-  // logic as handleAddAnswer) and retargets the edge to it.
+  // logic as handleAddAnswer) and retargets the edge to it. Clears any prior
+  // targetFlowId: an answer points at a node OR a flow, never both.
   const handleRetargetAnswer = useCallback(
     (nodeId: string, edgeId: string, targetNodeId: string) => {
       if (targetNodeId === "__new__") {
@@ -314,12 +324,22 @@ function FlowEditorInner() {
           data: { question: "", answers: [], attachmentCount: 0, terminalType: null } as FlowQuestionNodeData,
         }
         setNodes((prev) => [...prev, childNode])
-        setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: childId } : e)))
+        setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: childId, data: { ...e.data, targetFlowId: null } } : e)))
         return
       }
-      setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: targetNodeId } : e)))
+      setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: targetNodeId, data: { ...e.data, targetFlowId: null } } : e)))
     },
     [setNodes, setEdges],
+  )
+
+  // Points this answer at another flow's root instead of a node in this
+  // canvas. Clears target (no local node) — targetFlowId in data is the
+  // real destination, read by handleSave.
+  const handleRetargetAnswerToFlow = useCallback(
+    (_nodeId: string, edgeId: string, targetFlowId: string) => {
+      setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: "", data: { ...e.data, targetFlowId } } : e)))
+    },
+    [setEdges],
   )
 
   const selectedNode = panelNodeId ? nodes.find((n) => n.id === panelNodeId) ?? null : null
@@ -370,6 +390,7 @@ function FlowEditorInner() {
           id: e.id,
           sourceNodeId: e.source,
           targetNodeId: e.target || null,
+          targetFlowId: (e.data as any)?.targetFlowId ?? null,
           label: (e.data as any)?.label ?? (typeof e.label === "string" ? e.label : ""),
           triggersEscalation: !!(e.data as any)?.triggersEscalation,
         })),
@@ -511,13 +532,16 @@ function FlowEditorInner() {
         availableAssets={assets}
         attachedAssetIds={attachedAssetIds}
         allNodes={nodes.map((n) => ({ id: n.id, question: n.data.question }))}
+        allFlows={allFlows.filter((f) => f.id !== flowId)}
         edgeTargets={Object.fromEntries(edges.map((e) => [e.id, e.target]))}
+        edgeTargetFlows={Object.fromEntries(edges.map((e) => [e.id, (e.data as any)?.targetFlowId ?? ""]))}
         onChange={handleNodeDataChange}
         onAddAnswer={handleAddAnswer}
         onRemoveAnswer={handleRemoveAnswer}
         onToggleAnswerEscalation={handleToggleAnswerEscalation}
         onToggleAttachment={handleToggleAttachment}
         onRetargetAnswer={handleRetargetAnswer}
+        onRetargetAnswerToFlow={handleRetargetAnswerToFlow}
         onDeleteNode={handleDeleteNode}
         onUploadAsset={categoryId && categoryId !== "generic" ? handleUploadAsset : undefined}
         onDeleteAsset={categoryId && categoryId !== "generic" ? handleDeleteAsset : undefined}

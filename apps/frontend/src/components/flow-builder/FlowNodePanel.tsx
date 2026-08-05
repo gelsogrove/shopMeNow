@@ -45,8 +45,13 @@ interface FlowNodePanelProps {
   // All nodes in the flow (id + question text), for the "Go to" dropdown —
   // lets an answer point at an existing node without canvas drag.
   allNodes: Array<{ id: string; question: string }>
+  // Every flow in the workspace (this one excluded) — the same dropdown also
+  // offers "hand over to this other flow entirely" as a destination.
+  allFlows: Array<{ id: string; title: string }>
   // edgeId -> current target node id, so the dropdown shows the existing link.
   edgeTargets: Record<string, string>
+  // edgeId -> current target flow id, mutually exclusive with edgeTargets.
+  edgeTargetFlows: Record<string, string>
   // Debounced writes into React Flow state (design.md Decision 12:
   // updateNodeData, never a per-keystroke store write).
   onChange: (nodeId: string, patch: Partial<FlowQuestionNodeData>) => void
@@ -55,6 +60,8 @@ interface FlowNodePanelProps {
   onToggleAnswerEscalation: (nodeId: string, edgeId: string, value: boolean) => void
   onToggleAttachment: (nodeId: string, assetId: string, attached: boolean) => void
   onRetargetAnswer: (nodeId: string, edgeId: string, targetNodeId: string) => void
+  // Points this answer at another flow's root instead of a node here.
+  onRetargetAnswerToFlow: (nodeId: string, edgeId: string, targetFlowId: string) => void
   onDeleteNode: (nodeId: string) => void
   // Uploads a new asset for the current category. Absent when the flow is the
   // workspace-generic one (no category to attach assets to).
@@ -75,13 +82,16 @@ export function FlowNodePanel({
   availableAssets,
   attachedAssetIds,
   allNodes,
+  allFlows,
   edgeTargets,
+  edgeTargetFlows,
   onChange,
   onAddAnswer,
   onRemoveAnswer,
   onToggleAnswerEscalation,
   onToggleAttachment,
   onRetargetAnswer,
+  onRetargetAnswerToFlow,
   onDeleteNode,
   onUploadAsset,
   onDeleteAsset,
@@ -194,7 +204,12 @@ export function FlowNodePanel({
             </div>
             <div className="space-y-2">
               {data.answers.map((answer) => {
-                const currentTarget = edgeTargets[answer.edgeId] ?? ""
+                const currentTargetNode = edgeTargets[answer.edgeId] ?? ""
+                const currentTargetFlow = edgeTargetFlows[answer.edgeId] ?? ""
+                // Node ids and flow ids come from independent generators, so a
+                // "flow:" prefix distinguishes the two kinds of destination in
+                // one dropdown without risking a collision.
+                const selectValue = currentTargetFlow ? `flow:${currentTargetFlow}` : currentTargetNode || undefined
                 return (
                   <div key={answer.edgeId} className="rounded-md border border-gray-200 px-2 py-1.5 space-y-1.5">
                     <div className="flex items-center gap-2">
@@ -213,8 +228,14 @@ export function FlowNodePanel({
                     <div className="flex items-center gap-2">
                       <ArrowRight className="h-3 w-3 text-gray-400 shrink-0" />
                       <Select
-                        value={currentTarget || undefined}
-                        onValueChange={(v) => onRetargetAnswer(nodeId, answer.edgeId, v)}
+                        value={selectValue}
+                        onValueChange={(v) => {
+                          if (v.startsWith("flow:")) {
+                            onRetargetAnswerToFlow(nodeId, answer.edgeId, v.slice("flow:".length))
+                          } else {
+                            onRetargetAnswer(nodeId, answer.edgeId, v)
+                          }
+                        }}
                       >
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="Go to…" />
@@ -228,6 +249,18 @@ export function FlowNodePanel({
                                 {n.question || "(empty question)"}
                               </SelectItem>
                             ))}
+                          {allFlows.length > 0 && (
+                            <>
+                              <SelectItem value="__flows_divider__" disabled>
+                                — Other flows —
+                              </SelectItem>
+                              {allFlows.map((f) => (
+                                <SelectItem key={f.id} value={`flow:${f.id}`}>
+                                  ↪ {f.title}
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

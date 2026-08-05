@@ -74,5 +74,7 @@ PROSSIMO — da pianificare, non ancora iniziato
 
 FLOW:
 e' possibile cheun flow passi ad un altro flow ! deve essere un opzione da gestire
+[FATTO 2026-08-05] un'answer puo' puntare a targetFlowId invece che a un nodo (FlowEdge.targetFlowId, migration 20260805140000_add_flow_edge_target_flow) — il flow editor ha il picker "go to another flow" (flowApi.listAll / GET .../demorobot/flows/all)
+[FATTO 2026-08-05] rimosso il dialog "Flow instructions" (generate/save di un human-readable prompt via LLM dopo il Save): non veniva mai letto a runtime, il flow gira nodo-per-nodo su compiledPrompt + graph. Salva ora torna direttamente alla lista flow
 
 - le parti harcodeate devon essee portate al minimo parliamo con l'utente per ogni scelta di hard-code non dico di non usarle dico di condividere

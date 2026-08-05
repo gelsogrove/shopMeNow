@@ -179,6 +179,7 @@ export function createFlowBuilderRoutes(): Router {
    *         description: Flow created
    */
   router.get('/workspaces/:workspaceId/demorobot/flows', ...middlewares, controller.listFlows.bind(controller))
+  router.get('/workspaces/:workspaceId/demorobot/flows/all', ...middlewares, controller.listAllFlows.bind(controller))
   router.post('/workspaces/:workspaceId/demorobot/flows', ...middlewares, controller.createFlow.bind(controller))
 
   /**

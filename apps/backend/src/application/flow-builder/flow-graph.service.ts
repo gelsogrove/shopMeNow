@@ -51,6 +51,15 @@ export async function listFlows(workspaceId: string, flowCategoryId: string | nu
   })
 }
 
+/** Every flow in the workspace, across all categories — for pickers that hand over to ANY flow (e.g. flow-to-flow answers), not just the one being edited. */
+export async function listAllFlows(workspaceId: string) {
+  return prisma.flow.findMany({
+    where: { workspaceId },
+    select: { id: true, title: true, flowCategoryId: true },
+    orderBy: { title: 'asc' },
+  })
+}
+
 export async function createFlow(workspaceId: string, flowCategoryId: string | null, title: string, description?: string) {
   // Compile immediately with an empty graph so the row is never in a
   // "never compiled" limbo state — it will fail validation (no root node)
