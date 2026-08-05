@@ -56,17 +56,12 @@ async function main() {
     { id: "hf_powered_on", question: "Before connect to our Human Support let me ask you a couple of question, Is the robot power on?", positionX: 0, positionY: 0, fieldKey: "robotPoweredOn", fieldType: "boolean", terminalType: null },
     { id: "hf_wifi", question: "Good. And now Can you confirm that the wifi is active ?", positionX: 280, positionY: 0, fieldKey: "wifiActive", fieldType: "boolean", terminalType: null },
 
-    // Corrective LOOP nodes: a "No" is not a dead end. Support cannot help a
-    // robot that is off or offline, so we ask the customer to fix it and
-    // re-check, rather than escalating with a blocker nobody addressed
-    // (Andrea, 2026-08-06).
-    //
-    // Listed AFTER the question they loop back to, never before: the
-    // compiler's reachability walk starts from the first node it considers a
-    // root, and a LOOP node placed first makes every other node look
-    // unreachable. Cosmetic (the graph is identical either way, and the
-    // runtime's own rootNodeId ignores LOOP back-edges) but it fills the
-    // editor with false warnings.
+    // Corrective fix nodes: a "No" is not a dead end. Support cannot help a
+    // robot that is off or offline, so we ask the customer to fix it, and
+    // "Done" continues FORWARD to the next check (see the edges below for
+    // why forward, not back). terminalType LOOP is kept as the marker the
+    // runtime's per-turn cap keys on — not because the graph cycles (it
+    // doesn't any more).
     { id: "hf_power_fix", question: "The robot needs to be switched on for support to be able to help — please turn it on, then let me know once it is running.", positionX: 0, positionY: 200, terminalType: "LOOP" },
     { id: "hf_wifi_fix", question: "Support needs the robot connected to be able to help — please switch the wifi on, then let me know once it is connected.", positionX: 280, positionY: 200, terminalType: "LOOP" },
 
