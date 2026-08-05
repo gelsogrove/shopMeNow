@@ -249,7 +249,7 @@ const ESCALATE_TOOL = {
       properties: {
         reason: {
           type: 'string',
-          enum: ['complaint', 'diagnostic_exhausted', 'no_matching_flow', 'faq_not_found', 'emergency'],
+          enum: ['complaint', 'diagnostic_exhausted', 'no_matching_flow', 'faq_not_found', 'requested_operator', 'emergency'],
         },
         summary: { type: 'string', description: 'Operator briefing: facts gathered along the path, in the configured operator briefing language.' },
       },
@@ -614,7 +614,11 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       // Complaints (2-A) are the same: unhappy about something that already
       // happened has no device to diagnose, so no serial number and no
       // technical checks either — only the name, to greet them and hand off.
-      const skipTechnical = reason === 'faq_not_found' || reason === 'complaint'
+      // A bare "I want to talk to a person" with no problem described yet is
+      // the same shape again: nothing to diagnose until they say what is
+      // wrong, so don't make them sit through a gate for a case that was
+      // never opened.
+      const skipTechnical = reason === 'faq_not_found' || reason === 'complaint' || reason === 'requested_operator'
       if (skipTechnical && !state.skippedTechnicalGate) {
         updateState(ctx.sessionId, { skippedTechnicalGate: true }, { mirror: false })
       }
@@ -1014,9 +1018,10 @@ function formatRuntimeBlock(
     lines.push(
       '',
       '## NOTE FOR THE OPERATOR BRIEFING',
-      'This case came from an unanswered FAQ question, not a technical report:',
-      'no serial number, problem description or device checks were collected.',
-      'Say so plainly in the summary so the operator knows to start from scratch.',
+      'This case has no device to diagnose (an unanswered FAQ question, or a',
+      'complaint about something that already happened): no serial number,',
+      'problem description or device checks were collected. Say so plainly in',
+      'the summary so the operator knows what kind of case this is.',
     )
   }
 
@@ -1038,7 +1043,7 @@ function formatOperatorBriefing(params: {
   if (ticketId) lines.push(`🎫 **Ticket:** ${ticketId}`)
   lines.push(`📌 **Reason:** ${reason}`)
   if (state.skippedTechnicalGate) {
-    lines.push('⚠️ **No technical details collected** — this came from an unanswered FAQ question.')
+    lines.push('⚠️ **No technical details collected** — no device to diagnose on this incident.')
   }
   lines.push('')
 

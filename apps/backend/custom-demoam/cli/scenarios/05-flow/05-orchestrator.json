@@ -1,0 +1,16 @@
+{
+  "description": "L'orchestratore non deve richiedere una domanda del flow la cui risposta è già presente in ciò che il cliente ha detto — qui la descrizione del problema menziona già 'la luce rossa è accesa e lampeggia in continuazione', che risponde SIA al primo nodo del flow ERROR 001 ('c'è una luce rossa accesa?') SIA al secondo ('lampeggia continuamente?'): il flow deve saltare dritto alla terza domanda (i 10 minuti di raffreddamento), senza mai ripetere le prime due.",
+  "contractRule": "Se il cliente ha già dato la risposta a una domanda del flow parlando del problema, l'orchestratore non la richiede di nuovo — la salva e passa alla prossima domanda non ancora risposta, saltando anche quella se già data.",
+  "phone": "+391110000405",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mi da errore 001" },
+    { "message": "HKA4OB100LQ26050405" },
+    { "message": "la luce rossa è accesa e lampeggia in continuazione, non si ferma mai" },
+    { "message": "è successo stamattina" },
+    { "message": "sì, dopo 10 minuti la luce si è spenta" }
+  ],
+  "expect": {
+    "replyExcludes": ["operatore", "operator"]
+  }
+}

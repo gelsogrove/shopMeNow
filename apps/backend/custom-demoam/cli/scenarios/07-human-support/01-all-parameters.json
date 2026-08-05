@@ -1,0 +1,19 @@
+{
+  "description": "Human Support completo — problema non presente in nessun flow: seriale, descrizione, poi il flow Human operator (acceso/wifi come nodi reali del flow builder), poi cut-scheduling/batteria/nome — verifica che TUTTI i parametri vengano richiesti nell'ordine giusto prima dell'escalation.",
+  "contractRule": "Il gate pre-operatore chiede, in ordine, tutto ciò che ancora manca: seriale, descrizione, acceso, wifi, cut-scheduling, batteria, nome — mai saltarne uno se non è già noto.",
+  "phone": "+391110000012",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot fa un rumore mai sentito prima, tipo un ronzio metallico continuo" },
+    { "message": "HKA4OB100LQ26050212" },
+    { "message": "il ronzio metallico è iniziato ieri sera e non si ferma mai, anche da fermo" },
+    { "message": "sì è acceso" },
+    { "message": "sì il wifi è connesso" },
+    { "message": "no, non sta tagliando in questo momento" },
+    { "message": "sì la batteria è carica all'80%" },
+    { "message": "Giulia Bianchi" }
+  ],
+  "expect": {
+    "replyContains": ["Giulia"]
+  }
+}

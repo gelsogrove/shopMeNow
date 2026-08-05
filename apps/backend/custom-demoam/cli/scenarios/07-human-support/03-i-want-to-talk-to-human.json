@@ -1,0 +1,14 @@
+{
+  "description": "Cliente chiede subito di parlare con un operatore, senza descrivere alcun problema — non c'è nulla da diagnosticare: niente seriale, niente controlli tecnici, solo il nome prima dell'escalation reale (reason 'requested_operator').",
+  "contractRule": "Richiesta esplicita di un operatore senza un problema ancora descritto → niente da diagnosticare, si chiede solo il nome e si escala subito.",
+  "phone": "+391110000702",
+  "newSession": true,
+  "turns": [
+    { "message": "voglio parlare subito con un operatore" },
+    { "message": "Paolo Neri" }
+  ],
+  "expect": {
+    "replyContains": ["Paolo"],
+    "replyExcludes": ["numero di serie", "serial number", "wifi", "batteria", "battery"]
+  }
+}

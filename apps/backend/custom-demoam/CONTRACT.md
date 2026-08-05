@@ -89,3 +89,18 @@ UI/UX
   (dove porta ogni risposta — nodo, fine, operatore, o un altro flow — quali
   campi sta salvando, cosa succede al Save). Va curata con la stessa
   attenzione della logica che governa
+
+ORCHESTRATOR
+
+- se il cliente, descrivendo il problema, ha già dato la risposta a una
+  domanda del flow (es. dice "ho la luce accesa" mentre spiega cosa succede),
+  l'orchestratore non deve richiederla di nuovo: la salva e passa alla
+  prossima domanda non ancora risposta. Se anche quella è già stata detta,
+  salta anche quella, e così via — mai fermarsi su una domanda il cui dato
+  è già presente in SESSION STATE.
+
+PULIZIA
+
+- mai lasciare file temporanei/di scratch appesi nella root del progetto
+  (script one-off tipo scratch_*.ts per query dirette al DB, ecc.) — vanno
+  rimossi subito dopo l'uso, la soluzione deve restare pulita in ogni momento

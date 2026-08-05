@@ -1,0 +1,11 @@
+{
+  "description": "Messaggio troppo vago per classificare subito il problema ('il robot non funziona', nessun dettaglio) — il modello non ha ancora abbastanza informazioni per cercare in FAQ o flow: deve prima chiedere il numero di serie, poi chiedere maggiori dettagli sul problema (respinti se troppo generici — min 8 caratteri, max 2 tentativi), e solo da quei dettagli decidere se una FAQ risponde o un flow corrisponde.",
+  "contractRule": "Un problema descritto troppo vagamente non basta per cercare in FAQ o flow — prima si raccoglie il caso (seriale, poi una descrizione con un minimo di dettaglio, respinta dal codice se troppo generica), solo dopo si decide dove cercare la risposta.",
+  "phone": "+391110000601",
+  "newSession": true,
+  "turns": [
+    { "message": "il robot non funziona" },
+    { "message": "HKA4OB100LQ26050501" },
+    { "message": "il display mostra ERROR 001 e lampeggia una luce rossa" }
+  ]
+}

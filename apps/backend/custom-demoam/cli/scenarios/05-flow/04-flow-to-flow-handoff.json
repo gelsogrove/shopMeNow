@@ -1,0 +1,14 @@
+{
+  "description": "Flusso che manda a un altro flusso — ERROR 002 (surriscaldamento, reale in DB), risposta 'Sì' al nodo e002_noise deve saltare al flow ERROR 003 tramite targetFlowId (edge e002_e_noise_yes), dal suo nodo radice, mantenendo collectedData. Intake completo prima che il primo flow venga attaccato.",
+  "contractRule": "Ogni nodo del flow builder può portare a: un nuovo nodo, la fine del flusso, l'escalation a un operatore, oppure un altro flow intero — un flow può passare a un altro flow senza interrompere la conversazione.",
+  "phone": "+391110000008",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mi da errore 002, è surriscaldato" },
+    { "message": "HKA4OB100LQ26050201" },
+    { "message": "il display mostra ERROR 002 e sembra surriscaldato" },
+    { "message": "è successo poco fa" },
+    { "message": "sì è accesa una luce rossa fissa" },
+    { "message": "sì fa anche un rumore strano mentre lavora" }
+  ]
+}
