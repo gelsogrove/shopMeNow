@@ -100,6 +100,16 @@
       "role": "assistant",
       "content": "Perfetto, la batteria è carica. Ora mi serve solo il tuo nome per passarti al nostro team di customer care — come ti chiami?",
       "timestamp": "2026-08-05T20:56:36.697Z"
+    },
+    {
+      "role": "user",
+      "content": "Sara",
+      "timestamp": "2026-08-05T20:56:36.698Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Perfetto, Sara. Prima di passarti al nostro team, mi serve una conferma: il robot è effettivamente acceso in questo momento?",
+      "timestamp": "2026-08-05T20:56:41.527Z"
     }
   ],
   "persistedState": {
@@ -114,7 +124,9 @@
         "batterySufficient": "true"
       },
       "flowCheckOffered": true,
-      "humanSupportFlowOffered": true
+      "humanSupportFlowOffered": true,
+      "name": "Sara",
+      "pendingGateField": "robotPoweredOn"
     },
     "patches": []
   }
