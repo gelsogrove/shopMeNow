@@ -2,7 +2,7 @@
 // steps.md's Step 2. Kept out of agent.ts so the gate logic is unit-testable
 // in isolation, same reasoning as custom-demorobot/flow-selection.ts.
 
-import { attachFlow, SessionState } from './state.js'
+import { attachFlow, getState, SessionState } from './state.js'
 import { buildFlowGraph, rootNodeId } from './flow-machine.js'
 
 export interface FlowSummary {
@@ -39,6 +39,7 @@ export interface StartFlowContext {
   availableFlows?: FlowSummary[]
   loadFlow?: LoadFlowHandler
   currentMessage?: string
+  gateQuestions?: GateQuestions | null
 }
 
 export interface StartFlowResult {
@@ -132,6 +133,47 @@ export async function startFlow(
         available.length > 0
           ? `"${flowId}" is not in AVAILABLE FLOWS. Use one of: ${available.map((f) => f.flowId).join(', ')}. If none of them matches, go straight to the pre-operator checks — never invent a procedure.`
           : 'No flows are configured for this workspace. Go straight to the pre-operator checks.',
+    }
+  }
+
+  // Andrea 2026-08-05, seen live: with the Human Support flow already
+  // attached and a question pending on its current node, the model called
+  // start_flow(ERROR_001) again instead of answering that question — ERROR
+  // 001 got reattached mid-conversation, currentNodeId reset to ITS root, and
+  // the two flows' questions interleaved from then on. A flow with a pending
+  // node can only be advanced by answer_step or abandoned by abandon_flow;
+  // start_flow is for attaching the FIRST flow of an incident, and for the
+  // code-driven handoff in answer_step's own result.nextFlowId branch (which
+  // calls startFlow directly, never through this tool-call path, so it never
+  // hits this guard).
+  if (getState(ctx.sessionId).currentNodeId) {
+    return {
+      ok: false,
+      error: 'flow_already_active',
+      dictates_text: true,
+      instruction:
+        `A flow is already running with a question pending — call answer_step with the customer's ` +
+        `answer to THAT question, or abandon_flow if they clearly changed subject. Do not attach ` +
+        `"${match.title}" on top of it.`,
+    }
+  }
+
+  // Andrea 2026-08-05, seen live: the model attached ERROR 001 on the very
+  // first message ("il mio robot mi da errore 001") before ever asking for
+  // the serial number — the case had a matching flow so start_flow won the
+  // race against intake entirely. The case (serial, description, when) is
+  // collected once, up front, regardless of which flow ends up handling it —
+  // a flow attaching mid-intake is the same class of bug as a flow skipping
+  // its own root node.
+  const pendingIntake = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+  if (pendingIntake) {
+    return {
+      ok: false,
+      error: 'intake_incomplete',
+      dictates_text: true,
+      instruction:
+        `The case is not fully collected yet — "${match.title}" cannot be attached before that. ` +
+        formatIntakeBlock(pendingIntake),
     }
   }
 
@@ -235,18 +277,23 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
   if (!step) return null
 
   const lines = [
-    '## THE QUESTION TO ASK NOW',
+    '## THE QUESTION TO ASK NOW (mandatory, this hop only — no tool call available)',
     '',
     'This overrides every other instruction in this prompt, including anything',
-    'above about what to collect or in which order. Ask THIS question, verbatim,',
-    'and nothing else:',
+    'above about what to collect or in which order. This hop offers no tools —',
+    'writing text is the ONLY thing you can do, and the text must be a',
+    'translation of THIS question, verbatim, and nothing else:',
     '',
     step.question,
     '',
     "Translate it into the customer's language and send it as your whole reply.",
-    'Do NOT add other questions, do NOT offer options or possible causes, and',
-    'do NOT rephrase it into a multiple-choice list. A brief acknowledgement of',
-    'what the customer just said may come first, then this question.',
+    'A DIFFERENT question — even a reasonable-sounding follow-up like "is the',
+    'robot on or off?" — is not an option right now, no matter how relevant it',
+    'seems: it is not the question on record, and asking it would silently skip',
+    'this one. Do NOT add other questions, do NOT offer options or possible',
+    'causes, and do NOT rephrase it into a multiple-choice list. A brief',
+    'acknowledgement of what the customer just said may come first, then this',
+    'question, verbatim.',
   ]
 
   if (step.field === 'serialNumber') {

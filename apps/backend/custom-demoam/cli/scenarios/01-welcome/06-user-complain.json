@@ -1,0 +1,14 @@
+{
+  "description": "Utente si lamenta pesantemente (reclamo su un ordine/esperienza passata) — niente domande tecniche (no seriale, no acceso/wifi/cut-scheduling/batteria): l'unica domanda prima dell'escalation è il nome, per salutarlo e mandare l'handing-off message.",
+  "contractRule": "Reclamo → nessuna diagnostica tecnica (non c'è un dispositivo da diagnosticare), si chiede solo il nome, poi si collega a un operatore con l'handing-off message inviato solo nel turno in cui l'operatore è davvero contattato.",
+  "phone": "+391110000005",
+  "newSession": true,
+  "turns": [
+    { "message": "sono molto scontento, ho comprato il robot un mese fa e si è già rotto due volte, voglio parlare con qualcuno" },
+    { "message": "Mario Rossi" }
+  ],
+  "expect": {
+    "replyContains": ["Mario"],
+    "replyExcludes": ["numero di serie", "serial number", "wifi", "batteria", "battery"]
+  }
+}

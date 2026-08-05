@@ -1,0 +1,22 @@
+{
+  "description": "Utente sbaglia 3 volte il numero di serie (formato reale richiesto: serialNumberPattern ^HK.{17}$, 19 caratteri con HK, da settings.json) — dopo 3 tentativi falliti il gate smette di richiederlo (serialNumberExhausted) e prosegue con le domande restanti fino a contattare davvero il supporto umano.",
+  "contractRule": "Il numero di serie viene validato dal codice (formato/lunghezza), mai dal modello; dopo 3 tentativi falliti si passa oltre senza richiederlo di nuovo, e la conversazione arriva comunque a contattare l'operatore.",
+  "phone": "+391110000009",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot non parte" },
+    { "message": "123" },
+    { "message": "ABC" },
+    { "message": "non lo trovo il numero di serie" },
+    { "message": "il robot non si accende proprio, ho premuto il pulsante ma niente" },
+    { "message": "è successo stamattina" },
+    { "message": "sì è collegato alla corrente" },
+    { "message": "sì il wifi è attivo" },
+    { "message": "no non sta tagliando" },
+    { "message": "la batteria dovrebbe essere carica" },
+    { "message": "Sara" }
+  ],
+  "expect": {
+    "replyContains": ["Sara"]
+  }
+}

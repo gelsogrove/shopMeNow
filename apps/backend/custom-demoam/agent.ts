@@ -487,9 +487,13 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         }
       }
 
+      // detachFlow first: startFlow refuses to attach on top of a flow with
+      // a pending node (see gate.ts's flow_already_active guard) — this
+      // handoff is the one legitimate case of that, so the old flow's node
+      // is cleared before attaching the next one.
+      detachFlow(ctx.sessionId)
       const handover = await startFlow(ctx, { flowId: result.nextFlowId })
       if (!handover.ok) {
-        detachFlow(ctx.sessionId)
         return { ok: true, escalate: true, error: 'flow_handover_failed' }
       }
       return handover
@@ -607,7 +611,10 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     if (reason !== 'emergency') {
       // steps.md 2-B.3: the FAQ-not-found path never collected a technical
       // case, so the gate only asks for the name — not the full 7 fields.
-      const skipTechnical = reason === 'faq_not_found'
+      // Complaints (2-A) are the same: unhappy about something that already
+      // happened has no device to diagnose, so no serial number and no
+      // technical checks either — only the name, to greet them and hand off.
+      const skipTechnical = reason === 'faq_not_found' || reason === 'complaint'
       if (skipTechnical && !state.skippedTechnicalGate) {
         updateState(ctx.sessionId, { skippedTechnicalGate: true }, { mirror: false })
       }

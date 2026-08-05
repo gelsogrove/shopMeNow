@@ -1,0 +1,13 @@
+{
+  "description": "Utente descrive un problema e fornisce un numero di serie valido al primo tentativo (19 caratteri, inizia con HK, pattern reale ^HK.{17}$ da settings.json) — il gate deve accettarlo subito, senza chiedere di ricontrollarlo, e proseguire con la domanda successiva.",
+  "contractRule": "Il numero di serie viene validato dal codice (formato/lunghezza); se il formato è corretto, viene accettato subito e non viene mai rimesso in discussione.",
+  "phone": "+391110000404",
+  "newSession": true,
+  "turns": [
+    { "message": "il robot non parte" },
+    { "message": "HKA4OB100LQ26050199" }
+  ],
+  "expect": {
+    "replyExcludes": ["non è valido", "not valid", "riprova", "ricontrolla"]
+  }
+}

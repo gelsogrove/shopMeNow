@@ -1,13 +1,12 @@
 {
-  "description": "Utente fa una domanda NON coperta da nessuna delle 3 FAQ in DB (batteria sostitutiva — le FAQ parlano solo di scelta modello, pulizia, uso sotto pioggia) — deve dire onestamente che non ha questa informazione, mai inventare una risposta, poi chiedere solo il nome ed escalare con reason 'faq_not_found' (niente domande tecniche: non c'è un caso da diagnosticare).",
-  "contractRule": "FAQ non trovata → dice onestamente che non ha l'informazione, mai inventa; chiede solo il nome (non seriale/problema) ed escala a Human operator flow.",
+  "description": "Utente fa una domanda NON coperta da nessuna delle 3 FAQ in DB (batteria sostitutiva — le FAQ parlano solo di scelta modello, pulizia, uso sotto pioggia) — deve dire onestamente che non ha questa informazione, mai inventare una risposta. Una domanda generica senza risposta NON è di per sé motivo di escalation: nessuna richiesta del nome, nessun contatto con l'operatore.",
+  "contractRule": "FAQ non trovata → dice onestamente che non ha l'informazione, mai inventa, resta disponibile — non chiede il nome e non chiama escalate_to_operator solo per questo.",
   "phone": "+391110000302",
   "newSession": true,
   "turns": [
-    { "message": "posso mettere un'altra batteria sul robot?" },
-    { "message": "Marco" }
+    { "message": "posso mettere un'altra batteria sul robot?" }
   ],
   "expect": {
-    "replyExcludes": ["numero di serie", "serial number"]
+    "replyExcludes": ["numero di serie", "serial number", "operatore", "operator", "collega", "colleague"]
   }
 }
