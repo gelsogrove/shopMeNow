@@ -600,6 +600,9 @@ interface DemoFeature {
   // Optional count shown in the third column (how many FAQs, flows, languages…).
   // Left out when a feature has nothing meaningful to count.
   count?: string
+  // Rough build effort, rendered as a 3-segment bar. Only meaningful on "todo"
+  // rows — on a finished feature the work is already paid for, so it is hidden.
+  effort?: 1 | 2 | 3
 }
 
 const DEMO_FEATURES: DemoFeature[] = [
@@ -623,6 +626,7 @@ const DEMO_FEATURES: DemoFeature[] = [
     name: "Presentation Video",
     description: "Short video introducing the assistant and how it works.",
     status: "todo",
+    effort: 1,
   },
   {
     name: "FAQ",
