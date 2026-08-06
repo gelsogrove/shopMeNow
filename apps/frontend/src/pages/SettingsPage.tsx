@@ -803,6 +803,7 @@ export function SettingsPage() {
               customChatbotModel: formData.customChatbotModel,
               customChatbotTemperature: formData.customChatbotTemperature,
               customChatbotMaxTokens: formData.customChatbotMaxTokens,
+              speechToTextEnabled: formData.speechToTextEnabled,
               audioOutput: formData.audioOutput,
               audioVoices: formData.audioVoices,
               customChatbotAdvancedSettings: formData.customChatbotAdvancedSettings,
@@ -889,7 +890,6 @@ export function SettingsPage() {
           <WidgetSupportSection
             formData={{
               hasHumanSupport: formData.hasHumanSupport,
-              speechToTextEnabled: formData.speechToTextEnabled,
               hasSalesAgents: formData.hasSalesAgents,
               operatorContactMethod: formData.operatorContactMethod,
               operatorEmails: formData.operatorEmails,

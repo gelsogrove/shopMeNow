@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Headphones, Mic, Smartphone, Users, Mail } from "lucide-react"
+import { Headphones, Smartphone, Users, Mail } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { OperatorRecipientList } from "@/components/settings/OperatorRecipientList"
 
