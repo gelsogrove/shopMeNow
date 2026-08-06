@@ -610,6 +610,11 @@ const DEMO_FEATURES: DemoFeature[] = [
     count: "3",
   },
   {
+    name: "AI personality",
+    description: "You define the assistant's name, tone and rules — no coding needed.",
+    status: "done",
+  },
+  {
     name: "Welcome message",
     description: "Greets new customers and welcomes returning ones back by name.",
     status: "done",
@@ -666,7 +671,7 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "todo",
   },
   {
-    name: "Send Images",
+    name: "Send Images and Documents",
     description: "The chatbot can send images and documents to the customer.",
     status: "todo",
   },
@@ -676,13 +681,18 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "done",
   },
   {
+    name: "Block spam user",
+    description: "Blocked numbers are ignored: no reply, no notification, no cost.",
+    status: "done",
+  },
+  {
     name: "Push Message",
     description: "Proactive promotions and reminders sent to customers outside the chat.",
     status: "todo",
   },
   {
-    name: "Booking",
-    description: "Customers book a slot in chat: pick a service, a day and a time.",
+    name: "E-commerce",
+    description: "Customers browse products, add to cart and order directly in chat.",
     status: "todo",
   },
   {
