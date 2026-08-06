@@ -247,10 +247,20 @@ export class PlaygroundController {
       if (!workspace) {
         return res.status(404).json({ error: `No workspace found with customChatbotId='${slug}'` })
       }
+      // Content counts shown in the demo page's feature table. Read live so the
+      // page never states a stale number after FAQs or flows are edited.
+      // FAQs are counted only when active (an archived one answers nobody);
+      // flows have no active flag — every row is reachable by the matcher.
+      const [faqCount, flowCount] = await Promise.all([
+        prisma.fAQ.count({ where: { workspaceId: workspace.id, isActive: true } }),
+        prisma.flow.count({ where: { workspaceId: workspace.id } }),
+      ])
       return res.json({
         workspaceId: workspace.id,
         workspaceName: workspace.name,
         chatbotId: workspace.customChatbotId,
+        faqCount,
+        flowCount,
       })
     } catch (error: any) {
       logger.error("Playground resolveDemo error:", error)

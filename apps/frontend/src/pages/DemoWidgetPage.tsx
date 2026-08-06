@@ -45,6 +45,9 @@ interface ResolvedDemo {
   workspaceId: string
   workspaceName: string
   chatbotId: string
+  // Live content counts for the feature table's Qty column (see resolveDemo).
+  faqCount?: number
+  flowCount?: number
 }
 
 // ── Per-brand visual theme (keyed by slug) ───────────────────────────────────
@@ -663,6 +666,11 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "todo",
   },
   {
+    name: "Send Images",
+    description: "The chatbot can send images and documents to the customer.",
+    status: "todo",
+  },
+  {
     name: "Chats history",
     description: "Picks up where you left off: nothing is lost between conversations.",
     status: "done",
@@ -670,6 +678,11 @@ const DEMO_FEATURES: DemoFeature[] = [
   {
     name: "Push Message",
     description: "Proactive promotions and reminders sent to customers outside the chat.",
+    status: "todo",
+  },
+  {
+    name: "Booking",
+    description: "Customers book a slot in chat: pick a service, a day and a time.",
     status: "todo",
   },
   {
@@ -690,11 +703,6 @@ const DEMO_FEATURES: DemoFeature[] = [
   {
     name: "Terms and conditions",
     description: "Asks for privacy consent before the conversation starts.",
-    status: "todo",
-  },
-  {
-    name: "Send Images",
-    description: "The chatbot can send images and documents to the customer.",
     status: "todo",
   },
 ]
@@ -875,7 +883,17 @@ export function DemoWidgetPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {DEMO_FEATURES.map((feature) => (
+                  {DEMO_FEATURES.map((feature) => {
+                    // FAQ/Flow counts come from the API so they stay true as
+                    // content is added; everything else uses its static count.
+                    const liveCount =
+                      feature.name === "FAQ"
+                        ? demo?.faqCount
+                        : feature.name === "Flow"
+                          ? demo?.flowCount
+                          : undefined
+                    const qty = liveCount != null ? String(liveCount) : feature.count
+                    return (
                     <tr key={feature.name} className="border-b border-white/10 align-top">
                       {/* Name + one-line description of what the feature does. */}
                       <td className="py-2.5 pr-4">
@@ -898,10 +916,11 @@ export function DemoWidgetPage() {
                         )}
                       </td>
                       <td className={`whitespace-nowrap py-2.5 text-right font-medium ${brand.itemsText}`}>
-                        {feature.count ?? ""}
+                        {qty ?? ""}
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
