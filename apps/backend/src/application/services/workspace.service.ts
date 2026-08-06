@@ -925,6 +925,8 @@ For privacy inquiries, please contact our support team.`
           currency: true,
           websiteUrl: true,
           url: true,
+          whatsappPhoneNumber: true,
+          whatsappSettings: { select: { adminEmail: true } },
           allowedExternalLinks: true,
           customChatbotModel: true,
           customChatbotTemperature: true,
