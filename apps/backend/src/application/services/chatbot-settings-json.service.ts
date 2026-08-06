@@ -102,6 +102,8 @@ export interface WorkspaceChatbotSource {
   currency?: string | null
   websiteUrl?: string | null
   url?: string | null
+  whatsappPhoneNumber?: string | null
+  whatsappSettings?: { adminEmail?: string | null } | null
   allowedExternalLinks?: string[] | null
   customChatbotModel?: string | null
   customChatbotTemperature?: number | null
@@ -245,6 +247,8 @@ async function buildMainPrompt(
     businessType: workspace.businessType || VARIABLE_DEFAULTS.businessType,
     currency: workspace.currency || VARIABLE_DEFAULTS.currency,
     websiteUrl: workspace.websiteUrl || workspace.url || VARIABLE_DEFAULTS.websiteUrl,
+    adminEmail: workspace.whatsappSettings?.adminEmail || "",
+    whatsappNumber: workspace.whatsappPhoneNumber || "",
     allowedExternalLinks: workspace.allowedExternalLinks?.join("\n") || "",
     termsAndConditions: workspace.termsAndConditions || "",
     faqs: faqsText,
