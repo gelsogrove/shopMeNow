@@ -1,0 +1,13 @@
+{
+  "description": "Bug visto live 2026-08-06 (cliente danese): il primo messaggio dichiara già un guasto ('min robot virker ikke. Den klipper ikke ordentligt') — la risposta NON può essere il solo welcome: nello stesso turno deve arrivare anche la sostanza (track C step 1: richiesta del numero di serie). In più il danese non è in enabledLanguages (['it','en']) → l'intera risposta deve uscire in defaultLanguage (en), mai in danese.",
+  "contractRule": "Welcome message per utente nuovo + track C ('Ask for the serial number' come primo step quando il problema è già dichiarato) nello stesso turno: il saluto non sostituisce mai la risposta al problema. Lingua non abilitata → defaultLanguage (stessa regola dello scenario 03).",
+  "phone": "+391110000106",
+  "newSession": true,
+  "turns": [
+    { "message": "Hej, min robot virker ikke. Den klipper ikke ordentligt." }
+  ],
+  "expect": {
+    "language": "en",
+    "replyContains": ["serial"]
+  }
+}

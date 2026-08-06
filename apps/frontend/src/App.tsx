@@ -311,6 +311,25 @@ export function App() {
           }
         />
 
+        {/* DemoRobot — STORM robotic-lawnmower support demo. Same DemoWidgetPage,
+            branded by slug ("demorobot"). Resolves the workspace via
+            customChatbotId="demorobot"; the widget mirrors the production embed
+            config (sparkles icon + channel logo + #3aad38). */}
+        <Route
+          path="/demo/demorobot/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <DemoWidgetPage />
+            </Suspense>
+          }
+        />
+
         {/* ALL OTHER ROUTES (with providers) */}
         <Route path="*" element={<AppWithProviders />} />
       </Routes>

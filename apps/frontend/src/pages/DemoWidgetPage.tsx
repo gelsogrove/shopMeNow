@@ -70,6 +70,17 @@ interface BrandTheme {
   spinner: string
   loadingText: string
   openHint: string
+  // Optional widget-config override. When present, the page does NOT render the
+  // React <ChatWidget>: it loads the REAL production embed snippet instead
+  // (window.eChatbotConfig + /widget.js), exactly as a customer's website
+  // would — so the actual embed code is what gets verified on this page.
+  widget?: {
+    title: string
+    icon: string
+    language?: string
+    logoUrl?: string
+    useChannelLogo?: boolean
+  }
 }
 
 const BRAND_THEMES: Record<string, BrandTheme> = {
@@ -133,6 +144,36 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     spinner: "border-emerald-200 border-t-white",
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
+  },
+  // DemoRobot — STORM robotic-lawnmower support. Same emerald page styling; the
+  // WIDGET however is loaded via the real embed snippet with the production
+  // config for this workspace (sparkles icon + channel logo + #3aad38).
+  demorobot: {
+    titleA: "Demo",
+    titleB: "Robot",
+    monogram: "DR",
+    primaryColor: "#3aad38",
+    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
+    blob1: "bg-emerald-400/30",
+    blob2: "bg-teal-300/20",
+    accentText: "text-emerald-300",
+    badge: "bg-white/10 text-emerald-50",
+    dot: "bg-emerald-300",
+    introText: "text-emerald-50/90",
+    tryLabel: "text-emerald-200",
+    itemsText: "text-emerald-50/90",
+    contactBtn: "text-emerald-700 hover:bg-emerald-50",
+    spinner: "border-emerald-200 border-t-white",
+    loadingText: "text-emerald-50",
+    openHint: "text-emerald-100/80",
+    widget: {
+      title: "Chat with us",
+      icon: "sparkles",
+      language: "it",
+      logoUrl:
+        "https://res.cloudinary.com/dpagtnf1i/image/upload/v1785492466/echatbot/users/temp_1785492466207_2o889c_ptdrs1.jpg",
+      useChannelLogo: true,
+    },
   },
 }
 
@@ -371,6 +412,56 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🙋 Mit einem Mitarbeiter sprechen",
     ],
   },
+  demorobot: {
+    en: [
+      "🤖 Ask which STORM model fits your garden",
+      "⚠️ Report that your robot stopped with an error",
+      "🔧 Ask about spare blades and batteries",
+      "⛰️ Ask if STORM mows slopes without a perimeter wire",
+      "🛡️ Ask about the warranty",
+      "🙋 Ask to talk to a human operator",
+    ],
+    it: [
+      "🤖 Chiedi quale modello STORM è adatto al tuo giardino",
+      "⚠️ Segnala che il robot si è fermato con un errore",
+      "🔧 Chiedi informazioni su lame e batterie di ricambio",
+      "⛰️ Chiedi se STORM taglia in pendenza senza filo perimetrale",
+      "🛡️ Chiedi informazioni sulla garanzia",
+      "🙋 Chiedi di parlare con un operatore",
+    ],
+    es: [
+      "🤖 Pregunta qué modelo STORM es adecuado para tu jardín",
+      "⚠️ Informa de que el robot se ha parado con un error",
+      "🔧 Pregunta por cuchillas y baterías de repuesto",
+      "⛰️ Pregunta si STORM corta en pendiente sin cable perimetral",
+      "🛡️ Pregunta por la garantía",
+      "🙋 Pide hablar con un operador",
+    ],
+    fr: [
+      "🤖 Demander quel modèle STORM convient à votre jardin",
+      "⚠️ Signaler que le robot s'est arrêté avec une erreur",
+      "🔧 Demander des lames et batteries de rechange",
+      "⛰️ Demander si STORM tond en pente sans câble périmétrique",
+      "🛡️ Se renseigner sur la garantie",
+      "🙋 Demander à parler à un opérateur",
+    ],
+    ca: [
+      "🤖 Pregunta quin model STORM és adequat per al teu jardí",
+      "⚠️ Informa que el robot s'ha aturat amb un error",
+      "🔧 Pregunta per fulles i bateries de recanvi",
+      "⛰️ Pregunta si STORM talla en pendent sense cable perimetral",
+      "🛡️ Pregunta per la garantia",
+      "🙋 Demana parlar amb un operador",
+    ],
+    de: [
+      "🤖 Frag, welches STORM-Modell zu deinem Garten passt",
+      "⚠️ Melde, dass der Roboter mit einem Fehler stehen geblieben ist",
+      "🔧 Frag nach Ersatzmessern und Akkus",
+      "⛰️ Frag, ob STORM Hänge ohne Begrenzungskabel mäht",
+      "🛡️ Frag nach der Garantie",
+      "🙋 Mit einem Mitarbeiter sprechen",
+    ],
+  },
 }
 
 // Resolve the browser language (e.g. "it-IT" → "it"), English fallback.
@@ -603,6 +694,42 @@ export function DemoWidgetPage() {
     }
   }, [apiUrl, slug])
 
+  // ── Real-embed mode ────────────────────────────────────────────────────────
+  // Brands with a `widget` config (demorobot) load the widget through the REAL
+  // production embed snippet — window.eChatbotConfig + /widget.js — exactly as
+  // a customer's website would, so this page verifies the actual embed code.
+  // Only the workspaceId differs from the customer snippet: it is resolved at
+  // runtime from the slug, so the same code works in dev and in production.
+  // The other brands keep rendering the React <ChatWidget> directly (unchanged).
+  useEffect(() => {
+    if (!brand.widget || !demo) return
+    const w = window as unknown as {
+      eChatbotConfig?: Record<string, unknown>
+      _eChatbotWidget?: { destroy?: () => void }
+    }
+    w.eChatbotConfig = {
+      workspaceId: demo.workspaceId,
+      position: "bottom-right",
+      title: brand.widget.title,
+      primaryColor: brand.primaryColor,
+      icon: brand.widget.icon,
+      language: brand.widget.language,
+      useChannelLogo: brand.widget.useChannelLogo,
+      logoUrl: brand.widget.logoUrl,
+    }
+    // Same-origin script: /widget.js is served by this frontend in dev and prod.
+    const script = document.createElement("script")
+    script.src = "/widget.js"
+    script.async = true
+    document.body.appendChild(script)
+    return () => {
+      w._eChatbotWidget?.destroy?.()
+      delete w._eChatbotWidget
+      delete w.eChatbotConfig
+      script.remove()
+    }
+  }, [brand, demo])
+
   return (
     <div className={`relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br ${brand.pageGradient}`}>
       {/* Decorative blurred blobs */}
@@ -671,7 +798,9 @@ export function DemoWidgetPage() {
                 on purpose — clicking it makes a clickable notification pop above
                 the WhatsApp icon (close the chat first to see it), proving the
                 push arrives from outside the conversation. */}
-            {demo && pushCases.length > 0 && (
+            {/* Hidden in real-embed mode: the push injection needs the React
+                ChatWidget; the iframe embed cannot receive it. */}
+            {demo && !brand.widget && pushCases.length > 0 && (
               <button
                 type="button"
                 onClick={() => setPushTrigger((n) => n + 1)}
@@ -696,16 +825,22 @@ export function DemoWidgetPage() {
             </div>
           )}
 
+          {/* In real-embed mode the widget starts as a closed launcher bubble
+              (like on a customer site), so point to it instead. */}
           {demo && !loading && !error && (
             <p className={`mt-8 hidden items-center gap-2 text-sm ${brand.openHint} sm:flex`}>
-              The chat is open on the right. 👉
+              {brand.widget
+                ? "Click the chat bubble in the corner. 👉"
+                : "The chat is open on the right. 👉"}
             </p>
           )}
         </div>
       </div>
 
-      {/* The real widget, opened by default so the visitor lands on the form. */}
-      {demo && (
+      {/* The real widget, opened by default so the visitor lands on the form.
+          Skipped in real-embed mode: there the widget is mounted by /widget.js
+          (see the embed useEffect above), not by React. */}
+      {demo && !brand.widget && (
         <ChatWidget
           workspaceId={demo.workspaceId}
           apiUrl={apiUrl}

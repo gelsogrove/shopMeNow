@@ -1,5 +1,6 @@
 rifacciamo, vediamo se hai capito, cosa ti torna e cosa manca
 
+- se l'utente è bloccato (isBlacklisted) non deve succedere NULLA: nessuna risposta, nessun messaggio salvato in chat history, nessuna chiamata LLM — silenzio totale, il messaggio viene scartato prima di qualsiasi elaborazione
 - se il channel è disattivo parte il wip message
 - se l'utente è nuovo facciamo il welcome message, se l'utente non è nuovo facciamo il welcome back message chiamandolo con il nome
 - il chatbot deve rispodnere nella lignau del cliene se la lignua e' presente nel settings..come lignua dispobibile altrimenti usa lignua di degault che anch'essa dovrebbe essere nel settigs.json
