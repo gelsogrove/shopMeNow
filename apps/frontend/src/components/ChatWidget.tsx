@@ -250,6 +250,7 @@ const UI_STRINGS: Record<
   LangCode,
   {
     intro: string
+    language: string
     phone: string
     message: string
     phonePh: string
@@ -264,6 +265,7 @@ const UI_STRINGS: Record<
 > = {
   it: {
     intro: "Presentati per iniziare a chattare",
+    language: "Lingua",
     phone: "Telefono",
     message: "Messaggio",
     phonePh: "+39 312 345 6789",
@@ -278,6 +280,7 @@ const UI_STRINGS: Record<
   },
   en: {
     intro: "Introduce yourself to start chatting",
+    language: "Language",
     phone: "Phone",
     message: "Message",
     phonePh: "+1 415 555 1212",
@@ -292,6 +295,7 @@ const UI_STRINGS: Record<
   },
   es: {
     intro: "Preséntate para comenzar a chatear",
+    language: "Idioma",
     phone: "Teléfono",
     message: "Mensaje",
     phonePh: "+34 612 345 678",
@@ -306,6 +310,7 @@ const UI_STRINGS: Record<
   },
   fr: {
     intro: "Présentez-vous pour commencer à discuter",
+    language: "Langue",
     phone: "Téléphone",
     message: "Message",
     phonePh: "+33 6 12 34 56 78",
@@ -320,6 +325,7 @@ const UI_STRINGS: Record<
   },
   de: {
     intro: "Stell dich vor, um zu chatten",
+    language: "Sprache",
     phone: "Telefon",
     message: "Nachricht",
     phonePh: "+49 170 1234567",
@@ -334,6 +340,7 @@ const UI_STRINGS: Record<
   },
   ca: {
     intro: "Presenta't per començar a xatejar",
+    language: "Idioma",
     phone: "Telèfon",
     message: "Missatge",
     phonePh: "+34 612 345 678",
@@ -431,7 +438,13 @@ export function ChatWidget({
   // Resolve language: header selection (user) > prop > window config > "en"
   // RULE: headerLanguage is the user's explicit in-widget selection → ALWAYS wins over workspace config
   const resolvedLanguage = headerLanguage || language || widgetConfig?.language || "en"
-  const resolvedLangKey = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
+  // 🌐 Language picked in the registration-form dropdown (Andrea 2026-08-06):
+  // wins over every config source, so ALL widget copy (intro, labels,
+  // placeholders, button, terms) switches instantly when the visitor changes it.
+  const [uiLangOverride, setUiLangOverride] = useState<LangCode | null>(null)
+  const resolvedLangKey =
+    uiLangOverride ??
+    ((resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en")
   const ui = UI_STRINGS[resolvedLangKey] || UI_STRINGS.en
   
   // Resolve other props from window config
@@ -2125,6 +2138,32 @@ export function ChatWidget({
                       {ui.intro}
                     </p>
 
+                    {/* 🌐 Language dropdown (Andrea 2026-08-06): switching it
+                        re-renders the WHOLE form copy — intro, labels,
+                        placeholders, button, terms — via uiLangOverride, and is
+                        sent as the customer's language at registration. */}
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <Globe className="w-3.5 h-3.5" /> {ui.language}
+                      </label>
+                      <select
+                        value={resolvedLangKey}
+                        onChange={(e) => {
+                          const next = e.target.value as LangCode
+                          setUiLangOverride(next)
+                          setFormLanguage(next)
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1"
+                      >
+                        <option value="en">English</option>
+                        <option value="it">Italiano</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="ca">Català</option>
+                        <option value="de">Deutsch</option>
+                      </select>
+                    </div>
+
                     {/* Phone */}
                     <div className="space-y-1">
                       <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
@@ -2159,11 +2198,11 @@ export function ChatWidget({
                       />
                     </div>
 
-                    {/* Andrea 2026-08-02: the language selector and the terms
-                        checkbox were removed from this form. Language is
-                        detected from what the customer actually writes (the
-                        picker only ever added a wrong-by-default guess), and
-                        the consent step is handled outside registration. */}
+                    {/* Andrea 2026-08-02: the terms checkbox stays out of this
+                        form — consent is handled outside registration. The
+                        language dropdown above was re-added on 2026-08-06 as a
+                        UI-language switcher (the bot still detects the
+                        conversation language from what the customer writes). */}
 
                     {/* Error message */}
                     {formError && (
