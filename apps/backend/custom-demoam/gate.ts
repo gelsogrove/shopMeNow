@@ -296,6 +296,7 @@ export function nextIntakeStep(
   state: SessionState,
   questions?: GateQuestions | null,
 ): IntakeStep | null {
+  if (state.skippedTechnicalGate) return null
   for (const field of INTAKE_ORDER) {
     // A serial exhausted after 3 failed attempts (content-guards.ts) is
     // "done asking", the same as answered — never re-requested here either,
@@ -340,6 +341,13 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
     'causes, and do NOT rephrase it into a multiple-choice list. A brief',
     'acknowledgement of what the customer just said may come first, then this',
     'question, verbatim.',
+    '',
+    'ONE exception: if the customer is explicitly asking for a human operator,',
+    'or complaining about a past experience rather than reporting a device',
+    'problem, this intake question does not apply to them — when a tool call',
+    'is available this hop, call escalate_to_operator with the fitting reason',
+    "('requested_operator' or 'complaint') instead of asking it, and let that",
+    'tool dictate what to collect.',
   ]
 
   if (step.field === 'serialNumber') {

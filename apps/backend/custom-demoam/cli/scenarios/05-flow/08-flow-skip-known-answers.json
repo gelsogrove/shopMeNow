@@ -1,0 +1,28 @@
+{
+  "description": "Il cliente dichiara GIÀ nella descrizione del problema le risposte ai primi nodi del flow ERROR 001 ('la luce rossa lampeggia continuamente') — una volta agganciato il flow, il bot NON deve rifare quelle domande: risponde da solo ai nodi già coperti (luce accesa → sì, lampeggia → sì) e chiede direttamente la prima domanda NON ancora coperta (dopo 10 minuti la luce si è spenta?). Il transcript stampato è la verifica primaria: se il bot richiede 'c'è una luce rossa accesa?' o 'lampeggia?', la regola non sta funzionando. Strutturalmente: in 4 turni si arriva al terminale SELF_SERVICE senza escalation.",
+  "contractRule": "Following an ACTIVE FLOW, regola 6 del main prompt: 'Never re-ask what the customer already stated' — answer_step con la label già dichiarata dal cliente, mai ri-domandare; nel dubbio chiedere, mai avanzare su un'interpretazione.",
+  "phone": "+391110000408",
+  "newSession": true,
+  "skip": true,
+  "skipReason": "Feature non ancora attiva: la versione prompt-only (regola 6, 2026-08-06) allentava l'ordine intake/gate/flow ed è stata revertita — riattivare questo scenario quando lo skip delle domande già risposte sarà implementato con un meccanismo code-assisted.",
+  "turns": [
+    {
+      "message": "il mio robot da errore 001 e la luce rossa lampeggia continuamente"
+    },
+    {
+      "message": "HKA4OB100LQ26050199"
+    },
+    {
+      "message": "è successo stamattina"
+    },
+    {
+      "message": "sì, dopo 10 minuti la luce si è spenta"
+    }
+  ],
+  "expect": {
+    "replyExcludes": [
+      "operatore",
+      "operator"
+    ]
+  }
+}

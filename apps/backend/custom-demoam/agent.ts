@@ -1350,6 +1350,9 @@ async function agentTurnInternal(
 
   let awaitingDictatedReply = false
 
+  const EMPTY_REPLY_RETRY_INSTRUCTION =
+    "[SYSTEM: Your previous turn produced no visible text. Write your reply to the customer now — ask the pending question or acknowledge their last message — in the customer's language, ending with the ⟦LANG:xx⟧ tag.]"
+
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     const mustForceToolChoice = !isFirstTurn && !awaitingDictatedReply
@@ -1390,7 +1393,35 @@ async function agentTurnInternal(
       if (lang) {
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
       }
-      const reply = greetingReply ? `${greetingReply}\n\n${rawReply}`.trim() : rawReply
+      let replyBody = rawReply.trim()
+      if (!replyBody && !greetingReply) {
+        // eslint-disable-next-line no-console
+        console.error('[demoam][empty-reply-retry]', JSON.stringify({ node: state.currentNodeId ?? null, hop }))
+        history.push({ role: 'user', content: EMPTY_REPLY_RETRY_INSTRUCTION })
+        const retryHop = await callLLM({
+          commonPrompt,
+          state,
+          history,
+          operatorBriefingLanguageOverride,
+          isFirstTurn,
+          faqBlock,
+          faqCount: ctx.availableFaqs?.length ?? 0,
+          flowsBlock: state.activeFlowId ? undefined : flowsBlock,
+          settings,
+          messages,
+          greetingToTranslate: undefined,
+          greetingAlreadyDelivered: !!greetingToTranslate,
+          forceTextOnly: true,
+        })
+        history.pop()
+        tokensUsedSoFar += retryHop.tokensUsed
+        const retryExtracted = extractLanguage(retryHop.text)
+        if (retryExtracted.lang) {
+          commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(retryExtracted.lang, settings.enabledLanguages, settings.defaultLanguage))
+        }
+        replyBody = retryExtracted.reply.trim()
+      }
+      const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
       history.push({ role: 'assistant', content: reply })
       if (LLM_DEBUG) {
         // eslint-disable-next-line no-console
