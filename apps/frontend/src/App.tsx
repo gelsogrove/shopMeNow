@@ -105,6 +105,8 @@ const RegisterPage = lazy(() => import("./pages/register"))
 const SupportChatPage = lazy(() => import("./pages/SupportChatPage"))
 const OperatorDashboardPage = lazy(() => import("./pages/OperatorDashboardPage"))
 const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
+// Not lazy: the gate must render immediately, before the demo page chunk loads.
+import { DemoPasswordGate } from "./components/DemoPasswordGate"
 
 function AuthLoginRedirect() {
   const location = useLocation()
@@ -314,7 +316,9 @@ export function App() {
         {/* DemoRobot — STORM robotic-lawnmower support demo. Same DemoWidgetPage,
             branded by slug ("demorobot"). Resolves the workspace via
             customChatbotId="demorobot"; the widget mirrors the production embed
-            config (sparkles icon + channel logo + #3aad38). */}
+            config (sparkles icon + channel logo + #3aad38).
+            🔓 Behind DemoPasswordGate (light barrier, 4h unlock) — this is the
+            only demo Andrea asked to gate. */}
         <Route
           path="/demo/demorobot/*"
           element={
@@ -325,7 +329,9 @@ export function App() {
                 </div>
               }
             >
-              <DemoWidgetPage />
+              <DemoPasswordGate>
+                <DemoWidgetPage />
+              </DemoPasswordGate>
             </Suspense>
           }
         />

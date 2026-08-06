@@ -78,6 +78,9 @@ export function WidgetEmbedPage() {
       apiUrl:
         decodeParam(params.get("apiUrl")) ||
         (window as any)?.eChatbotConfig?.apiUrl,
+      openByDefault:
+        decodeParam(params.get("openByDefault")) ||
+        (window as any)?.eChatbotConfig?.openByDefault,
     }
   }, [])
 
@@ -97,6 +100,7 @@ export function WidgetEmbedPage() {
         useChannelLogo={config.useChannelLogo === true || config.useChannelLogo === "true"}
         useWindowConfig={false}
         apiUrl={config.apiUrl}
+        defaultOpen={config.openByDefault === true || config.openByDefault === "true"}
         onOpenChange={(open) => {
           window.parent?.postMessage(
             {

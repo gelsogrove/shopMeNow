@@ -585,6 +585,35 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
   },
 }
 
+// ── Feature status table (demorobot) ─────────────────────────────────────────
+// Shown under the hero copy so a visitor sees at a glance what the assistant
+// already does and what is still coming. `status` drives the rendering: "done"
+// gets a check icon, "todo" a clock, and a plain string is printed as-is (used
+// for the supported-languages row).
+interface DemoFeature {
+  name: string
+  status: "done" | "todo" | string
+}
+
+const DEMO_FEATURES: DemoFeature[] = [
+  { name: "FAQ", status: "done" },
+  { name: "Flow", status: "done" },
+  { name: "Human support", status: "done" },
+  { name: "Human support translation message", status: "done" },
+  { name: "Languages", status: "ITA, Danish, English" },
+  { name: "Speech to text", status: "done" },
+  { name: "Widget", status: "done" },
+  { name: "Chats history", status: "done" },
+  { name: "WhatsApp", status: "todo" },
+  { name: "Push Message", status: "todo" },
+  { name: "Appointment and Calendar", status: "todo" },
+  { name: "CRM integration", status: "todo" },
+  { name: "Registration User", status: "todo" },
+  { name: "Terms and conditions", status: "todo" },
+  { name: "Presentation Video", status: "todo" },
+  { name: "Forward support logic", status: "todo" },
+]
+
 function resolveDemoPushCases(slug: string, lang: string): PushDemoCase[] {
   const brand = PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demowash
   return brand[lang] || brand.en
@@ -718,7 +747,10 @@ export function DemoWidgetPage() {
       </a>
 
       {/* Hero copy */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center overflow-y-auto px-6 py-16 text-center sm:items-start sm:px-16 sm:text-left">
+      {/* justify-center only while the copy fits: `my-auto` on the inner column
+          centers it on tall screens and lets it scroll on short ones instead of
+          being clipped (the feature table makes the column tall). */}
+      <div className="relative z-10 flex h-full flex-col items-center overflow-y-auto px-6 py-12 text-center sm:items-start sm:px-16 sm:text-left">
         <div className="max-w-xl">
           <div className={`mb-4 inline-flex items-center gap-2 rounded-full ${brand.badge} px-4 py-1.5 text-sm font-medium backdrop-blur`}>
             <span className={`h-2 w-2 rounded-full ${brand.dot}`} />
@@ -746,6 +778,45 @@ export function DemoWidgetPage() {
               ))}
             </ul>
           </div>
+
+          {/* Feature status table — what the assistant already does vs. what is
+              still coming. Only on demorobot, where the list applies. */}
+          {slug === "demorobot" && (
+            <div className="mt-7 w-full max-w-md">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className={`border-b border-white/25 ${brand.tryLabel}`}>
+                    <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
+                      Feature
+                    </th>
+                    <th className="py-2 text-xs font-semibold uppercase tracking-wide">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DEMO_FEATURES.map((feature) => (
+                    <tr key={feature.name} className="border-b border-white/10">
+                      <td className={`py-2 pr-4 ${brand.itemsText}`}>{feature.name}</td>
+                      <td className="py-2">
+                        {feature.status === "done" ? (
+                          <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
+                            ✅ Done
+                          </span>
+                        ) : feature.status === "todo" ? (
+                          <span className="inline-flex items-center gap-1.5 font-medium text-amber-200/90">
+                            🕒 To do
+                          </span>
+                        ) : (
+                          <span className={brand.itemsText}>{feature.status}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-start">
             {/* 📣 Demo-only: simulate a promotional push. Lives OUTSIDE the chat

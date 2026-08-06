@@ -89,6 +89,29 @@ function isOriginAllowed(
 }
 
 /**
+ * English names for the ISO codes the chatbot modules can commit via ⟦LANG:xx⟧.
+ * Used ONLY to phrase the suggestions prompt — an unknown code is passed through
+ * as-is rather than silently downgraded to English, so a language added to a
+ * module keeps working here without a change in this file.
+ */
+const ISO_LANGUAGE_NAMES: Record<string, string> = {
+  en: "English", it: "Italian", es: "Spanish", pt: "Portuguese", fr: "French",
+  de: "German", nl: "Dutch", da: "Danish", sv: "Swedish", no: "Norwegian",
+  fi: "Finnish", pl: "Polish", cs: "Czech", ro: "Romanian", hu: "Hungarian",
+  el: "Greek", tr: "Turkish", uk: "Ukrainian", ru: "Russian", ca: "Catalan",
+  ar: "Arabic", zh: "Chinese", ja: "Japanese", ko: "Korean", hi: "Hindi",
+}
+
+/** Resolve the language the AI suggestions must be written in. */
+function resolveSuggestionsLanguage(raw?: string): string {
+  const code = (raw || "").toLowerCase().trim()
+  if (!code) return "English"
+  // Legacy 3-letter codes ("ITA", "ENG", …) still reach this from older callers.
+  const iso = normLang(code)
+  return ISO_LANGUAGE_NAMES[code.slice(0, 2)] || ISO_LANGUAGE_NAMES[iso] || code
+}
+
+/**
  * Ask a cheap LLM to generate 4 contextually-relevant, language-correct
  * follow-up suggestions for the last bot message (widget only — the widget
  * renders them two per row).
@@ -138,8 +161,13 @@ async function buildWidgetSuggestionsWithAI(
   // No FAQ knowledge base → use static quick replies as fallback
   if (faqQuestions.length === 0) return staticReplies
 
-  const lang = normLang(language)
-  const langName: Record<string, string> = { it: "Italian", en: "English", es: "Spanish", pt: "Portuguese" }
+  // 🌍 The custom chatbot modules commit an OPEN 2-letter ISO code (⟦LANG:xx⟧,
+  // 25 languages), so this path must NOT go through normLang() — that one
+  // collapses everything outside it/en/es/pt down to "en" because the STATIC
+  // fallback table below only has those four. Here the LLM does the writing, so
+  // any ISO code works: name the language when we know its English name,
+  // otherwise hand the bare code to the model, which resolves it fine.
+  const outputLanguage = resolveSuggestionsLanguage(language)
   const truncated = response.slice(0, 600)
   const faqList = faqQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")
 
@@ -155,7 +183,7 @@ async function buildWidgetSuggestionsWithAI(
             role: "system",
             content:
               `You select clickable follow-up suggestions for a chat widget from a fixed FAQ list.\n` +
-              `Output language: ${langName[lang] || "English"}. ALL suggestions MUST be written in this language — regardless of the language of the FAQ list.\n` +
+              `Output language: ${outputLanguage}. ALL suggestions MUST be written in this language — regardless of the language of the FAQ list.\n` +
               `\n` +
               `WHEN TO RETURN EMPTY: Return [] (empty array, no suggestions) if the chatbot reply is about ANY of these topics:\n` +
               `- Appointment booking, scheduling, available slots, confirming/cancelling/rescheduling appointments\n` +
@@ -174,7 +202,7 @@ async function buildWidgetSuggestionsWithAI(
               `\n` +
               `STRICT RULES (when NOT returning empty):\n` +
               `- Select EXACTLY 4 FAQ topics that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
-              `- TRANSLATE and REWRITE each selected topic in ${langName[lang] || "English"} — do NOT copy the original FAQ text verbatim\n` +
+              `- TRANSLATE and REWRITE each selected topic in ${outputLanguage} — do NOT copy the original FAQ text verbatim\n` +
               `- Write each suggestion in FIRST PERSON (e.g. "I want to know the prices" not "Prices")\n` +
               `- Max 40 characters per suggestion — shorten if needed\n` +
               `- No links, no emoji, no punctuation at the end\n` +
@@ -2354,11 +2382,15 @@ export class WidgetChatController {
           }
 
           // AI suggestions (same as normal flow)
+          // 🌍 Language: use the language the bot ACTUALLY replied in (⟦LANG:xx⟧),
+          // not customerLanguage — that one is the DB/registration guess and goes
+          // stale as soon as the customer switches language mid-conversation,
+          // producing suggestions in a different language than the reply above them.
           const customSuggestions =
             !customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && customerReply
               ? await buildWidgetSuggestionsWithAI(
                   customerReply,
-                  customerLanguage || "en",
+                  customOutput.language || customerLanguage || "en",
                   workspace.widgetQuickReplies as any,
                   resolvedWorkspaceId
                 )

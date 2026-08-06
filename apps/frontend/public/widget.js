@@ -308,10 +308,8 @@
 
     .echatbot-widget-popup {
       position: absolute;
-      width: 520px;
-      height: 820px;
-      max-width: calc(100vw - 4rem);
-      max-height: 92vh;
+      width: 390px;
+      height: 610px;
       background-color: #ffffff;
       border-radius: 12px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.1);
@@ -1014,11 +1012,6 @@
       if (this.status === "wip") {
         this.showWipMessage()
       }
-      // Open the panel straight away when the host page asks for it
-      // (demo pages), instead of showing the closed launcher bubble.
-      if (this.config.openByDefault && !this.isOpen) {
-        this.togglePopup()
-      }
       console.log("✅ eChatbot Widget initialized", {
         workspaceId: this.config.workspaceId,
         visitorId: this.visitorId,
@@ -1368,12 +1361,8 @@
     togglePopup() {
       this.isOpen = !this.isOpen
       this.popup.classList.toggle("open", this.isOpen)
-      // Toggle overlay. Skipped when the panel opens by default (demo pages):
-      // a permanently dimmed page would hide the content behind the chat.
-      this.overlay.classList.toggle(
-        "visible",
-        this.isOpen && !this.config.openByDefault
-      )
+      // Toggle overlay
+      this.overlay.classList.toggle("visible", this.isOpen)
       // Hide button when popup is open
       this.button.style.display = this.isOpen ? "none" : "flex"
       if (this.isOpen) {
@@ -1712,6 +1701,7 @@
       if (this.config.primaryColor) params.set("primaryColor", this.config.primaryColor)
       if (this.config.icon) params.set("icon", this.config.icon)
       if (this.config.apiUrl) params.set("apiUrl", this.config.apiUrl)
+      if (this.config.openByDefault) params.set("openByDefault", "true")
       return `${this.config.embedUrl}?${params.toString()}`
     }
 
@@ -1728,9 +1718,13 @@
       this.iframe.style.border = "none"
       this.iframe.style.background = "transparent"
       this.iframe.style.overflow = "hidden"
-      this.iframe.style.width = "100px"
-      this.iframe.style.height = "100px"
-      this.iframe.style.borderRadius = "0"
+      // With openByDefault the panel is already open inside the iframe, so the
+      // frame must start at full size instead of the 100x100 launcher bubble.
+      const startsOpen = !!this.config.openByDefault
+      this.isOpen = startsOpen
+      this.iframe.style.width = startsOpen ? "min(520px, calc(100vw - 2.5rem))" : "100px"
+      this.iframe.style.height = startsOpen ? "min(820px, calc(100vh - 2.5rem))" : "100px"
+      this.iframe.style.borderRadius = startsOpen ? "24px" : "0"
       this.iframe.style.boxShadow = "none"
       this.iframe.style.transition = "width 0.2s ease, height 0.2s ease"
 
@@ -1756,8 +1750,10 @@
       if (!this.iframe) return
 
       if (this.isOpen) {
-        this.iframe.style.width = "430px"
-        this.iframe.style.height = "690px"
+        // Same panel size as the in-app ChatWidget (520x820), capped so it can
+        // never overflow a small viewport.
+        this.iframe.style.width = "min(520px, calc(100vw - 2.5rem))"
+        this.iframe.style.height = "min(820px, calc(100vh - 2.5rem))"
         this.iframe.style.borderRadius = "24px"
         this.iframe.style.boxShadow = "none"
       } else {

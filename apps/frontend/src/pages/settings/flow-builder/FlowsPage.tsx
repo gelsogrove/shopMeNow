@@ -116,9 +116,16 @@ export function FlowsPage() {
     }
   }
 
+  // Titles are short codes ("ERROR 001"), descriptions are full sentences —
+  // sizing both keeps the auto-width actions column from eating the row.
   const columns: ColumnDef<Flow>[] = [
-    { header: "Title", accessorKey: "title", size: 200 },
-    { header: "Description", accessorKey: "description", cell: ({ getValue }) => (getValue() as string) || "—" },
+    { header: "Title", accessorKey: "title", size: 160 },
+    {
+      header: "Description",
+      accessorKey: "description",
+      size: 900,
+      cell: ({ getValue }) => (getValue() as string) || "—",
+    },
   ]
 
   const filtered = flows
