@@ -239,6 +239,163 @@ describe('ChatWidget', () => {
     })
   })
 
+  // ========================================
+  // OPERATOR HANDOFF TESTS
+  // ========================================
+
+  it('should display the hand-off message on the escalation turn (activeChatbot=false WITH response)', async () => {
+    // WHY: the escalation response carries BOTH the configured hand-off text
+    // (workspace.humanSupportMessage, translated by the LLM) AND
+    // activeChatbot:false. The widget used to discard the response entirely
+    // when it saw the flag — the customer answered the last question and got
+    // silence before waiting mode. Seen live on DemoRobot (2026-08-06): the
+    // message was saved in conversation_messages but never rendered.
+    const user = userEvent.setup()
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
+
+    ;(global.fetch as any)
+      // Init: widget status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          status: 'active',
+          channelStatus: true,
+          debugMode: false,
+          workspaceId: 'test-workspace',
+          workspace: {
+            channelStatus: true,
+            debugMode: false,
+            whatsappPhoneNumber: '+391234',
+            name: 'Test Workspace',
+          },
+        }),
+      })
+      // Init: restoreOperatorState → /widget/operator-messages
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ activeChatbot: true, messages: [] }),
+      })
+      // Send: the ESCALATION turn — hand-off text + takeover flag together
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          response: 'Thank you Andrea, I am connecting you with our Customer Care team.',
+          sessionId: 'session-123',
+          activeChatbot: false,
+        }),
+      })
+      // Any later operator-messages polls triggered by botDisabled=true
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ activeChatbot: false, messages: [] }),
+      })
+
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
+
+    const button = screen.getByRole('button', { name: /open chat/i })
+    await user.click(button)
+
+    const input = screen.getByPlaceholderText(/type a message/i)
+    await user.type(input, 'andrea')
+    const sendBtn = screen.getByRole('button', { name: /send message/i })
+    await user.click(sendBtn)
+
+    // The hand-off message MUST be rendered as a bot bubble...
+    await waitFor(() => {
+      expect(
+        screen.getByText(/connecting you with our Customer Care team/i)
+      ).toBeInTheDocument()
+    })
+    // ...AND the widget switches to waiting mode (operator banner visible)
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Connecting you with our team — replies coming shortly/i)
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('should NOT add a bot bubble on post-takeover messages (activeChatbot=false with empty response)', async () => {
+    // WHY: once the operator owns the chat, the backend blocks the LLM and the
+    // adapter returns response:"" with activeChatbot:false. Nothing must be
+    // rendered for those turns — only the waiting banner. This is the case the
+    // old discard logic was written for; it must keep working after the fix.
+    const user = userEvent.setup()
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
+
+    ;(global.fetch as any)
+      // Init: widget status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          status: 'active',
+          channelStatus: true,
+          debugMode: false,
+          workspaceId: 'test-workspace',
+          workspace: {
+            channelStatus: true,
+            debugMode: false,
+            whatsappPhoneNumber: '+391234',
+            name: 'Test Workspace',
+          },
+        }),
+      })
+      // Init: restoreOperatorState → /widget/operator-messages
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ activeChatbot: true, messages: [] }),
+      })
+      // Send: operator already owns the chat — backend blocked the LLM
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          activeChatbot: false,
+          blocked: true,
+          sessionId: 'session-123',
+        }),
+      })
+      // Any later operator-messages polls triggered by botDisabled=true
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ activeChatbot: false, messages: [] }),
+      })
+
+    const { container } = renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
+
+    const button = screen.getByRole('button', { name: /open chat/i })
+    await user.click(button)
+
+    const input = screen.getByPlaceholderText(/type a message/i)
+    await user.type(input, 'hello?')
+    const sendBtn = screen.getByRole('button', { name: /send message/i })
+    await user.click(sendBtn)
+
+    // Waiting banner appears...
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Connecting you with our team — replies coming shortly/i)
+      ).toBeInTheDocument()
+    })
+    // ...and the only stored message is the user's own — no bot bubble was
+    // added for the blocked turn (persisted history is the source of truth
+    // the widget re-renders from)
+    expect(screen.getByText('hello?')).toBeInTheDocument()
+    const persistedBotEntries = localStorageMock.setItem.mock.calls
+      .filter(([key]) => String(key).includes('messages'))
+      .flatMap(([, value]) => {
+        try {
+          return JSON.parse(String(value)) as Array<{ role: string }>
+        } catch {
+          return []
+        }
+      })
+      .filter((m) => m.role === 'bot')
+    expect(persistedBotEntries.length).toBe(0)
+  })
+
   it('should handle send button keyboard shortcut (Enter)', async () => {
     const user = userEvent.setup()
     localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
