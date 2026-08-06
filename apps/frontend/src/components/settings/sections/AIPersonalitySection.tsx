@@ -73,6 +73,8 @@ interface AIPersonalitySectionProps {
     customChatbotModel: string
     customChatbotTemperature: number | null
     customChatbotMaxTokens: number | null
+    /** Customer voice notes are transcribed to text (both widget and WhatsApp). */
+    speechToTextEnabled: boolean
     audioOutput: boolean
     audioVoices: Record<string, string>
     /**
@@ -272,10 +274,31 @@ export function AIPersonalitySection({
             </p>
           </div>
 
-          {/* Voice replies — ElevenLabs. Sits with the languages because a voice
-              is picked per language; showing them apart made the pairing unclear. */}
+          {/* Voice, both directions. Speech to Text (customer speaks) sits next
+              to Voice Replies (chatbot speaks) because they are the two halves
+              of the same capability — and neither belongs to a single channel:
+              both apply to the widget and to WhatsApp. Moved here from Human
+              Support on Andrea's call (2026-08-06). ElevenLabs voices follow
+              the languages above, since a voice is picked per language. */}
           <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center justify-between pt-2">
+              <div>
+                <Label htmlFor="speechToTextEnabled">Speech to Text</Label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Customers can send voice messages: they are transcribed in their
+                  detected language and the chatbot replies to the transcription
+                </p>
+              </div>
+              <Switch
+                id="speechToTextEnabled"
+                data-focus-key="speechToTextToggle"
+                checked={formData.speechToTextEnabled ?? false}
+                onCheckedChange={(checked) => onFieldChange("speechToTextEnabled", checked)}
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="audioOutput">Voice Replies</Label>
                 <p className="text-xs text-gray-500 mt-0.5">
