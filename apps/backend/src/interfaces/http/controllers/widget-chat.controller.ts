@@ -2592,20 +2592,25 @@ export class WidgetChatController {
       // attachments (images / PDFs / audio) so the widget renders them — parity
       // with WhatsApp, where the operator's media reaches the customer too.
       const sinceDate = since ? new Date(since) : new Date(0)
-      const messages = await prisma.conversationMessage.findMany({
-        where: {
-          conversationId: session.id,
-          role: "assistant",
-          createdAt: { gt: sinceDate },
-        },
-        orderBy: { createdAt: "asc" },
-        take: 20,
-        include: {
-          attachments: {
-            select: { id: true, url: true, kind: true, mimeType: true, filename: true, sizeBytes: true },
+      // Newest 20, then chronological: with a wide `since` (widget init uses
+      // 1970 to restore state after a reload) ascending+take would return the
+      // OLDEST 20 and silently drop the operator's latest message.
+      const messages = (
+        await prisma.conversationMessage.findMany({
+          where: {
+            conversationId: session.id,
+            role: "assistant",
+            createdAt: { gt: sinceDate },
           },
-        },
-      })
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: {
+            attachments: {
+              select: { id: true, url: true, kind: true, mimeType: true, filename: true, sizeBytes: true },
+            },
+          },
+        })
+      ).reverse()
 
       return res.json({
         messages: messages.map((m) => ({

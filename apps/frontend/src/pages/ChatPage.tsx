@@ -385,7 +385,12 @@ export function ChatPage() {
     if (!translateTo) return
     if (!messages.length) return
     const missing = messages.filter(
-      (m) => m.content && !translations[`${m.id}|${translateTo}`]
+      (m) =>
+        m.content &&
+        !translations[`${m.id}|${translateTo}`] &&
+        // Translated operator messages render their stored translation
+        // directly — no need to round-trip them through the API.
+        !getOperatorTranslation(m)
     )
     if (missing.length === 0) return
     let cancelled = false
@@ -1908,6 +1913,12 @@ export function ChatPage() {
                       try { return JSON.parse(dbg) } catch { return null }
                     })()
 
+                    // Translated operator message: bubble shows what the
+                    // operator WROTE; panel below shows what was SENT.
+                    const operatorTranslation = isOperatorMessage
+                      ? getOperatorTranslation(message)
+                      : null
+
                     const getMessageStyle = () => {
                       // 🛑 BLOCKED: Security Agent blocked this message
                       if (isBlockedMessage) {
@@ -2021,7 +2032,7 @@ export function ChatPage() {
                               bubble (Andrea: "audio player only"). */}
                           {!message.attachments?.some((a) => a.kind === "AUDIO") && (() => {
                             const { customer: rawCustomerText, operator: operatorText } = isAgentMessage
-                              ? splitBotMessage(message.content)
+                              ? splitBotMessage(operatorTranslation?.original ?? message.content)
                               : { customer: message.content, operator: null }
                             // 📺 Welcome video: the URL is authored INSIDE the bot
                             // reply (module greeting). Extract it and render the card
@@ -2094,13 +2105,30 @@ export function ChatPage() {
                               (in the chat header toolbar) is active, the
                               translated content is rendered here inline.
                               Cache lookup is by message id + target lang. */}
-                          {translateTo && !isBlockedMessage && (
+                          {operatorTranslation ? (
+                            // Already-translated operator message: the sent
+                            // text (customer's language) is in the DB — show
+                            // it directly, no re-translation API call.
                             <TranslationPanel
-                              text={translations[`${message.id}|${translateTo}`]}
-                              targetLanguage={translateTo}
-                              loading={translatingBatch}
-                              variant={isAgentMessage ? "operator" : "customer"}
+                              text={splitBotMessage(message.content || "").customer}
+                              targetLanguage={
+                                operatorTranslation.translatedTo ||
+                                debugInfo?.customerLanguage ||
+                                "?"
+                              }
+                              loading={false}
+                              variant="operator"
                             />
+                          ) : (
+                            translateTo &&
+                            !isBlockedMessage && (
+                              <TranslationPanel
+                                text={translations[`${message.id}|${translateTo}`]}
+                                targetLanguage={translateTo}
+                                loading={translatingBatch}
+                                variant={isAgentMessage ? "operator" : "customer"}
+                              />
+                            )
                           )}
 
                           <div className="flex justify-end items-center mt-1">
@@ -2366,6 +2394,42 @@ export function ChatPage() {
 
     </PageLayout>
   )
+}
+
+// For operator messages the DB stores `content` in the CUSTOMER's language
+// (what was actually sent) and the operator's original wording in
+// metadata/debugInfo.originalContent. The UI must show the ORIGINAL as the
+// bubble text and the sent translation in the panel below — never the
+// reverse (Andrea 2026-08-06, seen live: Danish shown as "what I wrote").
+function getOperatorTranslation(m: {
+  metadata?: any
+}): { original: string; translatedTo: string | null } | null {
+  const meta = m.metadata
+  if (!meta) return null
+  if (typeof meta.originalContent === "string" && meta.originalContent) {
+    return {
+      original: meta.originalContent,
+      translatedTo: typeof meta.translatedTo === "string" ? meta.translatedTo : null,
+    }
+  }
+  const dbg = meta.debugInfo
+  const info =
+    typeof dbg === "string"
+      ? (() => {
+          try {
+            return JSON.parse(dbg)
+          } catch {
+            return null
+          }
+        })()
+      : dbg
+  if (typeof info?.originalContent === "string" && info.originalContent) {
+    return {
+      original: info.originalContent,
+      translatedTo: typeof info.translatedTo === "string" ? info.translatedTo : null,
+    }
+  }
+  return null
 }
 
 // ── Translation toolbar + per-message panel ─────────────────────────────────

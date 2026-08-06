@@ -677,6 +677,37 @@ export function ChatWidget({
           setBotDisabled(true)
           if (Array.isArray(data.messages) && data.messages.length > 0) {
             setOperatorHasReplied(true)
+            // Andrea 2026-08-06, seen live: lastOperatorMsgAt starts at "now" on
+            // every mount, so operator messages sent while the widget was
+            // unmounted (page reload / navigation) were never shown — this init
+            // call already has them (since=1970) but only used them to set the
+            // banner flag. Append the ones newer than the last locally stored
+            // message, and move the polling cursor past them.
+            const fetched = data.messages as {
+              id: string
+              content: string
+              createdAt: string
+              attachments?: ChatAttachment[]
+            }[]
+            setMessages((prev) => {
+              const lastLocalTs = prev.length
+                ? Date.parse(prev[prev.length - 1].timestamp || "") || 0
+                : 0
+              const missed = fetched
+                .filter((m) => Date.parse(m.createdAt) > lastLocalTs)
+                .map((m) => ({
+                  role: "bot" as const,
+                  content: m.content,
+                  timestamp: m.createdAt,
+                  attachments: m.attachments,
+                  serverId: m.id,
+                }))
+              if (missed.length === 0) return prev
+              const updated = [...prev, ...missed]
+              if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+              return updated
+            })
+            lastOperatorMsgAt.current = fetched[fetched.length - 1].createdAt
           }
           console.log("🔒 [WIDGET] Restored operator handoff state on init", {
             operatorHasReplied: Array.isArray(data.messages) && data.messages.length > 0,

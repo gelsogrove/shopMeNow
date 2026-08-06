@@ -1394,7 +1394,13 @@ async function agentTurnInternal(
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
       }
       let replyBody = rawReply.trim()
-      if (!replyBody && !greetingReply) {
+      if (!replyBody) {
+        // Andrea 2026-08-06, seen live (Danish customer, first turn): the
+        // greeting hop always produces text, so the old `!replyBody &&
+        // !greetingReply` guard never retried an empty SUBSTANCE hop — the
+        // customer got only the greeting, their actual message (a stated
+        // fault) silently dropped with no question asked back. The retry
+        // must fire whenever the substance is empty, greeting or not.
         // eslint-disable-next-line no-console
         console.error('[demoam][empty-reply-retry]', JSON.stringify({ node: state.currentNodeId ?? null, hop }))
         history.push({ role: 'user', content: EMPTY_REPLY_RETRY_INSTRUCTION })

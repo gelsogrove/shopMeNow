@@ -26,8 +26,12 @@ type ChatChannel = string
 function renderCustomerName(template: string | undefined | null, customerName?: string): string | null {
   const text = template?.trim()
   if (!text) return null
-  const name = customerName?.trim()
-  return text.replace(/\{\{\s*customerName\s*\}\}/gi, name || "").replace(/\s{2,}/g, " ").trim()
+  // Host convention: anonymous visitors get an auto-generated "Visitor <id>"
+  // name (visitor-id.service.ts). That is NOT a customer name — substituting
+  // it produced "Grazie, Visitor ba9143zb" in a live hand-off (2026-08-06).
+  const trimmed = customerName?.trim()
+  const name = trimmed && !/^visitor[\s_]/i.test(trimmed) ? trimmed : ""
+  return text.replace(/\{\{\s*customerName\s*\}\}/gi, name).replace(/\s{2,}/g, " ").trim()
 }
 
 // Params/result for the injected schedule_consultation handler. Mirrors the
