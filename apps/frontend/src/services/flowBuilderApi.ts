@@ -24,6 +24,9 @@ export interface Flow {
   keywords: string[]
   compiledPrompt: string
   hash: string
+  // Seeded system flows (e.g. the human-operator fallback) that the backend
+  // refuses to delete (409) — the UI disables their delete action up front.
+  isProtected?: boolean
   createdAt: string
   updatedAt: string
 }

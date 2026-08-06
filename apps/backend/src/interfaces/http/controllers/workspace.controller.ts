@@ -608,69 +608,16 @@ export class WorkspaceController {
       const { id } = req.params
       const workspaceData = req.body
 
-      // 🔒 SECURITY CHECK
-      logger.error("=== SECURITY AUDIT ===")
-      logger.error("User from req:", (req as any).user ? "✅ PRESENT" : "❌ MISSING")
-      logger.error("Authorization header:", req.headers.authorization ? "✅ PRESENT" : "❌ MISSING")
-      logger.error("Workspace ID from token:", (req as any).workspaceId)
-      logger.error("Route called:", req.path)
-
       if (!(req as any).user) {
-        logger.error("🚨 SECURITY BREACH: Update called without authentication!")
+        logger.error("updateWorkspace called without authentication", { path: req.path })
         return res.status(401).json({ message: "Unauthorized - No user in request" })
       }
 
-      logger.info(`Updating workspace ${id}`)
-      logger.info(
-        `📦 Workspace data received: ${JSON.stringify(
-          {
-            ...workspaceData,
-            whatsappAppSecret: workspaceData.whatsappAppSecret ? "****" : undefined,
-          },
-          null,
-          2
-        )}`
-      )
-
-      // 🔍 LOG SPECIFICO per whatsappProvider (UltraMsg)
-      logger.info("=== WHATSAPP PROVIDER DEBUG ===")
-      logger.info("whatsappProvider:", workspaceData.whatsappProvider || "NOT SET")
-      logger.info("ultraMsgInstanceId:", workspaceData.ultraMsgInstanceId || "NOT SET")
-      logger.info("ultraMsgToken:", workspaceData.ultraMsgToken ? "***SET***" : "NOT SET")
-      logger.info("ultraMsgApiUrl:", workspaceData.ultraMsgApiUrl || "NOT SET")
-
-      // 🔍 LOG SPECIFICO per whatsappApiKey
-      logger.info("=== WHATSAPP API KEY DEBUG ===")
-      logger.info(
-        "whatsappApiKey presente nel body:",
-        workspaceData.whatsappApiKey ? "✅ SÌ" : "❌ NO"
-      )
-      if (workspaceData.whatsappApiKey) {
-        logger.info(
-          "Lunghezza whatsappApiKey:",
-          workspaceData.whatsappApiKey.length
-        )
-        logger.info(
-          "Primi 10 caratteri:",
-          workspaceData.whatsappApiKey.substring(0, 10) + "..."
-        )
-      }
-
-      // 🔍 LOG SPECIFICO per Feature 199 fields
-      logger.info("=== FEATURE 199 TOGGLE DEBUG ===")
-      logger.info(`channelMode nel body: ${workspaceData.channelMode} (tipo: ${typeof workspaceData.channelMode})`)
-      logger.info(`hasSalesAgents nel body: ${workspaceData.hasSalesAgents} (tipo: ${typeof workspaceData.hasSalesAgents})`)
-      logger.info(`hasHumanSupport nel body: ${workspaceData.hasHumanSupport} (tipo: ${typeof workspaceData.hasHumanSupport})`)
-      logger.info("operatorContactMethod nel body:", workspaceData.operatorContactMethod)
+      logger.info(`Updating workspace ${id}`, {
+        fields: Object.keys(workspaceData),
+      })
 
       const workspace = await this.workspaceService.update(id, workspaceData)
-
-      // 🐞 DEBUG: Log what service returned
-      logger.info("=== SERVICE RESPONSE DEBUG ===")
-      logger.info("whatsappProvider returned:", workspace?.whatsappProvider || "NOT IN RESPONSE")
-      logger.info("ultraMsgInstanceId returned:", workspace?.ultraMsgInstanceId || "NOT IN RESPONSE")
-      logger.info("ultraMsgToken returned:", workspace?.ultraMsgToken ? "***SET***" : "NOT IN RESPONSE")
-      logger.info("ultraMsgApiUrl returned:", workspace?.ultraMsgApiUrl || "NOT IN RESPONSE")
 
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" })

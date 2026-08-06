@@ -157,6 +157,7 @@ export function FlowsPage() {
         isLoading={isLoading}
         onEdit={(flow) => navigate(`/settings/demorobot/${categoryId}/flows/${flow.id}/edit`)}
         onDelete={(flow) => setDeleteTarget(flow)}
+        canDelete={(flow) => !flow.isProtected}
         actionButtons={(flow) => (
           <>
             <TooltipProvider>
