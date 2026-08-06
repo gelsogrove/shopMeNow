@@ -601,9 +601,20 @@ interface DemoFeature {
 
 const DEMO_FEATURES: DemoFeature[] = [
   {
+    name: "Languages",
+    description: "Detects the customer's language and replies in it automatically.",
+    status: "done",
+    count: "3",
+  },
+  {
     name: "Welcome message",
     description: "Greets new customers and welcomes returning ones back by name.",
     status: "done",
+  },
+  {
+    name: "Presentation Video",
+    description: "Short video introducing the assistant and how it works.",
+    status: "todo",
   },
   {
     name: "FAQ",
@@ -621,16 +632,15 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "done",
   },
   {
+    name: "Forward Human Support logic",
+    description: "Forwards the conversation to the agent for the customer's country.",
+    status: "todo",
+  },
+  {
     name: "Operator message translation",
     description:
       "Your operators reply in their own language: each message is translated into the customer's language automatically.",
     status: "done",
-  },
-  {
-    name: "Languages",
-    description: "Detects the customer's language and replies in it automatically.",
-    status: "done",
-    count: "3",
   },
   {
     name: "Speech to text",
@@ -648,14 +658,14 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "done",
   },
   {
-    name: "Chats history",
-    description: "Remembers past conversations and greets returning customers by name.",
-    status: "done",
-  },
-  {
     name: "WhatsApp",
     description: "Same assistant answering directly on your WhatsApp business number.",
     status: "todo",
+  },
+  {
+    name: "Chats history",
+    description: "Picks up where you left off: nothing is lost between conversations.",
+    status: "done",
   },
   {
     name: "Push Message",
@@ -680,16 +690,6 @@ const DEMO_FEATURES: DemoFeature[] = [
   {
     name: "Terms and conditions",
     description: "Asks for privacy consent before the conversation starts.",
-    status: "todo",
-  },
-  {
-    name: "Presentation Video",
-    description: "Short video introducing the assistant and how it works.",
-    status: "todo",
-  },
-  {
-    name: "Forward Human Support logic",
-    description: "Forwards the conversation to the agent for the customer's country.",
     status: "todo",
   },
   {
