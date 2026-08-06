@@ -6,23 +6,24 @@
  * who reloads (or comes back later the same session) is not asked again.
  *
  * 🔓 Scope — this is a LIGHT barrier, agreed with Andrea (2026-08-06), not
- * real access control. The expected password ships in the frontend bundle
- * (VITE_DEMO_PASSWORD), so anyone reading the JS can find it and skip the gate.
- * It exists to stop the demo from being stumbled upon casually. Do NOT put
- * anything genuinely private behind it — that needs a server-side check.
+ * real access control. The password below ships inside the frontend bundle, so
+ * anyone reading the JS can find it and skip the gate. It exists to stop the
+ * demo from being stumbled upon casually. Do NOT put anything genuinely
+ * private behind it — that needs a server-side check.
  *
- * The password itself is NOT hardcoded (project rule 1): it comes from
- * VITE_DEMO_PASSWORD. With the variable unset the gate stays closed and the
- * page cannot be opened at all, rather than silently letting everyone in.
+ * ⚠️ Hardcoded password — exception to project rule 1 (no hardcoded values),
+ * requested explicitly by Andrea on 2026-08-06 per rule 1C, after first
+ * choosing an env var. Rationale: as a VITE_ variable the password was already
+ * public in the bundle, so configuration bought no secrecy — only an extra
+ * deploy step. Changing it now requires editing this line and rebuilding.
  */
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 
 const UNLOCK_STORAGE_KEY = "echatbot-demo-unlocked-until"
 const UNLOCK_DURATION_MS = 4 * 60 * 60 * 1000 // 4 hours
 
-function getExpectedPassword(): string {
-  return import.meta.env.VITE_DEMO_PASSWORD || ""
-}
+// Hardcoded on Andrea's explicit instruction (2026-08-06) — see the header note.
+const DEMO_PASSWORD = "Admin@123"
 
 /** True when a previous unlock is stored and has not expired yet. */
 function readStoredUnlock(): boolean {
@@ -75,12 +76,7 @@ export function DemoPasswordGate({ children }: DemoPasswordGateProps) {
   const handleSubmit = useCallback(
     (event: React.FormEvent) => {
       event.preventDefault()
-      const expected = getExpectedPassword()
-      if (!expected) {
-        setError("This demo is not configured. Please contact the administrator.")
-        return
-      }
-      if (password !== expected) {
+      if (password !== DEMO_PASSWORD) {
         setError("Wrong password. Please try again.")
         setPassword("")
         return
