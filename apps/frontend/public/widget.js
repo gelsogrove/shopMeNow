@@ -1694,6 +1694,8 @@
       params.set("workspaceId", this.config.workspaceId)
       if (this.config.title) params.set("title", this.config.title)
       if (this.config.logoUrl) params.set("logoUrl", this.config.logoUrl)
+      if (this.config.useChannelLogo != null)
+        params.set("useChannelLogo", String(this.config.useChannelLogo))
       if (this.config.language) params.set("language", this.config.language)
       if (this.config.primaryColor) params.set("primaryColor", this.config.primaryColor)
       if (this.config.icon) params.set("icon", this.config.icon)
