@@ -72,6 +72,10 @@ interface BrandTheme {
   // When set, the page copy is forced to this language instead of following
   // the visitor's browser language (demorobot must always show English).
   pageLang?: string
+  // When set, the resolve-demo lookup uses this customChatbotId instead of the
+  // URL slug (demorobot resolves to the "demoam" workspace since 2026-08-06,
+  // when the old demorobot workspace was deleted).
+  chatbotId?: string
   // Optional widget-config override. When present, the page does NOT render the
   // React <ChatWidget>: it loads the REAL production embed snippet instead
   // (window.eChatbotConfig + /widget.js), exactly as a customer's website
@@ -151,6 +155,7 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     titleA: "Demo",
     titleB: "Robot",
     monogram: "DR",
+    chatbotId: "demoam",
     primaryColor: "#3aad38",
     pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
     blob1: "bg-emerald-400/30",
@@ -623,7 +628,7 @@ export function DemoWidgetPage() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(`${apiUrl}/playground/resolve-demo/${slug}`)
+    fetch(`${apiUrl}/playground/resolve-demo/${brand.chatbotId ?? slug}`)
       .then(async (r) => {
         const data = await r.json().catch(() => ({}))
         if (!r.ok) {
@@ -646,7 +651,7 @@ export function DemoWidgetPage() {
     return () => {
       cancelled = true
     }
-  }, [apiUrl, slug])
+  }, [apiUrl, slug, brand.chatbotId])
 
   // ── Real-embed mode ────────────────────────────────────────────────────────
   // Brands with a `widget` config (demorobot) load the widget through the REAL
