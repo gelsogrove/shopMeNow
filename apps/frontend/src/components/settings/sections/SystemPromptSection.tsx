@@ -29,6 +29,12 @@ const AVAILABLE_VARIABLES: Array<{ name: string; description: string }> = [
   { name: "{{operatorWhatsappNumber}}", description: "Operator WhatsApp number" },
   { name: "{{toneOfVoice}}", description: "friendly / formal / professional / casual" },
   { name: "{{address}}", description: "Business physical address" },
+  { name: "{{websiteUrl}}", description: "Company website URL" },
+  { name: "{{businessType}}", description: "Business type (Business Config)" },
+  { name: "{{adminEmail}}", description: "Business email (Business Config)" },
+  { name: "{{whatsappNumber}}", description: "Business WhatsApp number" },
+  { name: "{{currency}}", description: "Workspace currency (e.g. EUR)" },
+  { name: "{{termsAndConditions}}", description: "Terms and conditions URL" },
   { name: "{{allowedExternalLinks}}", description: "Domains the bot may link to" },
 ]
 

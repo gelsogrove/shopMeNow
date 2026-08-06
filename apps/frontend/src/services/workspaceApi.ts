@@ -52,6 +52,7 @@ export interface Workspace {
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
+  speechToTextEnabled?: boolean // Widget composer shows a microphone; voice notes are transcribed to text
   hasProductCatalog?: boolean
   hasCart?: boolean
   hasOrderTracking?: boolean
@@ -206,6 +207,7 @@ export interface UpdateWorkspaceData {
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
+  speechToTextEnabled?: boolean // Widget composer shows a microphone; voice notes are transcribed to text
   hasProductCatalog?: boolean
   hasCart?: boolean
   hasOrderTracking?: boolean

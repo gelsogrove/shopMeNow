@@ -69,6 +69,7 @@ model Workspace {
   enableCalendarBooking             Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
   hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
   hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
+  speechToTextEnabled               Boolean     @default(false) // Widget shows a microphone; voice notes are transcribed (Whisper) in the customer's detected language
   hasProductCatalog                 Boolean     @default(true) // Enable product search agent in pipeline
   hasCart                           Boolean     @default(true) // Enable cart management agent in pipeline
   hasOrderTracking                  Boolean     @default(true) // Enable order tracking agent in pipeline

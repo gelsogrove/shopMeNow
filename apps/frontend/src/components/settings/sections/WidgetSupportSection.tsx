@@ -6,13 +6,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Headphones, Smartphone, Users, Mail } from "lucide-react"
+import { Headphones, Mic, Smartphone, Users, Mail } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { OperatorRecipientList } from "@/components/settings/OperatorRecipientList"
 
 interface WidgetSupportSectionProps {
   formData: {
     hasHumanSupport: boolean
+    /** Widget composer shows a microphone; voice notes are transcribed to text. */
+    speechToTextEnabled: boolean
     hasSalesAgents: boolean
     operatorContactMethod: "email" | "whatsapp"
     operatorEmails: string[]
@@ -328,6 +330,31 @@ export function WidgetSupportSection({
               )}
         </CardContent>
         )}
+      </Card>
+
+      {/* Speech to Text — widget microphone. Independent of hasHumanSupport:
+          it changes the widget composer, not the escalation flow. */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white" data-focus-key="speechToTextToggle">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Mic className="h-5 w-5 text-purple-600" />
+                Speech to Text
+              </CardTitle>
+              <p className="text-xs text-gray-500 mt-1">
+                Adds a microphone to the chat widget. Voice messages are transcribed to
+                text in the customer's detected language, and the chatbot replies to the
+                transcription.
+              </p>
+            </div>
+            <Switch
+              checked={formData.speechToTextEnabled}
+              onCheckedChange={(checked) => onFieldChange("speechToTextEnabled", checked)}
+              disabled={!canEdit}
+            />
+          </div>
+        </CardHeader>
       </Card>
     </div>
   )

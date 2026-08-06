@@ -26,6 +26,12 @@ export interface TranscribeAudioInput {
   /** Provider name for structured logging. */
   provider: "meta" | "ultramsg" | "wasender" | "playground" | "widget"
   workspaceId: string
+  /**
+   * ISO 639-1 hint (e.g. "it") — the language the system detected for the
+   * customer. Steers Whisper so short clips aren't transcribed into the wrong
+   * language. Omitted → Whisper auto-detects.
+   */
+  language?: string
 }
 
 export interface TranscribeAudioResult {
@@ -39,7 +45,7 @@ export interface TranscribeAudioResult {
 export async function transcribeAudio(
   input: TranscribeAudioInput
 ): Promise<TranscribeAudioResult | null> {
-  const { audioBuffer, audioUrl, declaredMime, provider, workspaceId } = input
+  const { audioBuffer, audioUrl, declaredMime, provider, workspaceId, language } = input
 
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
@@ -82,12 +88,18 @@ export async function transcribeAudio(
   const filename = `audio.${ext}`
   const mimeType = declaredMime || "audio/ogg"
 
+  // Whisper takes an ISO 639-1 hint; anything else is dropped so a bad value
+  // can never fail the request.
+  const languageHint =
+    language && /^[a-z]{2}$/i.test(language.trim()) ? language.trim().toLowerCase() : undefined
+
   logger.info("[AUDIO-TRANSCRIPTION] 🎤 Sending to Whisper", {
     model: WHISPER_MODEL,
     bytes: buffer.byteLength,
     ext,
     format: mimeToOpenRouterFormat(declaredMime),
     declaredMime,
+    language: languageHint,
     provider,
     workspaceId,
   })
@@ -97,7 +109,7 @@ export async function transcribeAudio(
   // WhatsApp sends audio/ogg;codecs=opus — OpenRouter accepts "ogg" as format
   const format = mimeToOpenRouterFormat(declaredMime)
 
-  try {
+  const requestWhisper = async (withLanguage: boolean) => {
     const res = await axios.post(
       WHISPER_URL,
       {
@@ -106,6 +118,7 @@ export async function transcribeAudio(
           data: base64Audio,
           format,
         },
+        ...(withLanguage && languageHint ? { language: languageHint } : {}),
       },
       {
         headers: {
@@ -115,8 +128,30 @@ export async function transcribeAudio(
         timeout: 30_000,
       }
     )
+    return res.data?.text?.trim() as string | undefined
+  }
 
-    const text = res.data?.text?.trim()
+  try {
+    let text: string | undefined
+    try {
+      text = await requestWhisper(true)
+    } catch (err: any) {
+      // Guard: if the endpoint rejects the language field (4xx), the voice note
+      // must still work — retry once with auto-detection.
+      const status = err.response?.status
+      if (languageHint && status && status >= 400 && status < 500) {
+        logger.warn("[AUDIO-TRANSCRIPTION] ⚠️ Language hint rejected, retrying without it", {
+          status,
+          language: languageHint,
+          provider,
+          workspaceId,
+        })
+        text = await requestWhisper(false)
+      } else {
+        throw err
+      }
+    }
+
     if (!text) {
       logger.warn("[AUDIO-TRANSCRIPTION] ⚠️ Whisper returned empty text", { provider, workspaceId })
       return null

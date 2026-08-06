@@ -113,6 +113,7 @@ interface FormData {
   // Security
   allowedExternalLinks: string
   hasHumanSupport: boolean
+  speechToTextEnabled: boolean
   hasSalesAgents: boolean
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
@@ -276,6 +277,7 @@ export function SettingsPage() {
     termsAndConditions: "",
     allowedExternalLinks: "",
     hasHumanSupport: true,
+    speechToTextEnabled: false,
     hasSalesAgents: false,
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
@@ -388,6 +390,7 @@ export function SettingsPage() {
           ? currentWorkspace.allowedExternalLinks.join(", ")
           : currentWorkspace.allowedExternalLinks || "",
         hasHumanSupport: currentWorkspace.hasHumanSupport ?? true,
+        speechToTextEnabled: currentWorkspace.speechToTextEnabled ?? false,
         hasSalesAgents: currentWorkspace.hasSalesAgents ?? false,
         operatorContactMethod:
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
@@ -636,6 +639,11 @@ export function SettingsPage() {
         // hasHumanSupport
         if (updateData.hasHumanSupport === currentWorkspace.hasHumanSupport) {
           delete updateData.hasHumanSupport
+        }
+
+        // speechToTextEnabled
+        if (updateData.speechToTextEnabled === (currentWorkspace.speechToTextEnabled ?? false)) {
+          delete updateData.speechToTextEnabled
         }
 
         // hasSalesAgents
@@ -893,6 +901,7 @@ export function SettingsPage() {
           <WidgetSupportSection
             formData={{
               hasHumanSupport: formData.hasHumanSupport,
+              speechToTextEnabled: formData.speechToTextEnabled,
               hasSalesAgents: formData.hasSalesAgents,
               operatorContactMethod: formData.operatorContactMethod,
               operatorEmails: formData.operatorEmails,

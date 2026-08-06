@@ -582,6 +582,9 @@ export function ChatWidget({
     // 📄 T&C text authored in Settings → Other. Shown verbatim in the
     // registration form; falls back to the built-in copy when not configured.
     termsAndConditions?: string | null
+    // 🎤 Settings → Human Support toggle: composer shows a microphone and voice
+    // notes are transcribed to text in the customer's detected language.
+    speechToTextEnabled?: boolean
   } | null>(null)
 
   // 👤 Profile Panel State
@@ -633,6 +636,7 @@ export function ChatWidget({
               whatsappPhoneNumber: statusResp.workspace.whatsappPhoneNumber,
               name: statusResp.workspace.name,
               termsAndConditions: statusResp.workspace.termsAndConditions,
+              speechToTextEnabled: statusResp.workspace.speechToTextEnabled === true,
             })
           }
         } catch (err) {
@@ -658,6 +662,7 @@ export function ChatWidget({
               whatsappPhoneNumber: statusResp.workspace.whatsappPhoneNumber,
               name: statusResp.workspace.name,
               termsAndConditions: statusResp.workspace.termsAndConditions,
+              speechToTextEnabled: statusResp.workspace.speechToTextEnabled === true,
             })
           }
 
@@ -2637,9 +2642,10 @@ export function ChatWidget({
                     )}
                   </div>
                   {/* Right round button (WhatsApp-style): mic when the field is
-                      empty, send when there's text. Mic only in the live demo
-                      composer and not while waiting for an operator. */}
-                  {instantChat &&
+                      empty, send when there's text. Mic in the live demo composer
+                      or when the workspace enables Speech to Text (Settings →
+                      Human Support), never while waiting for an operator. */}
+                  {(instantChat || workspaceConfig?.speechToTextEnabled === true) &&
                   !(botDisabled && !operatorHasReplied) &&
                   inputValue.trim().length === 0 ? (
                     <button

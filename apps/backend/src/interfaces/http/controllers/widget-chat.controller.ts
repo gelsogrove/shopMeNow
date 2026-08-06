@@ -457,6 +457,7 @@ export class WidgetChatController {
           customChatbotId: true, // 🎮 demo workspaces bypass enableWidget/debugMode gates
           allowedExternalLinks: true, // reuse as allow-list for widget origins
           termsAndConditions: true, // 📄 T&C text shown in the widget registration form
+          speechToTextEnabled: true, // 🎤 Widget composer shows a microphone for voice notes
         },
       })
 
@@ -626,6 +627,7 @@ export class WidgetChatController {
           websiteUrl: workspace.websiteUrl,
           allowedOrigins: workspace.allowedExternalLinks,
           termsAndConditions: workspace.termsAndConditions,
+          speechToTextEnabled: workspace.speechToTextEnabled ?? false,
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
@@ -1413,14 +1415,40 @@ export class WidgetChatController {
         return res.status(400).json({ error: "audio file is required" })
       }
       const { workspaceId } = req.params
+
+      // 🎤 Settings → Human Support toggle: voice input is off by default.
+      // Demo workspaces (customChatbotId) bypass it, same as the other widget gates.
+      const workspaceFlags = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { speechToTextEnabled: true, customChatbotId: true },
+      })
+      if (!workspaceFlags) {
+        cleanup()
+        return res.status(404).json({ error: "Workspace not found" })
+      }
+      if (workspaceFlags.speechToTextEnabled !== true && !workspaceFlags.customChatbotId) {
+        cleanup()
+        return res.status(403).json({ error: "Speech to text is disabled for this workspace" })
+      }
+
       const buffer = fs.readFileSync(file.path)
       const declaredMime = (file.mimetype || "audio/webm").split(";")[0].trim()
+
+      // 🌍 Same detection priority as sendMessage (explicit widget language >
+      // browser Accept-Language): the system-detected language steers Whisper,
+      // so short voice notes aren't transcribed into the wrong language.
+      const detectedLanguage =
+        this.normalizeLanguage(typeof req.body?.language === "string" ? req.body.language : null) ||
+        (req.headers["accept-language"]
+          ? this.normalizeLanguage(detectLanguageFromHeader(req.headers["accept-language"]))
+          : null)
 
       const transcription = await transcribeAudio({
         audioBuffer: buffer,
         declaredMime,
         provider: "widget",
         workspaceId,
+        language: detectedLanguage ?? undefined,
       })
       cleanup()
       if (!transcription?.text) {

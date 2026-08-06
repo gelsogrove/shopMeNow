@@ -67,6 +67,7 @@ export interface WorkspaceProps {
   channelMode?: import("@echatbot/database").ChannelMode
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
+  speechToTextEnabled?: boolean
   hasProductCatalog?: boolean
   hasCart?: boolean
   hasOrderTracking?: boolean
@@ -387,6 +388,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get hasHumanSupport(): boolean {
     return this.props.hasHumanSupport ?? true
+  }
+
+  get speechToTextEnabled(): boolean {
+    return this.props.speechToTextEnabled ?? false
   }
 
   get hasProductCatalog(): boolean {
