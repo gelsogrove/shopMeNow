@@ -24,6 +24,7 @@ import { flowApi, assetApi, Flow, FlowNode, FlowEdge as ApiFlowEdge, Asset, Vali
 import { FlowQuestionNode, type FlowQuestionNodeData } from "@/components/flow-builder/FlowQuestionNode"
 import { FlowNodePanel } from "@/components/flow-builder/FlowNodePanel"
 import { ChatWidget } from "@/components/ChatWidget"
+import { resolveLogoUrl } from "@/config"
 
 const nodeTypes = { question: FlowQuestionNode }
 
@@ -590,6 +591,7 @@ function FlowEditorInner() {
           title={workspace.widgetTitle}
           primaryColor={workspace.widgetPrimaryColor}
           icon={workspace.widgetIcon}
+          logoUrl={resolveLogoUrl(workspace.logoUrl)}
           useChannelLogo={workspace.widgetUseChannelLogo}
           useWindowConfig={false}
           language={workspace.widgetLanguage}

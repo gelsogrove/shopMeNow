@@ -89,13 +89,14 @@ function isOriginAllowed(
 }
 
 /**
- * Ask a cheap LLM to generate 2-3 contextually-relevant, language-correct
- * follow-up suggestions for the last bot message.
+ * Ask a cheap LLM to generate 4 contextually-relevant, language-correct
+ * follow-up suggestions for the last bot message (widget only — the widget
+ * renders them two per row).
  *
  * - Model: gpt-4o-mini (cheapest / fastest on OpenRouter, ~$0.000015 / call)
  * - Timeout: 2.5 s — falls back silently to heuristic on any error
- * - Input: bot response truncated to 500 chars to keep tokens minimal
- * - Output: string[] of 2-3 short replies (≤40 chars each)
+ * - Input: bot response truncated to 600 chars to keep tokens minimal
+ * - Output: string[] of 4 short replies (≤40 chars each)
  */
 async function buildWidgetSuggestionsWithAI(
   response: string,
@@ -163,13 +164,21 @@ async function buildWidgetSuggestionsWithAI(
               `- User registration, login, account creation, sign up\n` +
               `In these cases the user needs to act, not browse more FAQ topics — suggestions would distract them.\n` +
               `\n` +
+              `OPENING OF THE CONVERSATION: when the chatbot reply is a greeting or a\n` +
+              `generic presentation, the user does not yet know what this assistant can\n` +
+              `do. Cover DIFFERENT entry points so the suggestions work as a menu — for\n` +
+              `example reporting a problem or malfunction, understanding something shown\n` +
+              `on a display or screen, and the other most common reasons people contact\n` +
+              `this business according to the FAQ list. Never propose four variations of\n` +
+              `the same topic.\n` +
+              `\n` +
               `STRICT RULES (when NOT returning empty):\n` +
-              `- Select EXACTLY 3 FAQ topics that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
+              `- Select EXACTLY 4 FAQ topics that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
               `- TRANSLATE and REWRITE each selected topic in ${langName[lang] || "English"} — do NOT copy the original FAQ text verbatim\n` +
               `- Write each suggestion in FIRST PERSON (e.g. "I want to know the prices" not "Prices")\n` +
               `- Max 40 characters per suggestion — shorten if needed\n` +
               `- No links, no emoji, no punctuation at the end\n` +
-              `- Return ONLY a raw JSON array of EXACTLY 3 strings, or [] if the reply matches the empty cases above. Example: ["How can I pay?","Where is my order?","Can I modify it?"]`,
+              `- Return ONLY a raw JSON array of EXACTLY 4 strings, or [] if the reply matches the empty cases above. Example: ["How can I pay?","Where is my order?","Can I modify it?","Is there a warranty?"]`,
           },
           {
             role: "user",
@@ -202,11 +211,12 @@ async function buildWidgetSuggestionsWithAI(
         return []
       }
 
-      // RULE: We need EXACTLY 3 suggestions. If LLM returned <3, use static fallback
-      if (valid.length >= 3) {
-        return valid.slice(0, 3)
+      // RULE: We need EXACTLY 4 suggestions (widget renders two per row).
+      // If the LLM returned fewer, use static fallback.
+      if (valid.length >= 4) {
+        return valid.slice(0, 4)
       } else {
-        logger.warn("[WIDGET-SUGGESTIONS-AI] LLM returned <3 suggestions, using static fallback", {
+        logger.warn("[WIDGET-SUGGESTIONS-AI] LLM returned <4 suggestions, using static fallback", {
           returnedCount: valid.length
         })
         return staticReplies
@@ -458,6 +468,7 @@ export class WidgetChatController {
           allowedExternalLinks: true, // reuse as allow-list for widget origins
           termsAndConditions: true, // 📄 T&C text shown in the widget registration form
           speechToTextEnabled: true, // 🎤 Widget composer shows a microphone for voice notes
+          enabledLanguages: true, // 🌐 Filters the registration-form language dropdown
         },
       })
 
@@ -599,6 +610,7 @@ export class WidgetChatController {
           websiteUrl: workspace.websiteUrl,
           allowedOrigins: workspace.allowedExternalLinks,
           termsAndConditions: workspace.termsAndConditions,
+          enabledLanguages: workspace.enabledLanguages ?? [],
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
@@ -628,6 +640,7 @@ export class WidgetChatController {
           allowedOrigins: workspace.allowedExternalLinks,
           termsAndConditions: workspace.termsAndConditions,
           speechToTextEnabled: workspace.speechToTextEnabled ?? false,
+          enabledLanguages: workspace.enabledLanguages ?? [],
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
@@ -2692,7 +2705,10 @@ export class WidgetChatController {
         return res.status(404).json({ error: "CUSTOMER_NOT_FOUND", message: "Customer not found in this workspace" })
       }
 
-      return res.json(customer)
+      return res.json({
+        ...customer,
+        email: customer.email?.endsWith("@visitor.local") ? null : customer.email,
+      })
     } catch (error) {
       logger.error("❌ Error getting widget profile", error)
       return res.status(500).json({ error: "INTERNAL_ERROR" })
@@ -2731,6 +2747,12 @@ export class WidgetChatController {
         }
       }
 
+      // The widget never shows @visitor.local placeholders, so an empty email
+      // from the profile form means "unchanged" — keep the placeholder intact.
+      if ("email" in sanitized && !(sanitized.email as string)?.trim()) {
+        delete sanitized.email
+      }
+
       // Handle push_notifications_consent timestamp
       if ("push_notifications_consent" in sanitized) {
         sanitized.push_notifications_consent_at = sanitized.push_notifications_consent ? new Date() : null
@@ -2756,7 +2778,10 @@ export class WidgetChatController {
         },
       })
 
-      return res.json(updated)
+      return res.json({
+        ...updated,
+        email: updated.email?.endsWith("@visitor.local") ? null : updated.email,
+      })
     } catch (error) {
       logger.error("❌ Error updating widget profile", error)
       return res.status(500).json({ error: "INTERNAL_ERROR" })

@@ -12,3 +12,11 @@ export const IMG_BASE_URL =
   (typeof window !== "undefined" && window.location.hostname !== "localhost"
     ? window.location.origin
     : "http://localhost:3001")
+
+// Workspace logo paths are stored relative to the backend (e.g. "/uploads/x.png")
+export function resolveLogoUrl(value?: string): string | undefined {
+  if (!value) return undefined
+  if (/^https?:\/\//i.test(value)) return value
+  const path = value.startsWith("/") ? value : `/${value}`
+  return `${IMG_BASE_URL}${path}`
+}

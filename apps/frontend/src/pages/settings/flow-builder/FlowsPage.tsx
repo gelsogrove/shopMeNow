@@ -26,6 +26,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
 import { flowApi, Flow } from "@/services/flowBuilderApi"
 import { ChatWidget } from "@/components/ChatWidget"
+import { resolveLogoUrl } from "@/config"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
 // categoryId param is "generic" for the workspace-generic fallback flow
@@ -250,6 +251,7 @@ export function FlowsPage() {
           title={workspace.widgetTitle}
           primaryColor={workspace.widgetPrimaryColor}
           icon={workspace.widgetIcon}
+          logoUrl={resolveLogoUrl(workspace.logoUrl)}
           useChannelLogo={workspace.widgetUseChannelLogo}
           useWindowConfig={false}
           language={workspace.widgetLanguage}

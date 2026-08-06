@@ -157,6 +157,22 @@ function formatBubbleTime(ts?: string): string {
 // Supported language codes (browser language detection)
 const SUPPORTED_LANG_CODES = ["it", "en", "es", "de", "fr", "ca"]
 
+// 🌐 Registration-form language dropdown: every language a workspace can
+// enable in Settings → AI Personality (Workspace.enabledLanguages), shown by
+// autonym. The dropdown a visitor sees is FILTERED to the workspace's enabled
+// languages; when none are configured the full list is offered.
+const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "it", label: "Italiano" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "ca", label: "Català" },
+  { code: "de", label: "Deutsch" },
+  { code: "da", label: "Dansk" },
+  { code: "pt", label: "Português" },
+  { code: "nl", label: "Nederlands" },
+]
+
 // 📣 A simulated promotional push (demo only). Rendered as a rich card: bold
 // badge, body text, optional big image, optional link/CTA.
 export interface PushDemoCase {
@@ -441,10 +457,9 @@ export function ChatWidget({
   // 🌐 Language picked in the registration-form dropdown (Andrea 2026-08-06):
   // wins over every config source, so ALL widget copy (intro, labels,
   // placeholders, button, terms) switches instantly when the visitor changes it.
-  const [uiLangOverride, setUiLangOverride] = useState<LangCode | null>(null)
-  const resolvedLangKey =
-    uiLangOverride ??
-    ((resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en")
+  const [uiLangOverride, setUiLangOverride] = useState<string | null>(null)
+  const resolvedLangKey = (uiLangOverride ??
+    (resolvedLanguage?.slice(0, 2).toLowerCase() || "en")) as LangCode
   const ui = UI_STRINGS[resolvedLangKey] || UI_STRINGS.en
   
   // Resolve other props from window config
@@ -565,7 +580,7 @@ export function ChatWidget({
   // 🎮 instantChat (demo) opens straight into the chat — no registration form.
   const [showRegistrationForm, setShowRegistrationForm] = useState(!instantChat)
   const [formPhone, setFormPhone] = useState("")
-  const [formLanguage, setFormLanguage] = useState<LangCode>("en")
+  const [formLanguage, setFormLanguage] = useState<string>("en")
   const [formFirstMessage, setFormFirstMessage] = useState("")
   const [showTermsContent, setShowTermsContent] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -580,7 +595,34 @@ export function ChatWidget({
     // 🎤 Settings → Human Support toggle: composer shows a microphone and voice
     // notes are transcribed to text in the customer's detected language.
     speechToTextEnabled?: boolean
+    // 🌐 Workspace.enabledLanguages — restricts the registration-form
+    // language dropdown to the languages this workspace actually serves.
+    enabledLanguages?: string[]
   } | null>(null)
+
+  // 🌐 Languages offered in the registration form: only the ones enabled on
+  // the workspace. Empty/unknown config (config not yet fetched, or workspace
+  // never configured the list) falls back to the full list.
+  const enabledLanguageOptions = useMemo(() => {
+    const enabled = workspaceConfig?.enabledLanguages ?? []
+    const filtered = LANGUAGE_OPTIONS.filter((o) => enabled.includes(o.code))
+    return filtered.length > 0 ? filtered : LANGUAGE_OPTIONS
+  }, [workspaceConfig?.enabledLanguages])
+
+  // 🌐 When the enabled-languages list arrives and the current selection is
+  // not served by this workspace, snap both the form copy and the language
+  // sent at registration to the first available option — the dropdown must
+  // never display a language the workspace does not serve.
+  useEffect(() => {
+    const first = enabledLanguageOptions[0]?.code
+    if (!first) return
+    if (!enabledLanguageOptions.some((o) => o.code === resolvedLangKey)) {
+      setUiLangOverride(first)
+    }
+    if (!enabledLanguageOptions.some((o) => o.code === formLanguage)) {
+      setFormLanguage(first)
+    }
+  }, [enabledLanguageOptions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 👤 Profile Panel State
   const [showProfilePanel, setShowProfilePanel] = useState(false)
@@ -632,6 +674,7 @@ export function ChatWidget({
               name: statusResp.workspace.name,
               termsAndConditions: statusResp.workspace.termsAndConditions,
               speechToTextEnabled: statusResp.workspace.speechToTextEnabled === true,
+              enabledLanguages: statusResp.workspace.enabledLanguages,
             })
           }
         } catch (err) {
@@ -658,6 +701,7 @@ export function ChatWidget({
               name: statusResp.workspace.name,
               termsAndConditions: statusResp.workspace.termsAndConditions,
               speechToTextEnabled: statusResp.workspace.speechToTextEnabled === true,
+              enabledLanguages: statusResp.workspace.enabledLanguages,
             })
           }
 
@@ -1062,15 +1106,29 @@ export function ChatWidget({
       }
 
       // RULE: activeChatbot=false means the operator has taken over.
-      // Backend blocked the LLM — do NOT show any bot reply.
-      // Just enable waiting mode immediately and discard the empty response.
+      // Two distinct cases share this flag:
+      // - the ESCALATION turn itself: response carries the configured hand-off
+      //   message (workspace.humanSupportMessage) — it MUST be shown, then
+      //   waiting mode starts;
+      // - any LATER message while the operator owns the chat: backend blocked
+      //   the LLM and response is empty — nothing to show.
       if (data.activeChatbot === false) {
         setBotDisabled(true)
         lastOperatorMsgAt.current = new Date().toISOString()
-        // Keep only the user message (no bot reply to add)
-        setMessages(updatedMessages)
+        const handoffText = (data.response || "").trim()
+        const finalMessages = handoffText
+          ? [
+              ...updatedMessages,
+              {
+                role: "bot" as const,
+                content: handoffText,
+                timestamp: new Date().toISOString(),
+              },
+            ]
+          : updatedMessages
+        setMessages(finalMessages)
         if (resolvedWorkspaceId) {
-          saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+          saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
         }
         return
       }
@@ -1212,10 +1270,25 @@ export function ChatWidget({
         saveWidgetSessionId(localStorage, resolvedWorkspaceId, data.sessionId)
       }
 
-      // Operator took over → no bot reply to show.
+      // Same rule as sendMessage: the escalation turn carries the configured
+      // hand-off message in data.response — show it before waiting mode. Later
+      // messages while the operator owns the chat come back empty.
       if (data.activeChatbot === false) {
         setBotDisabled(true)
         lastOperatorMsgAt.current = new Date().toISOString()
+        const handoffText = (data.response || "").trim()
+        if (handoffText) {
+          const finalMessages = [
+            ...updatedMessages,
+            {
+              role: "bot" as const,
+              content: handoffText,
+              timestamp: new Date().toISOString(),
+            },
+          ]
+          setMessages(finalMessages)
+          if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
+        }
         return
       }
 
@@ -2149,18 +2222,17 @@ export function ChatWidget({
                       <select
                         value={resolvedLangKey}
                         onChange={(e) => {
-                          const next = e.target.value as LangCode
+                          const next = e.target.value
                           setUiLangOverride(next)
                           setFormLanguage(next)
                         }}
                         className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1"
                       >
-                        <option value="en">English</option>
-                        <option value="it">Italiano</option>
-                        <option value="es">Español</option>
-                        <option value="fr">Français</option>
-                        <option value="ca">Català</option>
-                        <option value="de">Deutsch</option>
+                        {enabledLanguageOptions.map((option) => (
+                          <option key={option.code} value={option.code}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -2249,6 +2321,10 @@ export function ChatWidget({
               saving={profileSaving}
               error={profileError}
               primaryColor={resolvedPrimaryColor}
+              termsLabel={ui.termsLabel}
+              termsTitle={ui.termsTitle}
+              termsContent={workspaceConfig?.termsAndConditions?.trim() || ui.termsBody}
+              backLabel={ui.back}
               onSave={handleSaveProfile}
               onBack={() => setShowProfilePanel(false)}
               onLogout={handleWidgetLogout}

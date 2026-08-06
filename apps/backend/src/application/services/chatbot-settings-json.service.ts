@@ -61,6 +61,8 @@ export interface ChatbotSettingsJson {
   topK: number
   audioOutput: boolean
   audioVoices: Record<string, string>
+  /** Widget composer shows a microphone; voice notes are transcribed to text in the customer's detected language. */
+  speechToTextEnabled?: boolean
   /** ISO 639-1 code used when the detected language isn't in `enabledLanguages`. */
   defaultLanguage?: string
   /** Languages the chatbot is allowed to reply in; detection outside this set falls back to `defaultLanguage`. */
@@ -118,6 +120,7 @@ export interface WorkspaceChatbotSource {
   defaultLanguage?: string | null
   enabledLanguages?: string[] | null
   audioOutput?: boolean | null
+  speechToTextEnabled?: boolean | null
   audioVoices?: unknown
   welcomeMessage?: string | null
   welcomeBackMessage?: string | null
@@ -328,6 +331,18 @@ export async function buildChatbotSettingsJson(
         : current.enabledLanguages,
     audioOutput:
       typeof workspace.audioOutput === "boolean" ? workspace.audioOutput : current.audioOutput,
+    // Written only when a real value exists: every UI save provides the DB
+    // boolean, so the key lands in the file then — but a module that never
+    // configured it keeps its file untouched (backwards compatible).
+    ...(typeof workspace.speechToTextEnabled === "boolean" ||
+    typeof current.speechToTextEnabled === "boolean"
+      ? {
+          speechToTextEnabled:
+            typeof workspace.speechToTextEnabled === "boolean"
+              ? workspace.speechToTextEnabled
+              : current.speechToTextEnabled,
+        }
+      : {}),
     audioVoices: audioVoices ?? current.audioVoices,
     welcomeMessage: renderTermsAndConditions(
       workspace.welcomeMessage?.trim() || current.welcomeMessage,

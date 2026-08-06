@@ -941,6 +941,7 @@ For privacy inquiries, please contact our support team.`
           defaultLanguage: true,
           enabledLanguages: true,
           audioOutput: true,
+          speechToTextEnabled: true,
           audioVoices: true,
           welcomeMessage: true,
           welcomeBackMessage: true,

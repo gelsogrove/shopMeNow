@@ -1,7 +1,7 @@
 import { useState, useEffect, type CSSProperties } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, Loader2, Save, User, Mail, Phone, Building, Globe, Bell, LogOut } from "lucide-react"
+import { ArrowLeft, FileText, Loader2, Save, User, Mail, Phone, Building, Globe, Bell, LogOut } from "lucide-react"
 
 interface WidgetProfilePanelProps {
   profileData: Record<string, unknown> | null
@@ -9,6 +9,10 @@ interface WidgetProfilePanelProps {
   saving: boolean
   error: string | null
   primaryColor: string
+  termsLabel: string
+  termsTitle: string
+  termsContent: string
+  backLabel: string
   onSave: (data: Record<string, unknown>) => void
   onBack: () => void
   onLogout?: () => void
@@ -20,6 +24,10 @@ export function WidgetProfilePanel({
   saving,
   error,
   primaryColor,
+  termsLabel,
+  termsTitle,
+  termsContent,
+  backLabel,
   onSave,
   onBack,
   onLogout,
@@ -30,6 +38,7 @@ export function WidgetProfilePanel({
   const [company, setCompany] = useState("")
   const [language, setLanguage] = useState("en")
   const [pushNotificationsConsent, setPushNotificationsConsent] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
 
   useEffect(() => {
     if (profileData) {
@@ -51,6 +60,26 @@ export function WidgetProfilePanel({
       <div className="flex-1 flex items-center justify-center bg-slate-50">
         <Loader2 className="w-6 h-6 animate-spin" style={{ color: primaryColor }} />
       </div>
+    )
+  }
+
+  if (showTerms) {
+    return (
+      <ScrollArea className="flex-1 bg-slate-50 px-5 py-4">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-slate-800">{termsTitle}</h3>
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+            {termsContent}
+          </p>
+          <button
+            onClick={() => setShowTerms(false)}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium transition-all"
+            style={{ color: primaryColor }}
+          >
+            ← {backLabel}
+          </button>
+        </div>
+      </ScrollArea>
     )
   }
 
@@ -170,6 +199,15 @@ export function WidgetProfilePanel({
               />
             </div>
           </div>
+
+          {/* Terms & Conditions link */}
+          <button
+            onClick={() => setShowTerms(true)}
+            className="flex items-center gap-1.5 text-xs font-medium underline transition-colors"
+            style={{ color: primaryColor }}
+          >
+            <FileText className="w-3.5 h-3.5" /> {termsLabel}
+          </button>
         </div>
       </ScrollArea>
 

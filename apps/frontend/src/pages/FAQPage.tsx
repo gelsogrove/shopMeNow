@@ -16,6 +16,7 @@ import { HelpCircle, Edit2, Trash2, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
+import { resolveLogoUrl } from "@/config"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
 export function FAQPage() {
@@ -420,6 +421,7 @@ export function FAQPage() {
           title={workspace.widgetTitle}
           primaryColor={workspace.widgetPrimaryColor}
           icon={workspace.widgetIcon}
+          logoUrl={resolveLogoUrl(workspace.logoUrl)}
           useChannelLogo={workspace.widgetUseChannelLogo}
           useWindowConfig={false}
           language={workspace.widgetLanguage}
