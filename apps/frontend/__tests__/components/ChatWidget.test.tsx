@@ -363,7 +363,7 @@ describe('ChatWidget', () => {
         json: async () => ({ activeChatbot: false, messages: [] }),
       })
 
-    const { container } = renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     const button = screen.getByRole('button', { name: /open chat/i })
     await user.click(button)
