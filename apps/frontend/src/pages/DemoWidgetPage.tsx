@@ -20,7 +20,7 @@
  *   below, so it works the same in dev and in production.
  */
 import { useEffect, useMemo, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { ChatWidget, type PushDemoCase } from "@/components/ChatWidget"
 
 // API base for both the slug resolution below and the widget it renders.
@@ -594,9 +594,17 @@ interface DemoFeature {
   name: string
   description: string
   status: "done" | "todo" | string
+  // Optional count shown in the third column (how many FAQs, flows, languages…).
+  // Left out when a feature has nothing meaningful to count.
+  count?: string
 }
 
 const DEMO_FEATURES: DemoFeature[] = [
+  {
+    name: "Welcome message",
+    description: "Greets new customers and welcomes returning ones back by name.",
+    status: "done",
+  },
   {
     name: "FAQ",
     description: "Answers common questions from a curated knowledge base — never invented.",
@@ -621,16 +629,22 @@ const DEMO_FEATURES: DemoFeature[] = [
   {
     name: "Languages",
     description: "Detects the customer's language and replies in it automatically.",
-    status: "ITA, Danish, English",
+    status: "done",
+    count: "3",
   },
   {
     name: "Speech to text",
-    description: "Understands voice notes and replies out loud with a voice note.",
-    status: "done",
+    description: "Understands voice notes sent by the customer.",
+    status: "todo",
+  },
+  {
+    name: "Text to speech",
+    description: "Replies out loud with a voice note instead of text.",
+    status: "todo",
   },
   {
     name: "Widget",
-    description: "Embeddable chat for any website — one snippet, no development.",
+    description: "Embeddable chat for any website.",
     status: "done",
   },
   {
@@ -674,13 +688,13 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "todo",
   },
   {
-    name: "Forward support logic",
-    description: "Routes each request to the right team based on its topic.",
+    name: "Forward Human Support logic",
+    description: "Forwards the conversation to the agent for the customer's country.",
     status: "todo",
   },
   {
     name: "Send Images",
-    description: "Customers can attach a photo of the problem instead of describing it.",
+    description: "The chatbot can send images and documents to the customer.",
     status: "todo",
   },
 ]
@@ -798,14 +812,6 @@ export function DemoWidgetPage() {
       <div className={`pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full ${brand.blob1} blur-3xl`} />
       <div className={`pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full ${brand.blob2} blur-3xl`} />
 
-      {/* Back to home */}
-      <Link
-        to="/"
-        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-white/20 sm:left-6 sm:top-6"
-      >
-        ← Home
-      </Link>
-
       {/* eChatbot.AI brand logo */}
       <a
         href="https://www.echatbot.ai"
@@ -860,8 +866,11 @@ export function DemoWidgetPage() {
                     <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
                       Feature
                     </th>
-                    <th className="py-2 text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
                       Status
+                    </th>
+                    <th className="py-2 text-right text-xs font-semibold uppercase tracking-wide">
+                      Qty
                     </th>
                   </tr>
                 </thead>
@@ -875,7 +884,7 @@ export function DemoWidgetPage() {
                           {feature.description}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap py-2.5">
+                      <td className="whitespace-nowrap py-2.5 pr-4">
                         {feature.status === "done" ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
                             ✅ Done
@@ -887,6 +896,9 @@ export function DemoWidgetPage() {
                         ) : (
                           <span className={brand.itemsText}>{feature.status}</span>
                         )}
+                      </td>
+                      <td className={`whitespace-nowrap py-2.5 text-right font-medium ${brand.itemsText}`}>
+                        {feature.count ?? ""}
                       </td>
                     </tr>
                   ))}
@@ -927,11 +939,6 @@ export function DemoWidgetPage() {
             </div>
           )}
 
-          {demo && !loading && !error && (
-            <p className={`mt-8 hidden items-center gap-2 text-sm ${brand.openHint} sm:flex`}>
-              The chat is open on the right. 👉
-            </p>
-          )}
         </div>
       </div>
 

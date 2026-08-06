@@ -2033,7 +2033,7 @@ export function ChatWidget({
         >
           {/* Header */}
           <div
-            className="text-white px-4 sm:px-5 py-3 flex items-center justify-between gap-2 sm:gap-3"
+            className="text-white px-5 sm:px-6 py-4 flex items-center justify-between gap-3 sm:gap-4"
             style={{ backgroundColor: headerColor }}
           >
               {waSkin ? (
