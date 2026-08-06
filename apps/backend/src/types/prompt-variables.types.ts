@@ -259,6 +259,12 @@ export interface PromptVariables {
    */
   websiteUrl: string
 
+  /** Numero WhatsApp del business (il numero del canale, non dell'operatore)
+   * Template: {{whatsappNumber}}
+   * Source: workspace.whatsappPhoneNumber || ''
+   */
+  whatsappNumber?: string
+
   /** Email supporto
    * Template: {{supportEmail}}
    * Source: workspace.notificationEmail || ''
@@ -536,6 +542,7 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   operatorContactMethod: 'email',
   operatorWhatsappNumber: '',
   websiteUrl: '',
+  whatsappNumber: '',
   supportEmail: '',
   termsAndConditions: '',
   channel: 'whatsapp', // Default to WhatsApp, widget will override

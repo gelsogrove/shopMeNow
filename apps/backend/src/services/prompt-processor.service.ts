@@ -138,6 +138,13 @@ export class PromptProcessorService {
       .replace(/\{\{url\}\}/g, vars.workspaceUrl || '')
       .replace(/\{\{website\}\}/g, vars.workspaceUrl || '')
       .replace(/\{\{toneOfVoice\}\}/g, vars.toneOfVoice || 'friendly')
+      .replace(/\{\{businessType\}\}/g, vars.businessType || '')
+      .replace(/\{\{currency\}\}/g, vars.currency || VARIABLE_DEFAULTS.currency || 'EUR')
+      // {{adminEmail}} left in place when empty: chat-engine resolves it later
+      // with the workspace's WhatsappSettings fallback (see replaceUserVariables)
+      .replace(/\{\{adminEmail\}\}/g, vars.adminEmail || '{{adminEmail}}')
+      .replace(/\{\{businessEmail\}\}/g, vars.adminEmail || '')
+      .replace(/\{\{whatsappNumber\}\}/g, vars.whatsappNumber || '')
       .replace(/\{\{humanSupportInstructions\}\}/g, vars.humanSupportInstructions || '')
       .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')
       .replace(/\{\{ALLOWED_EXTERNAL_LINKS\}\}/g, v.ALLOWED_EXTERNAL_LINKS || vars.allowedExternalLinks || '')
