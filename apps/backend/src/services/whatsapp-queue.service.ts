@@ -170,6 +170,67 @@ export class WhatsAppQueueService {
   }
 
   /**
+   * Drain pending queue messages across ALL workspaces (cron entry point).
+   *
+   * Guard (Andrea 2026-08-06): a workspace is only processed when WhatsApp is
+   * ACTIVE (`enableWhatsapp`) and a provider is configured — otherwise its
+   * messages stay `pending` and go out automatically once the channel is set
+   * up, instead of erroring against a provider that doesn't exist.
+   *
+   * Each cycle drains at most MAX_MESSAGES_PER_CYCLE per workspace so one
+   * large push campaign can't hold the cron hostage or hammer the provider.
+   */
+  static readonly MAX_MESSAGES_PER_CYCLE = 25
+
+  async processAllPendingWorkspaces(): Promise<void> {
+    try {
+      const pendingGroups = await this.prisma.whatsAppQueue.groupBy({
+        by: ["workspaceId"],
+        where: { status: "pending" },
+        _count: { _all: true },
+      })
+      if (pendingGroups.length === 0) return
+
+      const workspaces = await this.prisma.workspace.findMany({
+        where: { id: { in: pendingGroups.map((g) => g.workspaceId) } },
+        select: { id: true, name: true, enableWhatsapp: true, whatsappProvider: true },
+      })
+      const pendingCountByWorkspace = new Map(
+        pendingGroups.map((g) => [g.workspaceId, g._count._all])
+      )
+
+      for (const workspace of workspaces) {
+        if (!workspace.enableWhatsapp || !workspace.whatsappProvider) {
+          logger.info(
+            `[WhatsAppQueueService] ⏭️ Skipping workspace "${workspace.name}" (${workspace.id}) - WhatsApp inactive or no provider configured`,
+            {
+              enableWhatsapp: workspace.enableWhatsapp,
+              whatsappProvider: workspace.whatsappProvider || null,
+              pendingMessages: pendingCountByWorkspace.get(workspace.id) ?? 0,
+            }
+          )
+          continue
+        }
+
+        const toProcess = Math.min(
+          pendingCountByWorkspace.get(workspace.id) ?? 0,
+          WhatsAppQueueService.MAX_MESSAGES_PER_CYCLE
+        )
+        for (let i = 0; i < toProcess; i++) {
+          // processPendingMessages handles ONE message (FIFO) and never throws.
+          await this.processPendingMessages(workspace.id)
+        }
+      }
+    } catch (error) {
+      logger.error(
+        `[WhatsAppQueueService] Error in processAllPendingWorkspaces:`,
+        error
+      )
+      // Don't throw - let cron continue with next cycle
+    }
+  }
+
+  /**
    * Process pending messages for a workspace (called by cron)
    * If debugMode is enabled for the workspace, messages are NOT sent (stay pending)
    * @param workspaceId Workspace ID

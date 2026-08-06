@@ -98,6 +98,10 @@ export interface WorkspaceChatbotSource {
   humanSupportInstructions?: string | null
   toneOfVoice?: string | null
   address?: string | null
+  businessType?: string | null
+  currency?: string | null
+  websiteUrl?: string | null
+  url?: string | null
   allowedExternalLinks?: string[] | null
   customChatbotModel?: string | null
   customChatbotTemperature?: number | null
@@ -237,6 +241,9 @@ async function buildMainPrompt(
     humanSupportInstructions: workspace.humanSupportInstructions || "",
     toneOfVoice: workspace.toneOfVoice || VARIABLE_DEFAULTS.toneOfVoice,
     address: workspace.address || "",
+    businessType: workspace.businessType || VARIABLE_DEFAULTS.businessType,
+    currency: workspace.currency || VARIABLE_DEFAULTS.currency,
+    websiteUrl: workspace.websiteUrl || workspace.url || VARIABLE_DEFAULTS.websiteUrl,
     allowedExternalLinks: workspace.allowedExternalLinks?.join("\n") || "",
     faqs: faqsText,
   } as PromptVariables

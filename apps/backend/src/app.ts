@@ -166,7 +166,8 @@ const corsOptions: cors.CorsOptions = {
 
 // ⚠️  NOTE: Scheduler is now a separate microservice (apps/scheduler)
 // Run with: npm run dev:all (starts backend + frontend + scheduler)
-// Scheduler handles: WhatsApp queue, billing, cleanups, etc.
+// Scheduler handles: billing, cleanups, campaign enqueueing, etc. (on-demand jobs)
+// WhatsApp queue DELIVERY runs here in the backend (whatsapp-queue-processor.ts)
 
 // Logging middleware should be first
 app.use(loggingMiddleware)

@@ -78,6 +78,10 @@ async function startServer() {
       logger.info(`WebSocket server ready on ws://localhost:${PORT}`)
     })
 
+    // Drain the WhatsApp queue (push campaigns) — see whatsapp-queue-processor.ts
+    const { startWhatsAppQueueProcessor } = require("./services/whatsapp-queue-processor")
+    startWhatsAppQueueProcessor(prisma)
+
     // Graceful shutdown
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM received, shutting down gracefully")
