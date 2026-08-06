@@ -400,7 +400,7 @@ export function AIPersonalitySection({
               />
             </div>
             <p className="text-xs text-gray-500">
-              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code> and <code>{"{{companyName}}"}</code>.
+              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code>, <code>{"{{companyName}}"}</code> and <code>{"{{termsAndConditions}}"}</code>.
             </p>
           </div>
 

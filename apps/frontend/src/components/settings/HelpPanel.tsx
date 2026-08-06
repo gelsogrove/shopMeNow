@@ -25,6 +25,7 @@ const AVAILABLE_VARIABLES = [
   { variable: "{{address}}", alwaysAvailable: true },
   { variable: "{{websiteUrl}}", alwaysAvailable: true },
   { variable: "{{supportEmail}}", alwaysAvailable: true },
+  { variable: "{{termsAndConditions}}", alwaysAvailable: true },
   { variable: "{{agentName}}", alwaysAvailable: true },
   { variable: "{{agentPhone}}", alwaysAvailable: true },
   { variable: "{{agentEmail}}", alwaysAvailable: true },
