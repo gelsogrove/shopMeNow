@@ -66,10 +66,12 @@ interface BrandTheme {
   introText: string
   tryLabel: string
   itemsText: string
-  contactBtn: string
   spinner: string
   loadingText: string
   openHint: string
+  // When set, the page copy is forced to this language instead of following
+  // the visitor's browser language (demorobot must always show English).
+  pageLang?: string
   // Optional widget-config override. When present, the page does NOT render the
   // React <ChatWidget>: it loads the REAL production embed snippet instead
   // (window.eChatbotConfig + /widget.js), exactly as a customer's website
@@ -98,7 +100,6 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     introText: "text-emerald-50/90",
     tryLabel: "text-emerald-200",
     itemsText: "text-emerald-50/90",
-    contactBtn: "text-emerald-700 hover:bg-emerald-50",
     spinner: "border-emerald-200 border-t-white",
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
@@ -119,7 +120,6 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     introText: "text-emerald-50/90",
     tryLabel: "text-emerald-200",
     itemsText: "text-emerald-50/90",
-    contactBtn: "text-emerald-700 hover:bg-emerald-50",
     spinner: "border-emerald-200 border-t-white",
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
@@ -140,7 +140,6 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     introText: "text-emerald-50/90",
     tryLabel: "text-emerald-200",
     itemsText: "text-emerald-50/90",
-    contactBtn: "text-emerald-700 hover:bg-emerald-50",
     spinner: "border-emerald-200 border-t-white",
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
@@ -162,14 +161,14 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     introText: "text-emerald-50/90",
     tryLabel: "text-emerald-200",
     itemsText: "text-emerald-50/90",
-    contactBtn: "text-emerald-700 hover:bg-emerald-50",
     spinner: "border-emerald-200 border-t-white",
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
+    pageLang: "en",
     widget: {
       title: "Chat with us",
       icon: "sparkles",
-      language: "it",
+      language: "en",
       logoUrl:
         "https://res.cloudinary.com/dpagtnf1i/image/upload/v1785492466/echatbot/users/temp_1785492466207_2o889c_ptdrs1.jpg",
       useChannelLogo: true,
@@ -192,7 +191,6 @@ interface DemoIntroCopy {
   tryFor: string
   loading: string
   unavailable: string
-  contact: string
   pushBtn: string
 }
 
@@ -204,7 +202,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     tryFor: "Try, for example:",
     loading: "Loading the assistant…",
     unavailable: "Demo unavailable",
-    contact: "Contact us",
     pushBtn: "📣 Push message (in the customer's language)",
   },
   it: {
@@ -214,7 +211,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     tryFor: "Prova, per esempio:",
     loading: "Caricamento dell'assistente…",
     unavailable: "Demo non disponibile",
-    contact: "Contattaci",
     pushBtn: "📣 Push message (nella lingua del cliente)",
   },
   es: {
@@ -224,7 +220,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     tryFor: "Prueba, por ejemplo:",
     loading: "Cargando el asistente…",
     unavailable: "Demo no disponible",
-    contact: "Contáctanos",
     pushBtn: "📣 Push message (en el idioma del cliente)",
   },
   fr: {
@@ -234,7 +229,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     tryFor: "Essayez, par exemple :",
     loading: "Chargement de l'assistant…",
     unavailable: "Démo indisponible",
-    contact: "Contactez-nous",
     pushBtn: "📣 Push message (dans la langue du client)",
   },
   ca: {
@@ -244,7 +238,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     tryFor: "Prova, per exemple:",
     loading: "Carregant l'assistent…",
     unavailable: "Demo no disponible",
-    contact: "Contacta'ns",
     pushBtn: "📣 Push message (en l'idioma del client)",
   },
   de: {
@@ -254,7 +247,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     tryFor: "Probier zum Beispiel:",
     loading: "Assistent wird geladen…",
     unavailable: "Demo nicht verfügbar",
-    contact: "Kontaktiere uns",
     pushBtn: "📣 Push message (in der Sprache des Kunden)",
   },
 }
@@ -412,51 +404,16 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🙋 Mit einem Mitarbeiter sprechen",
     ],
   },
-  // 2 FAQ + 2 diagnostic-flow problems + operator. Texts talk about a generic
-  // robot mower (no brand names): FAQs match the bot's direct answers, the two
-  // problems trigger its troubleshooting flows.
+  // 2 FAQ + 1 diagnostic flow + operator. Texts talk about a generic robot
+  // mower (no brand names): the FAQs are the two Andrea picked from the
+  // workspace FAQ list, the problem chip triggers the workspace "ERROR 001"
+  // flow. English only — this demo page is forced to English (pageLang).
   demorobot: {
     en: [
-      "🤖 Ask which robot model fits the size of your garden",
-      "📡 Ask if the robot mows without a perimeter wire",
-      "⚠️ Report that your robot won't start",
-      "🔧 Report that the robot cuts badly or stops halfway",
+      "🧽 Ask how to clean your robot",
+      "🌧️ Ask if the robot can work in the rain",
+      "⚠️ Say your robot shows ERROR 001 on the display",
       "🙋 Ask to talk to a human operator",
-    ],
-    it: [
-      "🤖 Chiedi quale modello di robot è adatto al tuo giardino",
-      "📡 Chiedi se il robot taglia senza filo perimetrale",
-      "⚠️ Segnala che il robot non parte",
-      "🔧 Segnala che il robot taglia male o si ferma a metà",
-      "🙋 Chiedi di parlare con un operatore",
-    ],
-    es: [
-      "🤖 Pregunta qué modelo de robot es adecuado para tu jardín",
-      "📡 Pregunta si el robot corta sin cable perimetral",
-      "⚠️ Informa de que el robot no arranca",
-      "🔧 Informa de que el robot corta mal o se para a mitad",
-      "🙋 Pide hablar con un operador",
-    ],
-    fr: [
-      "🤖 Demander quel modèle de robot convient à votre jardin",
-      "📡 Demander si le robot tond sans câble périmétrique",
-      "⚠️ Signaler que le robot ne démarre pas",
-      "🔧 Signaler que le robot tond mal ou s'arrête en cours de route",
-      "🙋 Demander à parler à un opérateur",
-    ],
-    ca: [
-      "🤖 Pregunta quin model de robot és adequat per al teu jardí",
-      "📡 Pregunta si el robot talla sense cable perimetral",
-      "⚠️ Informa que el robot no arrenca",
-      "🔧 Informa que el robot talla malament o s'atura a mig camí",
-      "🙋 Demana parlar amb un operador",
-    ],
-    de: [
-      "🤖 Frag, welches Robotermodell zu deinem Garten passt",
-      "📡 Frag, ob der Roboter ohne Begrenzungskabel mäht",
-      "⚠️ Melde, dass der Roboter nicht startet",
-      "🔧 Melde, dass der Roboter schlecht mäht oder mittendrin stehen bleibt",
-      "🙋 Mit einem Mitarbeiter sprechen",
     ],
   },
 }
@@ -649,7 +606,7 @@ export function DemoWidgetPage() {
 
   // Brand theme + intro copy/items, localized to the visitor's browser language.
   const brand = useMemo(() => resolveBrand(slug), [slug])
-  const lang = useMemo(() => resolveLang(), [])
+  const lang = useMemo(() => brand.pageLang ?? resolveLang(), [brand])
   const t = useMemo(() => resolveDemoIntro(lang), [lang])
   const items = useMemo(() => resolveDemoItems(slug, lang), [slug, lang])
   const pushCases = useMemo(() => resolveDemoPushCases(slug, lang), [slug, lang])
@@ -782,15 +739,7 @@ export function DemoWidgetPage() {
             </ul>
           </div>
 
-          {/* Contact us — always visible; routes to the contact form. */}
           <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-start">
-            <Link
-              to="/contact"
-              className={`inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold ${brand.contactBtn} shadow-lg transition active:scale-[0.98]`}
-            >
-              ✉️ {t.contact}
-            </Link>
-
             {/* 📣 Demo-only: simulate a promotional push. Lives OUTSIDE the chat
                 on purpose — clicking it makes a clickable notification pop above
                 the WhatsApp icon (close the chat first to see it), proving the
