@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url"
 
 import { prisma as defaultPrisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
+import { ensureCustomerFacingReply } from "../../utils/custom-chatbot-reply"
 import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 import { sendEscalationEmail } from "./escalation-email.service"
 import { buildChatbotSettingsJson } from "./chatbot-settings-json.service"
@@ -453,6 +454,20 @@ export class CustomClientChatbotService {
       // module has already exhausted its retry budget before returning.
       if (output.error === 'llm_unavailable' && params.wipMessage) {
         output.wipMessage = params.wipMessage
+      }
+
+      // Escalation turn must never leave the customer in silence: when the
+      // model wrote only the operator briefing, prepend the configured
+      // hand-off message. Done here, at the single point every channel
+      // (widget, WhatsApp, UltraMsg) receives the reply from.
+      if (output.reply) {
+        output.reply = ensureCustomerFacingReply(
+          output.reply,
+          renderCustomerName(
+            chatbotSettings?.humanSupportMessage as string | undefined,
+            params.userName
+          )
+        )
       }
 
       return { handled: true, output }
