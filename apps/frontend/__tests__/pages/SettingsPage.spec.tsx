@@ -129,16 +129,20 @@ const waitForLoaded = async () => {
 
 const openSection = async (title: string) => {
   const user = userEvent.setup()
-  // Map old section names to new dropdown menu items
+  // Map old section names to the current dropdown menu items.
+  // Labels come from settingsSections.ts (ALL_SECTIONS):
+  //   - "business" section is labeled "Preferences" (h2 heading "Preferences")
+  //   - allowedExternalLinks moved into the "Other" section (h2 heading "Other")
+  //   - AI fields live under "AI Personality" (unchanged)
   const menuConfig: Record<string, { menuLabel: string, heading: string }> = {
-    'Business Configuration': { menuLabel: 'Business Config', heading: 'Business Configuration' },
-    'General Settings': { menuLabel: 'Business Config', heading: 'Business Configuration' },
+    'Business Configuration': { menuLabel: 'Preferences', heading: 'Preferences' },
+    'General Settings': { menuLabel: 'Preferences', heading: 'Preferences' },
     'Personality & Behavior': { menuLabel: 'AI Personality', heading: 'AI Personality' },
     'AI Personality': { menuLabel: 'AI Personality', heading: 'AI Personality' },
     'AI Configuration': { menuLabel: 'AI Personality', heading: 'AI Personality' },
-    'Security & Access': { menuLabel: 'Security', heading: 'Security' },
+    'Security & Access': { menuLabel: 'Other', heading: 'Other' },
     'Support & Escalation': { menuLabel: 'Human Support', heading: 'Human Support' },
-    'Security & Support': { menuLabel: 'Security', heading: 'Security' },
+    'Security & Support': { menuLabel: 'Other', heading: 'Other' },
     'WhatsApp Configuration': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
     'Channels & Connections': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
     'Channels': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
@@ -278,16 +282,14 @@ describe('SettingsPage - Toggle Behaviors', () => {
 
     await waitForLoaded()
 
-    // Find the channel status indicator by looking for the specific status span and its parent
-    // Use more specific query to avoid matching help text containing "Inactive"
-    const channelStatusElements = screen.getAllByText(/^(Active|Inactive)$/i)
-    // Find the actual status label (not the help text)
-    const statusLabel = channelStatusElements.find(el => 
-      el.tagName === 'SPAN' && el.className.includes('font-medium')
-    )
-    expect(statusLabel).toBeInTheDocument()
-    
-    const channelStatusContainer = statusLabel!.closest('div')
+    // The channel status is now a plain Switch in the "Channel" card header
+    // (BusinessConfigSection) — the old "Active"/"Inactive" text label was
+    // removed from the UI. The header div carries data-focus-key="channelStatus",
+    // so we scope the switch lookup to that container to avoid matching any
+    // other toggle in the section.
+    const channelStatusContainer = document.querySelector(
+      '[data-focus-key="channelStatus"]'
+    ) as HTMLElement | null
     expect(channelStatusContainer).toBeInTheDocument()
 
     const channelSwitch = within(channelStatusContainer!).getByRole('switch')

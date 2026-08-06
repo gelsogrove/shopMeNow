@@ -271,6 +271,12 @@ export interface PromptVariables {
    */
   registrationPage: string
 
+  /** Termini e condizioni (testo o URL dal campo Settings > Terms & Conditions)
+   * Template: {{termsAndConditions}}
+   * Source: workspace.termsAndConditions || ''
+   */
+  termsAndConditions: string
+
   /** Approvazione manuale registrazione
    * Template: {{requireManualApproval}} (boolean for {{#if}})
    * Source: workspace.requireManualApproval
@@ -531,5 +537,6 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   operatorWhatsappNumber: '',
   websiteUrl: '',
   supportEmail: '',
+  termsAndConditions: '',
   channel: 'whatsapp', // Default to WhatsApp, widget will override
 }

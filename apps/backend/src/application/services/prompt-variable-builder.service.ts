@@ -78,6 +78,7 @@ interface WorkspaceInput {
   currency?: string | null
   websiteUrl?: string | null
   registrationPage?: string | null
+  termsAndConditions?: string | null
   requireManualApproval?: boolean | null
   defaultLanguage?: string | null
   catalogBaseLanguage?: string | null
@@ -220,6 +221,7 @@ export class PromptVariableBuilder {
       websiteUrl: workspace?.websiteUrl || workspace?.url || VARIABLE_DEFAULTS.websiteUrl!,
       supportEmail: workspace?.notificationEmail || VARIABLE_DEFAULTS.supportEmail!,
       registrationPage: workspace?.registrationPage || '',
+      termsAndConditions: workspace?.termsAndConditions || '',
       requireManualApproval: workspace?.requireManualApproval ?? false,
       enableCalendarBooking: workspace?.enableCalendarBooking ?? false,
       defaultLanguage: workspace?.defaultLanguage || 'en',
@@ -373,6 +375,7 @@ export class PromptVariableBuilder {
         businessType: true,
         websiteUrl: true,
         currency: true,
+        termsAndConditions: true,
       },
     })
 

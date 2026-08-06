@@ -943,6 +943,7 @@ For privacy inquiries, please contact our support team.`
           welcomeMessage: true,
           welcomeBackMessage: true,
           humanSupportMessage: true,
+          termsAndConditions: true,
           customChatbotAdvancedSettings: true,
         },
       })

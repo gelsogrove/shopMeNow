@@ -203,6 +203,7 @@ export function SettingsPage() {
   }, [isCustomChatbot, activeSection])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isDirty, setIsDirty] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
@@ -586,6 +587,7 @@ export function SettingsPage() {
 
   // Perform the actual save
   const performSave = async (dataToSave: FormData, options?: { suppressToast?: boolean }) => {
+    setIsSaving(true)
     try {
       const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
@@ -742,6 +744,8 @@ export function SettingsPage() {
     } catch (error: any) {
       toast.error(error.message || "Save failed")
       throw error
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -983,9 +987,13 @@ export function SettingsPage() {
             <div className="flex items-center gap-4">
               {/* Save Button */}
               {canEdit && (
-                <Button onClick={handleSave} disabled={!isDirty}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
+                <Button onClick={handleSave} disabled={!isDirty || isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               )}
             </div>

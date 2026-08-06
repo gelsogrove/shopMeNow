@@ -817,6 +817,7 @@ export class CustomClientChatbotService {
           welcomeMessage: true,
           welcomeBackMessage: true,
           humanSupportMessage: true,
+          termsAndConditions: true,
         },
       })
       if (!workspace) return null

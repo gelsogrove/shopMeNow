@@ -29,6 +29,8 @@ export interface WorkspaceConfig {
   customChatbotId?: string | null  // Custom chatbot module id (e.g. "ecolaundry"). When set, the
                                     // custom chatbot owns translation and the engine MUST skip
                                     // its own TranslationAgent layer to avoid double-translation.
+  allowedExternalLinks: string[]   // Security: external domains allowed in OUTBOUND bot messages.
+                                    // Enforced deterministically by outbound-link-guard.
 }
 
 // ================================================================================

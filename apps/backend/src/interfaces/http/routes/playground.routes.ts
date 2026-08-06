@@ -1,5 +1,6 @@
 import { prisma } from "@echatbot/database"
 import { Router } from "express"
+import rateLimit from "express-rate-limit"
 import { PlaygroundController } from "../controllers/playground.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
@@ -14,6 +15,22 @@ import {
 
 const controller = new PlaygroundController()
 const playgroundRouter = Router()
+
+// Rate limiter for the public no-auth demo-chat endpoint: 20 requests per
+// minute per IP, same policy as /widget/chat. Without this, the in-module
+// per-session limits are the only guard and sessionId is client-generated,
+// so a script rotating sessionIds could burn LLM credit without bounds.
+const demoChatRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per window
+  message: {
+    error: "RATE_LIMIT_EXCEEDED",
+    message: "Too many requests. Please try again later.",
+    retryAfter: 60000,
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
 
 // Conditional middleware to enforce JWT and workspace authentication if active dashboard access headers/query params are supplied
 const optionalPlaygroundAuth = (req: any, res: any, next: any) => {
@@ -77,7 +94,7 @@ playgroundRouter.get("/playground/resolve-demo/:slug", (req, res) => controller.
 // Public endpoint: send a chat message to a demo workspace (customChatbotId set).
 // No auth required — workspaceId comes from body. Validation in the controller
 // enforces that the target workspace is a demo (customChatbotId present).
-playgroundRouter.post("/playground/demo-chat", (req, res) => controller.sendDemoChat(req, res))
+playgroundRouter.post("/playground/demo-chat", demoChatRateLimiter, (req, res) => controller.sendDemoChat(req, res))
 
 // Public endpoint: returns the usecases.md content for a demo chatbot slug.
 playgroundRouter.get("/playground/demo-usecases/:slug", (req, res) => controller.getDemoUsecases(req, res))

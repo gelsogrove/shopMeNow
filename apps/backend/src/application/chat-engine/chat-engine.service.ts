@@ -43,6 +43,7 @@ import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
 import { ProductContextAgentLLM, ProductContextData } from "../agents/ProductContextAgentLLM"
 import { TranslationAgent } from "../agents/TranslationAgent"
 import { SecurityAgent } from "../agents/SecurityAgent"
+import { sanitizeOutboundLinks } from "./outbound-link-guard"
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import {
   ConversationStateService, 
@@ -1298,6 +1299,7 @@ export class ChatEngineService {
         address: true,
         catalogBaseLanguage: true,
         customChatbotId: true,
+        allowedExternalLinks: true,
       },
     })
 
@@ -1317,6 +1319,7 @@ export class ChatEngineService {
       address: workspace?.address || null,
       catalogBaseLanguage: workspace?.catalogBaseLanguage || null,
       customChatbotId: workspace?.customChatbotId || null,
+      allowedExternalLinks: workspace?.allowedExternalLinks || [],
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -1730,6 +1733,34 @@ export class ChatEngineService {
         }
       }
     
+      // 🛡️ STEP 2.6: Outbound Link Guard (deterministic, ALL channels)
+      // Removes every URL whose domain is not in workspace.allowedExternalLinks
+      // (merged with platform-internal domains). Runs AFTER translation/security
+      // and BEFORE the DB update, so neither the customer nor the stored chat
+      // history ever contains an unauthorized link — even if the LLM-based
+      // SecurityAgent fails open (iron rule #16: code guarantee, not prompt rule).
+      const linkGuardResult = sanitizeOutboundLinks(
+        finalMessage,
+        workspaceConfig.allowedExternalLinks,
+        { workspaceId: input.workspaceId, customerId: input.customerId }
+      )
+      if (linkGuardResult.removedUrls.length > 0) {
+        debugSteps.push({
+          type: "safety",
+          agent: "Outbound Link Guard",
+          timestamp: new Date().toISOString(),
+          input: { textContent: finalMessage },
+          output: {
+            textResponse: linkGuardResult.message,
+            decision: "links_removed",
+          },
+          details: {
+            removedUrls: linkGuardResult.removedUrls,
+          },
+        })
+        finalMessage = linkGuardResult.message
+      }
+
       // 🌍 STEP 2B: Update the saved message with final version
       // Use the message ID saved from processMessageInternal
       const messageIdToUpdate = (result as any)._assistantMessageId

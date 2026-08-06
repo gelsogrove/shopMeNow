@@ -120,6 +120,7 @@ export interface WorkspaceChatbotSource {
   welcomeMessage?: string | null
   welcomeBackMessage?: string | null
   humanSupportMessage?: string | null
+  termsAndConditions?: string | null
   // Free-form JSON for fields with no dedicated column (maxToolHops,
   // maxMessageChars, rateLimitedMessage, intakeQuestions, etc.). Merged onto
   // the file as-is; widget look & feel keys are stripped even if present.
@@ -245,10 +246,25 @@ async function buildMainPrompt(
     currency: workspace.currency || VARIABLE_DEFAULTS.currency,
     websiteUrl: workspace.websiteUrl || workspace.url || VARIABLE_DEFAULTS.websiteUrl,
     allowedExternalLinks: workspace.allowedExternalLinks?.join("\n") || "",
+    termsAndConditions: workspace.termsAndConditions || "",
     faqs: faqsText,
   } as PromptVariables
 
   return promptProcessor.processWithVariables(workspace.customChatbotSystemPrompt, variables)
+}
+
+/**
+ * Substitutes {{termsAndConditions}} in workspace-owned customer copy
+ * (welcome/welcome-back). Workspace-level like the buildMainPrompt set, so
+ * save-time substitution is correct; per-customer variables (e.g.
+ * {{customerName}}) are left untouched for the module to resolve at runtime.
+ */
+function renderTermsAndConditions(
+  text: string | undefined,
+  termsAndConditions: string | null | undefined
+): string | undefined {
+  if (!text) return text
+  return text.replace(/\{\{\s*termsAndConditions\s*\}\}/gi, termsAndConditions?.trim() || "")
 }
 
 /**
@@ -309,9 +325,14 @@ export async function buildChatbotSettingsJson(
     audioOutput:
       typeof workspace.audioOutput === "boolean" ? workspace.audioOutput : current.audioOutput,
     audioVoices: audioVoices ?? current.audioVoices,
-    welcomeMessage: workspace.welcomeMessage?.trim() || current.welcomeMessage,
-    welcomeBackMessage:
+    welcomeMessage: renderTermsAndConditions(
+      workspace.welcomeMessage?.trim() || current.welcomeMessage,
+      workspace.termsAndConditions
+    ),
+    welcomeBackMessage: renderTermsAndConditions(
       workspace.welcomeBackMessage?.trim() || current.welcomeBackMessage,
+      workspace.termsAndConditions
+    ),
     humanSupportMessage:
       workspace.humanSupportMessage?.trim() || current.humanSupportMessage,
   }

@@ -142,6 +142,9 @@ export class PromptProcessorService {
       .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')
       .replace(/\{\{ALLOWED_EXTERNAL_LINKS\}\}/g, v.ALLOWED_EXTERNAL_LINKS || vars.allowedExternalLinks || '')
       .replace(/\{\{supportEmail\}\}/g, vars.supportEmail || '')
+      // Runs AFTER the {{welcomeMessage}} insertion above, so a
+      // {{termsAndConditions}} written inside the welcome text is resolved too
+      .replace(/\{\{termsAndConditions\}\}/g, vars.termsAndConditions || '')
       .replace(/\{\{operatorContactMethod\}\}/g, vars.operatorContactMethod || 'email')
       .replace(/\{\{operatorWhatsappNumber\}\}/g, vars.operatorWhatsappNumber || '')
 
