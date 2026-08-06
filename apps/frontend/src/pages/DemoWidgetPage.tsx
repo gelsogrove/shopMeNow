@@ -592,26 +592,97 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
 // for the supported-languages row).
 interface DemoFeature {
   name: string
+  description: string
   status: "done" | "todo" | string
 }
 
 const DEMO_FEATURES: DemoFeature[] = [
-  { name: "FAQ", status: "done" },
-  { name: "Flow", status: "done" },
-  { name: "Human support", status: "done" },
-  { name: "Human support translation message", status: "done" },
-  { name: "Languages", status: "ITA, Danish, English" },
-  { name: "Speech to text", status: "done" },
-  { name: "Widget", status: "done" },
-  { name: "Chats history", status: "done" },
-  { name: "WhatsApp", status: "todo" },
-  { name: "Push Message", status: "todo" },
-  { name: "Appointment and Calendar", status: "todo" },
-  { name: "CRM integration", status: "todo" },
-  { name: "Registration User", status: "todo" },
-  { name: "Terms and conditions", status: "todo" },
-  { name: "Presentation Video", status: "todo" },
-  { name: "Forward support logic", status: "todo" },
+  {
+    name: "FAQ",
+    description: "Answers common questions from a curated knowledge base — never invented.",
+    status: "done",
+  },
+  {
+    name: "Flow",
+    description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
+    status: "done",
+  },
+  {
+    name: "Human support",
+    description: "Hands the conversation to a real operator and notifies them by email.",
+    status: "done",
+  },
+  {
+    name: "Operator message translation",
+    description:
+      "Your operators reply in their own language: each message is translated into the customer's language automatically.",
+    status: "done",
+  },
+  {
+    name: "Languages",
+    description: "Detects the customer's language and replies in it automatically.",
+    status: "ITA, Danish, English",
+  },
+  {
+    name: "Speech to text",
+    description: "Understands voice notes and replies out loud with a voice note.",
+    status: "done",
+  },
+  {
+    name: "Widget",
+    description: "Embeddable chat for any website — one snippet, no development.",
+    status: "done",
+  },
+  {
+    name: "Chats history",
+    description: "Remembers past conversations and greets returning customers by name.",
+    status: "done",
+  },
+  {
+    name: "WhatsApp",
+    description: "Same assistant answering directly on your WhatsApp business number.",
+    status: "todo",
+  },
+  {
+    name: "Push Message",
+    description: "Proactive promotions and reminders sent to customers outside the chat.",
+    status: "todo",
+  },
+  {
+    name: "Appointment and Calendar",
+    description: "Books, moves and cancels appointments against a live calendar.",
+    status: "todo",
+  },
+  {
+    name: "CRM integration",
+    description: "Syncs customers and conversations with your existing CRM.",
+    status: "todo",
+  },
+  {
+    name: "Registration User",
+    description: "Collects and stores customer details on the first conversation.",
+    status: "todo",
+  },
+  {
+    name: "Terms and conditions",
+    description: "Asks for privacy consent before the conversation starts.",
+    status: "todo",
+  },
+  {
+    name: "Presentation Video",
+    description: "Short video introducing the assistant and how it works.",
+    status: "todo",
+  },
+  {
+    name: "Forward support logic",
+    description: "Routes each request to the right team based on its topic.",
+    status: "todo",
+  },
+  {
+    name: "Send Images",
+    description: "Customers can attach a photo of the problem instead of describing it.",
+    status: "todo",
+  },
 ]
 
 function resolveDemoPushCases(slug: string, lang: string): PushDemoCase[] {
@@ -782,7 +853,7 @@ export function DemoWidgetPage() {
           {/* Feature status table — what the assistant already does vs. what is
               still coming. Only on demorobot, where the list applies. */}
           {slug === "demorobot" && (
-            <div className="mt-7 w-full max-w-md">
+            <div className="mt-7 w-full">
               <table className="w-full border-collapse text-left text-sm">
                 <thead>
                   <tr className={`border-b border-white/25 ${brand.tryLabel}`}>
@@ -796,9 +867,15 @@ export function DemoWidgetPage() {
                 </thead>
                 <tbody>
                   {DEMO_FEATURES.map((feature) => (
-                    <tr key={feature.name} className="border-b border-white/10">
-                      <td className={`py-2 pr-4 ${brand.itemsText}`}>{feature.name}</td>
-                      <td className="py-2">
+                    <tr key={feature.name} className="border-b border-white/10 align-top">
+                      {/* Name + one-line description of what the feature does. */}
+                      <td className="py-2.5 pr-4">
+                        <span className={`font-medium ${brand.itemsText}`}>{feature.name}</span>
+                        <span className={`mt-0.5 block text-xs leading-snug ${brand.openHint}`}>
+                          {feature.description}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap py-2.5">
                         {feature.status === "done" ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
                             ✅ Done
