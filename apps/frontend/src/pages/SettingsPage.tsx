@@ -822,6 +822,7 @@ export function SettingsPage() {
               currency: formData.currency,
               channelMode: formData.channelMode,
               channelStatus: formData.channelStatus,
+              whatsappPhoneNumber: formData.whatsappPhoneNumber,
               enableWhatsapp: formData.enableWhatsapp,
               enableWidget: formData.enableWidget,
               address: formData.address,

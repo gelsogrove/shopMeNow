@@ -29,6 +29,7 @@ interface BusinessConfigSectionProps {
     currency: string
     channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     channelStatus: boolean
+    whatsappPhoneNumber: string
     enableWhatsapp: boolean
     enableWidget: boolean
     address: string
@@ -249,6 +250,20 @@ export function BusinessConfigSection({
                   <SelectItem value="FLOW">Flow</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* WhatsApp Number — same workspace field edited in the WhatsApp
+                Channel section (whatsappPhoneNumber); surfaced here too so it
+                can be set without enabling WhatsApp first. */}
+            <div className="space-y-2" onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}>
+              <Label htmlFor="channelWhatsappPhoneNumber">WhatsApp Number</Label>
+              <Input
+                id="channelWhatsappPhoneNumber"
+                value={formData.whatsappPhoneNumber}
+                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
+                placeholder="+1234567890"
+                disabled={!canEdit}
+              />
             </div>
           </div>
         </CardContent>
