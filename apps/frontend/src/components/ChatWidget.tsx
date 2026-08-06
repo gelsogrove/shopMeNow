@@ -2091,7 +2091,7 @@ export function ChatWidget({
           {showRegistrationForm ? (
             /* ── Registration Form ── */
             <>
-              <ScrollArea className="flex-1 bg-slate-50 px-5 py-5">
+              <ScrollArea className="flex-1 bg-slate-50 px-6 py-6">
                 {showTermsContent ? (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-slate-800">{ui.termsTitle}</h3>
@@ -2110,8 +2110,18 @@ export function ChatWidget({
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <p className="text-sm text-slate-500 text-center">
+                  <div className="space-y-5">
+                    {/* Channel logo above the intro — large, with a soft shadow
+                        (Andrea's request). Rendered only when the workspace has
+                        a logo; other widgets keep the plain form. */}
+                    {displayLogoUrl && (
+                      <img
+                        src={displayLogoUrl}
+                        alt=""
+                        className="mx-auto mt-1 h-24 w-24 rounded-full object-cover shadow-xl ring-4 ring-white"
+                      />
+                    )}
+                    <p className="text-base text-slate-600 text-center">
                       {ui.intro}
                     </p>
 
@@ -2125,7 +2135,7 @@ export function ChatWidget({
                         value={formPhone}
                         onChange={(e) => setFormPhone(e.target.value)}
                         placeholder={ui.phonePh}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
                       />
                     </div>
 
@@ -2145,7 +2155,7 @@ export function ChatWidget({
                         }}
                         placeholder={ui.messagePh}
                         rows={3}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
                       />
                     </div>
 
