@@ -88,7 +88,6 @@ interface FormData {
   widgetIcon: string
   widgetUseChannelLogo: boolean
   widgetAutoSuggestionsEnabled: boolean
-  widgetQuickReplies: string[]
   // AI Config
   customAiRules: string
   customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
@@ -258,7 +257,6 @@ export function SettingsPage() {
     widgetIcon: "chat",
     widgetUseChannelLogo: false,
     widgetAutoSuggestionsEnabled: false,
-    widgetQuickReplies: [],
     customAiRules: "",
     customChatbotId: "",
     customChatbotSystemPrompt: "",
@@ -367,7 +365,6 @@ export function SettingsPage() {
         widgetIcon: currentWorkspace.widgetIcon || "chat",
         widgetUseChannelLogo: currentWorkspace.widgetUseChannelLogo ?? false,
         widgetAutoSuggestionsEnabled: currentWorkspace.widgetAutoSuggestionsEnabled ?? false,
-        widgetQuickReplies: currentWorkspace.widgetQuickReplies || [],
         customAiRules: currentWorkspace.customAiRules || "",
         customChatbotId: currentWorkspace.customChatbotId || "",
         customChatbotSystemPrompt: currentWorkspace.customChatbotSystemPrompt || "",
@@ -685,14 +682,6 @@ export function SettingsPage() {
         // They are explicitly set above and should always be persisted
       }
 
-      // Trim and cap quick replies
-      if (updateData.widgetQuickReplies) {
-        updateData.widgetQuickReplies = (updateData.widgetQuickReplies as string[])
-          .map((r) => r.trim())
-          .filter((r) => r.length > 0)
-          .slice(0, 4)
-      }
-
       if (!updateData.whatsappAppSecret) {
         delete updateData.whatsappAppSecret
       }
@@ -886,7 +875,6 @@ export function SettingsPage() {
               widgetIcon: formData.widgetIcon,
               widgetUseChannelLogo: formData.widgetUseChannelLogo,
               widgetAutoSuggestionsEnabled: formData.widgetAutoSuggestionsEnabled,
-              widgetQuickReplies: formData.widgetQuickReplies,
               logoUrl: resolveLogoUrl(formData.logoUrl),
             }}
             workspaceId={currentWorkspace?.id || ""}

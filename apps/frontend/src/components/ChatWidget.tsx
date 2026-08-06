@@ -477,11 +477,6 @@ export function ChatWidget({
     return letters.length === 2 ? letters.toUpperCase() : ""
   }, [resolvedTitle, monogram])
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
-  const resolvedAutoSuggestionsEnabled =
-    (widgetConfig as any)?.autoSuggestionsEnabled === true
-  const resolvedQuickReplies = Array.isArray((widgetConfig as any)?.quickReplies)
-    ? (widgetConfig as any)?.quickReplies.slice(0, 4)
-    : []
   const resolvedPlaceholder =
     widgetConfig?.placeholder ||
     {
@@ -2473,14 +2468,10 @@ export function ChatWidget({
                 // RULE: Never show suggestions when operator handoff is active
                 if (botDisabled) return null
 
-                // If there are conversation messages, only show LLM-provided suggestions (dynamic per response)
-                // If no messages yet, fall back to static quick replies
+                // Suggestions come ONLY from the backend AI pipeline attached to
+                // bot replies (gated server-side by widgetAutoSuggestionsEnabled)
                 const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
-                const rawSuggestions = lastBot?.suggestions?.length
-                  ? lastBot.suggestions
-                  : messages.length === 0 && resolvedAutoSuggestionsEnabled
-                    ? resolvedQuickReplies
-                    : []
+                const rawSuggestions = lastBot?.suggestions?.length ? lastBot.suggestions : []
 
                 // RULE: Never suggest a question the user already asked
                 const askedMessages = new Set(
@@ -2496,7 +2487,8 @@ export function ChatWidget({
 
                 return (
                   <div className="px-4 py-2 bg-white border-t border-slate-200">
-                    <div className="flex flex-col gap-1.5">
+                    {/* Max 4 suggestions, two per row */}
+                    <div className="grid grid-cols-2 gap-1.5">
                       {suggestions.slice(0, 4).map((qr: string, idx: number) => (
                         <button
                           key={`${qr}-${idx}`}

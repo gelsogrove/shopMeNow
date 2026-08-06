@@ -24,7 +24,6 @@ import {
   MessagesSquare,
   AlertTriangle,
   Info,
-  Trash2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "@/lib/toast"
@@ -38,7 +37,6 @@ interface WebsiteWidgetSectionProps {
   widgetIcon: string
   widgetUseChannelLogo: boolean
   widgetAutoSuggestionsEnabled: boolean
-  widgetQuickReplies: string[]
     logoUrl?: string
   }
   workspaceId: string
@@ -92,7 +90,6 @@ export function WebsiteWidgetSection({
   // 🚨 Widget disabled for e-commerce workspaces (Andrea's rule)
   const isEcommerce = channelMode === 'ECOMMERCE'
   const widgetDisabled = !canEdit || isEcommerce
-  const maxReplies = 4
 
   /**
    * Build the embed snippet the customer pastes into THEIR website.
@@ -229,68 +226,24 @@ export function WebsiteWidgetSection({
                 </div>
               </div>
 
-              {/* Auto Suggestions */}
-              <div className="col-span-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-xs font-semibold text-gray-700">
-                      Auto Suggestions (max {maxReplies})
-                    </Label>
-                    <p className="text-xs text-gray-500">
-                      Quick reply buttons shown in the widget when chat opens.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.widgetAutoSuggestionsEnabled}
-                    onCheckedChange={(checked) =>
-                      onFieldChange("widgetAutoSuggestionsEnabled", checked)
-                    }
-                    disabled={widgetDisabled}
-                  />
+              {/* Auto Suggestions — suggestions are generated automatically by
+                  the AI (grounded on workspace FAQs), never edited manually */}
+              <div className="col-span-2 flex items-center justify-between">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-700">
+                    Auto Suggestions
+                  </Label>
+                  <p className="text-xs text-gray-500">
+                    When enabled, the widget automatically proposes up to 4 AI-generated quick replies (two per row).
+                  </p>
                 </div>
-                {formData.widgetAutoSuggestionsEnabled && (
-                  <div className="space-y-2">
-                    {formData.widgetQuickReplies.map((reply, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <Input
-                          value={reply}
-                          maxLength={80}
-                          onChange={(e) => {
-                            const next = [...formData.widgetQuickReplies]
-                            next[idx] = e.target.value
-                            onFieldChange("widgetQuickReplies", next)
-                          }}
-                          disabled={widgetDisabled}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const next = formData.widgetQuickReplies.filter((_, i) => i !== idx)
-                            onFieldChange("widgetQuickReplies", next)
-                          }}
-                          disabled={widgetDisabled}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    ))}
-                    {formData.widgetQuickReplies.length < maxReplies && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          onFieldChange("widgetQuickReplies", [...formData.widgetQuickReplies, ""])
-                        }
-                        disabled={widgetDisabled}
-                      >
-                        Add suggestion
-                      </Button>
-                    )}
-                  </div>
-                )}
+                <Switch
+                  checked={formData.widgetAutoSuggestionsEnabled}
+                  onCheckedChange={(checked) =>
+                    onFieldChange("widgetAutoSuggestionsEnabled", checked)
+                  }
+                  disabled={widgetDisabled}
+                />
               </div>
 
               {/* Widget Icon — hidden when the channel logo is used instead */}
