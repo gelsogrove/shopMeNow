@@ -635,7 +635,7 @@ const DEMO_FEATURES: DemoFeature[] = [
     status: "done",
   },
   {
-    name: "Human support",
+    name: "Escalate to Human support",
     description: "Hands the conversation to a real operator and notifies them by email.",
     status: "done",
   },
