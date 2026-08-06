@@ -7,7 +7,8 @@
  *   const eChatbotConfig = {
  *     workspaceId: "your-workspace-id",
  *     position: "bottom-right",
- *     theme: "light"
+ *     theme: "light",
+ *     openByDefault: false // true = panel open on load, no dimming overlay
  *   };
  *   const script = document.createElement("script");
  *   script.src = "https://api.echatbot.ai/widget.js";
@@ -307,8 +308,10 @@
 
     .echatbot-widget-popup {
       position: absolute;
-      width: 390px;
-      height: 610px;
+      width: 520px;
+      height: 820px;
+      max-width: calc(100vw - 4rem);
+      max-height: 92vh;
       background-color: #ffffff;
       border-radius: 12px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.1);
@@ -1011,6 +1014,11 @@
       if (this.status === "wip") {
         this.showWipMessage()
       }
+      // Open the panel straight away when the host page asks for it
+      // (demo pages), instead of showing the closed launcher bubble.
+      if (this.config.openByDefault && !this.isOpen) {
+        this.togglePopup()
+      }
       console.log("✅ eChatbot Widget initialized", {
         workspaceId: this.config.workspaceId,
         visitorId: this.visitorId,
@@ -1360,8 +1368,12 @@
     togglePopup() {
       this.isOpen = !this.isOpen
       this.popup.classList.toggle("open", this.isOpen)
-      // Toggle overlay
-      this.overlay.classList.toggle("visible", this.isOpen)
+      // Toggle overlay. Skipped when the panel opens by default (demo pages):
+      // a permanently dimmed page would hide the content behind the chat.
+      this.overlay.classList.toggle(
+        "visible",
+        this.isOpen && !this.config.openByDefault
+      )
       // Hide button when popup is open
       this.button.style.display = this.isOpen ? "none" : "flex"
       if (this.isOpen) {

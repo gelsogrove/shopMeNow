@@ -675,6 +675,9 @@ export function DemoWidgetPage() {
       language: brand.widget.language,
       useChannelLogo: brand.widget.useChannelLogo,
       logoUrl: brand.widget.logoUrl,
+      // Demo page: land straight on the chat, no launcher bubble to click and
+      // no dimming overlay over the page copy.
+      openByDefault: true,
     }
     // Same-origin script: /widget.js is served by this frontend in dev and prod.
     const script = document.createElement("script")
@@ -690,7 +693,7 @@ export function DemoWidgetPage() {
   }, [brand, demo])
 
   return (
-    <div className={`relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br ${brand.pageGradient}`}>
+    <div className={`relative h-[100dvh] w-full overflow-hidden bg-gradient-to-br ${brand.pageGradient}`}>
       {/* Decorative blurred blobs */}
       <div className={`pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full ${brand.blob1} blur-3xl`} />
       <div className={`pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full ${brand.blob2} blur-3xl`} />
@@ -715,7 +718,7 @@ export function DemoWidgetPage() {
       </a>
 
       {/* Hero copy */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-24 text-center sm:items-start sm:px-16 sm:py-16 sm:text-left">
+      <div className="relative z-10 flex h-full flex-col items-center justify-center overflow-y-auto px-6 py-16 text-center sm:items-start sm:px-16 sm:text-left">
         <div className="max-w-xl">
           <div className={`mb-4 inline-flex items-center gap-2 rounded-full ${brand.badge} px-4 py-1.5 text-sm font-medium backdrop-blur`}>
             <span className={`h-2 w-2 rounded-full ${brand.dot}`} />
@@ -776,13 +779,9 @@ export function DemoWidgetPage() {
             </div>
           )}
 
-          {/* In real-embed mode the widget starts as a closed launcher bubble
-              (like on a customer site), so point to it instead. */}
           {demo && !loading && !error && (
             <p className={`mt-8 hidden items-center gap-2 text-sm ${brand.openHint} sm:flex`}>
-              {brand.widget
-                ? "Click the chat bubble in the corner. 👉"
-                : "The chat is open on the right. 👉"}
+              The chat is open on the right. 👉
             </p>
           )}
         </div>
