@@ -25,8 +25,9 @@ dobbiamo avere già chiesto il serial number
 se e' una domanda che non abbiamo nelle faq non serve chidere i dati del robot
 
 chiediamo in UNA sola domanda se il wifi è attivo E il cut scheduling è
-abilitato (Andrea 2026-08-07: "vorrei avere tutto in un nodo" — robot acceso
-e batteria non si chiedono più)
+abilitato E la batteria è carica (Andrea 2026-08-07: "vorrei avere tutto in
+un nodo... metterei anche il controllo della batteria" — robot acceso non si
+chiede più: se il wifi risponde, il robot è acceso)
 (fine del flow — il flow builder oggi classifica solo Yes/No, non testo libero)
 
 subito dopo, chiediamo il nome dell'utente se non lo abbiamo già
@@ -43,8 +44,9 @@ La sequenza, un meccanismo per ogni pezzo:
   caso TECNICO
     gate  → serial → descrizione → quando        (intake: precede il flow,
                                                   serve a SCEGLIERLO)
-    flow  → wifi attivo E cut scheduling abilitato? (UNA domanda combinata)
-            (No → nodo correttivo LOOP "attivali entrambi" → Done → avanti)
+    flow  → wifi attivo E cut scheduling abilitato E batteria carica?
+            (UNA domanda combinata)
+            (No → nodo correttivo LOOP "sistemali" → Done → avanti)
           → terminale ESCALATE
     gate  → nome                                 (testo libero)
           → escalate_to_operator                 (mail operatore)
@@ -62,13 +64,14 @@ Chi fa cosa, e perché non è ridondanza:
   flow esista) e il nome (testo libero; `answer_step` classifica solo
   etichette fisse)
 
-🚨 IL CHECK TECNICO (wifi attivo + cut scheduling abilitato, UNA domanda) SI
-CHIEDE SOLO NELL'HUMAN SUPPORT FLOW, subito prima di chiamare l'assistenza.
-Mai dentro un flow diagnostico, mai improvvisato dal modello. Un flow
-diagnostico (ERROR 001 ecc.) fa SOLO le sue domande; quando arriva al
-terminale ESCALATE il codice attacca l'Human Support flow, che fa il check,
-poi il gate chiede il nome e si escala. (Robot acceso e batteria: rimossi
-2026-08-07 su indicazione di Andrea — non si chiedono più da nessuna parte.)
+🚨 IL CHECK TECNICO (wifi attivo + cut scheduling abilitato + batteria
+carica, UNA domanda) SI CHIEDE SOLO NELL'HUMAN SUPPORT FLOW, subito prima di
+chiamare l'assistenza. Mai dentro un flow diagnostico, mai improvvisato dal
+modello. Un flow diagnostico (ERROR 001 ecc.) fa SOLO le sue domande; quando
+arriva al terminale ESCALATE il codice attacca l'Human Support flow, che fa
+il check, poi il gate chiede il nome e si escala. (Robot acceso: rimosso
+2026-08-07 su indicazione di Andrea — se il wifi è attivo il robot è
+necessariamente acceso, non si chiede da nessuna parte.)
 
 Garanzie in codice, non nel prompt (CLAUDE.md §16):
 - `escalate_to_operator` RIFIUTA con `human_support_flow_required` +
@@ -98,7 +101,8 @@ Garanzie in codice, non nel prompt (CLAUDE.md §16):
   al cliente arrivava "Grazie &lt;UNKNOWN&gt;".
 
 Flow in produzione (`cmsfavpet0000qwngacwdutj6`), 3 nodi / 3 archi:
-  hf_checks (wifi + cut scheduling, combinati) → ESCALATE
+  hf_checks (wifi + cut scheduling + batteria, combinati,
+  fieldKey `technicalChecksOk`) → ESCALATE
   hf_checks_fix è `terminalType: LOOP`; il suo "Done" va AVANTI al terminale,
   mai indietro alla domanda già risposta
 Il compiler accetta i cicli SOLO attraverso nodi LOOP. Il tetto è `maxAsks`

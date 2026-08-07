@@ -1,6 +1,6 @@
 {
-  "description": "Nodo correttivo LOOP nel Human operator flow — il cliente risponde 'no' al cut scheduling e NON lo attiva mai, continuando a rispondere altro. Il grafo cicla all'infinito per costruzione (il compiler permette il ciclo proprio perché il nodo è terminalType LOOP), quindi il tetto deve stare nel codice: dopo 2 turni sullo stesso nodo LOOP il flow molla, stacca, e la conversazione prosegue fino a nome + handing-off + escalate_to_operator reale. Regressione vista live il 2026-08-06: senza il tetto il bot ripeteva 'attiva la programmazione del taglio' a ogni turno successivo, il cliente non arrivava mai alla batteria, non gli veniva mai chiesto il nome, e persino il nome dato spontaneamente veniva ignorato.",
-  "contractRule": "Un cliente che non può o non vuole completare un check deve comunque arrivare a un operatore — stesso principio del maxAsks del gate, applicato ai nodi LOOP del flow. Il nome resta sempre l'ultima domanda prima dell'handing-off message e della calling function.",
+  "description": "Nodo correttivo LOOP nel Human operator flow — il cliente risponde 'no' al check combinato e NON riesce mai a sistemarlo, continuando a rispondere altro. Il grafo permette il ciclo per costruzione (nodo terminalType LOOP), quindi il tetto sta nel codice: dopo MAX_LOOP_TURNS (2) turni sullo stesso nodo LOOP il flow molla, stacca, e la conversazione prosegue fino a nome + handing-off + escalate_to_operator reale. Regressione vista live il 2026-08-06: senza il tetto il bot ripeteva la richiesta a ogni turno, il nome non veniva mai chiesto.",
+  "contractRule": "Un cliente che non può o non vuole completare il check deve comunque arrivare a un operatore — stesso principio del maxAsks del gate, applicato ai nodi LOOP del flow. Il nome resta sempre l'ultima domanda prima dell'handing-off message e della calling function.",
   "phone": "+391110000704",
   "newSession": true,
   "turns": [
@@ -8,12 +8,9 @@
     { "message": "HKA4OB100LQ26050197" },
     { "message": "l'erba resta alta a chiazze" },
     { "message": "da tre giorni" },
-    { "message": "sì è acceso" },
-    { "message": "sì il wifi va" },
-    { "message": "no la programmazione non è attiva" },
+    { "message": "no, la programmazione del taglio non è attiva" },
     { "message": "non riesco ad aprire l'app" },
     { "message": "davvero non ci riesco" },
-    { "message": "sì la batteria è carica" },
     { "message": "Giulia Rossi" }
   ],
   "expect": {

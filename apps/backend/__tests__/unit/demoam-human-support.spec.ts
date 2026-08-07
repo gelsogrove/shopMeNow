@@ -5,8 +5,9 @@
  * sequence he asked to have locked down:
  *
  *   every road to a human  →  Human Support FLOW (ONE combined check: wifi
- *                              active + cut scheduling enabled — corrective
- *                              LOOP on "No")
+ *                              active + cut scheduling enabled + battery
+ *                              charged — corrective LOOP on "No"; powered-on
+ *                              is never asked, wifi implies it)
  *                          →  the customer's NAME (free text: the flow
  *                              engine classifies fixed edge labels, so it
  *                              cannot capture this)
@@ -85,8 +86,9 @@ describe('demoam Human Support — what the gate still owns', () => {
 
   it('leaves the technical checks to the flow', () => {
     // 2026-08-07: the flow's check is now ONE combined question (fieldKey
-    // wifiAndCutSchedulingActive); the four retired booleans stay guarded so
-    // they cannot creep back into the gate as dead config.
+    // technicalChecksOk: wifi + cut scheduling + battery); the retired
+    // booleans stay guarded so they cannot creep back into the gate as dead
+    // config.
     const settings = JSON.parse(fs.readFileSync(path.join(MODULE_DIR, 'settings.json'), 'utf8'))
 
     for (const owned of [
@@ -94,7 +96,7 @@ describe('demoam Human Support — what the gate still owns', () => {
       'wifiActive',
       'cutSchedulingActive',
       'batterySufficient',
-      'wifiAndCutSchedulingActive',
+      'technicalChecksOk',
     ]) {
       expect(settings.gateQuestions[owned]).toBeUndefined()
     }

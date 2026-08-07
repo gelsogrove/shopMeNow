@@ -1,17 +1,17 @@
 {
-  "description": "Human Support completo — problema non presente in nessun flow: seriale, descrizione (con il quando), poi l'Human Support flow con l'UNICO check combinato (wifi + cut scheduling in una sola domanda dal flow builder), poi il nome — verifica che TUTTI i parametri vengano richiesti nell'ordine giusto prima dell'escalation, senza domande su robot acceso o batteria.",
-  "contractRule": "Il gate pre-operatore chiede, in ordine, tutto ciò che ancora manca: seriale, descrizione, quando; poi il flow fa il check combinato wifi+cut scheduling; il nome è l'ultimo — mai saltarne uno se non è già noto.",
+  "description": "Human Support completo — problema non presente in nessun flow: seriale, descrizione (con il quando), poi l'Human Support flow con l'UNICO check combinato (wifi + cut scheduling + batteria in una sola domanda dal flow builder), poi il nome — verifica che TUTTI i parametri vengano richiesti nell'ordine giusto prima dell'escalation, senza la domanda sul robot acceso (implicita nel wifi).",
+  "contractRule": "Il gate pre-operatore chiede, in ordine, tutto ciò che ancora manca: seriale, descrizione, quando; poi il flow fa il check combinato wifi+cut scheduling+batteria; il nome è l'ultimo — mai saltarne uno se non è già noto.",
   "phone": "+391110000012",
   "newSession": true,
   "turns": [
     { "message": "il mio robot fa un rumore mai sentito prima, tipo un ronzio metallico continuo" },
     { "message": "HKA4OB100LQ26050212" },
     { "message": "il ronzio metallico è iniziato ieri sera e non si ferma mai, anche da fermo" },
-    { "message": "sì, il wifi è connesso e la programmazione del taglio è attiva" },
+    { "message": "sì, il wifi è connesso, la programmazione del taglio è attiva e la batteria è carica" },
     { "message": "Giulia Bianchi" }
   ],
   "expect": {
     "replyContains": ["Giulia"],
-    "replyExcludes": ["batteria", "battery", "acceso"]
+    "replyExcludes": ["robot è acceso"]
   }
 }

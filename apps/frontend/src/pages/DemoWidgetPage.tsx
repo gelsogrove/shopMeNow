@@ -694,15 +694,21 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
-        name: "Operator message translation",
+        name: "Operator replay message translation",
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "todo",
         effort: 1,
       },
       {
-        name: "Setting to the client's server",
+        name: "Install software on the client infrastructure",
         description: "Deploys and configures the assistant on your own server.",
+        status: "todo",
+        effort: 2,
+      },
+      {
+        name: "WhatsApp",
+        description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
         effort: 2,
       },
@@ -735,12 +741,6 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
         effort: 1,
-      },
-      {
-        name: "WhatsApp",
-        description: "Same assistant answering directly on your WhatsApp business number.",
-        status: "todo",
-        effort: 2,
       },
       {
         name: "Forward Human Support logic",
