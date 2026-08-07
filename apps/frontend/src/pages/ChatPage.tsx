@@ -1671,12 +1671,9 @@ export function ChatPage() {
               >
                 🎧 Support
               </button>
-              <button
-                onClick={() => setFilterPlayground(v => !v)}
-                className={`px-2 py-0.5 rounded-full text-[10px] border transition-colors ${filterPlayground ? "bg-purple-100 border-purple-400 text-purple-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
-              >
-                🧪 Playground
-              </button>
+              {/* Playground chip removed (Andrea, 2026-08-07). The filter state
+                  itself stays: with it off, playground sessions are hidden from
+                  the list, which is what the operator wants by default. */}
               <div className="flex items-center gap-0.5 ml-auto">
                 {([['All', 'all'], ['1h', '1h'], ['24h', '24h'], ['7d', 'week']] as [string, 'all' | '1h' | '24h' | 'week'][]).map(([label, value]) => (
                   <button
