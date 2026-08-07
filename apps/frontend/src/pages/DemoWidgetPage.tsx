@@ -672,7 +672,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 2 — Loading Context Data",
+    title: "Phase 2 — To evaluate",
     subtitle: "Feeding the assistant your own content so it answers from your data.",
     features: [
       {
