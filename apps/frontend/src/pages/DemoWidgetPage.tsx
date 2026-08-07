@@ -630,7 +630,7 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 1 — The assistant, live",
+    title: "Phase 1 — The basic requirmentshase 2 — Your own content",
     subtitle: "Available today — everything you can try right now in this demo.",
     features: [
       {
@@ -677,7 +677,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 2 — Your own content",
+    title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
     features: [
@@ -691,7 +691,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 3 — Voice, translation & WhatsApp",
+    title: "Phase 3 — WhatsApp",
     subtitle: "Reaching customers on their channel, in their language.",
     features: [
       {
@@ -722,7 +722,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 4 — Channels & Booking",
+    title: "Phase 4 — Other features",
     subtitle: "New channels, richer replies, and your calendar and CRM connected.",
     features: [
       {
@@ -770,7 +770,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 5 — Later",
+    title: "Phase 5 — Push message",
     subtitle: "Speaking out loud, and reaching customers outside the chat.",
     features: [
       {

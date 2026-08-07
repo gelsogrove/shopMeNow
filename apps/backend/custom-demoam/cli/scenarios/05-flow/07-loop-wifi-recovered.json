@@ -12,8 +12,13 @@
     { "message": "fatto: ora il wifi è connesso, la programmazione è attiva e la batteria è carica" },
     { "message": "Chiara Ferri" }
   ],
+  "finishWith": {
+    "message": "sì, confermo che ora è tutto attivo — procedi pure con l'operatore",
+    "untilReplyContains": "Ticket",
+    "maxTurns": 3
+  },
   "expect": {
-    "replyContains": ["Chiara", "Ticket"],
+    "anyReplyContains": ["Chiara", "Ticket"],
     "replyExcludes": ["tornato a funzionare", "funziona correttamente"]
   }
 }

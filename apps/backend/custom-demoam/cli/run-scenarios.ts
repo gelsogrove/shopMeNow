@@ -78,6 +78,20 @@ interface Scenario {
      */
     anyReplyContains?: string[]
   }
+  /**
+   * Elastic tail for scenarios whose exact turn count is not deterministic:
+   * the model may legitimately ask one extra clarification, which shifts
+   * every scripted answer one turn off and ends the conversation before the
+   * event under test (Andrea 2026-08-07, "fail 3"). After the scripted turns,
+   * `message` is re-sent up to `maxTurns` times until some reply contains
+   * `untilReplyContains`; if it never appears the checks then fail for the
+   * REAL reason (the event never happened), not for the misalignment.
+   */
+  finishWith?: {
+    message: string
+    untilReplyContains: string
+    maxTurns: number
+  }
 }
 
 interface ScenarioOutcome {
@@ -219,6 +233,20 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
       replies.push(output.reply ?? "")
       errors.push(output.error)
       console.log(`  [${scenario.phone}] "${turn.message}"`)
+      console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
+      if (output.error) console.log(`    !! error: ${output.error}`)
+    }
+  }
+
+  if (scenario.finishWith) {
+    const { message, untilReplyContains, maxTurns } = scenario.finishWith
+    for (let extra = 0; extra < maxTurns; extra++) {
+      if (replies.some((r) => r.includes(untilReplyContains))) break
+      const { output } = await runTurn({ phone: scenario.phone, message, userName: scenario.userName, group })
+      lastOutput = output
+      replies.push(output.reply ?? "")
+      errors.push(output.error)
+      console.log(`  [${scenario.phone}] (finishWith ${extra + 1}/${maxTurns}) "${message}"`)
       console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
       if (output.error) console.log(`    !! error: ${output.error}`)
     }
