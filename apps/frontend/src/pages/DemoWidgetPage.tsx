@@ -701,6 +701,12 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
+        name: "Text to speech",
+        description: "Replies out loud with a voice note instead of text.",
+        status: "todo",
+        effort: 1,
+      },
+      {
         name: "Operator replay message translation",
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
@@ -771,14 +777,8 @@ const DEMO_PHASES: DemoPhase[] = [
   },
   {
     title: "Phase 5 — Push message",
-    subtitle: "Speaking out loud, and reaching customers outside the chat.",
+    subtitle: "Reaching customers outside the chat.",
     features: [
-      {
-        name: "Text to speech",
-        description: "Replies out loud with a voice note instead of text.",
-        status: "todo",
-        effort: 1,
-      },
       {
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
