@@ -316,12 +316,74 @@ export function nextIntakeStep(
 }
 
 /**
+ * True when the missing intake field may ALREADY be answered somewhere in what
+ * the customer has written, so the right move is to save it, not to ask for it.
+ *
+ * Andrea 2026-08-08, seen live: the opening message was "ho un errore 003, un
+ * strano rumore nella parte dietro" — a complete problem description. That
+ * turn is the greeting hop, which is forceTextOnly by design (it must produce
+ * the welcome and nothing else), so `remember` did not exist on it and the
+ * description was never saved. Two turns later the intake gate dictated
+ * "can you briefly describe what's happening?" and the customer had to repeat
+ * himself. Andrea: "non mi sembra naturale".
+ *
+ * Only problemDescription qualifies. A serial number is never inferable from
+ * prose, and problemStartedWhen has its own question the customer answers
+ * directly — but "what is wrong" is, in practice, the FIRST thing a customer
+ * says, before anyone asks.
+ *
+ * Deterministic, and NOT phrase detection (CLAUDE.md §14): it inspects no
+ * words, only whether the customer has written a message of any substance
+ * before this hop. Judging whether that text actually describes the fault is
+ * the model's job — the code merely stops offering "ask again" as the easy
+ * default. validateProblemDescription still rejects whatever comes back if it
+ * is too thin.
+ */
+const MIN_INFERABLE_DESCRIPTION_CHARS = 12
+
+export function intakeFieldMayAlreadyBeAnswered(
+  step: IntakeStep | null,
+  customerMessages: ReadonlyArray<string>,
+): boolean {
+  if (step?.field !== 'problemDescription') return false
+  return customerMessages.some((m) => m.trim().length >= MIN_INFERABLE_DESCRIPTION_CHARS)
+}
+
+/**
  * Renders the intake instruction: the ONE question the model may ask right
  * now, dictated verbatim so it cannot improvise a probing question or a menu
  * of invented causes. Returns null when intake is complete or unconfigured.
+ *
+ * `mayAlreadyBeAnswered` flips the block from "ask this" to "save what they
+ * already said": the question stays available as the fallback, but re-asking
+ * stops being the first thing the model reaches for.
  */
-export function formatIntakeBlock(step: IntakeStep | null): string | null {
+export function formatIntakeBlock(step: IntakeStep | null, mayAlreadyBeAnswered = false): string | null {
   if (!step) return null
+
+  if (mayAlreadyBeAnswered) {
+    return [
+      '## SAVE WHAT THE CUSTOMER ALREADY TOLD YOU (mandatory, this hop only)',
+      '',
+      `The case still has no "${step.field}" on record, but the customer has`,
+      'already written to you — and what is wrong is normally the very first',
+      'thing they say, before anyone asks. Re-asking it is the single thing',
+      'that most makes this conversation feel robotic.',
+      '',
+      'Re-read the conversation NOW, their opening message included. If they',
+      'have said anything at all about what the robot is doing — an error code,',
+      'a noise, a light, a movement, a smell, anything — that IS the problem',
+      `description: call remember({key:'${step.field}', value:'...'}) with it,`,
+      'in their own words, and do NOT ask them to describe it again.',
+      '',
+      'Only if they have genuinely said nothing about what is wrong, ask this',
+      "question, verbatim, translated into the customer's language:",
+      '',
+      step.question,
+      '',
+      'Do NOT add other questions and do NOT offer possible causes.',
+    ].join('\n')
+  }
 
   const lines = [
     '## THE QUESTION TO ASK NOW (mandatory, this hop only — no tool call available)',

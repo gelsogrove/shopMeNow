@@ -34,6 +34,7 @@ import {
   formatIntakeBlock,
   formatPreOperatorInstruction,
   caseShapeFor,
+  intakeFieldMayAlreadyBeAnswered,
   nextIntakeStep,
   nextPreOperatorAction,
   startFlow,
@@ -988,8 +989,14 @@ async function callLLM({
   // Intake gate: while no flow is running and the case details are still
   // missing, the code dictates the exact question (see formatIntakeBlock in
   // gate.ts) — the model translates it, it does not compose its own.
+  let intakeWantsRemember = false
   if (!greetingOnlyHop && !state.currentNodeId) {
-    const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions))
+    const intakeStep = nextIntakeStep(state, settings.gateQuestions)
+    // Only the customer's own words count as "already told us" — assistant
+    // turns are what we are trying to avoid repeating, not evidence.
+    const customerMessages = history.filter((m) => m.role === 'user').map((m) => m.content ?? '')
+    intakeWantsRemember = intakeFieldMayAlreadyBeAnswered(intakeStep, customerMessages)
+    const intakeBlock = formatIntakeBlock(intakeStep, intakeWantsRemember)
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
 
@@ -1025,6 +1032,19 @@ async function callLLM({
     // structurally unavailable rather than merely discouraged (§16).
     if (forceToolChoice && state.currentNodeId && currentStepLabels.length > 0) {
       body.tool_choice = { type: 'function', function: { name: 'answer_step' } }
+    }
+
+    // Same reasoning one step earlier, for intake. With the problem already
+    // described in the customer's opening message, 'required' alone lets the
+    // model satisfy the contract with start_flow or escalate_to_operator and
+    // leave problemDescription unsaved — after which the intake gate dictates
+    // its question and the customer is asked to repeat himself (Andrea,
+    // 2026-08-08). Naming remember makes saving the thing he already said the
+    // only move available. The tool's own guard
+    // (validateProblemDescription) still rejects a value too thin to be a
+    // description, so this forces the ATTEMPT, never a bad save.
+    if (intakeWantsRemember) {
+      body.tool_choice = { type: 'function', function: { name: 'remember' } }
     }
   }
 
