@@ -600,9 +600,9 @@ interface DemoFeature {
   // Optional count shown in the third column (how many FAQs, flows, languages…).
   // Left out when a feature has nothing meaningful to count.
   count?: string
-  // Rough build effort, rendered as a 3-segment bar. Only meaningful on "todo"
+  // Rough build effort, rendered as a 5-segment bar. Only meaningful on "todo"
   // rows — on a finished feature the work is already paid for, so it is hidden.
-  effort?: 1 | 2 | 3
+  effort?: 1 | 2 | 3 | 4 | 5
 }
 
 // Delivery phases. The roadmap is presented as separate blocks so a visitor
@@ -618,14 +618,18 @@ interface DemoPhase {
 // the colour carries the meaning at a glance, the tooltip spells it out.
 const EFFORT_COLORS: Record<number, string> = {
   1: "bg-emerald-400",
-  2: "bg-amber-300",
-  3: "bg-rose-400",
+  2: "bg-lime-300",
+  3: "bg-amber-300",
+  4: "bg-orange-400",
+  5: "bg-rose-400",
 }
 
 const EFFORT_LABELS: Record<number, string> = {
-  1: "Low effort",
-  2: "Medium effort",
-  3: "High effort",
+  1: "Very low effort",
+  2: "Low effort",
+  3: "Medium effort",
+  4: "High effort",
+  5: "Very high effort",
 }
 
 const DEMO_PHASES: DemoPhase[] = [
@@ -686,7 +690,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description:
           "Loads your products, documents and company information so every answer comes from your real data.",
         status: "todo",
-        effort: 2,
+        effort: 3,
       },
     ],
   },
@@ -1017,7 +1021,7 @@ export function DemoWidgetPage() {
                       <td className={`whitespace-nowrap py-2.5 pr-4 text-right font-medium ${brand.itemsText}`}>
                         {qty ?? ""}
                       </td>
-                      {/* Effort bar — 3 segments, filled up to `effort`. Only on
+                      {/* Effort bar — 5 segments, filled up to `effort`. Only on
                           pending work: a shipped feature's cost is already sunk. */}
                       <td className="whitespace-nowrap py-2.5">
                         {feature.status === "todo" && feature.effort ? (
@@ -1026,7 +1030,7 @@ export function DemoWidgetPage() {
                             title={EFFORT_LABELS[feature.effort]}
                             aria-label={`Effort: ${EFFORT_LABELS[feature.effort]}`}
                           >
-                            {[1, 2, 3].map((segment) => (
+                            {[1, 2, 3, 4, 5].map((segment) => (
                               <span
                                 key={segment}
                                 className={`block h-3.5 w-2 rounded-sm ${
