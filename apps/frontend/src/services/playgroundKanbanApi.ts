@@ -44,9 +44,10 @@ export interface KanbanComment {
 export interface KanbanTodo {
   id: string
   workspaceId: string
-  dialogId: string
-  messageType: "chatbot" | "human"
-  messageContent: string
+  // Evidence — null on a card created straight on the board.
+  dialogId: string | null
+  messageType: "chatbot" | "human" | null
+  messageContent: string | null
   chatbotResponse: string | null
   commentTitle: string
   priority: KanbanPriority
@@ -60,13 +61,15 @@ export interface KanbanTodo {
 }
 
 export interface CreateTodoInput {
-  dialogId: string
-  messageType: "chatbot" | "human"
-  messageContent: string
-  chatbotResponse?: string | null
   commentTitle: string
   priority?: KanbanPriority
   firstComment?: string
+  // Chat evidence. Send all three or none — the server rejects a partial set,
+  // because half an anchor is worse than no anchor.
+  dialogId?: string
+  messageType?: "chatbot" | "human"
+  messageContent?: string
+  chatbotResponse?: string | null
 }
 
 async function readError(response: Response): Promise<string> {

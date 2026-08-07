@@ -733,7 +733,7 @@ export class PlaygroundController {
    *         application/json:
    *           schema:
    *             type: object
-   *             required: [sessionId, dialogId, messageType, messageContent, commentTitle]
+   *             required: [commentTitle]
    *             properties:
    *               sessionId:       { type: string, format: uuid }
    *               dialogId:        { type: string, description: Message id the card is anchored to }
@@ -772,11 +772,23 @@ export class PlaygroundController {
       }
       const { workspaceId, createdBy, authorKind } = identity
 
-      if (!dialogId || !commentTitle || !messageContent || !messageType) {
-        return res.status(400).json({ error: "Missing required fields" })
+      if (!commentTitle) {
+        return res.status(400).json({ error: "commentTitle is required" })
       }
       if (priority && !ALLOWED_PRIORITIES.includes(priority)) {
         return res.status(400).json({ error: "Invalid priority" })
+      }
+      // A card either carries its chat evidence whole or carries none: a
+      // dialogId with no message text would render an empty transcript block,
+      // and message text with no dialogId could never be traced back.
+      const hasEvidence = Boolean(dialogId || messageType || messageContent)
+      if (hasEvidence && !(dialogId && messageType && messageContent)) {
+        return res.status(400).json({
+          error: "dialogId, messageType and messageContent must be sent together",
+        })
+      }
+      if (messageType && !["chatbot", "human"].includes(messageType)) {
+        return res.status(400).json({ error: "Invalid messageType" })
       }
 
       const lastInColumn = await prisma.playgroundTodo.findFirst({
@@ -789,9 +801,9 @@ export class PlaygroundController {
       const todo = await prisma.playgroundTodo.create({
         data: {
           workspaceId,
-          dialogId,
-          messageType,
-          messageContent,
+          dialogId: dialogId || null,
+          messageType: messageType || null,
+          messageContent: messageContent || null,
           chatbotResponse: chatbotResponse || null,
           commentTitle,
           priority: priority || "MEDIUM",

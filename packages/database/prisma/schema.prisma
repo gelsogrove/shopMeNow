@@ -2307,9 +2307,11 @@ model OnboardingQuestionnaire {
 model PlaygroundTodo {
   id              String   @id @default(uuid())
   workspaceId     String   // Board owner — boards are never shared across workspaces
-  dialogId        String   // Reference to Message.id (no FK - cross-workspace safety)
-  messageType     String   // "chatbot" | "human"
-  messageContent  String
+  // Evidence — present when the card was reported from a chat message, null on
+  // a card created straight on the board.
+  dialogId        String?  // Reference to Message.id (no FK - cross-workspace safety)
+  messageType     String?  // "chatbot" | "human"
+  messageContent  String?
   chatbotResponse String?
   commentTitle    String
   priority        String   @default("MEDIUM") // "HIGH" | "MEDIUM" | "LOW"

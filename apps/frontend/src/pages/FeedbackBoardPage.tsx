@@ -18,6 +18,7 @@ import { kanbanApi } from "@/services/playgroundKanbanApi"
 
 const ops: KanbanOps = {
   list: () => kanbanApi.list(),
+  create: (input) => kanbanApi.create(input),
   update: (id, patch) => kanbanApi.update(id, patch),
   remove: (id) => kanbanApi.remove(id),
   comment: (todoId, text) => kanbanApi.comment(todoId, text),

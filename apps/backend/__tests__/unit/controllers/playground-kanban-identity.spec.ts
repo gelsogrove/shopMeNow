@@ -527,6 +527,111 @@ describe("PlaygroundController — kanban identity boundary", () => {
     })
   })
 
+  describe("chat evidence is all-or-nothing", () => {
+    // A card may be created straight on the board, with no conversation behind
+    // it. What it must never be is half-anchored: a dialogId with no text would
+    // render an empty transcript, text with no dialogId could not be traced back.
+    beforeEach(() => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        firstName: "Andrea",
+        lastName: null,
+        email: "andrea@echatbot.ai",
+      })
+      mockPrisma.playgroundTodo.findFirst.mockResolvedValue(null)
+      mockPrisma.playgroundTodo.create.mockResolvedValue({ id: "todo-1", comments: [] })
+    })
+
+    it("creates a standalone card from a title alone", async () => {
+      const res = buildResponse()
+
+      await controller.createTodo(
+        buildRequest({
+          ...staffRequestFields(),
+          body: { commentTitle: "Add an FAQ about opening hours" },
+        } as Partial<Request>),
+        res
+      )
+
+      expect(res.status).toHaveBeenCalledWith(201)
+      expect(mockPrisma.playgroundTodo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            commentTitle: "Add an FAQ about opening hours",
+            dialogId: null,
+            messageType: null,
+            messageContent: null,
+          }),
+        })
+      )
+    })
+
+    it("rejects a card with a dialogId but no message text", async () => {
+      const res = buildResponse()
+
+      await controller.createTodo(
+        buildRequest({
+          ...staffRequestFields(),
+          body: { commentTitle: "half anchored", dialogId: "msg-1" },
+        } as Partial<Request>),
+        res
+      )
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(mockPrisma.playgroundTodo.create).not.toHaveBeenCalled()
+    })
+
+    it("rejects message text with no dialogId to trace it back to", async () => {
+      const res = buildResponse()
+
+      await controller.createTodo(
+        buildRequest({
+          ...staffRequestFields(),
+          body: {
+            commentTitle: "untraceable",
+            messageType: "chatbot",
+            messageContent: "something the bot said",
+          },
+        } as Partial<Request>),
+        res
+      )
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(mockPrisma.playgroundTodo.create).not.toHaveBeenCalled()
+    })
+
+    it("still requires a title", async () => {
+      const res = buildResponse()
+
+      await controller.createTodo(
+        buildRequest({ ...staffRequestFields(), body: {} } as Partial<Request>),
+        res
+      )
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(mockPrisma.playgroundTodo.create).not.toHaveBeenCalled()
+    })
+
+    it("rejects a messageType outside the known set", async () => {
+      const res = buildResponse()
+
+      await controller.createTodo(
+        buildRequest({
+          ...staffRequestFields(),
+          body: {
+            commentTitle: "bad type",
+            dialogId: "msg-1",
+            messageType: "operator",
+            messageContent: "text",
+          },
+        } as Partial<Request>),
+        res
+      )
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(mockPrisma.playgroundTodo.create).not.toHaveBeenCalled()
+    })
+  })
+
   describe("priority labels are the English set", () => {
     it("rejects the retired Italian labels", async () => {
       mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)

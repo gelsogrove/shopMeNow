@@ -9,11 +9,13 @@
  * Cards are created elsewhere — from a chat message, which is what gives a card
  * its evidence. This board reads, moves, comments and deletes them.
  */
+import { Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
   KANBAN_COLUMNS,
   KANBAN_PRIORITIES,
+  type CreateTodoInput,
   type KanbanAuthorKind,
   type KanbanPriority,
   type KanbanStatus,
@@ -23,6 +25,8 @@ import {
 /** Everything the board needs to talk to the server, whichever door it is behind. */
 export interface KanbanOps {
   list: () => Promise<KanbanTodo[]>
+  /** Optional: when absent the board is read/move only, with no "New card" button. */
+  create?: (input: CreateTodoInput) => Promise<unknown>
   update: (
     id: string,
     patch: Partial<Pick<KanbanTodo, "status" | "priority" | "position" | "commentTitle">>
@@ -85,6 +89,7 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
   const [error, setError] = useState<string | null>(null)
   const [openCardId, setOpenCardId] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [composing, setComposing] = useState(false)
 
   const reload = useCallback(async () => {
     try {
@@ -205,10 +210,23 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
+      {ops.create && (
+        <div className="mb-3 flex flex-shrink-0 justify-end">
+          <button
+            type="button"
+            onClick={() => setComposing(true)}
+            className="flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" />
+            New card
+          </button>
+        </div>
+      )}
+
       {todos.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-300 py-16 text-center text-sm text-slate-500">
-          No cards yet. Open a chat and use the clipboard icon on a bot reply to
-          report it here.
+          No cards yet. Add one here, or use the clipboard icon on a chat message
+          to report it with the conversation attached.
         </p>
       ) : (
         <div className="min-h-0 flex-1 overflow-x-auto pb-2">
@@ -253,9 +271,11 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
                           {todo.priority}
                         </span>
                       </div>
-                      <p className="mt-2 line-clamp-2 text-xs text-slate-500">
-                        {todo.messageContent}
-                      </p>
+                      {todo.messageContent && (
+                        <p className="mt-2 line-clamp-2 text-xs text-slate-500">
+                          {todo.messageContent}
+                        </p>
+                      )}
                       <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
                         <AuthorChip name={todo.createdBy} kind={todo.authorKind} />
                         {todo.comments.length > 0 && <span>💬 {todo.comments.length}</span>}
@@ -285,6 +305,124 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
           onCommentsChanged={reload}
         />
       )}
+
+      {composing && ops.create && (
+        <NewCardDialog
+          create={ops.create}
+          onClose={() => setComposing(false)}
+          onCreated={reload}
+        />
+      )}
+    </div>
+  )
+}
+
+interface NewCardDialogProps {
+  create: (input: CreateTodoInput) => Promise<unknown>
+  onClose: () => void
+  onCreated: () => Promise<void>
+}
+
+/** A card with no chat behind it — for work that did not start in a conversation. */
+function NewCardDialog({ create, onClose, onCreated }: NewCardDialogProps) {
+  const [title, setTitle] = useState("")
+  const [priority, setPriority] = useState<KanbanPriority>("MEDIUM")
+  const [note, setNote] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    const trimmed = title.trim()
+    if (!trimmed || busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await create({
+        commentTitle: trimmed,
+        priority,
+        firstComment: note.trim() || undefined,
+      })
+      await onCreated()
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create the card")
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-base font-semibold text-slate-800">New card</h2>
+
+        <label className="mt-4 block text-xs font-medium text-slate-600">Title</label>
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void submit()
+            if (e.key === "Escape") onClose()
+          }}
+          placeholder="What needs doing?"
+          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+        />
+
+        <label className="mt-4 block text-xs font-medium text-slate-600">Priority</label>
+        <div className="mt-1 flex gap-2">
+          {KANBAN_PRIORITIES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setPriority(value)}
+              className={`rounded border px-2 py-1 text-[11px] font-semibold ${
+                priority === value
+                  ? PRIORITY_STYLES[value]
+                  : "border-slate-200 text-slate-400 hover:border-slate-300"
+              }`}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+
+        <label className="mt-4 block text-xs font-medium text-slate-600">
+          Note <span className="font-normal text-slate-400">(optional)</span>
+        </label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={3}
+          placeholder="Any detail worth recording"
+          className="mt-1 w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+        />
+
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={busy || !title.trim()}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {busy ? "Creating…" : "Create card"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -378,27 +516,31 @@ function CardDetail({
           ))}
         </div>
 
-        {/* The frozen evidence: what was asked, and what the bot answered. */}
-        <div className="mt-5 space-y-3">
-          <div className="rounded-md bg-slate-50 p-3">
-            <p className="text-[11px] font-semibold uppercase text-slate-400">
-              {todo.messageType === "chatbot" ? "Bot message" : "Customer message"}
-            </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-              {todo.messageContent}
-            </p>
-          </div>
-          {todo.chatbotResponse && (
-            <div className="rounded-md bg-emerald-50 p-3">
-              <p className="text-[11px] font-semibold uppercase text-emerald-600">
-                Bot reply
+        {/* The frozen evidence, when there is any: what was asked, and what the
+            bot answered. Cards created straight on the board have none, and
+            show nothing rather than an empty transcript. */}
+        {todo.messageContent && (
+          <div className="mt-5 space-y-3">
+            <div className="rounded-md bg-slate-50 p-3">
+              <p className="text-[11px] font-semibold uppercase text-slate-400">
+                {todo.messageType === "chatbot" ? "Bot message" : "Customer message"}
               </p>
               <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-                {todo.chatbotResponse}
+                {todo.messageContent}
               </p>
             </div>
-          )}
-        </div>
+            {todo.chatbotResponse && (
+              <div className="rounded-md bg-emerald-50 p-3">
+                <p className="text-[11px] font-semibold uppercase text-emerald-600">
+                  Bot reply
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                  {todo.chatbotResponse}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-slate-700">

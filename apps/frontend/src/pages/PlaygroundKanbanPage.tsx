@@ -18,6 +18,7 @@ import { loadWidgetSessionId } from "@/components/chat/adapters/widgetAdapter"
 import { KanbanBoard, type KanbanOps } from "@/components/kanban/KanbanBoard"
 import {
   addComment,
+  createTodo,
   deleteComment,
   deleteTodo,
   fetchTodos,
@@ -77,6 +78,7 @@ export default function PlaygroundKanbanPage() {
     if (!sessionId) return null
     return {
       list: async () => (await fetchTodos(apiUrl, sessionId)).todos,
+      create: (input) => createTodo(apiUrl, sessionId, input),
       update: (id, patch) => updateTodo(apiUrl, sessionId, id, patch),
       remove: (id) => deleteTodo(apiUrl, sessionId, id),
       comment: (todoId, text) => addComment(apiUrl, sessionId, todoId, text),
