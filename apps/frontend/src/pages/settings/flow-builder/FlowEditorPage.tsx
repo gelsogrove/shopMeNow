@@ -48,13 +48,14 @@ function apiNodeToFlowNode(n: FlowNode, edges: ApiFlowEdge[]): Node<FlowQuestion
   }
 }
 
-// A back-edge closes a cycle: its target sits at or before its source on the
-// canvas (LOOP nodes wire back to the question they re-ask). The default
-// bezier always exits right / enters left, so on a back-edge it has to swing
-// the long way round and crosses the forward edge underneath it — the "X"
-// Andrea saw. Returns are routed orthogonally into the node's bottom handle
-// instead, keeping the forward path reading strictly left-to-right. Applied
-// in displayEdges at render time, not here — see the comment there.
+// A back-edge closes a cycle: its target is an ancestor of its source (LOOP
+// nodes wire back to the question they re-ask). The default bezier always
+// exits right / enters left, so on a back-edge it has to swing the long way
+// round and crosses the forward edge underneath it — the "X" Andrea saw.
+// Returns are routed orthogonally into the node's bottom handle instead,
+// keeping the forward path reading strictly left-to-right. Applied in
+// displayEdges at render time, not here — see backEdgeIds for how cycles
+// are detected.
 const RETURN_EDGE_STYLE = { stroke: "#94a3b8", strokeDasharray: "5 4", strokeWidth: 1.5 }
 
 function apiEdgeToFlowEdge(e: ApiFlowEdge): Edge {
@@ -425,17 +426,70 @@ function FlowEditorInner() {
   const errorNodeIds = new Set(validationErrors.map((e) => e.nodeId).filter(Boolean))
 
   // Derived at render time, never stored, so none of it reaches the save payload.
-  const nodePositions = new Map(nodes.map((n) => [n.id, n.position.x]))
-  const isBackEdge = (e: Edge): boolean => {
-    const sourceX = nodePositions.get(e.source)
-    const targetX = nodePositions.get(e.target)
-    return (
-      e.source === e.target ||
-      (sourceX !== undefined && targetX !== undefined && targetX <= sourceX)
-    )
-  }
+  //
+  // A back-edge is one that closes a cycle: its target is an ancestor of its
+  // source. This is a property of the GRAPH, not of where the nodes happen to
+  // sit on the canvas — an earlier version compared x coordinates instead, so a
+  // child dragged below-left of its parent was misread as a loop, which both
+  // dashed its edge and (by removing it from targetedNodeIds) painted a bogus
+  // Start badge on that child. Classic white/grey/black DFS: an edge is a
+  // back-edge exactly when its target is grey, i.e. still on the current
+  // recursion stack. Every node is used as a DFS root so nodes unreachable from
+  // any entry point are still classified.
+  const backEdgeIds = (() => {
+    const outgoing = new Map<string, Edge[]>()
+    for (const e of edges) {
+      if (!e.target) continue
+      const list = outgoing.get(e.source)
+      if (list) list.push(e)
+      else outgoing.set(e.source, [e])
+    }
 
-  // Back-edges excluded: a LOOP into the first question would hide the Start badge.
+    const found = new Set<string>()
+    const state = new Map<string, "grey" | "black">()
+
+    // Iterative walk — a deep flow would blow the stack with plain recursion.
+    // Each frame keeps its own cursor into the node's outgoing edges, so we can
+    // mark the node black at exactly the moment we leave it (the pop below).
+    const visit = (root: string) => {
+      const stack: Array<{ nodeId: string; edgeIndex: number }> = [{ nodeId: root, edgeIndex: 0 }]
+      state.set(root, "grey")
+
+      while (stack.length > 0) {
+        const frame = stack[stack.length - 1]
+        const nodeEdges = outgoing.get(frame.nodeId) ?? []
+
+        if (frame.edgeIndex >= nodeEdges.length) {
+          state.set(frame.nodeId, "black")
+          stack.pop()
+          continue
+        }
+
+        const edge = nodeEdges[frame.edgeIndex++]
+        const targetState = state.get(edge.target)
+
+        if (targetState === "grey") {
+          // Target is on the current path: this edge closes a cycle.
+          // Self-loops land here too, since the source is grey by definition.
+          found.add(edge.id)
+        } else if (targetState === undefined) {
+          state.set(edge.target, "grey")
+          stack.push({ nodeId: edge.target, edgeIndex: 0 })
+        }
+        // "black" is a cross/forward edge into a finished subtree — not a cycle.
+      }
+    }
+
+    for (const n of nodes) {
+      if (!state.has(n.id)) visit(n.id)
+    }
+    return found
+  })()
+
+  const isBackEdge = (e: Edge): boolean => backEdgeIds.has(e.id)
+
+  // Back-edges excluded: a LOOP wiring back into the first question would
+  // otherwise count as an incoming edge and hide its Start badge.
   const targetedNodeIds = new Set(
     edges.filter((e) => !isBackEdge(e)).map((e) => e.target).filter(Boolean),
   )

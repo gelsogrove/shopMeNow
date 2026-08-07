@@ -287,6 +287,25 @@ export function ChatPage() {
   const [feedbackCardFor, setFeedbackCardFor] = useState<string | null>(null)
   const [feedbackTitle, setFeedbackTitle] = useState("")
   const [feedbackSaving, setFeedbackSaving] = useState(false)
+  // Ids of the messages that already have a card, so the chat shows at a glance
+  // what has been reported — otherwise the same wrong reply gets filed twice.
+  const [reportedMessageIds, setReportedMessageIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    let cancelled = false
+    kanbanApi
+      .list()
+      .then((todos) => {
+        if (!cancelled) setReportedMessageIds(new Set(todos.map((t) => t.dialogId)))
+      })
+      .catch(() => {
+        // The board is a side panel on this page: if it cannot be read, the
+        // chat must still work. Highlighting is simply absent.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [workspace?.id])
 
   /**
    * 📋 Report a message on the workspace's feedback board.
@@ -2007,8 +2026,30 @@ export function ChatPage() {
                             isOperatorMessage || isOperatorControl || isManualOperator || isBlockedMessage
                               ? 'pt-6'
                               : ''
-                          } ${getMessageStyle()}`}
+                          } ${getMessageStyle()} ${
+                            // 📋 Already on the feedback board. An amber ring
+                            // rather than a background colour: the background
+                            // already encodes who sent the message, and losing
+                            // that to mark a report would trade one signal for
+                            // another.
+                            reportedMessageIds.has(message.id)
+                              ? "ring-2 ring-amber-400 ring-offset-1"
+                              : ""
+                          }`}
                         >
+                          {/* 📋 Reported badge — the ring alone is a colour-only
+                              signal, so it carries a mark and a tooltip too. */}
+                          {reportedMessageIds.has(message.id) && (
+                            <span
+                              title="On the feedback board"
+                              className={`absolute -top-2 ${
+                                isAgentMessage ? "-right-2" : "-left-2"
+                              } z-20 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[10px] shadow`}
+                            >
+                              📋
+                            </span>
+                          )}
+
                           {/* 😀 React to ANY message (operator can react to the
                               customer or the bot). WhatsApp-style bar on hover;
                               the chosen emoji becomes a badge on this bubble. */}
@@ -2079,6 +2120,9 @@ export function ChatPage() {
                                       await createFeedbackCard(
                                         message,
                                         feedbackTitle.trim()
+                                      )
+                                      setReportedMessageIds((cur) =>
+                                        new Set(cur).add(message.id)
                                       )
                                       setFeedbackCardFor(null)
                                       toast.success("Added to the feedback board", {

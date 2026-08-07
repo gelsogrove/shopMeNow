@@ -253,6 +253,12 @@ export function MinimalLayout() {
                         <History className="mr-2 h-4 w-4 text-green-500" />
                         <span>Chat History</span>
                       </DropdownMenuItem>
+                      {/* Sits next to Chat History because that is where its
+                          cards are created — from a message in a conversation. */}
+                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/feedback-board")}>
+                        <ClipboardList className="mr-2 h-4 w-4 text-amber-500" />
+                        <span>Feedback Board</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/clients")}>
                         <Users className="mr-2 h-4 w-4 text-indigo-500" />
                         <span>Clients</span>
@@ -322,13 +328,6 @@ export function MinimalLayout() {
                           <span>WhatsApp Queue</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem
-                        className="p-2 cursor-pointer"
-                        onClick={() => navigate("/feedback-board")}
-                      >
-                        <ClipboardList className="mr-2 h-4 w-4 text-amber-500" />
-                        <span>Feedback Board</span>
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
