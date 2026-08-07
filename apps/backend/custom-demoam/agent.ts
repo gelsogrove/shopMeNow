@@ -1137,9 +1137,11 @@ function formatRuntimeBlock(
         '"Ciao!" / "Hi there!" / self-introduction — is a duplicate, not a nicety.',
         '',
         "If the customer's message was itself just a greeting with no request in it (\"ciao\", \"hi\",",
-        '"buongiorno" and nothing else), the greeting already sent IS the complete reply: return NO',
-        'text at all this hop — do not call a tool either. Only write text here if there is actual',
-        'substance to respond to beyond the greeting.',
+        '"buongiorno" and nothing else), there is nothing to answer yet: ask how you can help,',
+        'in one short sentence, and nothing more. Do not call a tool.',
+        '',
+        'If instead the customer already asked something or reported a problem, answer THAT and',
+        'only that. Do NOT open by asking how you can help — they have already told you.',
       )
     } else {
       lines.push(
