@@ -1,6 +1,6 @@
 {
-  "description": "Problema PRESENTE nel flow builder (ERROR 001) — intake completo prima che il flow venga attaccato, poi percorso che finisce in ESCALATE: luce rossa accesa (sì) → lampeggia continuamente (sì) → dopo 10 minuti la luce NON si è spenta (no) → nodo terminale ESCALATE ('Ti metto in contatto con un operatore') → gate pre-operatore (Human Support flow: acceso/wifi/cut scheduling/batteria, poi nome) → escalate_to_operator chiamato davvero, con ticket.",
-  "contractRule": "Se un flow porta a un terminale ESCALATE, si passa al gate pre-operatore condiviso (Human operator flow) e poi si contatta davvero l'operatore — mai un'escalation annunciata prima che il tool sia effettivamente chiamato.",
+  "description": "Problema PRESENTE nel flow builder (ERROR 001) — intake completo prima che il flow venga attaccato, poi percorso che finisce in ESCALATE: luce rossa accesa (sì) → lampeggia continuamente (sì) → dopo 10 minuti la luce NON si è spenta (no) → nodo terminale ESCALATE → Human Support flow con l'UNICO check combinato (wifi + cut scheduling in una sola domanda), poi il nome → escalate_to_operator chiamato davvero, con ticket.",
+  "contractRule": "Se un flow porta a un terminale ESCALATE, si passa all'Human Support flow condiviso (una domanda combinata wifi+cut scheduling) e poi si contatta davvero l'operatore — mai un'escalation annunciata prima che il tool sia effettivamente chiamato.",
   "phone": "+391110000402",
   "newSession": true,
   "turns": [
@@ -11,13 +11,11 @@
     { "message": "sì, la luce rossa è accesa" },
     { "message": "sì, lampeggia continuamente" },
     { "message": "no, la luce è ancora accesa dopo 10 minuti" },
-    { "message": "sì è acceso" },
-    { "message": "sì il wifi è attivo" },
-    { "message": "no non sta tagliando" },
-    { "message": "sì la batteria è carica" },
+    { "message": "sì, il wifi è attivo e la programmazione del taglio è abilitata" },
     { "message": "Luca" }
   ],
   "expect": {
-    "replyContains": ["Luca"]
+    "replyContains": ["Luca"],
+    "replyExcludes": ["batteria", "battery"]
   }
 }

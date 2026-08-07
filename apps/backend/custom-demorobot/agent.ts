@@ -878,9 +878,10 @@ async function translateFixedMessage(text: string, language: string | undefined)
         {
           role: 'system',
           content:
-            'Translate the following message into ' +
-            (language || 'the same language it is already written in') +
-            '. Output ONLY the translated message, verbatim in meaning — do not add ' +
+            (language
+              ? `Translate the following message into the language with ISO 639-1 code "${language}".`
+              : 'Translate the following message into the same language it is already written in.') +
+            ' Output ONLY the translated message, verbatim in meaning — do not add ' +
             'a greeting, a confirmation, an apology, or any sentence that is not a ' +
             'direct translation of the input.',
         },

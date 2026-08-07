@@ -1,11 +1,12 @@
 /**
  * demoam — the Human Support hand-off, end to end.
  *
- * Andrea 2026-08-06, the sequence he asked to have locked down:
+ * Andrea 2026-08-06 (flow shape updated 2026-08-07: one combined check), the
+ * sequence he asked to have locked down:
  *
- *   every road to a human  →  Human Support FLOW (powered on, wifi, cut
- *                              scheduling, battery — with a corrective LOOP
- *                              on "No")
+ *   every road to a human  →  Human Support FLOW (ONE combined check: wifi
+ *                              active + cut scheduling enabled — corrective
+ *                              LOOP on "No")
  *                          →  the customer's NAME (free text: the flow
  *                              engine classifies fixed edge labels, so it
  *                              cannot capture this)
@@ -82,10 +83,19 @@ describe('demoam Human Support — what the gate still owns', () => {
     expect(nextPreOperatorAction(state, QUESTIONS, {}, 'technical').kind).toBe('escalate')
   })
 
-  it('leaves the four technical booleans to the flow', () => {
+  it('leaves the technical checks to the flow', () => {
+    // 2026-08-07: the flow's check is now ONE combined question (fieldKey
+    // wifiAndCutSchedulingActive); the four retired booleans stay guarded so
+    // they cannot creep back into the gate as dead config.
     const settings = JSON.parse(fs.readFileSync(path.join(MODULE_DIR, 'settings.json'), 'utf8'))
 
-    for (const owned of ['robotPoweredOn', 'wifiActive', 'cutSchedulingActive', 'batterySufficient']) {
+    for (const owned of [
+      'robotPoweredOn',
+      'wifiActive',
+      'cutSchedulingActive',
+      'batterySufficient',
+      'wifiAndCutSchedulingActive',
+    ]) {
       expect(settings.gateQuestions[owned]).toBeUndefined()
     }
   })

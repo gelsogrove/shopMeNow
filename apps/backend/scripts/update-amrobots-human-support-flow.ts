@@ -2,19 +2,19 @@
  * Updates the AmRobots "Human operator flow" (Andrea, 2026-08-07).
  *
  * Today's shape — ONE combined technical check (Andrea: "vorrei avere tutto
- * in un nodo"):
+ * in un nodo", poi "io metterei anche il controllo della batteria"):
  *
- *   hf_checks      "is the wifi active and the cut scheduling enabled?"
+ *   hf_checks      "is the wifi active, the cut scheduling enabled and the
+ *                   battery charged?"
  *     Yes  → hf_handoff_checks_done (ESCALATE)
- *     No   → hf_checks_fix (LOOP): fix both, "Done" → hf_handoff_checks_done
+ *     No   → hf_checks_fix (LOOP): fix them, "Done" → hf_handoff_checks_done
  *
- * Gone from the graph (2026-08-07): robotPoweredOn, batterySufficient, and
- * the separate wifi / cut-scheduling nodes. The four-question version
- * (2026-08-06) interrogated the customer one boolean at a time right before
- * the hand-off; production transcripts showed the same ground being covered
- * twice once a session straddled an edit. The combined question keeps the
- * only two checks support actually needs (connectivity + scheduling) in a
- * single turn.
+ * Gone from the graph (2026-08-07): robotPoweredOn (a robot with wifi up is
+ * necessarily on — Andrea) and the separate per-boolean nodes. The
+ * four-question version (2026-08-06) interrogated the customer one boolean
+ * at a time right before the hand-off; production transcripts showed the
+ * same ground being covered twice once a session straddled an edit. The
+ * combined question does wifi + cut scheduling + battery in a single turn.
  *
  * The "Done" edge on the fix node goes FORWARD to the terminal, never back
  * to the question: "I switched both on" already answers it, and a back-edge
@@ -39,7 +39,7 @@ import { OpenRouterEmbeddingProvider } from "../src/application/flow-builder/emb
 const FLOW_ID = "cmsfavpet0000qwngacwdutj6"
 
 const DESCRIPTION =
-  "Use this flow when you need to verify that your robot has the wifi active and the cut scheduling enabled before escalating to a human support agent."
+  "Use this flow when you need to verify that your robot has the wifi active, the cut scheduling enabled and the battery charged before escalating to a human support agent."
 
 async function main() {
   const flow = await prisma.flow.findUnique({
@@ -49,8 +49,8 @@ async function main() {
   if (!flow) throw new Error(`Flow ${FLOW_ID} not found — this script updates, it never creates`)
 
   const nodes = [
-    { id: "hf_checks", question: "Before connecting you to our Human Support, one quick check — is the wifi active and the cut scheduling enabled?", positionX: 0, positionY: 0, fieldKey: "wifiAndCutSchedulingActive", fieldType: "boolean", terminalType: null },
-    { id: "hf_checks_fix", question: "Support needs the robot connected and scheduled to be able to help — please switch the wifi on and activate the cut scheduling from the app, then let me know once both are on.", positionX: 0, positionY: 200, terminalType: "LOOP" },
+    { id: "hf_checks", question: "Before connecting you to our Human Support, one quick check — is the wifi active, the cut scheduling enabled and the battery charged?", positionX: 0, positionY: 0, fieldKey: "technicalChecksOk", fieldType: "boolean", terminalType: null },
+    { id: "hf_checks_fix", question: "Support needs the robot online and ready — please switch the wifi on, activate the cut scheduling from the app and charge the battery if needed, then let me know once everything is set.", positionX: 0, positionY: 200, terminalType: "LOOP" },
     // One terminal, and it ESCALATEs: this flow's only destination is a human.
     { id: "hf_handoff_checks_done", question: "This flow has reached its escalation point — the standard checks are done, so the issue is something else.", positionX: 280, positionY: 0, terminalType: "ESCALATE" },
   ]
