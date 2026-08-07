@@ -995,7 +995,7 @@ async function callLLM({
     // Only the customer's own words count as "already told us" — assistant
     // turns are what we are trying to avoid repeating, not evidence.
     const customerMessages = history.filter((m) => m.role === 'user').map((m) => m.content ?? '')
-    intakeWantsRemember = false && intakeFieldMayAlreadyBeAnswered(intakeStep, customerMessages)
+    intakeWantsRemember = intakeFieldMayAlreadyBeAnswered(intakeStep, customerMessages)
     const intakeBlock = formatIntakeBlock(intakeStep, intakeWantsRemember)
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
