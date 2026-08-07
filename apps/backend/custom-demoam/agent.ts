@@ -1061,6 +1061,51 @@ async function callLLM({
 }
 
 /**
+ * Deterministic guard for steps.md Step 1.4 / scenario 01-welcome/07: the
+ * prompt alone did not stop the model from replying in a non-enabled
+ * language (seen live 2026-08-06, Danish customer — greeting and substance
+ * both came back in Danish while enabledLanguages was ['it','en']). When the
+ * model's own ⟦LANG:xx⟧ tag names a language outside enabledLanguages, the
+ * reply is re-rendered into the resolved language by a dedicated
+ * translation-only call: no history, no tools, no room to disobey
+ * (CLAUDE.md §16 — a guard, not another prompt rule). Any failure returns
+ * the original text: a reply in the wrong language beats no reply.
+ */
+function declaredLanguageNotEnabled(lang: string | null, settings: Settings): boolean {
+  return !!lang && !settings.enabledLanguages.includes(lang.toLowerCase())
+}
+
+async function forceReplyIntoLanguage(text: string, languageCode: string, settings: Settings): Promise<string> {
+  if (!text.trim() || !API_KEY) return text
+  try {
+    const res = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+      body: JSON.stringify({
+        model: process.env.LLM_MODEL || settings.model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              `Translate the user message into the language with ISO 639-1 code "${languageCode}". ` +
+              'If it is already entirely in that language, return it unchanged. ' +
+              'Output ONLY the translated text — no preamble, no quotes, no added sentences.',
+          },
+          { role: 'user', content: text },
+        ],
+        temperature: 0,
+        max_tokens: 1000,
+      }),
+    })
+    if (!res.ok) return text
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> }
+    return data.choices?.[0]?.message?.content?.trim() || text
+  } catch {
+    return text
+  }
+}
+
+/**
  * Which greeting text (if any) the model must translate and open with this
  * turn, {{customerName}} already substituted. CODE still decides whether a
  * greeting is due at all (state.greeting, set once per turn in chatbotFn) —
@@ -1348,6 +1393,9 @@ async function agentTurnInternal(
     if (lang) {
       commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
     }
+    if (declaredLanguageNotEnabled(lang, settings)) {
+      greetingReply = await forceReplyIntoLanguage(greetingReply, settings.defaultLanguage, settings)
+    }
   }
 
   let awaitingDictatedReply = false
@@ -1396,6 +1444,9 @@ async function agentTurnInternal(
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
       }
       let replyBody = rawReply.trim()
+      if (declaredLanguageNotEnabled(lang, settings)) {
+        replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings)
+      }
       if (!replyBody) {
         // Andrea 2026-08-06, seen live (Danish customer, first turn): the
         // greeting hop always produces text, so the old `!replyBody &&
@@ -1428,6 +1479,9 @@ async function agentTurnInternal(
           commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(retryExtracted.lang, settings.enabledLanguages, settings.defaultLanguage))
         }
         replyBody = retryExtracted.reply.trim()
+        if (declaredLanguageNotEnabled(retryExtracted.lang, settings)) {
+          replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings)
+        }
       }
       const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
       history.push({ role: 'assistant', content: reply })
@@ -1502,9 +1556,14 @@ async function agentTurnInternal(
         greetingToTranslate: undefined,
         greetingAlreadyDelivered: !!greetingToTranslate,
       })
-      const { reply, lang } = extractLanguage(finalHop.text)
+      const finalExtracted = extractLanguage(finalHop.text)
+      let reply = finalExtracted.reply
+      const lang = finalExtracted.lang
       if (lang) {
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
+      }
+      if (declaredLanguageNotEnabled(lang, settings)) {
+        reply = await forceReplyIntoLanguage(reply, settings.defaultLanguage, settings)
       }
       history.push({ role: 'assistant', content: reply })
 

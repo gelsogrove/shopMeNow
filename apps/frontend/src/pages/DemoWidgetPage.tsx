@@ -605,9 +605,9 @@ interface DemoFeature {
   effort?: 1 | 2 | 3
 }
 
-// Delivery phases. The roadmap is presented as three blocks so a visitor reads
-// it as a sequence rather than one long undifferentiated list: what already
-// works today, what comes next, and the bigger builds after that.
+// Delivery phases. The roadmap is presented as separate blocks so a visitor
+// reads it as a sequence rather than one long undifferentiated list: what
+// already works today, what comes next, and the bigger builds after that.
 interface DemoPhase {
   title: string
   subtitle: string
@@ -630,8 +630,8 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 1 — Available today",
-    subtitle: "Everything you can try right now in this demo.",
+    title: "Phase 1 — The assistant, live",
+    subtitle: "Available today — everything you can try right now in this demo.",
     features: [
       {
         name: "Languages",
@@ -677,8 +677,9 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 2 — To evaluate",
-    subtitle: "Feeding the assistant your own content so it answers from your data.",
+    title: "Phase 2 — Your own content",
+    subtitle:
+      "To evaluate — feeding the assistant your own content so it answers from your data.",
     features: [
       {
         name: "Loading Context Data",
@@ -687,6 +688,12 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 2,
       },
+    ],
+  },
+  {
+    title: "Phase 3 — Voice, translation & WhatsApp",
+    subtitle: "Reaching customers on their channel, in their language.",
+    features: [
       {
         name: "Speech to text",
         description: "Understands voice notes sent by the customer.",
@@ -707,7 +714,7 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 2,
       },
       {
-        name: "WhatsApp",
+        name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
         effort: 2,
@@ -715,7 +722,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 3 — Channels & Booking",
+    title: "Phase 4 — Channels & Booking",
     subtitle: "New channels, richer replies, and your calendar and CRM connected.",
     features: [
       {
@@ -763,7 +770,7 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 4 — Later",
+    title: "Phase 5 — Later",
     subtitle: "Larger builds that turn the assistant into a sales channel.",
     features: [
       {
@@ -975,7 +982,7 @@ export function DemoWidgetPage() {
                 <tbody>
                   {DEMO_PHASES.map((phase) => (
                   <Fragment key={phase.title}>
-                    {/* Phase separator — turns the roadmap into three readable
+                    {/* Phase separator — turns the roadmap into readable
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
                       <td colSpan={4} className="pb-3 pt-7">
