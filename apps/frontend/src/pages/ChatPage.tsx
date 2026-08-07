@@ -25,6 +25,7 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { kanbanApi } from "@/services/playgroundKanbanApi"
+import { getSocket } from "@/services/socket"
 import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -291,7 +292,7 @@ export function ChatPage() {
   // what has been reported — otherwise the same wrong reply gets filed twice.
   const [reportedMessageIds, setReportedMessageIds] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
+  const refreshReportedMessages = useCallback(() => {
     let cancelled = false
     kanbanApi
       .list()
@@ -305,7 +306,26 @@ export function ChatPage() {
     return () => {
       cancelled = true
     }
-  }, [workspace?.id])
+  }, [])
+
+  useEffect(() => refreshReportedMessages(), [workspace?.id, refreshReportedMessages])
+
+  // Keep the highlight honest when the board changes elsewhere — a card deleted
+  // from /feedback-board must stop marking its message here, without a reload.
+  useEffect(() => {
+    if (!workspace?.id) return
+    const socket = getSocket(workspace.id)
+    if (!socket) return
+
+    const onBoardChanged = () => refreshReportedMessages()
+    socket.on("playground:todo:created", onBoardChanged)
+    socket.on("playground:todo:deleted", onBoardChanged)
+
+    return () => {
+      socket.off("playground:todo:created", onBoardChanged)
+      socket.off("playground:todo:deleted", onBoardChanged)
+    }
+  }, [workspace?.id, refreshReportedMessages])
 
   /**
    * 📋 Report a message on the workspace's feedback board.

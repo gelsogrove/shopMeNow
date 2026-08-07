@@ -2,14 +2,14 @@
  * Playground Kanban — identity boundary unit tests.
  *
  * WHAT THIS PINS
- * The kanban lives on a PUBLIC route (/demo/<slug>/kanban) with one board per
- * Flow workspace. There is no JWT, so the only thing separating one client's
- * board from another's is that the handlers derive the workspace and the author
- * from the playground sessionId — never from the request.
+ * One board per workspace, reached through two doors: staff signed in to the
+ * app (identified by their JWT) and customers on the public /demo/<slug> page
+ * (identified by their playground sessionId). Neither door reads the workspace
+ * or the author from the request itself.
  *
  * WHY IT MATTERS
  * Cards hold a client's criticism of their own bot. If `x-workspace-id` were
- * trusted, a visitor holding the demorobot link could read demowash's board; if
+ * trusted, anyone holding one demo link could read another client's board; if
  * `createdBy` were trusted, they could sign a card as someone else and delete
  * that person's comments. Both are silent leaks — no error, just the wrong data
  * on screen — so they are locked here rather than left to review.
@@ -34,6 +34,7 @@ jest.mock("@echatbot/database", () => ({
     },
     playgroundComment: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     workspace: { findUnique: jest.fn(), findFirst: jest.fn() },
+    user: { findUnique: jest.fn() },
   },
 }))
 jest.mock("../../../src/utils/logger")
@@ -51,12 +52,22 @@ const mockPrisma = prisma as unknown as {
     delete: jest.Mock
   }
   playgroundComment: { create: jest.Mock; findUnique: jest.Mock; delete: jest.Mock }
+  user: { findUnique: jest.Mock }
 }
 
-/** A playground session belonging to demowash, owned by a customer named Olga. */
-const DEMOWASH_SESSION = {
-  workspaceId: "ws-demowash",
+/** A playground session on the board under test, owned by a customer named Olga. */
+const CUSTOMER_SESSION = {
+  workspaceId: "ws-selected",
   customer: { name: "Olga" },
+}
+
+/**
+ * A signed-in staff request. authMiddleware and validateWorkspaceOperation have
+ * already run by the time a handler sees this, so req.user and req.workspaceId
+ * are the trustworthy part — that is exactly what the handlers must rely on.
+ */
+function staffRequestFields(workspaceId = "ws-selected") {
+  return { user: { id: "user-1", email: "andrea@echatbot.ai" }, workspaceId }
 }
 
 function buildResponse() {
@@ -172,7 +183,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
     it("a session whose customer has no name is rejected", async () => {
       // createdBy would otherwise be empty, leaving cards unattributable.
       mockPrisma.chatSession.findFirst.mockResolvedValue({
-        workspaceId: "ws-demowash",
+        workspaceId: "ws-selected",
         customer: null,
       })
       const res = buildResponse()
@@ -188,7 +199,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
 
   describe("the workspace comes from the session, not from the request", () => {
     it("getTodos reads the session's board even when a foreign workspace header is sent", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       mockPrisma.playgroundTodo.findMany.mockResolvedValue([])
       const res = buildResponse()
 
@@ -196,18 +207,18 @@ describe("PlaygroundController — kanban identity boundary", () => {
         buildRequest({
           query: { sessionId: "sess-1" },
           // A visitor trying to read another client's board.
-          headers: { "x-workspace-id": "ws-demorobot" },
+          headers: { "x-workspace-id": "ws-other" },
         } as Partial<Request>),
         res
       )
 
       expect(mockPrisma.playgroundTodo.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { workspaceId: "ws-demowash" } })
+        expect.objectContaining({ where: { workspaceId: "ws-selected" } })
       )
     })
 
     it("only playground sessions can unlock a board", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       mockPrisma.playgroundTodo.findMany.mockResolvedValue([])
 
       await controller.getTodos(
@@ -226,7 +237,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
 
   describe("the author comes from the session, not from the request", () => {
     it("createTodo ignores a createdBy sent in the body", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       mockPrisma.playgroundTodo.findFirst.mockResolvedValue(null)
       mockPrisma.playgroundTodo.create.mockResolvedValue({ id: "todo-1", comments: [] })
       const res = buildResponse()
@@ -251,7 +262,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             createdBy: "Olga",
-            workspaceId: "ws-demowash",
+            workspaceId: "ws-selected",
           }),
         })
       )
@@ -259,7 +270,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
     })
 
     it("addComment signs the comment with the session's name", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       mockPrisma.playgroundTodo.findFirst.mockResolvedValue({ id: "todo-1" })
       mockPrisma.playgroundComment.create.mockResolvedValue({ id: "c-1" })
       mockPrisma.playgroundTodo.update.mockResolvedValue({ id: "todo-1" })
@@ -280,12 +291,12 @@ describe("PlaygroundController — kanban identity boundary", () => {
     })
 
     it("deleteComment refuses to delete another author's comment", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       mockPrisma.playgroundComment.findUnique.mockResolvedValue({
         id: "c-1",
         todoId: "todo-1",
         createdBy: "Andrea", // written by someone else
-        todo: { workspaceId: "ws-demowash" },
+        todo: { workspaceId: "ws-selected" },
       })
       const res = buildResponse()
 
@@ -304,7 +315,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
 
   describe("cards from another workspace are invisible", () => {
     it("updateTodo 404s when the card is not on the session's board", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       // Scoped lookup finds nothing: the card belongs to a different workspace.
       mockPrisma.playgroundTodo.findFirst.mockResolvedValue(null)
       const res = buildResponse()
@@ -320,14 +331,205 @@ describe("PlaygroundController — kanban identity boundary", () => {
       expect(res.status).toHaveBeenCalledWith(404)
       expect(mockPrisma.playgroundTodo.update).not.toHaveBeenCalled()
       expect(mockPrisma.playgroundTodo.findFirst).toHaveBeenCalledWith({
-        where: { id: "todo-of-another-client", workspaceId: "ws-demowash" },
+        where: { id: "todo-of-another-client", workspaceId: "ws-selected" },
+      })
+    })
+  })
+
+  describe("the staff door — identity comes from the JWT", () => {
+    // Signed-in users reach the same board from inside the app. Their name and
+    // workspace come from the verified token, so no sessionId is involved.
+    beforeEach(() => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        firstName: "Andrea",
+        lastName: "Gelsomino",
+        email: "andrea@echatbot.ai",
+      })
+    })
+
+    it("reads the board of the workspace the middleware authorised", async () => {
+      mockPrisma.playgroundTodo.findMany.mockResolvedValue([])
+
+      await controller.getTodos(
+        buildRequest(staffRequestFields() as Partial<Request>),
+        buildResponse()
+      )
+
+      expect(mockPrisma.playgroundTodo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { workspaceId: "ws-selected" } })
+      )
+      // No session lookup: the JWT is the credential on this door.
+      expect(mockPrisma.chatSession.findFirst).not.toHaveBeenCalled()
+    })
+
+    it("files a card as STAFF, named from the user record", async () => {
+      mockPrisma.playgroundTodo.findFirst.mockResolvedValue(null)
+      mockPrisma.playgroundTodo.create.mockResolvedValue({ id: "todo-1", comments: [] })
+
+      await controller.createTodo(
+        buildRequest({
+          ...staffRequestFields(),
+          body: {
+            dialogId: "msg-1",
+            messageType: "chatbot",
+            messageContent: "what are your prices?",
+            commentTitle: "bot cannot answer pricing",
+            // Both must be ignored: identity is never taken from the payload.
+            createdBy: "Someone Else",
+            sessionId: "sess-of-another-workspace",
+          },
+        } as Partial<Request>),
+        buildResponse()
+      )
+
+      expect(mockPrisma.playgroundTodo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            createdBy: "Andrea Gelsomino",
+            authorKind: "STAFF",
+            workspaceId: "ws-selected",
+          }),
+        })
+      )
+    })
+
+    it("a JWT beats a sessionId pointing at another workspace", async () => {
+      // Belt and braces: even if a caller supplies both, the token wins, so a
+      // stale session cannot redirect a staff write onto someone else's board.
+      mockPrisma.playgroundTodo.findMany.mockResolvedValue([])
+
+      await controller.getTodos(
+        buildRequest({
+          ...staffRequestFields("ws-selected"),
+          query: { sessionId: "sess-other-workspace" },
+        } as Partial<Request>),
+        buildResponse()
+      )
+
+      expect(mockPrisma.playgroundTodo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { workspaceId: "ws-selected" } })
+      )
+    })
+
+    it("falls back to the email when the user has no name set", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        firstName: null,
+        lastName: null,
+        email: "andrea@echatbot.ai",
+      })
+      mockPrisma.playgroundTodo.findFirst.mockResolvedValue({ id: "todo-1" })
+      mockPrisma.playgroundComment.create.mockResolvedValue({ id: "c-1" })
+      mockPrisma.playgroundTodo.update.mockResolvedValue({ id: "todo-1" })
+
+      await controller.addComment(
+        buildRequest({
+          ...staffRequestFields(),
+          params: { id: "todo-1" },
+          body: { commentText: "fixed in the prompt" },
+        } as Partial<Request>),
+        buildResponse()
+      )
+
+      expect(mockPrisma.playgroundComment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            createdBy: "andrea@echatbot.ai",
+            authorKind: "STAFF",
+          }),
+        })
+      )
+    })
+  })
+
+  describe("authorship is (name, origin) — the two doors share one board", () => {
+    it("a customer cannot delete a staff comment that shares their name", async () => {
+      // The reason authorKind exists. Both are called "Andrea"; only the origin
+      // separates them.
+      mockPrisma.chatSession.findFirst.mockResolvedValue({
+        workspaceId: "ws-selected",
+        customer: { name: "Andrea" },
+      })
+      mockPrisma.playgroundComment.findUnique.mockResolvedValue({
+        id: "c-1",
+        todoId: "todo-1",
+        createdBy: "Andrea",
+        authorKind: "STAFF",
+        todo: { workspaceId: "ws-selected" },
+      })
+      const res = buildResponse()
+
+      await controller.deleteComment(
+        buildRequest({
+          params: { todoId: "todo-1", commentId: "c-1" },
+          query: { sessionId: "sess-1" },
+        } as Partial<Request>),
+        res
+      )
+
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(mockPrisma.playgroundComment.delete).not.toHaveBeenCalled()
+    })
+
+    it("a customer can delete their own comment", async () => {
+      mockPrisma.chatSession.findFirst.mockResolvedValue({
+        workspaceId: "ws-selected",
+        customer: { name: "Andrea" },
+      })
+      mockPrisma.playgroundComment.findUnique.mockResolvedValue({
+        id: "c-1",
+        todoId: "todo-1",
+        createdBy: "Andrea",
+        authorKind: "CUSTOMER",
+        todo: { workspaceId: "ws-selected" },
+      })
+      mockPrisma.playgroundTodo.update.mockResolvedValue({ id: "todo-1" })
+
+      await controller.deleteComment(
+        buildRequest({
+          params: { todoId: "todo-1", commentId: "c-1" },
+          query: { sessionId: "sess-1" },
+        } as Partial<Request>),
+        buildResponse()
+      )
+
+      expect(mockPrisma.playgroundComment.delete).toHaveBeenCalledWith({
+        where: { id: "c-1" },
+      })
+    })
+
+    it("staff may clear a customer's comment on their own board", async () => {
+      // The board belongs to the workspace: a client cannot be asked to tidy it.
+      mockPrisma.user.findUnique.mockResolvedValue({
+        firstName: "Andrea",
+        lastName: null,
+        email: "andrea@echatbot.ai",
+      })
+      mockPrisma.playgroundComment.findUnique.mockResolvedValue({
+        id: "c-1",
+        todoId: "todo-1",
+        createdBy: "Olga",
+        authorKind: "CUSTOMER",
+        todo: { workspaceId: "ws-selected" },
+      })
+      mockPrisma.playgroundTodo.update.mockResolvedValue({ id: "todo-1" })
+
+      await controller.deleteComment(
+        buildRequest({
+          ...staffRequestFields(),
+          params: { todoId: "todo-1", commentId: "c-1" },
+        } as Partial<Request>),
+        buildResponse()
+      )
+
+      expect(mockPrisma.playgroundComment.delete).toHaveBeenCalledWith({
+        where: { id: "c-1" },
       })
     })
   })
 
   describe("priority labels are the English set", () => {
     it("rejects the retired Italian labels", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       const res = buildResponse()
 
       await controller.createTodo(
@@ -349,7 +551,7 @@ describe("PlaygroundController — kanban identity boundary", () => {
     })
 
     it("defaults to MEDIUM when no priority is given", async () => {
-      mockPrisma.chatSession.findFirst.mockResolvedValue(DEMOWASH_SESSION)
+      mockPrisma.chatSession.findFirst.mockResolvedValue(CUSTOMER_SESSION)
       mockPrisma.playgroundTodo.findFirst.mockResolvedValue(null)
       mockPrisma.playgroundTodo.create.mockResolvedValue({ id: "todo-1", comments: [] })
 

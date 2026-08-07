@@ -1,3 +1,4 @@
+import compression from "compression"
 import cookieParser from "cookie-parser"
 import cors from "cors"
 import express from "express"
@@ -202,6 +203,12 @@ if (process.env.NODE_ENV === "production") {
   })
 }
 
+// ⚡ gzip/deflate every text response (JS, CSS, JSON). Mounted before the
+// routes and the static handlers below so it covers both the API and the SPA
+// bundles. Without it the frontend's main chunk went over the wire at its full
+// ~3.8MB, which is what made the embedded widget take ~30s to appear.
+app.use(compression())
+
 // Other middleware
 app.use(cors(corsOptions))
 
@@ -366,8 +373,22 @@ if (process.env.NODE_ENV === "production") {
   const frontendDistPath = path.join(backendRoot, "apps/frontend/dist")
   const backofficeDistPath = path.join(backendRoot, "apps/backoffice/dist")
 
+  // Vite writes a content hash into every filename under /assets, so those
+  // files are immutable: a change ships under a new name. Caching them for a
+  // year is what stops the multi-MB bundle from being re-downloaded on every
+  // single visit (it was served with max-age=0 before).
+  //
+  // Deliberately NOT applied to the rest of the build: index.html carries the
+  // references to those hashed names, so it must stay revalidated or the
+  // browser would keep loading the previous deploy's assets.
+  const immutableCache = { immutable: true, maxAge: "1y" } as const
+
   // Backoffice assets under /backoffice (must be registered before the root static)
   if (fs.existsSync(backofficeDistPath)) {
+    app.use(
+      "/backoffice/assets",
+      express.static(path.join(backofficeDistPath, "assets"), immutableCache)
+    )
     app.use("/backoffice", express.static(backofficeDistPath))
     logger.info(`[Production] Serving backoffice under /backoffice from: ${backofficeDistPath}`)
   } else {
@@ -375,6 +396,10 @@ if (process.env.NODE_ENV === "production") {
   }
 
   if (fs.existsSync(frontendDistPath)) {
+    app.use(
+      "/assets",
+      express.static(path.join(frontendDistPath, "assets"), immutableCache)
+    )
     app.use(express.static(frontendDistPath))
     logger.info(`[Production] Serving frontend from: ${frontendDistPath}`)
   } else {
