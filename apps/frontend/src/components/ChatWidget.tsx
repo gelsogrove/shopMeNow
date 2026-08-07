@@ -253,16 +253,23 @@ interface ChatWidgetProps {
 }
 
 // Determine API URL based on environment
+// Last-resort API base, used only when no apiUrl reaches this component (the
+// widget embed passes one explicitly). It must stay www.echatbot.ai: the API is
+// served from the same host as the frontend, and the api.echatbot.ai subdomain
+// that used to be written here does not resolve at all — every request through
+// that fallback failed at DNS, leaving the widget silently blank.
+const PRODUCTION_API_URL = "https://www.echatbot.ai/api/v1"
+
 const getApiUrl = () => {
-  if (typeof window === "undefined") return "https://api.echatbot.ai/api/v1"
-  
+  if (typeof window === "undefined") return PRODUCTION_API_URL
+
   // If running on localhost, use local backend
   if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     return import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
   }
-  
+
   // Otherwise use production URL
-  return import.meta.env.VITE_API_URL || "https://api.echatbot.ai/api/v1"
+  return import.meta.env.VITE_API_URL || PRODUCTION_API_URL
 }
 
 const DEFAULT_API_URL = getApiUrl()
