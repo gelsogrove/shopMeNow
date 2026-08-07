@@ -1637,6 +1637,23 @@ export function ChatPage() {
                 }}
               />
             </div>
+
+            {/* 📋 The board lives one click away from the chat, because this is
+                where its cards are created. The header dropdown also links it,
+                but that is out of sight while working through conversations. */}
+            <button
+              type="button"
+              onClick={() => navigate("/feedback-board")}
+              className="mt-2 flex w-full items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm transition-colors hover:bg-amber-50 hover:text-amber-700"
+            >
+              <ClipboardList className="h-4 w-4 text-amber-500" />
+              <span>Feedback Board</span>
+              {reportedMessageIds.size > 0 && (
+                <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  {reportedMessageIds.size}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Filters */}
