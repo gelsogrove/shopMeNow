@@ -716,6 +716,14 @@ interface CallLLMParams {
    * (CLAUDE.md §14), just applied to the output instead of the input.
    */
   forceToolChoice?: boolean
+  /**
+   * A verbatim correction the model must open with on THIS hop, dictated by
+   * the code rather than trusted to prose already ignored once — same shape
+   * as formatPreOperatorInstruction. Currently used only for a rejected
+   * serial (agent.ts §rejectedSerialInstruction); kept generic in case another
+   * "the tool refused, and the model must not paper over it" case shows up.
+   */
+  extraInstruction?: string
 }
 
 async function callLLM({
@@ -730,6 +738,7 @@ async function callLLM({
   settings,
   messages,
   forceToolChoice,
+  extraInstruction,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -800,6 +809,11 @@ async function callLLM({
     )
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
+
+  // Kept LAST, same reasoning as OPERATING_RULES above: a correction the tool
+  // just issued (e.g. a rejected serial) must outrank everything else the
+  // model might otherwise compose from the conversation so far.
+  if (extraInstruction) systemContent.push({ type: 'text', text: extraInstruction })
 
 
   const payloadMessages: Array<Record<string, unknown>> = [
@@ -1040,6 +1054,11 @@ async function agentTurnInternal(
     !state.activeFlowId &&
     !nextIntakeStep(state, messages?.intakeQuestions ?? settings.intakeQuestions)
 
+  // Set at the end of a hop that rejected a malformed serial, consumed by the
+  // very next callLLM as a dedicated system block, then cleared — it must not
+  // leak into hops that have nothing to do with the serial correction.
+  let pendingCorrectionInstruction: string | undefined
+
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     // Recomputed per hop: start_flow may have attached a flow during this very
@@ -1060,7 +1079,9 @@ async function agentTurnInternal(
       // the next hop's own state re-read stops satisfying the condition above
       // naturally — no separate reset needed.
       forceToolChoice: mustForceToolChoice && !state.currentNodeId && !state.activeFlowId,
+      extraInstruction: pendingCorrectionInstruction,
     })
+    pendingCorrectionInstruction = undefined
 
     if (toolCalls.length === 0) {
       if (mustForceToolChoice && !state.currentNodeId && !state.activeFlowId) {
@@ -1089,6 +1110,15 @@ async function agentTurnInternal(
     let escalationSummary: string | undefined
     let escalationReason = 'diagnostic_exhausted'
     let escalationTicketId: string | undefined
+    // Andrea 2026-08-07: production said "Ho registrato il numero di serie"
+    // in the same reply that then said the serial was invalid — remember()
+    // correctly refused to save it (agent.ts serialNumber check below), but
+    // common.md:14-15 ("NEVER confirm a serial is registered unless SESSION
+    // STATE says so") was not enough to stop the model from composing a
+    // confirmation anyway. Same fix shape as formatPreOperatorInstruction:
+    // dictate the correction verbatim in a dedicated system block for the
+    // NEXT hop, rather than trust prose the model already ignored once.
+    let rejectedSerialInstruction: string | undefined
 
     for (const call of toolCalls) {
       let args: Record<string, unknown> = {}
@@ -1119,6 +1149,10 @@ async function agentTurnInternal(
         }
       }
 
+      if (call.function.name === 'remember' && !result.ok && result.error === 'invalid_serial_format') {
+        rejectedSerialInstruction = typeof result.instruction === 'string' ? result.instruction : undefined
+      }
+
       if (call.function.name === 'escalate_to_operator' && result.ok) {
         escalated = true
         escalationSummary = typeof args.summary === 'string' ? args.summary : escalationSummary
@@ -1132,6 +1166,20 @@ async function agentTurnInternal(
         tool_call_id: call.id,
         name: call.function.name,
       })
+    }
+
+    if (rejectedSerialInstruction) {
+      pendingCorrectionInstruction = [
+        '## THE SERIAL NUMBER WAS JUST REJECTED',
+        '',
+        'This overrides every other instruction, including anything about being',
+        'friendly or acknowledging what the customer said. The remember() call for',
+        'the serial number FAILED — it was NOT saved. Do not say it was registered,',
+        'saved, received, or anything implying success. Open your reply with the',
+        'correction below, translated into the customer\'s language:',
+        '',
+        rejectedSerialInstruction,
+      ].join('\n')
     }
 
     if (escalated) {

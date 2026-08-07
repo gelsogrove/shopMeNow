@@ -732,12 +732,6 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
-        name: "Text to speech",
-        description: "Replies out loud with a voice note instead of text.",
-        status: "todo",
-        effort: 1,
-      },
-      {
         name: "Send Images and Documents",
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
@@ -773,6 +767,12 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 4 — Later",
     subtitle: "Larger builds that turn the assistant into a sales channel.",
     features: [
+      {
+        name: "Text to speech",
+        description: "Replies out loud with a voice note instead of text.",
+        status: "todo",
+        effort: 1,
+      },
       {
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
@@ -979,11 +979,11 @@ export function DemoWidgetPage() {
                     {/* Phase separator — turns the roadmap into three readable
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
-                      <td colSpan={4} className="pb-2 pt-6">
-                        <span className={`text-xs font-semibold uppercase tracking-wide ${brand.itemsText}`}>
+                      <td colSpan={4} className="pb-3 pt-7">
+                        <span className={`block text-lg font-extrabold tracking-tight sm:text-xl ${brand.itemsText}`}>
                           {phase.title}
                         </span>
-                        <span className={`mt-0.5 block text-xs leading-snug ${brand.openHint}`}>
+                        <span className={`mt-1 block text-sm leading-snug ${brand.openHint}`}>
                           {phase.subtitle}
                         </span>
                       </td>
