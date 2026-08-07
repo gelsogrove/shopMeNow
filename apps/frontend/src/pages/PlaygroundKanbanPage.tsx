@@ -33,7 +33,8 @@ function getApiBaseUrl(): string {
     const host = window.location.hostname
     if (host === "localhost" || host === "127.0.0.1") return "/api/v1"
   }
-  return "https://api.echatbot.ai/api/v1"
+  // Same host as the frontend: api.echatbot.ai does not resolve.
+  return "https://www.echatbot.ai/api/v1"
 }
 
 export default function PlaygroundKanbanPage() {
