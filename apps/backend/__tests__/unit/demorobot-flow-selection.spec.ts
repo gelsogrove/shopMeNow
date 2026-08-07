@@ -17,7 +17,12 @@
  *   2. start_flow accepts ONLY ids from the list it was given. A hallucinated
  *      or cross-tenant id is refused with instructions, not silently ignored.
  */
-import { formatFlowsBlock, nextIntakeStep, startFlow } from "../../custom-demorobot/flow-selection"
+import {
+  formatFlowsBlock,
+  matchFlowByNumericCode,
+  nextIntakeStep,
+  startFlow,
+} from "../../custom-demorobot/flow-selection"
 import { getState, resetState } from "../../custom-demorobot/state"
 
 const FLOWS = [
@@ -108,6 +113,57 @@ describe("demorobot flow catalogue block", () => {
 
     expect(block).toMatch(/do not invent/i)
     expect(block).toMatch(/escalate_to_operator/)
+  })
+
+  describe("pinning an exact numeric error-code match", () => {
+    // The regression this guards: the customer wrote "errore 0030" and the
+    // model attached the flow titled "ERROR 003" instead of "ERROR 0030" —
+    // a prefix, not the same code. A prompt rule already said not to do this
+    // (agent.ts: "ERROR 0011 is not ERROR 001") and it happened anyway, so
+    // the exact match is now computed in code and pinned as fact.
+    const ERROR_FLOWS = [
+      { flowId: "f-003", title: "ERROR 003" },
+      { flowId: "f-0030", title: "ERROR 0030" },
+    ]
+
+    it("tells the model which flow the customer's number exactly matches", () => {
+      const match = matchFlowByNumericCode("mi da un errore 0030", ERROR_FLOWS)
+      expect(match?.flowId).toBe("f-0030")
+
+      const block = formatFlowsBlock(ERROR_FLOWS, match)
+      expect(block).toContain("[f-0030]")
+      expect(block).toMatch(/exactly matches ONLY/)
+      expect(block).toMatch(/do NOT substitute/i)
+    })
+
+    it("never matches a code by prefix/substring", () => {
+      // "003" must not match a flow titled "0030", and vice versa in the
+      // other direction — the ONLY valid match is the whole number.
+      expect(matchFlowByNumericCode("errore 003", ERROR_FLOWS)?.flowId).toBe("f-003")
+      expect(matchFlowByNumericCode("errore 0030", ERROR_FLOWS)?.flowId).toBe("f-0030")
+    })
+
+    it("returns null when the message has no number", () => {
+      expect(matchFlowByNumericCode("il robot non si accende", ERROR_FLOWS)).toBeNull()
+    })
+
+    it("returns null when the number matches more than one flow", () => {
+      const ambiguous = [
+        { flowId: "f-a", title: "ERROR 001" },
+        { flowId: "f-b", title: "SERIAL 001-CHECK" },
+      ]
+      expect(matchFlowByNumericCode("ho l'errore 001", ambiguous)).toBeNull()
+    })
+
+    it("returns null when the number matches no flow", () => {
+      expect(matchFlowByNumericCode("errore 999", ERROR_FLOWS)).toBeNull()
+    })
+
+    it("renders the block exactly as before when there is no numeric match", () => {
+      // No regression for the common case: nothing pinned, nothing added.
+      const block = formatFlowsBlock(ERROR_FLOWS, null)
+      expect(block).not.toMatch(/exactly matches ONLY/)
+    })
   })
 })
 

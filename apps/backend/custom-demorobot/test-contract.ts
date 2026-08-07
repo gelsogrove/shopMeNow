@@ -39,15 +39,41 @@ const turns: Array<{ msg: string; note?: string }> = [
   { msg: 'no it does not blink', note: 'T4: answers "led lampeggia?" → should trigger immediate escalation' },
 ]
 
-const session = {
-  workspaceId: 'ws_demorobot_test',
-  sessionId: 'session_demorobot_test',
-}
+// Andrea 2026-08-07: reproduces a production bug — the bot said "Ho
+// registrato il numero di serie" and only afterwards said the serial was
+// invalid. remember() correctly rejects a malformed serial without saving it
+// (agent.ts serialNumber check), but common.md:14-15 ("NEVER confirm a serial
+// is registered unless SESSION STATE says so") was violated: the model
+// composed the confirmation sentence in the same turn as the tool call,
+// before reacting to its ok:false result. This scenario's bot reply for T2
+// must NOT contain a confirmation phrase — it must go straight to the
+// invalid-format correction.
+const invalidSerialTurns: Array<{ msg: string; note?: string }> = [
+  { msg: 'ciao, il mio robot non si accende', note: 'T1: greeting + problem → expects serial number ask' },
+  { msg: 'HKA4OB100LQ2605019', note: 'T2: 18-char serial (missing one digit) → must be rejected, NOT confirmed as registered' },
+]
 
-const history: ChatbotInput['context']['history'] = []
+// Phrases that would mean the model confirmed the serial before validating
+// it — production said "Ho registrato il numero di serie" then, one line
+// later, said it was invalid. None of these may appear in a bot reply that
+// also rejects the serial as malformed.
+const CONFIRMATION_PHRASES = [
+  'ho registrato',
+  'registrato il numero',
+  'i have registered',
+  'i\'ve registered',
+  'i\'ve saved',
+  'i have saved',
+]
 
-async function main() {
-  console.log('═══════ CONTRACT TEST: demoRobot chatbotFn invocations ═══════')
+async function runScenario(
+  label: string,
+  turns: Array<{ msg: string; note?: string }>,
+  sessionId: string,
+): Promise<void> {
+  console.log(`\n═══════ SCENARIO: ${label} ═══════`)
+
+  const history: ChatbotInput['context']['history'] = []
 
   for (let i = 0; i < turns.length; i++) {
     const turn = turns[i]
@@ -56,13 +82,13 @@ async function main() {
       userName: 'Test Customer',
       channel: 'widget',
       config: {
-        workspaceId: session.workspaceId,
+        workspaceId: 'ws_demorobot_test',
         debugChannel: true,
         isPlayground: true,
         handlers: { retrieveFlow },
       },
       context: {
-        sessionId: session.sessionId,
+        sessionId,
         history: [...history],
       },
     }
@@ -82,9 +108,20 @@ async function main() {
     console.log(`  meta: tokensUsed=${output.meta.tokensUsed} agentChain=${JSON.stringify(output.meta.agentChain)}`)
     if (output.error) console.log(`  ERROR: ${output.error}`)
 
+    const replyLower = (output.reply ?? '').toLowerCase()
+    const mentionsConfirmation = CONFIRMATION_PHRASES.some((p) => replyLower.includes(p))
+    if (mentionsConfirmation) {
+      console.log(`  ⚠️  BUG REPRODUCED: bot confirmed the serial in the same reply — check common.md:14-15`)
+    }
+
     history.push({ role: 'user', content: turn.msg })
     if (output.reply) history.push({ role: 'assistant', content: output.reply })
   }
+}
+
+async function main() {
+  await runScenario('happy path (wifi flow)', turns, 'session_demorobot_test')
+  await runScenario('invalid serial — must reject, not confirm', invalidSerialTurns, 'session_demorobot_invalid_serial')
 
   console.log('\n══════════ END CONTRACT TEST ══════════')
 }

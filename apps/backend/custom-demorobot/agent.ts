@@ -147,6 +147,7 @@ import {
   formatFlowStepBlock,
   formatIntakeBlock,
   formatPreOperatorInstruction,
+  matchFlowByNumericCode,
   nextIntakeStep,
   nextPreOperatorStep,
   startFlow,
@@ -1329,7 +1330,12 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       try {
         const flows = await listFlows({ workspaceId: input.config.workspaceId })
         ctx.availableFlows = flows
-        flowsBlock = formatFlowsBlock(flows)
+        // Deterministic: if the customer's message contains a number that
+        // exactly matches one flow's code, that fact is pinned in the prompt
+        // instead of left for the model to re-derive by fuzzy title matching
+        // (flow-selection.ts: matchFlowByNumericCode).
+        const numericMatch = matchFlowByNumericCode(input.userMessage, flows)
+        flowsBlock = formatFlowsBlock(flows, numericMatch)
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[demorobot] listFlows handler threw, continuing without the flow catalogue', err)

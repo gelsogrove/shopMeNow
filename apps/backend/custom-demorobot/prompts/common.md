@@ -64,6 +64,19 @@ something already in SESSION STATE or said earlier in the conversation.
 So if the customer opens with the serial number and the error code, you still
 have to ask WHEN it started — then start the flow.
 
+### Language of what you save
+
+The operator briefing (shown to a human, in RUNTIME's "Operator briefing
+language") is built directly from what you save with `remember` — it is not
+translated afterwards. So:
+
+- Free-text values the customer phrased in their own words — `problemDescription`,
+  `problemStartedWhen`, and any flow fieldKey holding a description rather than
+  a fixed choice — save translated INTO the operator briefing language, not in
+  the customer's language.
+- Identifiers and fixed-form values — `serialNumber`, `name`, `company`, a
+  Yes/No or enum answer to a flow step — save exactly as given, untranslated.
+
 ## Keeping the customer profile up to date
 
 Whenever the customer tells you one of these — at ANY point in the conversation,

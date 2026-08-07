@@ -69,10 +69,52 @@ export interface StartFlowResult {
 }
 
 /**
+ * Digit runs found in a string, e.g. "ERROR 0030" -> ["0030"]. Used to compare
+ * error codes as whole numbers, never as a prefix/substring — "003" and
+ * "0030" must never be treated as the same code just because one starts with
+ * the other.
+ */
+function digitRuns(text: string): string[] {
+  return text.match(/\d+/g) ?? []
+}
+
+/**
+ * Finds the one flow whose title contains an error code that EXACTLY matches
+ * a number the customer typed, e.g. "errore 0030" -> the flow titled
+ * "ERROR 0030", never "ERROR 003".
+ *
+ * Andrea 2026-08-07: the model was collapsing "0030" into "003" — picking the
+ * flow with the closest-looking title instead of the one with the same
+ * number. A prompt rule already told it not to (agent.ts: "ERROR 0011 is not
+ * ERROR 001") and it still happened, so per iron rule 1 the exact match is
+ * computed here, in code, and handed to the model as a fact rather than left
+ * for it to re-derive from title text under fuzzy matching.
+ *
+ * Returns null when zero or more than one flow matches — an ambiguous or
+ * absent signal must fall back to the model's own judgement (and ultimately
+ * escalation), never guess.
+ */
+export function matchFlowByNumericCode(
+  userMessage: string,
+  flows: FlowSummary[],
+): FlowSummary | null {
+  const messageCodes = new Set(digitRuns(userMessage))
+  if (messageCodes.size === 0) return null
+
+  const matches = flows.filter((f) => digitRuns(f.title).some((code) => messageCodes.has(code)))
+  return matches.length === 1 ? matches[0] : null
+}
+
+/**
  * Renders the AVAILABLE FLOWS prompt block: the only procedures the model may
  * follow, each with the id it must pass to start_flow.
+ *
+ * `numericMatch`, when given, is the flow that `matchFlowByNumericCode`
+ * determined is the ONLY one whose code matches a number in the customer's
+ * message — pinned here as a fact instead of left for the model to re-derive
+ * by fuzzy-matching title text, which is what let "0030" collapse into "003".
  */
-export function formatFlowsBlock(flows: FlowSummary[]): string {
+export function formatFlowsBlock(flows: FlowSummary[], numericMatch?: FlowSummary | null): string {
   if (!flows.length) {
     return [
       '',
@@ -137,6 +179,15 @@ export function formatFlowsBlock(flows: FlowSummary[]): string {
     'procedure for it and call escalate_to_operator. NEVER pick a flow that does not',
     'fit just to have something to say, and NEVER invent diagnostic questions of your',
     'own — the questions you ask must come from the ACTIVE FLOW block, nowhere else.',
+    ...(numericMatch
+      ? [
+          '',
+          `The customer's message contains a number that exactly matches ONLY`,
+          `[${numericMatch.flowId}] "${numericMatch.title}". Use this flow — do NOT substitute`,
+          'a different one with a similar-looking title or a shorter/longer code',
+          '(e.g. a code ending in the same digits is NOT the same code).',
+        ]
+      : []),
   ].join('\n')
 }
 
