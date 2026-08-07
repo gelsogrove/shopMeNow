@@ -597,6 +597,10 @@ interface DemoFeature {
   name: string
   description: string
   status: "done" | "in_progress" | "todo" | string
+  // Free-text note shown in the Notes column — scope, caveats, what is covered
+  // so far (e.g. which languages are live). Left out when there is nothing
+  // worth saying; the cell then renders empty.
+  note?: string
   // Rough build effort, rendered as a 5-segment bar. Only meaningful on "todo"
   // rows — on a finished feature the work is already paid for, so it is hidden.
   effort?: 1 | 2 | 3 | 4 | 5
@@ -638,6 +642,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "in_progress",
+        note: "Italian and English for now — more on request.",
       },
       {
         name: "AI personality",
@@ -973,8 +978,11 @@ export function DemoWidgetPage() {
                     <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
                       Status
                     </th>
-                    <th className="py-2 text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
                       Effort
+                    </th>
+                    <th className="py-2 text-xs font-semibold uppercase tracking-wide">
+                      Notes
                     </th>
                   </tr>
                 </thead>
@@ -984,7 +992,7 @@ export function DemoWidgetPage() {
                     {/* Phase separator — turns the roadmap into readable
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
-                      <td colSpan={3} className="pb-3 pt-7">
+                      <td colSpan={4} className="pb-3 pt-7">
                         <span className={`block text-lg font-extrabold tracking-tight sm:text-xl ${brand.itemsText}`}>
                           {phase.title}
                         </span>
@@ -1021,7 +1029,7 @@ export function DemoWidgetPage() {
                       </td>
                       {/* Effort bar — 5 segments, filled up to `effort`. Only on
                           pending work: a shipped feature's cost is already sunk. */}
-                      <td className="whitespace-nowrap py-2.5">
+                      <td className="whitespace-nowrap py-2.5 pr-4">
                         {feature.status === "todo" && feature.effort ? (
                           <span
                             className="inline-flex items-center gap-[3px] align-middle"
@@ -1040,6 +1048,10 @@ export function DemoWidgetPage() {
                             ))}
                           </span>
                         ) : null}
+                      </td>
+                      {/* Notes — free-text scope/caveat for the feature. */}
+                      <td className={`py-2.5 text-xs leading-snug ${brand.openHint}`}>
+                        {feature.note ?? ""}
                       </td>
                     </tr>
                     ))}
