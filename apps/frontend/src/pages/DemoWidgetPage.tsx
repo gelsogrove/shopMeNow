@@ -19,7 +19,7 @@
  *   This page (and the widget it renders) always uses the ABSOLUTE API base
  *   below, so it works the same in dev and in production.
  */
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { ChatWidget, type PushDemoCase } from "@/components/ChatWidget"
 
@@ -605,119 +605,193 @@ interface DemoFeature {
   effort?: 1 | 2 | 3
 }
 
-const DEMO_FEATURES: DemoFeature[] = [
+// Delivery phases. The roadmap is presented as three blocks so a visitor reads
+// it as a sequence rather than one long undifferentiated list: what already
+// works today, what comes next, and the bigger builds after that.
+interface DemoPhase {
+  title: string
+  subtitle: string
+  features: DemoFeature[]
+}
+
+// Effort bar styling. Green→amber→red reads as "quick" → "significant build";
+// the colour carries the meaning at a glance, the tooltip spells it out.
+const EFFORT_COLORS: Record<number, string> = {
+  1: "bg-emerald-400",
+  2: "bg-amber-300",
+  3: "bg-rose-400",
+}
+
+const EFFORT_LABELS: Record<number, string> = {
+  1: "Low effort",
+  2: "Medium effort",
+  3: "High effort",
+}
+
+const DEMO_PHASES: DemoPhase[] = [
   {
-    name: "Languages",
-    description: "Detects the customer's language and replies in it automatically.",
-    status: "done",
-    count: "3",
+    title: "Phase 1 — Available today",
+    subtitle: "Everything you can try right now in this demo.",
+    features: [
+      {
+        name: "Languages",
+        description: "Detects the customer's language and replies in it automatically.",
+        status: "done",
+        count: "3",
+      },
+      {
+        name: "AI personality",
+        description: "You define the assistant's name, tone and rules — no coding needed.",
+        status: "done",
+      },
+      {
+        name: "Welcome message",
+        description: "Greets new customers and welcomes returning ones back by name.",
+        status: "done",
+      },
+      {
+        name: "FAQ",
+        description: "Answers common questions from a curated knowledge base — never invented.",
+        status: "done",
+      },
+      {
+        name: "Flow",
+        description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
+        status: "done",
+      },
+      {
+        name: "Escalate to Human support",
+        description: "Hands the conversation to a real operator and notifies them by email.",
+        status: "done",
+      },
+      {
+        name: "Widget",
+        description: "Embeddable chat for any website.",
+        status: "done",
+      },
+    ],
   },
   {
-    name: "AI personality",
-    description: "You define the assistant's name, tone and rules — no coding needed.",
-    status: "done",
+    title: "Phase 2 — Loading Context Data",
+    subtitle: "Feeding the assistant your own content so it answers from your data.",
+    features: [
+      {
+        name: "Speech to text",
+        description: "Understands voice notes sent by the customer.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Chats history",
+        description: "Picks up where you left off: nothing is lost between conversations.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Operator message translation",
+        description:
+          "Your operators reply in their own language: each message is translated into the customer's language automatically.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Block spam user",
+        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Setting to the client's server",
+        description: "Deploys and configures the assistant on your own server.",
+        status: "todo",
+        effort: 2,
+      },
+    ],
   },
   {
-    name: "Welcome message",
-    description: "Greets new customers and welcomes returning ones back by name.",
-    status: "done",
+    title: "Phase 3 — Channels & Booking",
+    subtitle: "New channels, richer replies, and your calendar and CRM connected.",
+    features: [
+      {
+        name: "Loading Context Data",
+        description:
+          "Loads your products, documents and company information so every answer comes from your real data.",
+        status: "todo",
+        effort: 2,
+      },
+      {
+        name: "Terms and conditions",
+        description: "Asks for privacy consent before the conversation starts.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Presentation Video",
+        description: "Short video introducing the assistant and how it works.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Text to speech",
+        description: "Replies out loud with a voice note instead of text.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Send Images and Documents",
+        description: "The chatbot can send images and documents to the customer.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "WhatsApp",
+        description: "Same assistant answering directly on your WhatsApp business number.",
+        status: "todo",
+        effort: 2,
+      },
+      {
+        name: "Forward Human Support logic",
+        description: "Forwards the conversation to the agent for the customer's country.",
+        status: "todo",
+        effort: 2,
+      },
+      {
+        name: "Appointment and Calendar",
+        description: "Books, moves and cancels appointments against a live calendar.",
+        status: "todo",
+        effort: 3,
+      },
+      {
+        name: "CRM integration",
+        description: "Syncs customers and conversations with your existing CRM.",
+        status: "todo",
+        effort: 3,
+      },
+    ],
   },
   {
-    name: "Presentation Video",
-    description: "Short video introducing the assistant and how it works.",
-    status: "todo",
-    effort: 1,
-  },
-  {
-    name: "FAQ",
-    description: "Answers common questions from a curated knowledge base — never invented.",
-    status: "done",
-  },
-  {
-    name: "Flow",
-    description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
-    status: "done",
-  },
-  {
-    name: "Escalate to Human support",
-    description: "Hands the conversation to a real operator and notifies them by email.",
-    status: "done",
-  },
-  {
-    name: "Forward Human Support logic",
-    description: "Forwards the conversation to the agent for the customer's country.",
-    status: "todo",
-  },
-  {
-    name: "Operator message translation",
-    description:
-      "Your operators reply in their own language: each message is translated into the customer's language automatically.",
-    status: "done",
-  },
-  {
-    name: "Speech to text",
-    description: "Understands voice notes sent by the customer.",
-    status: "todo",
-  },
-  {
-    name: "Text to speech",
-    description: "Replies out loud with a voice note instead of text.",
-    status: "todo",
-  },
-  {
-    name: "Widget",
-    description: "Embeddable chat for any website.",
-    status: "done",
-  },
-  {
-    name: "WhatsApp",
-    description: "Same assistant answering directly on your WhatsApp business number.",
-    status: "todo",
-  },
-  {
-    name: "Send Images and Documents",
-    description: "The chatbot can send images and documents to the customer.",
-    status: "todo",
-  },
-  {
-    name: "Chats history",
-    description: "Picks up where you left off: nothing is lost between conversations.",
-    status: "done",
-  },
-  {
-    name: "Block spam user",
-    description: "Blocked numbers are ignored: no reply, no notification, no cost.",
-    status: "done",
-  },
-  {
-    name: "Push Message",
-    description: "Proactive promotions and reminders sent to customers outside the chat.",
-    status: "todo",
-  },
-  {
-    name: "E-commerce",
-    description: "Customers browse products, add to cart and order directly in chat.",
-    status: "todo",
-  },
-  {
-    name: "Appointment and Calendar",
-    description: "Books, moves and cancels appointments against a live calendar.",
-    status: "todo",
-  },
-  {
-    name: "CRM integration",
-    description: "Syncs customers and conversations with your existing CRM.",
-    status: "todo",
-  },
-  {
-    name: "Registration User",
-    description: "Collects and stores customer details on the first conversation.",
-    status: "todo",
-  },
-  {
-    name: "Terms and conditions",
-    description: "Asks for privacy consent before the conversation starts.",
-    status: "todo",
+    title: "Phase 4 — Later",
+    subtitle: "Larger builds that turn the assistant into a sales channel.",
+    features: [
+      {
+        name: "Push Message",
+        description: "Proactive promotions and reminders sent to customers outside the chat.",
+        status: "todo",
+        effort: 2,
+      },
+      {
+        name: "Registration User",
+        description: "Collects and stores customer details on the first conversation.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "E-commerce",
+        description: "Customers browse products, add to cart and order directly in chat.",
+        status: "todo",
+        effort: 3,
+      },
+    ],
   },
 ]
 
@@ -891,13 +965,30 @@ export function DemoWidgetPage() {
                     <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
                       Status
                     </th>
-                    <th className="py-2 text-right text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 pr-4 text-right text-xs font-semibold uppercase tracking-wide">
                       Qty
+                    </th>
+                    <th className="py-2 text-xs font-semibold uppercase tracking-wide">
+                      Effort
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {DEMO_FEATURES.map((feature) => {
+                  {DEMO_PHASES.map((phase) => (
+                  <Fragment key={phase.title}>
+                    {/* Phase separator — turns the roadmap into three readable
+                        blocks instead of one long list. */}
+                    <tr className="border-b border-white/20">
+                      <td colSpan={4} className="pb-2 pt-6">
+                        <span className={`text-xs font-semibold uppercase tracking-wide ${brand.itemsText}`}>
+                          {phase.title}
+                        </span>
+                        <span className={`mt-0.5 block text-xs leading-snug ${brand.openHint}`}>
+                          {phase.subtitle}
+                        </span>
+                      </td>
+                    </tr>
+                    {phase.features.map((feature) => {
                     // FAQ/Flow counts come from the API so they stay true as
                     // content is added; everything else uses its static count.
                     const liveCount =
@@ -929,12 +1020,36 @@ export function DemoWidgetPage() {
                           <span className={brand.itemsText}>{feature.status}</span>
                         )}
                       </td>
-                      <td className={`whitespace-nowrap py-2.5 text-right font-medium ${brand.itemsText}`}>
+                      <td className={`whitespace-nowrap py-2.5 pr-4 text-right font-medium ${brand.itemsText}`}>
                         {qty ?? ""}
+                      </td>
+                      {/* Effort bar — 3 segments, filled up to `effort`. Only on
+                          pending work: a shipped feature's cost is already sunk. */}
+                      <td className="whitespace-nowrap py-2.5">
+                        {feature.status === "todo" && feature.effort ? (
+                          <span
+                            className="inline-flex items-center gap-[3px] align-middle"
+                            title={EFFORT_LABELS[feature.effort]}
+                            aria-label={`Effort: ${EFFORT_LABELS[feature.effort]}`}
+                          >
+                            {[1, 2, 3].map((segment) => (
+                              <span
+                                key={segment}
+                                className={`block h-3.5 w-2 rounded-sm ${
+                                  segment <= feature.effort!
+                                    ? EFFORT_COLORS[feature.effort!]
+                                    : "bg-white/15"
+                                }`}
+                              />
+                            ))}
+                          </span>
+                        ) : null}
                       </td>
                     </tr>
                     )
-                  })}
+                    })}
+                  </Fragment>
+                  ))}
                 </tbody>
               </table>
             </div>

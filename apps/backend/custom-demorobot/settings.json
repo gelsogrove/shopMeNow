@@ -21,7 +21,7 @@
   "serialNumberPattern": "^HK.{17}$",
   "serialNumberFormatHint": "19 characters, starting with \"HK\"",
   "intakeQuestions": {
-    "serialNumber": "What is your robot's serial number? You will find it on the label on the robot.",
+    "serialNumber": "What is your robot's serial number? You can find it in the app on your phone.",
     "problemDescription": "What exactly is happening? Describe it in your own words, and tell me the error code if the display shows one.",
     "problemStartedWhen": "When did it start — today, yesterday, or has it been going on for a while?"
   }

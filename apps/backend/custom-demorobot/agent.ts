@@ -582,7 +582,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
           instruction:
             `"${candidate}" is not a valid serial number` +
             (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
-            ' Tell the customer this and ask them to re-check the label on the robot.',
+            ' Tell the customer this and ask them to re-check it in the app on their phone.',
         }
       }
     }
