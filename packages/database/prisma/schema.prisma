@@ -60,10 +60,6 @@ model Workspace {
   widgetAutoSuggestionsEnabled Boolean   @default(false) // Show quick reply suggestions in widget
   widgetQuickReplies           String[]  @default([])    // Up to 4 quick replies shown in widget
   widgetSuggestionsModel       String?               // Optional custom model for widget suggestions
-  // Sites allowed to embed /widget-embed in an iframe. Origins, scheme included
-  // (e.g. "https://acme.com"). Sent as CSP frame-ancestors by the widget-embed
-  // middleware — a site missing here is blocked by the browser.
-  widgetAllowedDomains         String[]  @default([])
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget

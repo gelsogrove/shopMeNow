@@ -106,6 +106,7 @@ const SupportChatPage = lazy(() => import("./pages/SupportChatPage"))
 const OperatorDashboardPage = lazy(() => import("./pages/OperatorDashboardPage"))
 const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
 const PlaygroundKanbanPage = lazy(() => import("./pages/PlaygroundKanbanPage"))
+const FeedbackBoardPage = lazy(() => import("./pages/FeedbackBoardPage"))
 // Not lazy: the gate must render immediately, before the demo page chunk loads.
 // Re-enable together with the <DemoPasswordGate> wrapper on /demo/demorobot.
 // import { DemoPasswordGate } from "./components/DemoPasswordGate"
@@ -494,6 +495,25 @@ function AppWithProviders() {
                   <Route path="/clients" element={<MinimalLayout />}>
                     <Route index element={<ClientsPage />} />
                     <Route path=":id" element={<ClientsPage />} />
+                  </Route>
+                  {/* Feedback board — cards reported from chat, by the team and
+                      by customers on the public demo page. Same board, one per
+                      workspace; the public door is /demo/<slug>/kanban. */}
+                  <Route path="/feedback-board" element={<MinimalLayout />}>
+                    <Route
+                      index
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="flex min-h-[50vh] items-center justify-center">
+                              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+                            </div>
+                          }
+                        >
+                          <FeedbackBoardPage />
+                        </Suspense>
+                      }
+                    />
                   </Route>
                   <Route path="/sales" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<SalesPage />} />

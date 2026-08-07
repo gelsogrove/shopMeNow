@@ -1,11 +1,18 @@
 /**
- * Playground Kanban API client.
+ * Playground Kanban API client — one board per workspace, two ways in.
  *
- * One board per Flow workspace, reachable from the public /demo/<slug>/kanban
- * page. Every call carries the playground `sessionId`: the backend resolves both
- * the workspace and the card author from it, so nothing here sends a workspace
- * id or an author name — see resolveKanbanIdentity in playground.controller.ts.
+ * `kanbanApi` (bottom of this file) is the IN-APP client: it goes through the
+ * shared axios instance, which already attaches the JWT and x-workspace-id, so
+ * the backend identifies the author as STAFF from the token.
+ *
+ * The bare functions above it are the PUBLIC-DEMO client: no token exists
+ * there, so each call carries the playground `sessionId` and the backend
+ * resolves the workspace and the author name from it (authorKind CUSTOMER).
+ *
+ * Neither client ever sends a workspace id or an author name in the payload —
+ * see resolveKanbanIdentity in playground.controller.ts.
  */
+import { api } from "@/services/api"
 
 export const KANBAN_COLUMNS = [
   "TODO",
@@ -21,11 +28,15 @@ export const KANBAN_PRIORITIES = ["HIGH", "MEDIUM", "LOW"] as const
 
 export type KanbanPriority = (typeof KANBAN_PRIORITIES)[number]
 
+/** Where an author came from. Names collide across the two doors. */
+export type KanbanAuthorKind = "STAFF" | "CUSTOMER"
+
 export interface KanbanComment {
   id: string
   todoId: string
   commentText: string
   createdBy: string
+  authorKind: KanbanAuthorKind
   color: string | null
   createdAt: string
 }
@@ -42,6 +53,7 @@ export interface KanbanTodo {
   status: KanbanStatus
   position: number
   createdBy: string
+  authorKind: KanbanAuthorKind
   createdAt: string
   updatedAt: string
   comments: KanbanComment[]
@@ -143,4 +155,44 @@ export function deleteComment(
     `${apiUrl}/playground/todos/${todoId}/comments/${commentId}?${query}`,
     { method: "DELETE" }
   )
+}
+
+/**
+ * In-app client. The shared axios instance attaches the JWT and the workspace
+ * header, so no sessionId is needed — the backend reads the author from the
+ * token and files the card as STAFF.
+ */
+export const kanbanApi = {
+  async list(): Promise<KanbanTodo[]> {
+    const { data } = await api.get("/playground/todos")
+    return data.todos
+  },
+
+  async create(input: CreateTodoInput): Promise<KanbanTodo> {
+    const { data } = await api.post("/playground/todos", input)
+    return data
+  },
+
+  async update(
+    id: string,
+    patch: Partial<Pick<KanbanTodo, "status" | "priority" | "position" | "commentTitle">>
+  ): Promise<KanbanTodo> {
+    const { data } = await api.patch(`/playground/todos/${id}`, patch)
+    return data
+  },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/playground/todos/${id}`)
+  },
+
+  async comment(todoId: string, commentText: string): Promise<KanbanComment> {
+    const { data } = await api.post(`/playground/todos/${todoId}/comments`, {
+      commentText,
+    })
+    return data
+  },
+
+  async removeComment(todoId: string, commentId: string): Promise<void> {
+    await api.delete(`/playground/todos/${todoId}/comments/${commentId}`)
+  },
 }

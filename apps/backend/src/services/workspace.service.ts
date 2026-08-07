@@ -91,7 +91,6 @@ interface CreateWorkspaceData {
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]
   widgetSuggestionsModel?: string
-  widgetAllowedDomains?: string[]
 }
 
 interface UpdateWorkspaceData {
@@ -144,7 +143,6 @@ interface UpdateWorkspaceData {
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]
   widgetSuggestionsModel?: string
-  widgetAllowedDomains?: string[]
 }
 
 export const workspaceService = {
@@ -209,7 +207,6 @@ export const workspaceService = {
         widgetUseChannelLogo: true,
         widgetAutoSuggestionsEnabled: true,
         widgetQuickReplies: true,
-        widgetAllowedDomains: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -310,7 +307,6 @@ export const workspaceService = {
         widgetUseChannelLogo: true,
         widgetAutoSuggestionsEnabled: true,
         widgetQuickReplies: true,
-        widgetAllowedDomains: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -493,7 +489,6 @@ export const workspaceService = {
         widgetUseChannelLogo: true,
         widgetAutoSuggestionsEnabled: true,
         widgetQuickReplies: true,
-        widgetAllowedDomains: true,
       },
     })
 
@@ -657,35 +652,6 @@ export const workspaceService = {
         .slice(0, 4)
     }
 
-    // Normalise the sites allowed to iframe the widget. Stored as origins so
-    // the CSP middleware can emit them verbatim: a bare hostname is upgraded to
-    // https and anything past the origin (path, query) is dropped, because a
-    // frame-ancestors source carrying a path invalidates the whole directive
-    // and would block every site in the list, not just the malformed one.
-    if (sanitizedData.widgetAllowedDomains) {
-      const domains = Array.isArray(sanitizedData.widgetAllowedDomains)
-        ? sanitizedData.widgetAllowedDomains
-        : []
-      sanitizedData.widgetAllowedDomains = Array.from(
-        new Set(
-          domains
-            .map((entry) => (entry || "").trim())
-            .filter((entry) => entry.length > 0)
-            .map((entry) => {
-              const candidate = /^https?:\/\//i.test(entry)
-                ? entry
-                : `https://${entry}`
-              try {
-                return new URL(candidate).origin
-              } catch {
-                return ""
-              }
-            })
-            .filter((origin) => origin.length > 0)
-        )
-      )
-    }
-
     // Update workspace data
     const updatedWorkspace = await prisma.workspace.update({
       where: { id },
@@ -749,7 +715,6 @@ export const workspaceService = {
         widgetUseChannelLogo: true,
         widgetAutoSuggestionsEnabled: true,
         widgetQuickReplies: true,
-        widgetAllowedDomains: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,

@@ -1,0 +1,11 @@
+-- Drop widgetAllowedDomains, added earlier the same day and superseded before
+-- it ever carried real configuration.
+--
+-- The column duplicated Workspace.allowedExternalLinks, which the widget API
+-- already uses as its origin allow-list (isOriginAllowed in
+-- widget-chat.controller.ts). Two lists meant a site could be authorised for
+-- the API but not for the iframe, and the two failures look nothing alike: the
+-- CSP blocks with a console error, the API answers 403 and the widget simply
+-- never renders. The CSP middleware now reads allowedExternalLinks, so this
+-- column has no reader left.
+ALTER TABLE "Workspace" DROP COLUMN IF EXISTS "widgetAllowedDomains";

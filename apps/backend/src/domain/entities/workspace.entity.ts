@@ -113,7 +113,6 @@ export interface WorkspaceProps {
   widgetAutoSuggestionsEnabled?: boolean | null
   widgetQuickReplies?: string[] | null
   widgetSuggestionsModel?: string | null
-  widgetAllowedDomains?: string[] | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -553,10 +552,6 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get widgetSuggestionsModel(): string | null | undefined {
     return this.props.widgetSuggestionsModel
-  }
-
-  get widgetAllowedDomains(): string[] | null | undefined {
-    return this.props.widgetAllowedDomains
   }
 
   // 🆕 Translation Settings getters

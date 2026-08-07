@@ -11,9 +11,18 @@ import logger from "../utils/logger"
  * configured on helmet lists echatbot.ai domains only, so every customer site
  * is blocked.
  *
- * The allowed sites live in the database (Workspace.widgetAllowedDomains) and
- * change without a deploy, which is why this cannot be part of the static
- * helmet config: helmet builds its header once at startup.
+ * The allowed sites live in the database and change without a deploy, which is
+ * why this cannot be part of the static helmet config: helmet builds its header
+ * once at startup.
+ *
+ * The source of truth is Workspace.allowedExternalLinks — the SAME list the
+ * widget API already enforces per request (isOriginAllowed in
+ * widget-chat.controller.ts). Keeping one list matters: these two checks fail
+ * in completely different ways (the CSP blocks the iframe with a console error,
+ * the API answers 403 and the widget just never appears), so a site present in
+ * one list but not the other produces a bug that looks like two unrelated
+ * problems. Entries are stored as bare hosts ("acme.com") and, as in the API
+ * check, subdomains of a listed host are accepted too.
  *
  * helmet overwrites Content-Security-Policy unconditionally, so this
  * middleware cannot simply run before it — app.ts skips the helmet CSP for
@@ -34,28 +43,34 @@ const PLATFORM_FRAME_ANCESTORS = [
 ]
 
 /**
- * Reduces a configured entry to a CSP source expression. Values are stored as
- * origins ("https://acme.com"), but a bare hostname ("acme.com") is accepted
- * too and normalised to https — writing the scheme is easy to forget and the
- * mistake would silently keep the customer blocked.
+ * Turns one allow-list entry into the CSP sources that let that site frame the
+ * widget. Entries are written as bare hosts ("acme.com"), but a full URL is
+ * accepted too and reduced to its host — allowedExternalLinks is also used for
+ * other purposes, so values there are not guaranteed to be bare.
  *
- * Anything that is not a parseable origin is dropped rather than passed
- * through: an invalid source would make the browser reject the whole
- * directive, blocking even the origins that were spelled correctly.
+ * Two sources come back per entry: the host itself and "*.host", because the
+ * API-side check (isOriginAllowed) accepts subdomains of a listed host. Without
+ * the wildcard a site listed as "acme.com" would pass the API call and still be
+ * refused the iframe when served from "www.acme.com".
+ *
+ * Anything unparseable is dropped rather than passed through: one invalid
+ * source makes the browser reject the entire directive, which would block every
+ * correctly-spelled site alongside it.
  */
-function toFrameAncestorSource(entry: string): string | null {
+function toFrameAncestorSources(entry: string): string[] {
   const trimmed = entry.trim()
-  if (!trimmed) return null
+  if (!trimmed) return []
 
   const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 
   try {
-    const url = new URL(candidate)
-    // Origin only — CSP frame-ancestors matches on scheme/host/port and a path
-    // would invalidate the source.
-    return url.origin
+    // Host only, no scheme: an entry stored without one must not be pinned to
+    // https here, or a customer serving over http silently stays blocked.
+    const { host } = new URL(candidate)
+    if (!host) return []
+    return [host, `*.${host}`]
   } catch {
-    return null
+    return []
   }
 }
 
@@ -81,12 +96,19 @@ export async function widgetEmbedCspMiddleware(
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { widgetAllowedDomains: true },
+      select: { allowedExternalLinks: true, websiteUrl: true },
     })
 
-    const configured = (workspace?.widgetAllowedDomains ?? [])
-      .map(toFrameAncestorSource)
-      .filter((source): source is string => source !== null)
+    // Same precedence as isOriginAllowed: the explicit list wins, and
+    // websiteUrl stands in only when no list was configured.
+    const configuredList = (workspace?.allowedExternalLinks ?? []).filter(Boolean)
+    const allowList = configuredList.length
+      ? configuredList
+      : workspace?.websiteUrl
+        ? [workspace.websiteUrl]
+        : []
+
+    const configured = allowList.flatMap(toFrameAncestorSources)
 
     const sources = [...PLATFORM_FRAME_ANCESTORS, ...configured]
 

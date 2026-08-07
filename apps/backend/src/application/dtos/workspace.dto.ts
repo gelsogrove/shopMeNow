@@ -204,7 +204,6 @@ export class WorkspaceDTO extends BaseDTO {
   @IsArray()
   @IsOptional()
   widgetQuickReplies?: string[];
-  widgetAllowedDomains?: string[];
 
   @IsString()
   @IsOptional()
@@ -325,7 +324,6 @@ export class CreateWorkspaceDTO {
   @IsArray()
   @IsOptional()
   widgetQuickReplies?: string[];
-  widgetAllowedDomains?: string[];
 
   @IsString()
   @IsOptional()
@@ -423,7 +421,6 @@ export class UpdateWorkspaceDTO {
   @IsArray()
   @IsOptional()
   widgetQuickReplies?: string[];
-  widgetAllowedDomains?: string[];
 
   @IsString()
   @IsOptional()

@@ -212,7 +212,7 @@ app.options("*", cors(corsOptions))
 //
 // ⚠️ /widget-embed is deliberately NOT covered by the CSP below. That page is
 // meant to be iframed by customer sites, and the allowed embedders live in the
-// database per workspace (Workspace.widgetAllowedDomains) — a list the static
+// database per workspace (Workspace.allowedExternalLinks) — a list the static
 // directives here cannot express. helmet overwrites Content-Security-Policy
 // unconditionally, so the path is skipped and widgetEmbedCspMiddleware writes
 // the header instead (mounted right after this block).

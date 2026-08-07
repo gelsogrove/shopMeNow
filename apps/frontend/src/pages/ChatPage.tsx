@@ -24,6 +24,7 @@ import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
+import { kanbanApi } from "@/services/playgroundKanbanApi"
 import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -32,6 +33,7 @@ import {
   Bot,
   Check,
   ClipboardCopy,
+  ClipboardList,
   Loader2,
   Lock,
   MessageSquare,
@@ -278,6 +280,38 @@ export function ChatPage() {
       )
       toast.error(err?.response?.data?.error || "Failed to set reaction", { duration: 2000 })
     }
+  }
+
+  // 📋 Feedback board: id of the message being turned into a card, and the
+  // title being typed. Null → the prompt is closed.
+  const [feedbackCardFor, setFeedbackCardFor] = useState<string | null>(null)
+  const [feedbackTitle, setFeedbackTitle] = useState("")
+  const [feedbackSaving, setFeedbackSaving] = useState(false)
+
+  /**
+   * 📋 Report a message on the workspace's feedback board.
+   *
+   * The card stores the bot's reply together with the customer message that
+   * triggered it, so whoever picks it up later sees the exchange rather than a
+   * bare complaint. Author and workspace come from the JWT server-side.
+   */
+  const createFeedbackCard = async (message: Message, title: string) => {
+    // "user" is the outgoing side of this chat (bot or operator); "customer"
+    // is the person writing in.
+    const isFromBot = message.sender === "user"
+    // The preceding customer message is the question that produced this reply.
+    const index = messages.findIndex((m) => m.id === message.id)
+    const question = [...messages.slice(0, index)]
+      .reverse()
+      .find((m) => m.sender === "customer")
+
+    await kanbanApi.create({
+      dialogId: message.id,
+      messageType: isFromBot ? "chatbot" : "human",
+      messageContent: isFromBot ? question?.content || message.content : message.content,
+      chatbotResponse: isFromBot ? message.content : null,
+      commentTitle: title,
+    })
   }
 
   const [loading, setLoading] = useState(false)
@@ -1988,6 +2022,85 @@ export function ChatPage() {
                               onReact={(emoji) => toggleReactionOperator(message, emoji)}
                             />
                           </div>
+
+                          {/* 📋 Report this message on the feedback board. Same
+                              hover reveal as the reaction bar, on the opposite
+                              side of the bubble so the two never overlap. */}
+                          <button
+                            type="button"
+                            aria-label="Report on the feedback board"
+                            title="Report on board"
+                            onClick={() => {
+                              setFeedbackCardFor((cur) =>
+                                cur === message.id ? null : message.id
+                              )
+                              setFeedbackTitle("")
+                            }}
+                            className={`absolute top-1/2 -translate-y-1/2 ${
+                              isAgentMessage ? "-left-8" : "-right-8"
+                            } z-10 flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm transition-opacity hover:text-emerald-600 opacity-0 group-hover:opacity-100`}
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                          </button>
+
+                          {feedbackCardFor === message.id && (
+                            <div
+                              className={`absolute -bottom-2 ${
+                                isAgentMessage ? "right-0" : "left-0"
+                              } z-40 w-64 translate-y-full rounded-lg border border-gray-200 bg-white p-3 text-left shadow-lg`}
+                            >
+                              <label className="text-[11px] font-medium text-gray-600">
+                                What is wrong with this message?
+                              </label>
+                              <input
+                                autoFocus
+                                value={feedbackTitle}
+                                onChange={(e) => setFeedbackTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") setFeedbackCardFor(null)
+                                }}
+                                placeholder="Short title"
+                                className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none"
+                              />
+                              <div className="mt-2 flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setFeedbackCardFor(null)}
+                                  className="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={feedbackSaving || !feedbackTitle.trim()}
+                                  onClick={async () => {
+                                    setFeedbackSaving(true)
+                                    try {
+                                      await createFeedbackCard(
+                                        message,
+                                        feedbackTitle.trim()
+                                      )
+                                      setFeedbackCardFor(null)
+                                      toast.success("Added to the feedback board", {
+                                        duration: 2000,
+                                      })
+                                    } catch (err: any) {
+                                      toast.error(
+                                        err?.response?.data?.error ||
+                                          "Failed to add the card",
+                                        { duration: 2000 }
+                                      )
+                                    } finally {
+                                      setFeedbackSaving(false)
+                                    }
+                                  }}
+                                  className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                  {feedbackSaving ? "Saving…" : "Add card"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           {message.reaction && (
                             <span
                               className={`absolute -bottom-3 ${
