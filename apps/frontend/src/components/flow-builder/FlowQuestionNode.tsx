@@ -13,6 +13,9 @@ export interface FlowQuestionNodeData extends Record<string, unknown> {
   attachmentCount: number
   terminalType: "SELF_SERVICE" | "ESCALATE" | "END" | "LOOP" | null
   hasValidationError?: boolean
+  // Injected at render time by the editor (no edge points at this node), not
+  // stored — see displayNodes in FlowEditorPage.
+  isRoot?: boolean
 }
 
 const TERMINAL_ICON: Record<NonNullable<FlowQuestionNodeData["terminalType"]>, React.ReactNode> = {
@@ -20,6 +23,26 @@ const TERMINAL_ICON: Record<NonNullable<FlowQuestionNodeData["terminalType"]>, R
   ESCALATE: <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />,
   END: <XCircle className="h-3 w-3 text-gray-400 shrink-0" />,
   LOOP: <RotateCcw className="h-3 w-3 text-blue-500 shrink-0" />,
+}
+
+// A terminal node's outcome is the one thing a reader needs at a glance, and
+// the 12px icon alone does not survive being zoomed out. The accent bar carries
+// the colour (visible at any zoom) while the tint stays near-white, so a canvas
+// full of coloured nodes is still readable — a saturated fill would not be.
+// The amber matches the escalation edge stroke (#f59e0b), so an escalating
+// answer and the node it lands on read as the same thing.
+const TERMINAL_ACCENT: Record<NonNullable<FlowQuestionNodeData["terminalType"]>, string> = {
+  SELF_SERVICE: "bg-green-500",
+  ESCALATE: "bg-amber-500",
+  END: "bg-gray-300",
+  LOOP: "bg-blue-500",
+}
+
+const TERMINAL_TINT: Record<NonNullable<FlowQuestionNodeData["terminalType"]>, string> = {
+  SELF_SERVICE: "bg-green-50",
+  ESCALATE: "bg-amber-50",
+  END: "bg-gray-50",
+  LOOP: "bg-blue-50",
 }
 
 export const FlowQuestionNode = memo(function FlowQuestionNode({ data, selected }: NodeProps) {
