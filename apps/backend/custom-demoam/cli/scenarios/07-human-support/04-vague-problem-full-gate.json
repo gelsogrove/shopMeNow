@@ -4,9 +4,8 @@
   "phone": "+391110000703",
   "newSession": true,
   "turns": [
-    { "message": "Ciao non mi funziona il robot" },
+    { "message": "Ciao, il mio robot non taglia bene" },
     { "message": "HKA4OB100LQ26050197" },
-    { "message": "non taglia bene" },
     { "message": "ieri" },
     { "message": "sì, il wifi è attivo, la programmazione del taglio è abilitata e la batteria è carica" },
     { "message": "Marco Bianchi" }
