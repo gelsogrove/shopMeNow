@@ -2028,12 +2028,12 @@ export function ChatWidget({
             "animate-in slide-in-from-bottom-4 fade-in duration-300",
             openPanelPositionClasses[position]
           )}
-          style={{ borderColor }}
+          style={{ borderColor: waSkin ? "transparent" : borderColor }}
           onWheel={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div
-            className="text-white px-5 sm:px-6 py-4 flex items-center justify-between gap-3 sm:gap-4"
+            className="text-white px-6 py-4 flex items-center justify-between gap-3 sm:gap-4"
             style={{ backgroundColor: headerColor }}
           >
               {waSkin ? (
@@ -2285,7 +2285,7 @@ export function ChatWidget({
               </ScrollArea>
 
               {/* Registration submit footer */}
-              <div className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
+              <div className="border-t border-gray-200 px-6 py-4 space-y-3">
                 <button
                   onClick={handleRegistrationSubmit}
                   disabled={isLoading}

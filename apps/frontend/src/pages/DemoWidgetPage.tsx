@@ -676,6 +676,13 @@ const DEMO_PHASES: DemoPhase[] = [
     subtitle: "Feeding the assistant your own content so it answers from your data.",
     features: [
       {
+        name: "Loading Context Data",
+        description:
+          "Loads your products, documents and company information so every answer comes from your real data.",
+        status: "todo",
+        effort: 2,
+      },
+      {
         name: "Speech to text",
         description: "Understands voice notes sent by the customer.",
         status: "todo",
@@ -695,12 +702,6 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
-        name: "Block spam user",
-        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
-        status: "todo",
-        effort: 1,
-      },
-      {
         name: "Setting to the client's server",
         description: "Deploys and configures the assistant on your own server.",
         status: "todo",
@@ -713,11 +714,10 @@ const DEMO_PHASES: DemoPhase[] = [
     subtitle: "New channels, richer replies, and your calendar and CRM connected.",
     features: [
       {
-        name: "Loading Context Data",
-        description:
-          "Loads your products, documents and company information so every answer comes from your real data.",
+        name: "Block spam user",
+        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
         status: "todo",
-        effort: 2,
+        effort: 1,
       },
       {
         name: "Terms and conditions",

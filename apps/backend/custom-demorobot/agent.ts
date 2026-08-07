@@ -577,13 +577,18 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     if (key === 'serialNumber' && ctx.serialNumberPattern) {
       const candidate = String(value).trim()
       if (!new RegExp(ctx.serialNumberPattern, 'i').test(candidate)) {
+        // customerMessage is the exact sentence shown to the customer (only
+        // translated, never composed by the model — see translateFixedMessage).
+        // instruction stays for the tool-result history / non-serial callers.
+        const customerMessage =
+          `"${candidate}" is not a valid serial number` +
+          (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
+          ' Please check it again in the app on your phone.'
         return {
           ok: false,
           error: 'invalid_serial_format',
-          instruction:
-            `"${candidate}" is not a valid serial number` +
-            (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
-            ' Tell the customer this and ask them to re-check it in the app on their phone.',
+          instruction: customerMessage + ' Tell the customer this and ask them to re-check it.',
+          customerMessage,
         }
       }
     }
@@ -716,14 +721,6 @@ interface CallLLMParams {
    * (CLAUDE.md §14), just applied to the output instead of the input.
    */
   forceToolChoice?: boolean
-  /**
-   * A verbatim correction the model must open with on THIS hop, dictated by
-   * the code rather than trusted to prose already ignored once — same shape
-   * as formatPreOperatorInstruction. Currently used only for a rejected
-   * serial (agent.ts §rejectedSerialInstruction); kept generic in case another
-   * "the tool refused, and the model must not paper over it" case shows up.
-   */
-  extraInstruction?: string
 }
 
 async function callLLM({
@@ -738,7 +735,6 @@ async function callLLM({
   settings,
   messages,
   forceToolChoice,
-  extraInstruction,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -810,12 +806,6 @@ async function callLLM({
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
 
-  // Kept LAST, same reasoning as OPERATING_RULES above: a correction the tool
-  // just issued (e.g. a rejected serial) must outrank everything else the
-  // model might otherwise compose from the conversation so far.
-  if (extraInstruction) systemContent.push({ type: 'text', text: extraInstruction })
-
-
   const payloadMessages: Array<Record<string, unknown>> = [
     { role: 'system', content: systemContent },
     ...history.map((m) => ({ role: m.role, content: m.content, tool_calls: m.tool_calls, tool_call_id: m.tool_call_id, name: m.name })),
@@ -856,6 +846,60 @@ async function callLLM({
   }
 
   return { text, toolCalls, tokensUsed }
+}
+
+/**
+ * Renders a fixed, code-composed message into the customer's language —
+ * nothing else. No history, no tools, no room to add a confirmation the
+ * instruction did not ask for.
+ *
+ * Andrea 2026-08-07: the system-block instruction alone (extraInstruction)
+ * was NOT reliable — across repeated runs of the same rejected-serial
+ * scenario, the model sometimes opened with "Ho registrato il numero di
+ * serie" anyway, mixing the correction with its own composed pleasantries.
+ * A text instruction is a request; tool_choice: 'none' plus a minimal prompt
+ * is a constraint — the model has no tool to call and no other content in
+ * context that could suggest a confirmation sentence.
+ */
+async function translateFixedMessage(text: string, language: string | undefined): Promise<string> {
+  if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
+
+  const res = await fetch(`${BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+      'HTTP-Referer': 'https://echatbot.ai',
+      'X-Title': 'DemoRobot',
+    },
+    body: JSON.stringify({
+      model: process.env.LLM_MODEL || SETTINGS.model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Translate the following message into ' +
+            (language || 'the same language it is already written in') +
+            '. Output ONLY the translated message, verbatim in meaning — do not add ' +
+            'a greeting, a confirmation, an apology, or any sentence that is not a ' +
+            'direct translation of the input.',
+        },
+        { role: 'user', content: text },
+      ],
+      tool_choice: 'none',
+      temperature: 0,
+      max_tokens: 300,
+    }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`OpenRouter HTTP ${res.status}: ${body.slice(0, 500)}`)
+  }
+
+  const data = await res.json()
+  const translated: string = data.choices?.[0]?.message?.content ?? ''
+  return translated.trim() || text
 }
 
 function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
@@ -1054,10 +1098,21 @@ async function agentTurnInternal(
     !state.activeFlowId &&
     !nextIntakeStep(state, messages?.intakeQuestions ?? settings.intakeQuestions)
 
-  // Set at the end of a hop that rejected a malformed serial, consumed by the
-  // very next callLLM as a dedicated system block, then cleared — it must not
-  // leak into hops that have nothing to do with the serial correction.
-  let pendingCorrectionInstruction: string | undefined
+  // Andrea 2026-08-07: a flow being active does not stop the customer from
+  // sending their serial number mid-flow — and when it does, the model
+  // sometimes skipped remember() entirely and just wrote "Grazie, l'ho
+  // salvato" as free text. No tool call means no validation ever ran (agent.ts
+  // serialNumber check), so a malformed serial slipped through unrejected.
+  // This checks the shape of what the customer just typed (length within a
+  // few characters of ctx.serialNumberPattern's target, same alphabet a
+  // serial uses) — not its content or intent, so it is a format check like
+  // the pattern match itself, not the keyword/phrase detection CLAUDE.md §14
+  // forbids. A false positive just forces a tool call the model would need to
+  // make anyway (remember, or any other tool that fits the turn).
+  const looksLikeSerialAttempt =
+    !state.serialNumber?.trim() &&
+    !!ctx.serialNumberPattern &&
+    /^[A-Za-z0-9-]{10,24}$/.test(sanitizedMessage.trim())
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
@@ -1079,9 +1134,7 @@ async function agentTurnInternal(
       // the next hop's own state re-read stops satisfying the condition above
       // naturally — no separate reset needed.
       forceToolChoice: mustForceToolChoice && !state.currentNodeId && !state.activeFlowId,
-      extraInstruction: pendingCorrectionInstruction,
     })
-    pendingCorrectionInstruction = undefined
 
     if (toolCalls.length === 0) {
       if (mustForceToolChoice && !state.currentNodeId && !state.activeFlowId) {
@@ -1150,7 +1203,8 @@ async function agentTurnInternal(
       }
 
       if (call.function.name === 'remember' && !result.ok && result.error === 'invalid_serial_format') {
-        rejectedSerialInstruction = typeof result.instruction === 'string' ? result.instruction : undefined
+        rejectedSerialInstruction =
+          typeof result.customerMessage === 'string' ? result.customerMessage : undefined
       }
 
       if (call.function.name === 'escalate_to_operator' && result.ok) {
@@ -1169,17 +1223,15 @@ async function agentTurnInternal(
     }
 
     if (rejectedSerialInstruction) {
-      pendingCorrectionInstruction = [
-        '## THE SERIAL NUMBER WAS JUST REJECTED',
-        '',
-        'This overrides every other instruction, including anything about being',
-        'friendly or acknowledging what the customer said. The remember() call for',
-        'the serial number FAILED — it was NOT saved. Do not say it was registered,',
-        'saved, received, or anything implying success. Open your reply with the',
-        'correction below, translated into the customer\'s language:',
-        '',
-        rejectedSerialInstruction,
-      ].join('\n')
+      // A composed reply here — even one carrying the instruction as a
+      // system block — was demonstrably unreliable (see translateFixedMessage
+      // doc comment): the model sometimes opened with a confirmation anyway.
+      // The reply the customer sees is instead code-composed and only
+      // translated, exactly like rateLimitedMessage/sessionTooLongMessage
+      // above — no LLM composition step where a confirmation could sneak in.
+      const reply = await translateFixedMessage(rejectedSerialInstruction, getState(ctx.sessionId).language)
+      history.push({ role: 'assistant', content: reply })
+      return { reply, tokensUsed: hopTokens, escalated: false, retrievalDebug }
     }
 
     if (escalated) {
