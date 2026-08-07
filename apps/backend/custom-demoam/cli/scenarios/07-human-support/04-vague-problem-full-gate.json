@@ -8,10 +8,11 @@
     { "message": "HKA4OB100LQ26050197" },
     { "message": "ieri" },
     { "message": "sì, il wifi è attivo, la programmazione del taglio è abilitata e la batteria è carica" },
-    { "message": "Marco Bianchi" }
+    { "message": "Marco Bianchi" },
+    { "message": "sì, confermo: wifi attivo, programmazione abilitata e batteria carica" }
   ],
   "expect": {
-    "replyContains": ["Marco"],
+    "anyReplyContains": ["Marco", "Ticket"],
     "replyExcludes": ["robot è acceso"]
   }
 }

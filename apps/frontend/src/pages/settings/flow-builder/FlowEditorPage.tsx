@@ -423,30 +423,34 @@ function FlowEditorInner() {
   }
 
   const errorNodeIds = new Set(validationErrors.map((e) => e.nodeId).filter(Boolean))
-  // Validation state is injected at render time rather than stored on the node:
-  // it is a presentation concern, and keeping it out of `nodes` means it never
-  // ends up in the save payload.
+
+  // Derived at render time, never stored, so none of it reaches the save payload.
+  const nodePositions = new Map(nodes.map((n) => [n.id, n.position.x]))
+  const isBackEdge = (e: Edge): boolean => {
+    const sourceX = nodePositions.get(e.source)
+    const targetX = nodePositions.get(e.target)
+    return (
+      e.source === e.target ||
+      (sourceX !== undefined && targetX !== undefined && targetX <= sourceX)
+    )
+  }
+
+  // Back-edges excluded: a LOOP into the first question would hide the Start badge.
+  const targetedNodeIds = new Set(
+    edges.filter((e) => !isBackEdge(e)).map((e) => e.target).filter(Boolean),
+  )
+
   const displayNodes = nodes.map((n) => ({
     ...n,
     data: {
       ...n.data,
       hasValidationError: errorNodeIds.has(n.id),
+      isRoot: !targetedNodeIds.has(n.id),
     },
   }))
 
-  // Same reasoning as displayNodes: how a return edge is drawn is presentation,
-  // derived at render time from where the nodes currently sit. Doing it here
-  // rather than in apiEdgeToFlowEdge means it stays correct after a node is
-  // dragged or an answer is retargeted, without the three mutation sites
-  // having to re-derive the geometry themselves.
-  const nodePositions = new Map(nodes.map((n) => [n.id, n.position.x]))
   const displayEdges = edges.map((e) => {
-    const sourceX = nodePositions.get(e.source)
-    const targetX = nodePositions.get(e.target)
-    const backEdge =
-      e.source === e.target ||
-      (sourceX !== undefined && targetX !== undefined && targetX <= sourceX)
-    if (!backEdge) return e
+    if (!isBackEdge(e)) return e
     const triggersEscalation = (e.data as { triggersEscalation?: boolean } | undefined)?.triggersEscalation
     return {
       ...e,

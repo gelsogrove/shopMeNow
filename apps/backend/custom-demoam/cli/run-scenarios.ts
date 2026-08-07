@@ -69,6 +69,14 @@ interface Scenario {
     replyContains?: string[]
     /** None of these substrings may appear anywhere in the final turn's reply. */
     replyExcludes?: string[]
+    /**
+     * Every one of these substrings must appear in AT LEAST ONE reply of the
+     * whole scenario. For events whose exact turn is not deterministic (the
+     * escalation ticket can land one turn earlier or later depending on how
+     * the model orders name/flow) — final-turn-only checks made those greens
+     * unreliable.
+     */
+    anyReplyContains?: string[]
   }
 }
 
@@ -138,6 +146,15 @@ function checkReplyContains(reply: string, needle: string): { name: string; ok: 
   }
 }
 
+function checkAnyReplyContains(replies: string[], needle: string): { name: string; ok: boolean; detail?: string } {
+  const ok = replies.some((r) => r.includes(needle))
+  return {
+    name: `some reply contains "${needle}"`,
+    ok,
+    detail: ok ? undefined : "not found in any reply of the scenario",
+  }
+}
+
 function checkReplyExcludes(reply: string, needle: string): { name: string; ok: boolean; detail?: string } {
   return {
     name: `reply does not contain "${needle}"`,
@@ -204,6 +221,9 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     }
     for (const needle of scenario.expect.replyExcludes ?? []) {
       checks.push(checkReplyExcludes(finalReply, needle))
+    }
+    for (const needle of scenario.expect.anyReplyContains ?? []) {
+      checks.push(checkAnyReplyContains(replies, needle))
     }
   }
 
