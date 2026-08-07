@@ -601,8 +601,8 @@ interface DemoFeature {
   // so far (e.g. which languages are live). Left out when there is nothing
   // worth saying; the cell then renders empty.
   note?: string
-  // Rough build effort, rendered as a 5-segment bar. Only meaningful on "todo"
-  // rows — on a finished feature the work is already paid for, so it is hidden.
+  // Rough build effort, rendered as a 5-segment bar. Shown on every row that
+  // sets one, so delivered work is sized on the same scale as pending work.
   effort?: 1 | 2 | 3 | 4 | 5
 }
 
@@ -647,12 +647,12 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "AI personality",
         description: "You define the assistant's name, tone and rules — no coding needed.",
-        status: "in_progress",
+        status: "done",
       },
       {
         name: "Welcome message",
         description: "Greets new customers and welcomes returning ones back by name.",
-        status: "in_progress",
+        status: "done",
       },
       {
         name: "FAQ",
@@ -675,7 +675,7 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Chats history",
         description: "Picks up where you left off: nothing is lost between conversations.",
-        status: "in_progress",
+        status: "done",
       },
       {
         name: "Widget",
@@ -696,6 +696,13 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 5,
       },
+      {
+        name: "Kanban Board",
+        description:
+          "Track conversations across columns so nothing is left unanswered.",
+        status: "todo",
+        effort: 2,
+      },
     ],
   },
   {
@@ -705,12 +712,6 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Speech to text",
         description: "Understands voice notes sent by the customer.",
-        status: "todo",
-        effort: 1,
-      },
-      {
-        name: "Text to speech",
-        description: "Replies out loud with a voice note instead of text.",
         status: "todo",
         effort: 1,
       },
@@ -740,12 +741,24 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 3,
       },
+      {
+        name: "Emoticons",
+        description: "Replies use emoji so the conversation feels natural on WhatsApp.",
+        status: "todo",
+        effort: 1,
+      },
     ],
   },
   {
     title: "Phase 4 — Other features",
     subtitle: "New channels, richer replies, and your calendar and CRM connected.",
     features: [
+      {
+        name: "Text to speech",
+        description: "Replies out loud with a voice note instead of text.",
+        status: "todo",
+        effort: 1,
+      },
       {
         name: "Block spam user",
         description: "Blocked numbers are ignored: no reply, no notification, no cost.",
@@ -777,7 +790,7 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 3,
       },
       {
-        name: "Ticketing platform",
+        name: "Ticketing platform Integration",
         description:
           "Opens and tracks a support ticket for every escalated conversation.",
         status: "todo",
@@ -1030,10 +1043,11 @@ export function DemoWidgetPage() {
                           <span className={brand.itemsText}>{feature.status}</span>
                         )}
                       </td>
-                      {/* Effort bar — 5 segments, filled up to `effort`. Only on
-                          pending work: a shipped feature's cost is already sunk. */}
+                      {/* Effort bar — 5 segments, filled up to `effort`. Shown
+                          on any row that declares one, so the work already done
+                          is sized on the same scale as what is still pending. */}
                       <td className="whitespace-nowrap py-2.5 pr-4">
-                        {feature.status === "todo" && feature.effort ? (
+                        {feature.effort ? (
                           <span
                             className="inline-flex items-center gap-[3px] align-middle"
                             title={EFFORT_LABELS[feature.effort]}
