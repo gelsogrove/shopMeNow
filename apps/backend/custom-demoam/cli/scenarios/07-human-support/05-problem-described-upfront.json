@@ -1,0 +1,18 @@
+{
+  "description": "Il problema è descritto per intero nel PRIMO messaggio, insieme al saluto (Andrea 2026-08-08, visto live: 'ho un errore 003, un strano rumore nella parte dietro'). Quel turno è il greeting hop, che è text-only per costruzione: remember non esiste su quell'hop e la descrizione rischia di non essere mai salvata. Dopo il seriale il bot NON deve richiedere 'descrivi cosa sta succedendo' — la descrizione è già agli atti e va salvata, non richiesta. Deve invece proseguire con il 'quando'.",
+  "contractRule": "INTAKE_ORDER è [serialNumber, problemDescription, problemStartedWhen]: la descrizione viene PRIMA del quando, e se il cliente l'ha già data non si richiede mai — si salva con remember.",
+  "phone": "+391110000706",
+  "newSession": true,
+  "turns": [
+    { "message": "Ciao ho un errore 003 e un rumore strano nella parte dietro del robot" },
+    { "message": "HKA4OB100LQ26050197" },
+    { "message": "oggi" }
+  ],
+  "expect": {
+    "replyExcludes": [
+      "descrivere brevemente cosa sta succedendo",
+      "descrivi brevemente cosa sta succedendo",
+      "puoi descrivere cosa sta succedendo"
+    ]
+  }
+}
