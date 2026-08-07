@@ -635,7 +635,7 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 1 — The assistant, live",
+    title: "Phase 1 — Demo",
     subtitle: "Available today — everything you can try right now in this demo.",
     features: [
       {
