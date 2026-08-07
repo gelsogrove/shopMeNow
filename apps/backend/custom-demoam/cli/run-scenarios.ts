@@ -77,6 +77,15 @@ interface Scenario {
      * unreliable.
      */
     anyReplyContains?: string[]
+    /**
+     * None of these substrings may appear in ANY reply of the scenario.
+     * The mirror of anyReplyContains, for a question that must never be put
+     * to the customer on any turn — a final-turn-only check misses it when
+     * the offending question lands mid-conversation (Andrea 2026-08-08: the
+     * bot re-asked for a problem description the customer had already given
+     * in his opening message, two turns before the end).
+     */
+    anyReplyExcludes?: string[]
   }
   /**
    * Elastic tail for scenarios whose exact turn count is not deterministic:
@@ -184,6 +193,16 @@ function customerVisiblePart(reply: string): string {
   return idx === -1 ? reply : reply.slice(0, idx)
 }
 
+function checkAnyReplyExcludes(replies: string[], needle: string): { name: string; ok: boolean; detail?: string } {
+  const lowered = needle.toLowerCase()
+  const hitIdx = replies.findIndex((r) => customerVisiblePart(r).toLowerCase().includes(lowered))
+  return {
+    name: `no reply contains "${needle}"`,
+    ok: hitIdx === -1,
+    detail: hitIdx === -1 ? undefined : `found in reply of turn ${hitIdx + 1}`,
+  }
+}
+
 function checkReplyExcludes(reply: string, needle: string): { name: string; ok: boolean; detail?: string } {
   return {
     name: `reply does not contain "${needle}"`,
@@ -267,6 +286,9 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     }
     for (const needle of scenario.expect.anyReplyContains ?? []) {
       checks.push(checkAnyReplyContains(replies, needle))
+    }
+    for (const needle of scenario.expect.anyReplyExcludes ?? []) {
+      checks.push(checkAnyReplyExcludes(replies, needle))
     }
   }
 

@@ -9,10 +9,13 @@
     { "message": "oggi" }
   ],
   "expect": {
-    "replyExcludes": [
+    "anyReplyExcludes": [
       "descrivere brevemente cosa sta succedendo",
       "descrivi brevemente cosa sta succedendo",
-      "puoi descrivere cosa sta succedendo"
+      "descrivere cosa sta succedendo",
+      "descrivere meglio",
+      "descrivi meglio",
+      "puoi descrivere"
     ]
   }
 }
