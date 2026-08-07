@@ -1133,7 +1133,10 @@ async function agentTurnInternal(
       // (neither happens today, but state is re-read every hop on principle),
       // the next hop's own state re-read stops satisfying the condition above
       // naturally — no separate reset needed.
-      forceToolChoice: mustForceToolChoice && !state.currentNodeId && !state.activeFlowId,
+      // looksLikeSerialAttempt only applies to hop 0: it is about the
+      // customer's message that started this turn, not about later hops
+      // reacting to a tool result (which already went through a tool call).
+      forceToolChoice: (mustForceToolChoice && !state.currentNodeId && !state.activeFlowId) || (hop === 0 && looksLikeSerialAttempt),
     })
 
     if (toolCalls.length === 0) {

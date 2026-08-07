@@ -665,6 +665,11 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "done",
       },
       {
+        name: "Chats history",
+        description: "Picks up where you left off: nothing is lost between conversations.",
+        status: "done",
+      },
+      {
         name: "Widget",
         description: "Embeddable chat for any website.",
         status: "done",
@@ -685,12 +690,6 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Speech to text",
         description: "Understands voice notes sent by the customer.",
-        status: "todo",
-        effort: 1,
-      },
-      {
-        name: "Chats history",
-        description: "Picks up where you left off: nothing is lost between conversations.",
         status: "todo",
         effort: 1,
       },
