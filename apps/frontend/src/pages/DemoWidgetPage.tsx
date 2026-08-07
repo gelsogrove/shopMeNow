@@ -596,10 +596,7 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
 interface DemoFeature {
   name: string
   description: string
-  status: "done" | "todo" | string
-  // Optional count shown in the third column (how many FAQs, flows, languages…).
-  // Left out when a feature has nothing meaningful to count.
-  count?: string
+  status: "done" | "in_progress" | "todo" | string
   // Rough build effort, rendered as a 5-segment bar. Only meaningful on "todo"
   // rows — on a finished feature the work is already paid for, so it is hidden.
   effort?: 1 | 2 | 3 | 4 | 5
@@ -634,49 +631,48 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 1 — The basic requirmentshase 2 — Your own content",
+    title: "Phase 1 — The assistant, live",
     subtitle: "Available today — everything you can try right now in this demo.",
     features: [
       {
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
-        status: "done",
-        count: "3",
+        status: "in_progress",
       },
       {
         name: "AI personality",
         description: "You define the assistant's name, tone and rules — no coding needed.",
-        status: "done",
+        status: "in_progress",
       },
       {
         name: "Welcome message",
         description: "Greets new customers and welcomes returning ones back by name.",
-        status: "done",
+        status: "in_progress",
       },
       {
         name: "FAQ",
         description: "Answers common questions from a curated knowledge base — never invented.",
-        status: "done",
+        status: "in_progress",
       },
       {
         name: "Flow",
         description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
-        status: "done",
+        status: "in_progress",
       },
       {
         name: "Escalate to Human support",
         description: "Hands the conversation to a real operator and notifies them by email.",
-        status: "done",
+        status: "in_progress",
       },
       {
         name: "Chats history",
         description: "Picks up where you left off: nothing is lost between conversations.",
-        status: "done",
+        status: "in_progress",
       },
       {
         name: "Widget",
         description: "Embeddable chat for any website.",
-        status: "done",
+        status: "in_progress",
       },
     ],
   },
@@ -690,7 +686,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description:
           "Loads your products, documents and company information so every answer comes from your real data.",
         status: "todo",
-        effort: 3,
+        effort: 5,
       },
     ],
   },
@@ -721,13 +717,20 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Install software on the client infrastructure",
         description: "Deploys and configures the assistant on your own server.",
         status: "todo",
-        effort: 2,
+        effort: 3,
       },
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
-        effort: 2,
+        effort: 3,
+      },
+      {
+        name: "Security",
+        description:
+          "Encrypted data, access control and full isolation between workspaces.",
+        status: "todo",
+        effort: 3,
       },
     ],
   },
@@ -763,19 +766,26 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Forward Human Support logic",
         description: "Forwards the conversation to the agent for the customer's country.",
         status: "todo",
-        effort: 2,
+        effort: 3,
+      },
+      {
+        name: "Ticketing platform",
+        description:
+          "Opens and tracks a support ticket for every escalated conversation.",
+        status: "todo",
+        effort: 4,
       },
       {
         name: "Appointment and Calendar",
         description: "Books, moves and cancels appointments against a live calendar.",
         status: "todo",
-        effort: 3,
+        effort: 5,
       },
       {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
         status: "todo",
-        effort: 3,
+        effort: 5,
       },
     ],
   },
@@ -787,7 +797,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
-        effort: 2,
+        effort: 3,
       },
     ],
   },
@@ -963,9 +973,6 @@ export function DemoWidgetPage() {
                     <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
                       Status
                     </th>
-                    <th className="py-2 pr-4 text-right text-xs font-semibold uppercase tracking-wide">
-                      Qty
-                    </th>
                     <th className="py-2 text-xs font-semibold uppercase tracking-wide">
                       Effort
                     </th>
@@ -977,7 +984,7 @@ export function DemoWidgetPage() {
                     {/* Phase separator — turns the roadmap into readable
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
-                      <td colSpan={4} className="pb-3 pt-7">
+                      <td colSpan={3} className="pb-3 pt-7">
                         <span className={`block text-lg font-extrabold tracking-tight sm:text-xl ${brand.itemsText}`}>
                           {phase.title}
                         </span>
@@ -986,17 +993,7 @@ export function DemoWidgetPage() {
                         </span>
                       </td>
                     </tr>
-                    {phase.features.map((feature) => {
-                    // FAQ/Flow counts come from the API so they stay true as
-                    // content is added; everything else uses its static count.
-                    const liveCount =
-                      feature.name === "FAQ"
-                        ? demo?.faqCount
-                        : feature.name === "Flow"
-                          ? demo?.flowCount
-                          : undefined
-                    const qty = liveCount != null ? String(liveCount) : feature.count
-                    return (
+                    {phase.features.map((feature) => (
                     <tr key={feature.name} className="border-b border-white/10 align-top">
                       {/* Name + one-line description of what the feature does. */}
                       <td className="py-2.5 pr-4">
@@ -1010,6 +1007,10 @@ export function DemoWidgetPage() {
                           <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
                             ✅ Done
                           </span>
+                        ) : feature.status === "in_progress" ? (
+                          <span className="inline-flex items-center gap-1.5 font-medium text-sky-300">
+                            🚧 In progress
+                          </span>
                         ) : feature.status === "todo" ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-amber-200/90">
                             🕒 To do
@@ -1017,9 +1018,6 @@ export function DemoWidgetPage() {
                         ) : (
                           <span className={brand.itemsText}>{feature.status}</span>
                         )}
-                      </td>
-                      <td className={`whitespace-nowrap py-2.5 pr-4 text-right font-medium ${brand.itemsText}`}>
-                        {qty ?? ""}
                       </td>
                       {/* Effort bar — 5 segments, filled up to `effort`. Only on
                           pending work: a shipped feature's cost is already sunk. */}
@@ -1044,8 +1042,7 @@ export function DemoWidgetPage() {
                         ) : null}
                       </td>
                     </tr>
-                    )
-                    })}
+                    ))}
                   </Fragment>
                   ))}
                 </tbody>
