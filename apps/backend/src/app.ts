@@ -11,6 +11,7 @@ import { authMiddleware } from "./interfaces/http/middlewares/auth.middleware"
 import { jsonFixMiddleware } from "./interfaces/http/middlewares/json-fix.middleware"
 import { sessionValidationMiddleware } from "./interfaces/http/middlewares/session-validation.middleware"
 import { loggingMiddleware } from "./middlewares/logging.middleware"
+import { widgetEmbedCspMiddleware } from "./middlewares/widget-embed-csp.middleware"
 import apiRouter from "./routes"
 import { injectMarketingHead } from "./seo/marketing-seo"
 import logger from "./utils/logger"
@@ -29,6 +30,10 @@ declare global {
 const app = express()
 // Use process.cwd() for monorepo root (on Heroku cwd = /app = monorepo root)
 const backendRoot = process.cwd()
+
+// The page customer sites load in an iframe. Its CSP is resolved per workspace
+// instead of coming from the static helmet config — see the helmet block below.
+const WIDGET_EMBED_PATH = "/widget-embed"
 
 const workspaceOriginCache = {
   values: new Set<string>(),
@@ -204,8 +209,14 @@ app.use(cors(corsOptions))
 app.options("*", cors(corsOptions))
 
 // 🔒 SECURITY: Helmet with strict security headers
-app.use(
-  helmet({
+//
+// ⚠️ /widget-embed is deliberately NOT covered by the CSP below. That page is
+// meant to be iframed by customer sites, and the allowed embedders live in the
+// database per workspace (Workspace.widgetAllowedDomains) — a list the static
+// directives here cannot express. helmet overwrites Content-Security-Policy
+// unconditionally, so the path is skipped and widgetEmbedCspMiddleware writes
+// the header instead (mounted right after this block).
+const helmetMiddleware = helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     // 🔐 FIX GOOGLE GSI: Disable COOP for OAuth popup flow
     crossOriginOpenerPolicy: false,
@@ -294,8 +305,31 @@ app.use(
     noSniff: true,
     // X-XSS-Protection: enable browser XSS filter
     xssFilter: true,
-  })
-)
+})
+
+// The embeddable widget page resolves its own frame-ancestors from the
+// database (see widgetEmbedCspMiddleware); every other route keeps the static
+// helmet CSP above. Only the CSP differs — the remaining helmet headers still
+// apply, because widgetEmbedCspMiddleware hands over to helmet with
+// contentSecurityPolicy disabled.
+const helmetWithoutCsp = helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: false,
+  hsts:
+    process.env.NODE_ENV === "production"
+      ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+      : false,
+  contentSecurityPolicy: false,
+  frameguard: false,
+  noSniff: true,
+  xssFilter: true,
+})
+
+app.use(WIDGET_EMBED_PATH, widgetEmbedCspMiddleware, helmetWithoutCsp)
+app.use((req, res, next) => {
+  if (req.path === WIDGET_EMBED_PATH) return next()
+  return helmetMiddleware(req, res, next)
+})
 
 // 🔒 SECURITY (TASK06): Serve ONLY public uploads directory
 // Private files are served via authenticated endpoint /api/v1/files/:key

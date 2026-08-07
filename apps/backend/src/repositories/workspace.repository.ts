@@ -123,6 +123,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetAutoSuggestionsEnabled: data.widgetAutoSuggestionsEnabled ?? false,
       widgetQuickReplies: data.widgetQuickReplies ?? [],
       widgetSuggestionsModel: data.widgetSuggestionsModel ?? null,
+      widgetAllowedDomains: data.widgetAllowedDomains ?? [],
       // 🆕 Translation Settings
       translateProductNames: data.translateProductNames ?? false,
       translateCategoryNames: data.translateCategoryNames ?? false,
@@ -237,6 +238,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
       widgetQuickReplies: workspace.widgetQuickReplies ?? [],
       widgetSuggestionsModel: workspace.widgetSuggestionsModel ?? null,
+      widgetAllowedDomains: workspace.widgetAllowedDomains ?? [],
       // 🆕 Translation Settings
       translateProductNames: workspace.translateProductNames,
       translateCategoryNames: workspace.translateCategoryNames,

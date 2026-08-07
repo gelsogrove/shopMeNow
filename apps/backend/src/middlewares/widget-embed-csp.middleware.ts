@@ -1,5 +1,5 @@
+import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
-import { prisma } from "../lib/prisma"
 import logger from "../utils/logger"
 
 /**
@@ -13,10 +13,13 @@ import logger from "../utils/logger"
  *
  * The allowed sites live in the database (Workspace.widgetAllowedDomains) and
  * change without a deploy, which is why this cannot be part of the static
- * helmet config: helmet builds its header once at startup. This middleware
- * runs first, resolves the workspace from the query string, and writes the
- * header itself; the helmet CSP that runs afterwards leaves an existing
- * Content-Security-Policy header alone.
+ * helmet config: helmet builds its header once at startup.
+ *
+ * helmet overwrites Content-Security-Policy unconditionally, so this
+ * middleware cannot simply run before it — app.ts skips the helmet CSP for
+ * this path and mounts this middleware in its place. Both must stay in sync:
+ * if the path stops being excluded there, the header written here is silently
+ * replaced and every customer site goes back to being blocked.
  *
  * A workspace with no domains configured stays embeddable from echatbot.ai
  * itself only — the same behaviour as before the column existed.
