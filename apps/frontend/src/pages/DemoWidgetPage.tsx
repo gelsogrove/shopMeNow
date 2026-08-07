@@ -771,7 +771,7 @@ const DEMO_PHASES: DemoPhase[] = [
   },
   {
     title: "Phase 5 — Later",
-    subtitle: "Larger builds that turn the assistant into a sales channel.",
+    subtitle: "Speaking out loud, and reaching customers outside the chat.",
     features: [
       {
         name: "Text to speech",
@@ -784,18 +784,6 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
         effort: 2,
-      },
-      {
-        name: "Registration User",
-        description: "Collects and stores customer details on the first conversation.",
-        status: "todo",
-        effort: 1,
-      },
-      {
-        name: "E-commerce",
-        description: "Customers browse products, add to cart and order directly in chat.",
-        status: "todo",
-        effort: 3,
       },
     ],
   },
