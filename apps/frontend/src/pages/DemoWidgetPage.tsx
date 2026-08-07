@@ -658,16 +658,19 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "FAQ",
         description: "Answers common questions from a curated knowledge base — never invented.",
         status: "in_progress",
+        note: 'Try: "How do I clean my robot?" · "Can I fit a second battery?" · "What does the warranty cover?"',
       },
       {
         name: "Flow",
         description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
         status: "in_progress",
+        note: 'Try: "My robot shows ERROR 001" · "It lost a wheel while mowing" · "It no longer cuts the grass evenly"',
       },
       {
         name: "Escalate to Human support",
         description: "Hands the conversation to a real operator and notifies them by email.",
         status: "in_progress",
+        note: "To investigate: the handover should open a case on the ticketing platform instead of sending an email.",
       },
       {
         name: "Chats history",

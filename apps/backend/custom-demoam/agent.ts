@@ -1224,17 +1224,22 @@ function formatRuntimeBlock(
 
 const HUMAN_SUPPORT_MARKER = '**👤 Human Support message**'
 
-function formatOperatorBriefing(params: {
+// The customer answers in THEIR language, so collectedData and the LLM summary
+// arrive in whatever they typed. The operator reads this briefing in the
+// workspace default language — translate the free-text values into it. Field
+// names and section labels stay as-is: they are keys, not prose.
+async function formatOperatorBriefing(params: {
   state: SessionState
   reason: string
   summary?: string
-  ticketId?: string
-}): string {
-  const { state, reason, summary, ticketId } = params
+  settings: Settings
+}): Promise<string> {
+  const { state, reason, summary, settings } = params
+  const toOperatorLanguage = (text: string): Promise<string> =>
+    forceReplyIntoLanguage(text, settings.defaultLanguage, settings)
 
   const lines: string[] = [HUMAN_SUPPORT_MARKER, '']
 
-  if (ticketId) lines.push(`🎫 **Ticket:** ${ticketId}`)
   lines.push(`📌 **Reason:** ${reason}`)
   if (state.skippedTechnicalGate) {
     lines.push('⚠️ **No technical details collected** — no device to diagnose on this incident.')
@@ -1261,16 +1266,26 @@ function formatOperatorBriefing(params: {
     if (collectedKeys.length > 0) {
       lines.push('')
       lines.push('**Answers collected**')
-      for (const key of collectedKeys) {
-        lines.push(`• ${key}: ${String(collected[key])}`)
-      }
+      // Booleans and other non-prose values have nothing to translate — sending
+      // them to the LLM would only risk turning `true` into `vero`.
+      const translated = await Promise.all(
+        collectedKeys.map((key) => {
+          const value = collected[key]
+          return typeof value === 'string' && /\p{L}{2,}/u.test(value)
+            ? toOperatorLanguage(value)
+            : Promise.resolve(String(value))
+        }),
+      )
+      collectedKeys.forEach((key, index) => {
+        lines.push(`• ${key}: ${translated[index]}`)
+      })
     }
   }
 
   if (summary?.trim()) {
     lines.push('')
     lines.push('**Summary**')
-    lines.push(summary.trim())
+    lines.push(await toOperatorLanguage(summary.trim()))
   }
 
   return lines.join('\n')
@@ -1497,7 +1512,6 @@ async function agentTurnInternal(
     let escalated = false
     let escalationSummary: string | undefined
     let escalationReason = 'diagnostic_exhausted'
-    let escalationTicketId: string | undefined
 
     for (const call of toolCalls) {
       let args: Record<string, unknown> = {}
@@ -1530,7 +1544,6 @@ async function agentTurnInternal(
         escalated = true
         escalationSummary = typeof args.summary === 'string' ? args.summary : escalationSummary
         escalationReason = typeof args.reason === 'string' ? args.reason : escalationReason
-        if (typeof result.ticket_id === 'string') escalationTicketId = result.ticket_id
       }
 
       history.push({
@@ -1567,11 +1580,11 @@ async function agentTurnInternal(
       }
       history.push({ role: 'assistant', content: reply })
 
-      const briefing = formatOperatorBriefing({
+      const briefing = await formatOperatorBriefing({
         state: getState(ctx.sessionId),
         reason: escalationReason,
         summary: escalationSummary,
-        ticketId: escalationTicketId,
+        settings,
       })
 
       detachFlow(ctx.sessionId)
@@ -1603,7 +1616,12 @@ async function agentTurnInternal(
 
   markEscalationOnce(ctx.sessionId, 'diagnostic_exhausted')
 
-  const briefing = formatOperatorBriefing({ state: finalState, reason: 'diagnostic_exhausted', summary })
+  const briefing = await formatOperatorBriefing({
+    state: finalState,
+    reason: 'diagnostic_exhausted',
+    summary,
+    settings,
+  })
 
   detachFlow(ctx.sessionId)
 
