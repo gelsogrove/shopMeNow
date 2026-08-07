@@ -1,36 +1,30 @@
 /**
- * Updates the AmRobots "Human operator flow" (Andrea, 2026-08-06).
+ * Updates the AmRobots "Human operator flow" (Andrea, 2026-08-07).
  *
- * Two changes, both read off the live production graph before writing:
+ * Today's shape — ONE combined technical check (Andrea: "vorrei avere tutto
+ * in un nodo"):
  *
- * 1. hf_handoff_powered_off was terminalType 'SELF_SERVICE', not 'ESCALATE'.
- *    A customer whose robot is off ended the flow in self-service: no name
- *    asked, no hand-off message, no operator, chatbot left on. Every road
- *    through this flow must reach a human — that is what the flow is for.
+ *   hf_checks      "is the wifi active and the cut scheduling enabled?"
+ *     Yes  → hf_handoff_checks_done (ESCALATE)
+ *     No   → hf_checks_fix (LOOP): fix both, "Done" → hf_handoff_checks_done
  *
- * 2. cutSchedulingActive and batterySufficient join the flow as DIAGNOSTIC
- *    nodes. They were left out originally because, as checklist items, "Yes"
- *    and "No" led to the same next node — a branch that does not branch,
- *    which the compiler rejects with converging_edge_targets. The semantics
- *    is different now: "No" leads to a corrective node ("turn it on" /
- *    "charge it") that loops BACK to the question, so the two answers
- *    genuinely go somewhere different.
+ * Gone from the graph (2026-08-07): robotPoweredOn, batterySufficient, and
+ * the separate wifi / cut-scheduling nodes. The four-question version
+ * (2026-08-06) interrogated the customer one boolean at a time right before
+ * the hand-off; production transcripts showed the same ground being covered
+ * twice once a session straddled an edit. The combined question keeps the
+ * only two checks support actually needs (connectivity + scheduling) in a
+ * single turn.
  *
- * The back-edge is legal because the node closing the cycle is typed
- * terminalType 'LOOP' — the compiler allows cycles only through those, and a
- * LOOP node may only call `remember` (flow-compiler.types.ts).
- *
- * No ask cap is modelled here: a LOOP in the graph is infinite by
- * construction. gate.ts's maxAsks is what bounds it, on the principle
- * already written there — a customer who cannot complete a check must still
- * reach a human rather than be trapped.
+ * The "Done" edge on the fix node goes FORWARD to the terminal, never back
+ * to the question: "I switched both on" already answers it, and a back-edge
+ * makes the model skip the redundant dictated question and desync from the
+ * flow (seen live 2026-08-06). terminalType LOOP stays as the marker the
+ * runtime's turn cap (MAX_LOOP_TURNS) keys on.
  *
  * `name` stays OUT of this flow and keeps being asked by
  * escalate_to_operator: answer_step classifies fixed edge labels, it cannot
  * capture free text.
- *
- * Node questions for the two pre-existing nodes are preserved VERBATIM from
- * production — they were edited from the UI and are the tenant's own copy.
  *
  * This UPDATES the existing flow (CONTRACT.md: "editato si, cancellarlo
  * mai") — same flow row, new graph.
@@ -44,6 +38,9 @@ import { OpenRouterEmbeddingProvider } from "../src/application/flow-builder/emb
 
 const FLOW_ID = "cmsfavpet0000qwngacwdutj6"
 
+const DESCRIPTION =
+  "Use this flow when you need to verify that your robot has the wifi active and the cut scheduling enabled before escalating to a human support agent."
+
 async function main() {
   const flow = await prisma.flow.findUnique({
     where: { id: FLOW_ID },
@@ -52,69 +49,25 @@ async function main() {
   if (!flow) throw new Error(`Flow ${FLOW_ID} not found — this script updates, it never creates`)
 
   const nodes = [
-    // Questions preserved verbatim from the live graph (edited from the UI).
-    { id: "hf_powered_on", question: "Before connect to our Human Support let me ask you a couple of question, Is the robot power on?", positionX: 0, positionY: 0, fieldKey: "robotPoweredOn", fieldType: "boolean", terminalType: null },
-    { id: "hf_wifi", question: "Good. And now Can you confirm that the wifi is active ?", positionX: 280, positionY: 0, fieldKey: "wifiActive", fieldType: "boolean", terminalType: null },
-
-    // Corrective fix nodes: a "No" is not a dead end. Support cannot help a
-    // robot that is off or offline, so we ask the customer to fix it, and
-    // "Done" continues FORWARD to the next check (see the edges below for
-    // why forward, not back). terminalType LOOP is kept as the marker the
-    // runtime's per-turn cap keys on — not because the graph cycles (it
-    // doesn't any more).
-    { id: "hf_power_fix", question: "The robot needs to be switched on for support to be able to help — please turn it on, then let me know once it is running.", positionX: 0, positionY: 200, terminalType: "LOOP" },
-    { id: "hf_wifi_fix", question: "Support needs the robot connected to be able to help — please switch the wifi on, then let me know once it is connected.", positionX: 280, positionY: 200, terminalType: "LOOP" },
-
-    { id: "hf_cut_scheduling", question: "One more check — is the cut scheduling currently active?", positionX: 560, positionY: 0, fieldKey: "cutSchedulingActive", fieldType: "boolean", terminalType: null },
-    { id: "hf_cut_fix", question: "Please activate the cut scheduling from the app, then let me know once it is on.", positionX: 560, positionY: 200, terminalType: "LOOP" },
-
-    { id: "hf_battery", question: "And is the battery charged enough right now?", positionX: 840, positionY: 0, fieldKey: "batterySufficient", fieldType: "boolean", terminalType: null },
-    { id: "hf_battery_fix", question: "Please put the robot on its charging base for a while, then let me know once it has charged.", positionX: 840, positionY: 200, terminalType: "LOOP" },
-
-    // One terminal, and it ESCALATEs: this flow's only destination is a
-    // human. The per-answer terminals are gone — every "No" now goes to its
-    // corrective LOOP instead, and the cap that stops the loop lives in code
-    // (MAX_LOOP_TURNS), which then escalates anyway.
-    { id: "hf_handoff_checks_done", question: "This flow has reached its escalation point — the standard checks are done, so the issue is something else.", positionX: 1120, positionY: 0, terminalType: "ESCALATE" },
+    { id: "hf_checks", question: "Before connecting you to our Human Support, one quick check — is the wifi active and the cut scheduling enabled?", positionX: 0, positionY: 0, fieldKey: "wifiAndCutSchedulingActive", fieldType: "boolean", terminalType: null },
+    { id: "hf_checks_fix", question: "Support needs the robot connected and scheduled to be able to help — please switch the wifi on and activate the cut scheduling from the app, then let me know once both are on.", positionX: 0, positionY: 200, terminalType: "LOOP" },
+    // One terminal, and it ESCALATEs: this flow's only destination is a human.
+    { id: "hf_handoff_checks_done", question: "This flow has reached its escalation point — the standard checks are done, so the issue is something else.", positionX: 280, positionY: 0, terminalType: "ESCALATE" },
   ]
 
   // No edge uses triggersEscalation: that flag stops advance() WITHOUT
-  // visiting a target node, which would skip the terminal's own dictated
-  // text. Every branch targets a node directly instead.
+  // visiting a target node, which would skip the terminal's own dictated text.
   const edges = [
-    // "Done" on a fix node goes FORWARD to the next check, never back to the
-    // question it fixed. "I turned it on" already answers "is it on?" — a
-    // back-edge would make the bot re-ask something the customer just said,
-    // which the model (rightly) refuses to do: seen live 2026-08-06, it
-    // skipped the redundant dictated question, improvised the next one in
-    // free text, and from there the flow and the conversation were
-    // permanently desynced (answer_step("No" to wifi) landed on the
-    // powered-on node). Forward edges also mean NO cycle in the graph — and
-    // no dashed back-edge cluttering the canvas. The fix nodes keep
-    // terminalType LOOP purely as the marker the runtime's turn cap
-    // (MAX_LOOP_TURNS) keys on, for the customer who never manages it.
-    { id: "hf_e_powered_yes", sourceNodeId: "hf_powered_on", targetNodeId: "hf_wifi", label: "Yes" },
-    { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_power_fix", label: "No" },
-    { id: "hf_e_powered_done", sourceNodeId: "hf_power_fix", targetNodeId: "hf_wifi", label: "Done" },
-
-    { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_cut_scheduling", label: "Yes" },
-    { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_wifi_fix", label: "No" },
-    { id: "hf_e_wifi_done", sourceNodeId: "hf_wifi_fix", targetNodeId: "hf_cut_scheduling", label: "Done" },
-
-    { id: "hf_e_cut_yes", sourceNodeId: "hf_cut_scheduling", targetNodeId: "hf_battery", label: "Yes" },
-    { id: "hf_e_cut_no", sourceNodeId: "hf_cut_scheduling", targetNodeId: "hf_cut_fix", label: "No" },
-    { id: "hf_e_cut_done", sourceNodeId: "hf_cut_fix", targetNodeId: "hf_battery", label: "Done" },
-
-    { id: "hf_e_batt_yes", sourceNodeId: "hf_battery", targetNodeId: "hf_handoff_checks_done", label: "Yes" },
-    { id: "hf_e_batt_no", sourceNodeId: "hf_battery", targetNodeId: "hf_battery_fix", label: "No" },
-    { id: "hf_e_batt_done", sourceNodeId: "hf_battery_fix", targetNodeId: "hf_handoff_checks_done", label: "Done" },
+    { id: "hf_e_checks_yes", sourceNodeId: "hf_checks", targetNodeId: "hf_handoff_checks_done", label: "Yes" },
+    { id: "hf_e_checks_no", sourceNodeId: "hf_checks", targetNodeId: "hf_checks_fix", label: "No" },
+    { id: "hf_e_checks_done", sourceNodeId: "hf_checks_fix", targetNodeId: "hf_handoff_checks_done", label: "Done" },
   ]
 
   const embeddingProvider = new OpenRouterEmbeddingProvider(process.env.OPENROUTER_API_KEY || "")
   const result = await saveFlowGraph(
     flow.workspaceId,
     flow.id,
-    { title: flow.title, nodes: nodes as any, edges: edges as any },
+    { title: flow.title, description: DESCRIPTION, nodes: nodes as any, edges: edges as any },
     embeddingProvider
   )
 
