@@ -155,6 +155,21 @@ function checkAnyReplyContains(replies: string[], needle: string): { name: strin
   }
 }
 
+const OPERATOR_BRIEFING_MARKER = "**👤 Human Support message**"
+
+/**
+ * The customer never sees the internal operator briefing — the host strips
+ * everything from the marker on before delivery (splitCustomChatbotReply).
+ * replyExcludes guards customer-facing copy, so it must not trip on English
+ * field names ("cut scheduling", "serial number") inside the ticket.
+ * replyContains stays on the FULL reply on purpose: the "Ticket" assertion
+ * lives exactly in that briefing.
+ */
+function customerVisiblePart(reply: string): string {
+  const idx = reply.indexOf(OPERATOR_BRIEFING_MARKER)
+  return idx === -1 ? reply : reply.slice(0, idx)
+}
+
 function checkReplyExcludes(reply: string, needle: string): { name: string; ok: boolean; detail?: string } {
   return {
     name: `reply does not contain "${needle}"`,
@@ -220,7 +235,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
       checks.push(checkReplyContains(finalReply, needle))
     }
     for (const needle of scenario.expect.replyExcludes ?? []) {
-      checks.push(checkReplyExcludes(finalReply, needle))
+      checks.push(checkReplyExcludes(customerVisiblePart(finalReply), needle))
     }
     for (const needle of scenario.expect.anyReplyContains ?? []) {
       checks.push(checkAnyReplyContains(replies, needle))
