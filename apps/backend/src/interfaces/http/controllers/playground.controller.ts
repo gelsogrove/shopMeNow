@@ -102,14 +102,40 @@ async function resolveWorkspaceId(req: Request): Promise<string> {
   return await getEcolaundryWorkspaceId()
 }
 
-const ALLOWED_USERS = ["ANDREA", "OLGA", "demo"] as const
-type PlaygroundUser = (typeof ALLOWED_USERS)[number]
-
 const ALLOWED_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "NICE_TO_HAVE"]
-const ALLOWED_PRIORITIES = ["Alto", "Medio", "Basso"]
+const ALLOWED_PRIORITIES = ["HIGH", "MEDIUM", "LOW"]
 
-function isAllowedUser(name: unknown): name is PlaygroundUser {
-  return typeof name === "string" && ALLOWED_USERS.includes(name as PlaygroundUser)
+/**
+ * Kanban identity — resolved from the playground session, never from the request.
+ *
+ * The kanban lives on a PUBLIC route (/demo/<slug>/kanban): there is no JWT to
+ * trust, and `optionalPlaygroundAuth` lets any workspace with a customChatbotId
+ * through. So neither `x-workspace-id` nor a `createdBy` in the body can be
+ * believed here — a visitor holding the demorobot link could otherwise read
+ * demowash's cards, or sign a comment with someone else's name.
+ *
+ * The session id is the credential instead: it is an unguessable uuid the
+ * visitor already owns after their first message, and it determines BOTH the
+ * workspace and the author. One lookup, no spoofable inputs.
+ *
+ * Cards carry a customer's criticism of their own bot, so this is the boundary
+ * that keeps one client's board out of another client's reach.
+ */
+async function resolveKanbanIdentity(
+  sessionId: unknown
+): Promise<{ workspaceId: string; createdBy: string } | null> {
+  if (typeof sessionId !== "string" || !sessionId) return null
+
+  const session = await prisma.chatSession.findFirst({
+    where: { id: sessionId, isPlayground: true },
+    select: {
+      workspaceId: true,
+      customer: { select: { name: true } },
+    },
+  })
+  if (!session?.customer?.name) return null
+
+  return { workspaceId: session.workspaceId, createdBy: session.customer.name }
 }
 
 function getIo(req: Request) {
@@ -604,10 +630,43 @@ export class PlaygroundController {
     }
   }
 
-  // GET /api/v1/playground/todos
+  /**
+   * @swagger
+   * /api/v1/playground/todos:
+   *   get:
+   *     tags: [Playground Kanban]
+   *     summary: List the kanban cards of the session's workspace
+   *     description: >
+   *       One board per Flow workspace. Authentication is the playground
+   *       sessionId itself — it resolves the workspace, so a visitor only ever
+   *       sees the board of the bot they actually chatted with.
+   *     parameters:
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *     responses:
+   *       200:
+   *         description: The board, ordered by status then position
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 todos:
+   *                   type: array
+   *                   items: { $ref: '#/components/schemas/PlaygroundTodo' }
+   *       401: { description: Missing or unknown sessionId }
+   */
+  // The board is scoped to the session's workspace: you see the cards of the
+  // bot you actually chatted with, and no others.
   async getTodos(req: Request, res: Response) {
     try {
-      const workspaceId = await resolveWorkspaceId(req)
+      const identity = await resolveKanbanIdentity(req.query.sessionId)
+      if (!identity) {
+        return res.status(401).json({ error: "Valid playground sessionId required" })
+      }
+      const { workspaceId } = identity
       const todos = await prisma.playgroundTodo.findMany({
         where: { workspaceId },
         include: { comments: { orderBy: { createdAt: "desc" } } },
@@ -620,23 +679,62 @@ export class PlaygroundController {
     }
   }
 
-  // POST /api/v1/playground/todos
+  /**
+   * @swagger
+   * /api/v1/playground/todos:
+   *   post:
+   *     tags: [Playground Kanban]
+   *     summary: Create a card from a chat message
+   *     description: >
+   *       The card freezes the message and the bot's reply so the report stays
+   *       readable later. `createdBy` is NOT accepted from the body — it is the
+   *       session customer's name, so a card cannot be signed with someone
+   *       else's identity.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [sessionId, dialogId, messageType, messageContent, commentTitle]
+   *             properties:
+   *               sessionId:       { type: string, format: uuid }
+   *               dialogId:        { type: string, description: Message id the card is anchored to }
+   *               messageType:     { type: string, enum: [chatbot, human] }
+   *               messageContent:  { type: string }
+   *               chatbotResponse: { type: string, nullable: true }
+   *               commentTitle:    { type: string }
+   *               priority:        { type: string, enum: [HIGH, MEDIUM, LOW], default: MEDIUM }
+   *               firstComment:    { type: string, nullable: true }
+   *     responses:
+   *       201:
+   *         description: Card created in the TODO column
+   *         content:
+   *           application/json:
+   *             schema: { $ref: '#/components/schemas/PlaygroundTodo' }
+   *       400: { description: Missing required fields or invalid priority }
+   *       401: { description: Missing or unknown sessionId }
+   */
   async createTodo(req: Request, res: Response) {
     try {
       const {
+        sessionId,
         dialogId,
         messageType,
         messageContent,
         chatbotResponse,
         commentTitle,
         priority,
-        createdBy,
         firstComment,
       } = req.body
 
-      if (!isAllowedUser(createdBy)) {
-        return res.status(401).json({ error: "Invalid user" })
+      // createdBy is NEVER read from the body — see resolveKanbanIdentity.
+      const identity = await resolveKanbanIdentity(sessionId)
+      if (!identity) {
+        return res.status(401).json({ error: "Valid playground sessionId required" })
       }
+      const { workspaceId, createdBy } = identity
+
       if (!dialogId || !commentTitle || !messageContent || !messageType) {
         return res.status(400).json({ error: "Missing required fields" })
       }
@@ -644,7 +742,6 @@ export class PlaygroundController {
         return res.status(400).json({ error: "Invalid priority" })
       }
 
-      const workspaceId = await resolveWorkspaceId(req)
       const lastInColumn = await prisma.playgroundTodo.findFirst({
         where: { workspaceId, status: "TODO" },
         orderBy: { position: "desc" },
@@ -660,7 +757,7 @@ export class PlaygroundController {
           messageContent,
           chatbotResponse: chatbotResponse || null,
           commentTitle,
-          priority: priority || "Medio",
+          priority: priority || "MEDIUM",
           status: "TODO",
           position: nextPosition,
           createdBy,
@@ -679,11 +776,50 @@ export class PlaygroundController {
     }
   }
 
-  // PATCH /api/v1/playground/todos/:id
+  /**
+   * @swagger
+   * /api/v1/playground/todos/{id}:
+   *   patch:
+   *     tags: [Playground Kanban]
+   *     summary: Move or edit a card (drag & drop target)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [sessionId]
+   *             properties:
+   *               sessionId:    { type: string, format: uuid }
+   *               status:       { type: string, enum: [TODO, IN_PROGRESS, REVIEW, DONE, NICE_TO_HAVE] }
+   *               priority:     { type: string, enum: [HIGH, MEDIUM, LOW] }
+   *               position:     { type: integer, description: Order within the column }
+   *               commentTitle: { type: string }
+   *     responses:
+   *       200:
+   *         description: The updated card
+   *         content:
+   *           application/json:
+   *             schema: { $ref: '#/components/schemas/PlaygroundTodo' }
+   *       400: { description: Invalid status or priority }
+   *       401: { description: Missing or unknown sessionId }
+   *       404: { description: Card not in this session's workspace }
+   */
   async updateTodo(req: Request, res: Response) {
     try {
       const { id } = req.params
-      const { status, priority, position, commentTitle } = req.body
+      const { sessionId, status, priority, position, commentTitle } = req.body
+
+      const identity = await resolveKanbanIdentity(sessionId)
+      if (!identity) {
+        return res.status(401).json({ error: "Valid playground sessionId required" })
+      }
+      const { workspaceId } = identity
 
       if (status && !ALLOWED_STATUSES.includes(status)) {
         return res.status(400).json({ error: "Invalid status" })
@@ -692,7 +828,6 @@ export class PlaygroundController {
         return res.status(400).json({ error: "Invalid priority" })
       }
 
-      const workspaceId = await resolveWorkspaceId(req)
       const existingTodo = await prisma.playgroundTodo.findFirst({
         where: { id, workspaceId },
       })
@@ -719,11 +854,35 @@ export class PlaygroundController {
     }
   }
 
-  // DELETE /api/v1/playground/todos/:id
+  /**
+   * @swagger
+   * /api/v1/playground/todos/{id}:
+   *   delete:
+   *     tags: [Playground Kanban]
+   *     summary: Delete a card
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *     responses:
+   *       200: { description: Deleted }
+   *       401: { description: Missing or unknown sessionId }
+   *       404: { description: Card not in this session's workspace }
+   */
   async deleteTodo(req: Request, res: Response) {
     try {
       const { id } = req.params
-      const workspaceId = await resolveWorkspaceId(req)
+      const identity = await resolveKanbanIdentity(req.query.sessionId ?? req.body?.sessionId)
+      if (!identity) {
+        return res.status(401).json({ error: "Valid playground sessionId required" })
+      }
+      const { workspaceId } = identity
+
       const existingTodo = await prisma.playgroundTodo.findFirst({
         where: { id, workspaceId },
       })
@@ -1206,10 +1365,9 @@ export class PlaygroundController {
         : []
 
       if (blockingTodos.length > 0) {
+        // Machine-readable only: the wording belongs to the UI, not here.
         return res.status(409).json({
           error: "CHAT_HAS_TODOS",
-          message:
-            "This chat has TODO cards on the kanban. Delete or move them first, then retry.",
           todos: blockingTodos,
         })
       }
@@ -1310,20 +1468,54 @@ export class PlaygroundController {
     }
   }
 
-  // POST /api/v1/playground/todos/:id/comments
+  /**
+   * @swagger
+   * /api/v1/playground/todos/{id}/comments:
+   *   post:
+   *     tags: [Playground Kanban]
+   *     summary: Comment on a card
+   *     description: Author comes from the session, never from the body.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [sessionId, commentText]
+   *             properties:
+   *               sessionId:   { type: string, format: uuid }
+   *               commentText: { type: string }
+   *               color:       { type: string, nullable: true, description: Hex color for the author chip }
+   *     responses:
+   *       201:
+   *         description: The created comment
+   *         content:
+   *           application/json:
+   *             schema: { $ref: '#/components/schemas/PlaygroundComment' }
+   *       400: { description: Missing commentText }
+   *       401: { description: Missing or unknown sessionId }
+   *       404: { description: Card not in this session's workspace }
+   */
   async addComment(req: Request, res: Response) {
     try {
       const { id } = req.params
-      const { commentText, createdBy, color } = req.body
+      const { sessionId, commentText, color } = req.body
 
-      if (!isAllowedUser(createdBy)) {
-        return res.status(401).json({ error: "Invalid user" })
+      const identity = await resolveKanbanIdentity(sessionId)
+      if (!identity) {
+        return res.status(401).json({ error: "Valid playground sessionId required" })
       }
+      const { workspaceId, createdBy } = identity
+
       if (!commentText) {
         return res.status(400).json({ error: "Missing commentText" })
       }
 
-      const workspaceId = await resolveWorkspaceId(req)
       const todoExists = await prisma.playgroundTodo.findFirst({
         where: { id, workspaceId },
       })
@@ -1348,17 +1540,46 @@ export class PlaygroundController {
     }
   }
 
-  // DELETE /api/v1/playground/todos/:todoId/comments/:commentId
+  /**
+   * @swagger
+   * /api/v1/playground/todos/{todoId}/comments/{commentId}:
+   *   delete:
+   *     tags: [Playground Kanban]
+   *     summary: Delete your own comment
+   *     description: >
+   *       Only the author can delete a comment. Authorship is compared against
+   *       the name resolved from the session, so it cannot be claimed by
+   *       sending someone else's name.
+   *     parameters:
+   *       - in: path
+   *         name: todoId
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *       - in: path
+   *         name: commentId
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *     responses:
+   *       204: { description: Deleted }
+   *       401: { description: Missing or unknown sessionId }
+   *       403: { description: Comment belongs to another author }
+   *       404: { description: Comment not in this session's workspace }
+   */
   async deleteComment(req: Request, res: Response) {
     try {
       const { todoId, commentId } = req.params
-      const { createdBy } = req.body
-
-      if (!isAllowedUser(createdBy)) {
-        return res.status(401).json({ error: "Invalid user" })
+      const identity = await resolveKanbanIdentity(
+        req.query.sessionId ?? req.body?.sessionId
+      )
+      if (!identity) {
+        return res.status(401).json({ error: "Valid playground sessionId required" })
       }
+      const { workspaceId, createdBy } = identity
 
-      const workspaceId = await resolveWorkspaceId(req)
       const comment = await prisma.playgroundComment.findUnique({
         where: { id: commentId },
         include: { todo: true },

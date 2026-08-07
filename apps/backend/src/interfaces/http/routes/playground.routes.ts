@@ -105,10 +105,16 @@ playgroundRouter.get("/playground/usecases", optionalPlaygroundAuth, (req, res) 
 playgroundRouter.get("/playground/messages", optionalPlaygroundAuth, (req, res) => controller.getMessages(req, res))
 // 😀 Set/clear the reaction on a message (demo/customer side) — workspace-isolated.
 playgroundRouter.post("/playground/messages/:messageId/reaction", optionalPlaygroundAuth, (req, res) => controller.setReaction(req, res))
-playgroundRouter.get("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.getTodos(req, res))
-playgroundRouter.post("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.createTodo(req, res))
-playgroundRouter.patch("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.updateTodo(req, res))
-playgroundRouter.delete("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.deleteTodo(req, res))
+// ── Kanban (public /demo/<slug>/kanban) ──────────────────────────────────────
+// These deliberately do NOT use optionalPlaygroundAuth: the board is one per
+// workspace and holds a client's criticism of their own bot, so the workspace
+// must not come from a spoofable x-workspace-id header. Each handler resolves
+// workspace + author from the playground sessionId instead — see
+// resolveKanbanIdentity in playground.controller.ts.
+playgroundRouter.get("/playground/todos", (req, res) => controller.getTodos(req, res))
+playgroundRouter.post("/playground/todos", (req, res) => controller.createTodo(req, res))
+playgroundRouter.patch("/playground/todos/:id", (req, res) => controller.updateTodo(req, res))
+playgroundRouter.delete("/playground/todos/:id", (req, res) => controller.deleteTodo(req, res))
 playgroundRouter.post("/playground/chat", optionalPlaygroundAuth, (req, res) => controller.sendChat(req, res))
 // 🎤 Voice note from the demo composer: transcribe → store audio → run bot turn.
 playgroundRouter.post(
@@ -131,12 +137,12 @@ playgroundRouter.patch("/playground/sessions/:id", optionalPlaygroundAuth, (req,
 playgroundRouter.delete("/playground/sessions/:id", optionalPlaygroundAuth, (req, res) =>
   controller.deleteSession(req, res)
 )
-playgroundRouter.post("/playground/todos/:id/comments", optionalPlaygroundAuth, (req, res) =>
+// Kanban comments — session-derived identity, same rationale as the todo routes above.
+playgroundRouter.post("/playground/todos/:id/comments", (req, res) =>
   controller.addComment(req, res)
 )
 playgroundRouter.delete(
   "/playground/todos/:todoId/comments/:commentId",
-  optionalPlaygroundAuth,
   (req, res) => controller.deleteComment(req, res)
 )
 

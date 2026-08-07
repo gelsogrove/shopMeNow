@@ -1127,6 +1127,7 @@ export function DemoWidgetPage() {
           hideWorkspaceName
           plainWhatsappNumber
           whatsappBadge
+          feedbackBoardSlug={slug}
           icon="whatsapp"
           monogram={brand.monogram}
           title={`${brand.titleA}${brand.titleB}`}

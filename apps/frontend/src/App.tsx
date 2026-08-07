@@ -105,6 +105,7 @@ const RegisterPage = lazy(() => import("./pages/register"))
 const SupportChatPage = lazy(() => import("./pages/SupportChatPage"))
 const OperatorDashboardPage = lazy(() => import("./pages/OperatorDashboardPage"))
 const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
+const PlaygroundKanbanPage = lazy(() => import("./pages/PlaygroundKanbanPage"))
 // Not lazy: the gate must render immediately, before the demo page chunk loads.
 // Re-enable together with the <DemoPasswordGate> wrapper on /demo/demorobot.
 // import { DemoPasswordGate } from "./components/DemoPasswordGate"
@@ -260,6 +261,24 @@ export function App() {
           }
         />
         
+        {/* Feedback board for any Flow demo — one board per workspace, resolved
+            from the slug. Declared BEFORE the per-slug demo routes below, whose
+            /* catch-all would otherwise swallow it and render the widget. */}
+        <Route
+          path="/demo/:slug/kanban"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <PlaygroundKanbanPage />
+            </Suspense>
+          }
+        />
+
         {/* Demowash public demo — renders the real embeddable ChatWidget so a
             visitor can try the live chatbot (name + language + first message),
             exactly like the production widget. Resolves the workspaceId from the

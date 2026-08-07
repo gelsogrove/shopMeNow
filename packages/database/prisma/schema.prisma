@@ -60,6 +60,10 @@ model Workspace {
   widgetAutoSuggestionsEnabled Boolean   @default(false) // Show quick reply suggestions in widget
   widgetQuickReplies           String[]  @default([])    // Up to 4 quick replies shown in widget
   widgetSuggestionsModel       String?               // Optional custom model for widget suggestions
+  // Sites allowed to embed /widget-embed in an iframe. Origins, scheme included
+  // (e.g. "https://acme.com"). Sent as CSP frame-ancestors by the widget-embed
+  // middleware — a site missing here is blocked by the browser.
+  widgetAllowedDomains         String[]  @default([])
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
@@ -2299,20 +2303,23 @@ model OnboardingQuestionnaire {
   @@map("onboarding_questionnaires")
 }
 
-// 🆕 PLAYGROUND - Demowash demo (demowash)
-// Collaborative TODO + comments layer over existing chat messages
+// 🆕 PLAYGROUND KANBAN — one board per Flow workspace (any workspace with
+// customChatbotId set: demowash, demorobot, demobeauty, …).
+// Collaborative TODO + comments layer over existing chat messages: a card is
+// created from a specific message and freezes that message + the bot's reply,
+// so the report stays readable even if the session moves on.
 model PlaygroundTodo {
   id              String   @id @default(uuid())
-  workspaceId     String   // Always Demowash workspace
+  workspaceId     String   // Board owner — boards are never shared across workspaces
   dialogId        String   // Reference to Message.id (no FK - cross-workspace safety)
   messageType     String   // "chatbot" | "human"
   messageContent  String
   chatbotResponse String?
   commentTitle    String
-  priority        String   @default("Medio") // "Alto" | "Medio" | "Basso"
+  priority        String   @default("MEDIUM") // "HIGH" | "MEDIUM" | "LOW"
   status          String   @default("TODO")  // "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
   position        Int      @default(0)       // Order within column
-  createdBy       String   // "ANDREA" | "OLGA"
+  createdBy       String   // Author name, taken from the playground session's customer
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

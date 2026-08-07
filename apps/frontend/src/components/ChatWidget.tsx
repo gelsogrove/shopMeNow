@@ -37,6 +37,7 @@ import {
   Mic,
   SmilePlus,
   Plus,
+  ClipboardList,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -111,6 +112,7 @@ import {
   type ChatAttachment,
 } from "@/components/chat/attachment-utils"
 import { WidgetProfilePanel } from "@/components/chat/WidgetProfilePanel"
+import { createTodo } from "@/services/playgroundKanbanApi"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
   getOrCreateVisitorId,
@@ -228,6 +230,12 @@ interface ChatWidgetProps {
   // corner (white circle + green glyph), like the channel badge in the
   // backoffice chat list. Used by the public /demo page to read as WhatsApp.
   whatsappBadge?: boolean
+  // 📋 Feedback board: when set, bot bubbles get a second trigger next to the
+  // reaction smiley that turns THAT message into a card on /demo/<slug>/kanban.
+  // The card freezes the message and the reply, so a wrong answer is reported
+  // with its evidence attached instead of described from memory. Off unless a
+  // slug is passed — the embedded production widget must never show it.
+  feedbackBoardSlug?: string
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
   // 📣 Demo-only: localized + branded promotional push cards. Cycled through as
@@ -390,6 +398,7 @@ export function ChatWidget({
   hideWorkspaceName = false,
   plainWhatsappNumber = false,
   whatsappBadge = false,
+  feedbackBoardSlug,
   onOpenChange,
   onConvert,
   pushDemoCases,
@@ -557,6 +566,12 @@ export function ChatWidget({
   // 😀 serverId of the message whose reaction picker is open. Tap-to-open so it
   // also works on touch devices, where the old hover-only reveal was unreachable.
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null)
+  // 📋 serverId of the message being turned into a feedback card, plus the
+  // title being typed. Null → the prompt is closed.
+  const [feedbackCardFor, setFeedbackCardFor] = useState<string | null>(null)
+  const [feedbackTitle, setFeedbackTitle] = useState("")
+  const [feedbackSaving, setFeedbackSaving] = useState(false)
+  const [feedbackDone, setFeedbackDone] = useState<string | null>(null)
   // WhatsApp-style composer: textarea grows with content up to a max, then scrolls
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   // 🎤 Voice note recording (mirrors PlaygroundPage): mic when the field is empty.
@@ -1472,6 +1487,31 @@ export function ChatWidget({
     }
   }
 
+  /**
+   * 📋 Turn a bot message into a card on the workspace's feedback board.
+   *
+   * The card stores the bot's reply together with the customer message that
+   * triggered it, so whoever picks it up later sees the exchange, not just a
+   * complaint. Author and workspace are derived server-side from `sessionId` —
+   * this call sends neither.
+   */
+  const createFeedbackCard = async (target: Message, title: string) => {
+    if (!target.serverId || !sessionId) return
+    // The preceding user message is the question that produced this reply.
+    const index = messages.findIndex((m) => m.serverId === target.serverId)
+    const question = [...messages.slice(0, index)]
+      .reverse()
+      .find((m) => m.role === "user")
+
+    await createTodo(resolvedApiUrl, sessionId, {
+      dialogId: target.serverId,
+      messageType: "chatbot",
+      messageContent: question?.content || target.content,
+      chatbotResponse: target.content,
+      commentTitle: title,
+    })
+  }
+
   // 🧹 Revoke any object URLs created for attachment previews on unmount.
   useEffect(() => {
     return () => {
@@ -1486,13 +1526,15 @@ export function ChatWidget({
     return () => clearTimeout(timer)
   }, [chatError])
 
-  // 😀 Close the open reaction picker when tapping/clicking anywhere outside it.
+  // 😀📋 Close the open reaction picker / feedback-card prompt when tapping or
+  // clicking anywhere outside them.
   useEffect(() => {
-    if (!reactionPickerFor) return
+    if (!reactionPickerFor && !feedbackCardFor) return
     const onDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement | null
       if (target?.closest?.("[data-reaction-ui]")) return
       setReactionPickerFor(null)
+      setFeedbackCardFor(null)
     }
     document.addEventListener("mousedown", onDown)
     document.addEventListener("touchstart", onDown)
@@ -1500,7 +1542,7 @@ export function ChatWidget({
       document.removeEventListener("mousedown", onDown)
       document.removeEventListener("touchstart", onDown)
     }
-  }, [reactionPickerFor])
+  }, [reactionPickerFor, feedbackCardFor])
 
   /**
    * Handle registration form submit
@@ -2478,6 +2520,95 @@ export function ChatWidget({
                                 }}
                               />
                             </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* 📋 Report this reply on the feedback board. Sits under
+                          the reaction trigger, same reveal behaviour. Only on
+                          demo pages that passed a board slug. */}
+                      {feedbackBoardSlug && msg.role === "bot" && msg.serverId && sessionId && (
+                        <>
+                          <button
+                            type="button"
+                            data-reaction-ui
+                            aria-label="Report this reply on the feedback board"
+                            title="Report on board"
+                            onClick={() => {
+                              setFeedbackCardFor((cur) =>
+                                cur === msg.serverId ? null : msg.serverId!
+                              )
+                              setFeedbackTitle("")
+                            }}
+                            className={cn(
+                              "absolute -right-8 top-1/2 z-10 flex h-7 w-7 translate-y-3 items-center justify-center",
+                              "rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm",
+                              "transition-opacity hover:text-emerald-600",
+                              "opacity-70 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                            )}
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                          </button>
+
+                          {feedbackCardFor === msg.serverId && (
+                            <div
+                              data-reaction-ui
+                              className="absolute -bottom-2 right-0 z-30 w-64 translate-y-full rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
+                            >
+                              <label className="text-[11px] font-medium text-gray-600">
+                                What is wrong with this reply?
+                              </label>
+                              <input
+                                autoFocus
+                                value={feedbackTitle}
+                                onChange={(e) => setFeedbackTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") setFeedbackCardFor(null)
+                                }}
+                                placeholder="Short title"
+                                className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none"
+                              />
+                              <div className="mt-2 flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setFeedbackCardFor(null)}
+                                  className="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={feedbackSaving || !feedbackTitle.trim()}
+                                  onClick={async () => {
+                                    setFeedbackSaving(true)
+                                    try {
+                                      await createFeedbackCard(msg, feedbackTitle.trim())
+                                      setFeedbackCardFor(null)
+                                      setFeedbackDone(msg.serverId!)
+                                      setTimeout(() => setFeedbackDone(null), 4000)
+                                    } catch (err) {
+                                      console.error("Failed to create feedback card:", err)
+                                    } finally {
+                                      setFeedbackSaving(false)
+                                    }
+                                  }}
+                                  className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                  {feedbackSaving ? "Saving…" : "Add card"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {feedbackDone === msg.serverId && (
+                            <a
+                              href={`/demo/${feedbackBoardSlug}/kanban`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="absolute -bottom-6 right-0 z-10 whitespace-nowrap text-[11px] font-medium text-emerald-600 underline"
+                            >
+                              Added to the board — open it
+                            </a>
                           )}
                         </>
                       )}
