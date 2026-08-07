@@ -198,7 +198,9 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
   }
 
   return (
-    <div>
+    // h-full so a parent that hands the board a height gets columns that fill
+    // it; min-h-0 lets the inner scroll areas shrink instead of overflowing.
+    <div className="flex h-full min-h-0 flex-col">
       {error && (
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -209,8 +211,8 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
           report it here.
         </p>
       ) : (
-        <div className="overflow-x-auto pb-2">
-          <div className="flex min-w-max gap-4">
+        <div className="min-h-0 flex-1 overflow-x-auto pb-2">
+          <div className="flex h-full min-w-max gap-4">
             {KANBAN_COLUMNS.map((status) => (
               <section
                 key={status}
@@ -220,16 +222,18 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
                   if (dragged) void moveCard(dragged, status)
                   setDraggedId(null)
                 }}
-                className="flex w-72 flex-col rounded-lg bg-slate-100 p-3"
+                className="flex h-full w-72 flex-col rounded-lg bg-slate-100 p-3"
               >
-                <h2 className="mb-3 flex items-center justify-between text-sm font-semibold text-slate-700">
+                <h2 className="mb-3 flex flex-shrink-0 items-center justify-between text-sm font-semibold text-slate-700">
                   {COLUMN_LABELS[status]}
                   <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
                     {byColumn[status].length}
                   </span>
                 </h2>
 
-                <div className="flex flex-col gap-2">
+                {/* Each column scrolls on its own: a long To-do list must not
+                    push the other columns off the page. */}
+                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
                   {byColumn[status].map((todo) => (
                     <article
                       key={todo.id}
@@ -260,7 +264,7 @@ export function KanbanBoard({ ops, socketOrigin }: KanbanBoardProps) {
                   ))}
 
                   {byColumn[status].length === 0 && (
-                    <p className="rounded-md border border-dashed border-slate-300 py-6 text-center text-xs text-slate-400">
+                    <p className="flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-300 text-center text-xs text-slate-400">
                       Drop cards here
                     </p>
                   )}

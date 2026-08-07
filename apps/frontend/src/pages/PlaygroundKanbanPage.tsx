@@ -137,7 +137,9 @@ export default function PlaygroundKanbanPage() {
         </div>
       </header>
 
-      <div className="p-6">
+      {/* Viewport height minus the header above, so the columns are tall enough
+          to drag between — KanbanBoard fills whatever height it is given. */}
+      <div className="h-[calc(100vh-5.5rem)] p-6">
         <KanbanBoard ops={ops} socketOrigin={socketOrigin} />
       </div>
     </div>
