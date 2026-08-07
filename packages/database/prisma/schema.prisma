@@ -2319,7 +2319,8 @@ model PlaygroundTodo {
   priority        String   @default("MEDIUM") // "HIGH" | "MEDIUM" | "LOW"
   status          String   @default("TODO")  // "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
   position        Int      @default(0)       // Order within column
-  createdBy       String   // Author name, taken from the playground session's customer
+  createdBy       String   // Author display name (staff user, or demo session customer)
+  authorKind      String   @default("STAFF")  // "STAFF" (in-app JWT) | "CUSTOMER" (public demo session)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -2336,6 +2337,7 @@ model PlaygroundComment {
   todo        PlaygroundTodo @relation(fields: [todoId], references: [id], onDelete: Cascade)
   commentText String
   createdBy   String
+  authorKind  String   @default("STAFF") // "STAFF" (in-app JWT) | "CUSTOMER" (public demo session)
   color       String?  // Hex color or username-derived
   createdAt   DateTime @default(now())
 

@@ -87,6 +87,40 @@ const optionalPlaygroundAuth = (req: any, res: any, next: any) => {
   next()
 }
 
+/**
+ * Kanban auth: run the full JWT chain when the caller is signed in, otherwise
+ * step aside and let the handler fall back to the playground sessionId.
+ *
+ * Deliberately narrower than optionalPlaygroundAuth: a bare x-workspace-id
+ * header does NOT authenticate here. That bypass exists so public demo pages
+ * can talk to the chat endpoints, but the board holds a client's criticism of
+ * their own bot — accepting a header would let anyone with one demo link read
+ * every other client's board.
+ */
+const kanbanAuth = (req: any, res: any, next: any) => {
+  const hasAuthHeader = !!req.headers.authorization
+  const hasTokenQuery = !!req.query.token
+  if (!hasAuthHeader && !hasTokenQuery) {
+    return next() // customer door — handler resolves identity from sessionId
+  }
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`
+  }
+  return authMiddleware(req, res, () => {
+    return workspaceValidationMiddleware(req, res, () => {
+      const user = req.user
+      const workspaceId = req.workspaceId
+      const hasAccess =
+        user?.workspaces?.some((w: any) => w.id === workspaceId) ||
+        user?.isPlatformAdmin
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Access denied to this workspace" })
+      }
+      next()
+    })
+  })
+}
+
 // Public endpoint: resolves chatbot slug → workspaceId for standalone demo
 // pages. No auth, no workspace header. Read-only on workspace metadata.
 playgroundRouter.get("/playground/resolve-demo/:slug", (req, res) => controller.resolveDemo(req, res))
@@ -105,16 +139,21 @@ playgroundRouter.get("/playground/usecases", optionalPlaygroundAuth, (req, res) 
 playgroundRouter.get("/playground/messages", optionalPlaygroundAuth, (req, res) => controller.getMessages(req, res))
 // 😀 Set/clear the reaction on a message (demo/customer side) — workspace-isolated.
 playgroundRouter.post("/playground/messages/:messageId/reaction", optionalPlaygroundAuth, (req, res) => controller.setReaction(req, res))
-// ── Kanban (public /demo/<slug>/kanban) ──────────────────────────────────────
-// These deliberately do NOT use optionalPlaygroundAuth: the board is one per
-// workspace and holds a client's criticism of their own bot, so the workspace
-// must not come from a spoofable x-workspace-id header. Each handler resolves
-// workspace + author from the playground sessionId instead — see
-// resolveKanbanIdentity in playground.controller.ts.
-playgroundRouter.get("/playground/todos", (req, res) => controller.getTodos(req, res))
-playgroundRouter.post("/playground/todos", (req, res) => controller.createTodo(req, res))
-playgroundRouter.patch("/playground/todos/:id", (req, res) => controller.updateTodo(req, res))
-playgroundRouter.delete("/playground/todos/:id", (req, res) => controller.deleteTodo(req, res))
+// ── Kanban ───────────────────────────────────────────────────────────────────
+// One board per workspace, written through two doors:
+//   • STAFF    — signed in to the app. kanbanAuth runs the full JWT +
+//                workspace-membership chain, so req.user and req.workspaceId
+//                are trustworthy by the time the handler runs.
+//   • CUSTOMER — a visitor on the public /demo/<slug> page, no JWT. Their
+//                playground sessionId is the credential.
+//
+// A bare x-workspace-id is NOT enough here (unlike optionalPlaygroundAuth,
+// which the demo chat endpoints use): it would let anyone holding one demo
+// link read another client's board. See resolveKanbanIdentity.
+playgroundRouter.get("/playground/todos", kanbanAuth, (req, res) => controller.getTodos(req, res))
+playgroundRouter.post("/playground/todos", kanbanAuth, (req, res) => controller.createTodo(req, res))
+playgroundRouter.patch("/playground/todos/:id", kanbanAuth, (req, res) => controller.updateTodo(req, res))
+playgroundRouter.delete("/playground/todos/:id", kanbanAuth, (req, res) => controller.deleteTodo(req, res))
 playgroundRouter.post("/playground/chat", optionalPlaygroundAuth, (req, res) => controller.sendChat(req, res))
 // 🎤 Voice note from the demo composer: transcribe → store audio → run bot turn.
 playgroundRouter.post(
@@ -137,12 +176,13 @@ playgroundRouter.patch("/playground/sessions/:id", optionalPlaygroundAuth, (req,
 playgroundRouter.delete("/playground/sessions/:id", optionalPlaygroundAuth, (req, res) =>
   controller.deleteSession(req, res)
 )
-// Kanban comments — session-derived identity, same rationale as the todo routes above.
-playgroundRouter.post("/playground/todos/:id/comments", (req, res) =>
+// Kanban comments — same two doors as the todo routes above.
+playgroundRouter.post("/playground/todos/:id/comments", kanbanAuth, (req, res) =>
   controller.addComment(req, res)
 )
 playgroundRouter.delete(
   "/playground/todos/:todoId/comments/:commentId",
+  kanbanAuth,
   (req, res) => controller.deleteComment(req, res)
 )
 

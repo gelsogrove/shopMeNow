@@ -105,25 +105,58 @@ async function resolveWorkspaceId(req: Request): Promise<string> {
 const ALLOWED_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "NICE_TO_HAVE"]
 const ALLOWED_PRIORITIES = ["HIGH", "MEDIUM", "LOW"]
 
+export interface KanbanIdentity {
+  workspaceId: string
+  createdBy: string
+  authorKind: "STAFF" | "CUSTOMER"
+}
+
 /**
- * Kanban identity — resolved from the playground session, never from the request.
+ * Kanban identity — who is writing, and on which board.
  *
- * The kanban lives on a PUBLIC route (/demo/<slug>/kanban): there is no JWT to
- * trust, and `optionalPlaygroundAuth` lets any workspace with a customChatbotId
- * through. So neither `x-workspace-id` nor a `createdBy` in the body can be
- * believed here — a visitor holding the demorobot link could otherwise read
- * demowash's cards, or sign a comment with someone else's name.
+ * The board has two doors onto the same workspace:
  *
- * The session id is the credential instead: it is an unguessable uuid the
- * visitor already owns after their first message, and it determines BOTH the
- * workspace and the author. One lookup, no spoofable inputs.
+ *   STAFF     — signed in to the app. authMiddleware has already verified the
+ *               JWT and validateWorkspaceOperation has pinned req.workspaceId
+ *               to a workspace this user belongs to, so both are trustworthy.
+ *   CUSTOMER  — a visitor on the public /demo/<slug> page, with no JWT at all.
+ *               Their playground sessionId is the credential: an unguessable
+ *               uuid they already own after their first message, which resolves
+ *               to exactly one workspace and one customer name.
  *
- * Cards carry a customer's criticism of their own bot, so this is the boundary
- * that keeps one client's board out of another client's reach.
+ * Neither door reads `x-workspace-id` or a `createdBy` from the request body.
+ * A visitor holding the demorobot link must not be able to read demowash's
+ * cards, nor sign anything as somebody else.
+ *
+ * `authorKind` is stored alongside the name because the two populations share
+ * one board and names collide: a customer called "Andrea" is not the staff
+ * member called "Andrea", and comment deletion must tell them apart.
  */
 async function resolveKanbanIdentity(
+  req: Request,
   sessionId: unknown
-): Promise<{ workspaceId: string; createdBy: string } | null> {
+): Promise<KanbanIdentity | null> {
+  // STAFF wins when present: the JWT is the stronger credential, and the
+  // middleware chain has already authorised this user for this workspace.
+  const user = (req as any).user
+  const authorisedWorkspaceId = (req as any).workspaceId
+  if (user?.id && authorisedWorkspaceId) {
+    const staff = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { firstName: true, lastName: true, email: true },
+    })
+    const displayName =
+      [staff?.firstName, staff?.lastName].filter(Boolean).join(" ").trim() ||
+      staff?.email ||
+      user.email
+    if (!displayName) return null
+    return {
+      workspaceId: authorisedWorkspaceId,
+      createdBy: displayName,
+      authorKind: "STAFF",
+    }
+  }
+
   if (typeof sessionId !== "string" || !sessionId) return null
 
   const session = await prisma.chatSession.findFirst({
@@ -135,7 +168,11 @@ async function resolveKanbanIdentity(
   })
   if (!session?.customer?.name) return null
 
-  return { workspaceId: session.workspaceId, createdBy: session.customer.name }
+  return {
+    workspaceId: session.workspaceId,
+    createdBy: session.customer.name,
+    authorKind: "CUSTOMER",
+  }
 }
 
 function getIo(req: Request) {
@@ -662,9 +699,9 @@ export class PlaygroundController {
   // bot you actually chatted with, and no others.
   async getTodos(req: Request, res: Response) {
     try {
-      const identity = await resolveKanbanIdentity(req.query.sessionId)
+      const identity = await resolveKanbanIdentity(req, req.query.sessionId)
       if (!identity) {
-        return res.status(401).json({ error: "Valid playground sessionId required" })
+        return res.status(401).json({ error: "Authentication required" })
       }
       const { workspaceId } = identity
       const todos = await prisma.playgroundTodo.findMany({
@@ -729,11 +766,11 @@ export class PlaygroundController {
       } = req.body
 
       // createdBy is NEVER read from the body — see resolveKanbanIdentity.
-      const identity = await resolveKanbanIdentity(sessionId)
+      const identity = await resolveKanbanIdentity(req, sessionId)
       if (!identity) {
-        return res.status(401).json({ error: "Valid playground sessionId required" })
+        return res.status(401).json({ error: "Authentication required" })
       }
-      const { workspaceId, createdBy } = identity
+      const { workspaceId, createdBy, authorKind } = identity
 
       if (!dialogId || !commentTitle || !messageContent || !messageType) {
         return res.status(400).json({ error: "Missing required fields" })
@@ -761,8 +798,9 @@ export class PlaygroundController {
           status: "TODO",
           position: nextPosition,
           createdBy,
+          authorKind,
           comments: firstComment
-            ? { create: [{ commentText: firstComment, createdBy }] }
+            ? { create: [{ commentText: firstComment, createdBy, authorKind }] }
             : undefined,
         },
         include: { comments: { orderBy: { createdAt: "desc" } } },
@@ -815,9 +853,9 @@ export class PlaygroundController {
       const { id } = req.params
       const { sessionId, status, priority, position, commentTitle } = req.body
 
-      const identity = await resolveKanbanIdentity(sessionId)
+      const identity = await resolveKanbanIdentity(req, sessionId)
       if (!identity) {
-        return res.status(401).json({ error: "Valid playground sessionId required" })
+        return res.status(401).json({ error: "Authentication required" })
       }
       const { workspaceId } = identity
 
@@ -877,9 +915,9 @@ export class PlaygroundController {
   async deleteTodo(req: Request, res: Response) {
     try {
       const { id } = req.params
-      const identity = await resolveKanbanIdentity(req.query.sessionId ?? req.body?.sessionId)
+      const identity = await resolveKanbanIdentity(req, req.query.sessionId ?? req.body?.sessionId)
       if (!identity) {
-        return res.status(401).json({ error: "Valid playground sessionId required" })
+        return res.status(401).json({ error: "Authentication required" })
       }
       const { workspaceId } = identity
 
@@ -1506,11 +1544,11 @@ export class PlaygroundController {
       const { id } = req.params
       const { sessionId, commentText, color } = req.body
 
-      const identity = await resolveKanbanIdentity(sessionId)
+      const identity = await resolveKanbanIdentity(req, sessionId)
       if (!identity) {
-        return res.status(401).json({ error: "Valid playground sessionId required" })
+        return res.status(401).json({ error: "Authentication required" })
       }
-      const { workspaceId, createdBy } = identity
+      const { workspaceId, createdBy, authorKind } = identity
 
       if (!commentText) {
         return res.status(400).json({ error: "Missing commentText" })
@@ -1524,7 +1562,7 @@ export class PlaygroundController {
       }
 
       const comment = await prisma.playgroundComment.create({
-        data: { todoId: id, commentText, createdBy, color: color || null },
+        data: { todoId: id, commentText, createdBy, authorKind, color: color || null },
       })
 
       await prisma.playgroundTodo.update({
@@ -1572,13 +1610,11 @@ export class PlaygroundController {
   async deleteComment(req: Request, res: Response) {
     try {
       const { todoId, commentId } = req.params
-      const identity = await resolveKanbanIdentity(
-        req.query.sessionId ?? req.body?.sessionId
-      )
+      const identity = await resolveKanbanIdentity(req, req.query.sessionId ?? req.body?.sessionId)
       if (!identity) {
-        return res.status(401).json({ error: "Valid playground sessionId required" })
+        return res.status(401).json({ error: "Authentication required" })
       }
-      const { workspaceId, createdBy } = identity
+      const { workspaceId, createdBy, authorKind } = identity
 
       const comment = await prisma.playgroundComment.findUnique({
         where: { id: commentId },
@@ -1587,7 +1623,13 @@ export class PlaygroundController {
       if (!comment || comment.todoId !== todoId || comment.todo.workspaceId !== workspaceId) {
         return res.status(404).json({ error: "Comment not found in this workspace" })
       }
-      if (comment.createdBy !== createdBy) {
+      // Authorship is (name, origin), never the name alone: staff and customers
+      // share one board, and a customer called "Andrea" is not the staff member
+      // called "Andrea". Staff may additionally clear anything on their own
+      // board — they own it, and a client cannot be asked to tidy up.
+      const isOwnComment =
+        comment.createdBy === createdBy && comment.authorKind === authorKind
+      if (!isOwnComment && authorKind !== "STAFF") {
         return res.status(403).json({ error: "Cannot delete another user's comment" })
       }
 
