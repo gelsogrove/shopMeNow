@@ -13,11 +13,11 @@
  *
  * Why this exists / production note:
  *   The previous /demo/<slug> route rendered the internal Playground, which
- *   talks to the backend through RELATIVE paths (`/api/v1/playground/...`). In
- *   production the frontend is served from www.echatbot.ai while the API lives
- *   on api.echatbot.ai, so those relative calls 404 and the page is broken.
- *   This page (and the widget it renders) always uses the ABSOLUTE API base
- *   below, so it works the same in dev and in production.
+ *   talks to the backend through RELATIVE paths (`/api/v1/playground/...`).
+ *   Those broke in production, so this page (and the widget it renders) always
+ *   uses the ABSOLUTE API base below and works the same in dev and in prod.
+ *   That base is www.echatbot.ai — the backend serves the API from the same
+ *   host as the frontend, and api.echatbot.ai does NOT resolve.
  */
 import { Fragment, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
@@ -38,7 +38,8 @@ function getApiBaseUrl(): string {
     const host = window.location.hostname
     if (host === "localhost" || host === "127.0.0.1") return "/api/v1"
   }
-  return "https://api.echatbot.ai/api/v1"
+  // Same host as the frontend: api.echatbot.ai does not resolve.
+  return "https://www.echatbot.ai/api/v1"
 }
 
 interface ResolvedDemo {
