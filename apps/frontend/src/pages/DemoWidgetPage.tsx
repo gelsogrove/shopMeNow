@@ -997,7 +997,7 @@ export function DemoWidgetPage() {
           centers it on tall screens and lets it scroll on short ones instead of
           being clipped (the feature table makes the column tall). */}
       <div className="relative z-10 flex h-full flex-col items-center overflow-y-auto px-6 py-12 text-center sm:items-start sm:px-16 sm:text-left">
-        <div className="max-w-4xl">
+        <div className="w-full max-w-6xl">
           <div className={`mb-4 inline-flex items-center gap-2 rounded-full ${brand.badge} px-4 py-1.5 text-sm font-medium backdrop-blur`}>
             <span className={`h-2 w-2 rounded-full ${brand.dot}`} />
             {t.liveDemo}
@@ -1029,6 +1029,75 @@ export function DemoWidgetPage() {
               still coming. Only on demorobot, where the list applies. */}
           {slug === "demorobot" && (
             <div className="mt-7 w-full">
+              {/* Pricing model — the five billable items, four one-time (each
+                  mapping to a phase above) plus metered usage. */}
+              <div className="mb-12">
+                <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
+                  Pricing model
+                </span>
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Software
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €2,500
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. The assistant itself, with the whole basic
+                      functionality already working today.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Loading data
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €1,000
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. Importing your FAQ and troubleshooting flows from
+                      your own documents.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Customizations
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €1,000
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. Only what is tailor-made for you: the optional
+                      modules you pick from the phases above.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Installation
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €1,000
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. Deploy and configuration of the software on the
+                      server of the customer.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Usage
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €0.05/message
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      You pay in proportion to how much the assistant actually
+                      works.
+                    </span>
+                  </div>
+                </div>
+              </div>
               <table className="w-full border-collapse text-left text-base">
                 <tbody>
                   {DEMO_PHASES.map((phase) => (
@@ -1167,75 +1236,6 @@ export function DemoWidgetPage() {
                 </tbody>
               </table>
 
-              {/* Pricing model — the five billable items, four one-time (each
-                  mapping to a phase above) plus metered usage. */}
-              <div className="mt-10">
-                <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
-                  Pricing model
-                </span>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Software
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €2,500
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. The assistant itself, with the whole basic
-                      functionality already working today.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Loading data
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,000
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Importing your FAQ and troubleshooting flows from
-                      your own documents.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Customizations
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,000
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Only what is tailor-made for you: the optional
-                      modules you pick from the phases above.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Installation
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,000
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Deploy and configuration of the software on your
-                      own server.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Usage
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €0.05/message
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      You pay in proportion to how much the assistant actually
-                      works.
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
