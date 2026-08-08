@@ -721,9 +721,9 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Loading data (optional)",
+    title: "Customizations",
     subtitle: "",
-    total: 1000,
+    total: 2400,
     features: [
       {
         name: "Loading Context Data",
@@ -732,13 +732,6 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 5,
         price: 1000,
       },
-    ],
-  },
-  {
-    title: "Customizations",
-    subtitle: "",
-    total: 1400,
-    features: [
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
