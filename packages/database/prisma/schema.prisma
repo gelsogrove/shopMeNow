@@ -157,7 +157,6 @@ model Workspace {
   categories             Categories[]
   chatSessions           ChatSession[]
   customers              Customers[]
-  documents              Documents[]
   faqs                   FAQ[]
   gdprContent            GdprContent[]
   languages              Languages[]
@@ -189,10 +188,8 @@ model Workspace {
   googleCalendarConnection GoogleCalendarConnection?
   businessHours            WorkspaceBusinessHours[]
   blackoutPeriods          BlackoutPeriod[]
-  pendingAppointments      PendingAppointment[]
   reminderLocks            ReminderLock[]
   lateCancellationAttempts LateCancellationAttempt[]
-  appointmentGdprLogs      AppointmentGdprLog[]
   timezone                 String?  @default("Europe/Rome") // IANA timezone (e.g., "Europe/Rome", "America/New_York")
   
   // 🔔 Appointment Reminder Settings (Global template for all appointment types)
@@ -1100,7 +1097,6 @@ model Services {
   cartItems       CartItems[]
   orderItems      OrderItems[]
   appointments    Appointment[]
-  pendingAppointments PendingAppointment[]
   lateCancellationAttempts LateCancellationAttempt[]
   workspace       Workspace    @relation(fields: [workspaceId], references: [id])
 
@@ -1148,26 +1144,6 @@ model Offers {
 
   @@index([workspaceId])
   @@map("offers")
-}
-
-model Documents {
-  id           String         @id @default(uuid())
-  filename     String
-  originalName String
-  filePath     String
-  fileSize     Int
-  mimeType     String
-  status       DocumentStatus @default(UPLOADED)
-  workspaceId  String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  isActive     Boolean        @default(true)
-  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId])
-  @@index([status])
-  @@index([isActive])
-  @@map("documents")
 }
 
 model AgentConfig {
@@ -1246,13 +1222,6 @@ enum ProductStatus {
   OUT_OF_STOCK
 }
 
-enum DocumentStatus {
-  UPLOADED
-  PROCESSING
-  PROCESSED
-  ERROR
-}
-
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -1282,20 +1251,6 @@ enum PaymentStatus {
 enum MessageDirection {
   INBOUND
   OUTBOUND
-}
-
-model RegistrationAttempts {
-  id            String   @id @default(cuid())
-  phoneNumber   String
-  workspaceId   String
-  attemptCount  Int      @default(0)
-  lastAttemptAt DateTime @default(now())
-  isBlocked     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([phoneNumber, workspaceId])
-  @@map("registration_attempts")
 }
 
 enum MessageType {
@@ -2172,31 +2127,6 @@ model BlackoutPeriod {
   @@map("blackout_periods")
 }
 
-// Pending Appointments: fallback quando Google Calendar offline
-model PendingAppointment {
-  id                   String             @id @default(uuid())
-  workspaceId          String
-  customerId           String             // Chi ha prenotato (phone number da Customers)
-  serviceId            String             // Services.id (booking service type)
-  requestedStartTime   DateTime           // Slot richiesto (UTC)
-  requestedEndTime     DateTime           // Slot fine (UTC)
-  customerNotes        String?            @db.Text
-  adminNotes           String?            @db.Text // Note interne admin
-  status               String             @default("pending") // "pending" | "synced" | "rejected"
-  syncedEventId        String?            // Google Calendar Event ID se sincronizzato
-  syncedAt             DateTime?
-  rejectedAt           DateTime?
-  rejectionReason      String?            @db.Text
-  createdAt            DateTime           @default(now())
-
-  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  service              Services           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-
-  @@index([workspaceId, status])
-  @@index([customerId])
-  @@map("pending_appointments")
-}
-
 // Reminder Lock: atomicità per evitare duplicati reminder
 model ReminderLock {
   id                   String    @id @default(uuid())
@@ -2232,23 +2162,6 @@ model LateCancellationAttempt {
   @@index([workspaceId, customerId])
   @@index([attemptedAt])
   @@map("late_cancellation_attempts")
-}
-
-// Appointment GDPR Log: traccia eliminazioni eventi Google Calendar
-model AppointmentGdprLog {
-  id                   String    @id @default(uuid())
-  workspaceId          String
-  customerId           String    // Who requested deletion
-  googleEventId        String?   // Google Calendar Event ID deleted (optional until GCal integration)
-  deletedAt            DateTime  @default(now())
-  deletedBy            String    @default("customer") // "customer" | "admin" | "gdpr_batch"
-  reason               String?   @db.Text // "GDPR request", "Customer cancel", etc.
-
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId, customerId])
-  @@index([deletedAt])
-  @@map("appointment_gdpr_logs")
 }
 
 // ============================================================

@@ -47,15 +47,12 @@ async function main() {
     await tx.orders.deleteMany({})
 
     // Appointments (depend on customers)
-    await tx.pendingAppointment.deleteMany({})
-    await tx.appointmentGdprLog.deleteMany({})
     await tx.reminderLock.deleteMany({})
     await tx.lateCancellationAttempt.deleteMany({})
     await tx.appointment.deleteMany({})
 
     // Customer-scoped audit/auth
     await tx.registrationToken.deleteMany({})
-    await tx.registrationAttempts.deleteMany({})
     await tx.secureToken.deleteMany({})
     await tx.shortUrls.deleteMany({})
 
@@ -99,7 +96,6 @@ async function getCounts() {
     creditNotes: await prisma.creditNote.count(),
     invoiceCreditNotes: await prisma.invoiceCreditNote.count(),
     appointments: await prisma.appointment.count(),
-    pendingAppointments: await prisma.pendingAppointment.count(),
     billing: await prisma.billing.count(),
     billingTransactions: await prisma.billingTransaction.count(),
     paypalTransactions: await prisma.payPalTransaction.count(),
@@ -113,7 +109,6 @@ async function getCounts() {
     playgroundTodos: await prisma.playgroundTodo.count(),
     playgroundComments: await prisma.playgroundComment.count(),
     registrationTokens: await prisma.registrationToken.count(),
-    registrationAttempts: await prisma.registrationAttempts.count(),
     secureTokens: await prisma.secureToken.count(),
     shortUrls: await prisma.shortUrls.count(),
   }

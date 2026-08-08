@@ -73,7 +73,6 @@ jest.mock('../src/config/database', () => ({
     offers: { deleteMany: jest.fn() },
     services: { deleteMany: jest.fn() },
     fAQ: { deleteMany: jest.fn() },
-    documents: { deleteMany: jest.fn() },
     suppliers: { deleteMany: jest.fn() },
     sales: { deleteMany: jest.fn() },
     languages: { deleteMany: jest.fn() },
@@ -89,7 +88,6 @@ jest.mock('../src/config/database', () => ({
     billingTransaction: { deleteMany: jest.fn() },
     adminSession: { deleteMany: jest.fn() },
     workspaceInvitation: { deleteMany: jest.fn() },
-    registrationAttempts: { deleteMany: jest.fn() },
     softDeleteAuditLog: { create: jest.fn(), deleteMany: jest.fn() },
     userWorkspace: { deleteMany: jest.fn() },
     $transaction: jest.fn((callback, options) => {
@@ -136,7 +134,6 @@ jest.mock('../src/config/database', () => ({
         offers: { deleteMany: createDeleteManyMock() },
         services: { deleteMany: createDeleteManyMock() },
         fAQ: { deleteMany: createDeleteManyMock() },
-        documents: { deleteMany: createDeleteManyMock() },
         suppliers: { deleteMany: createDeleteManyMock() },
         sales: { deleteMany: createDeleteManyMock() },
         languages: { deleteMany: createDeleteManyMock() },
@@ -152,7 +149,6 @@ jest.mock('../src/config/database', () => ({
         billingTransaction: { deleteMany: createDeleteManyMock() },
         adminSession: { deleteMany: createDeleteManyMock() },
         workspaceInvitation: { deleteMany: createDeleteManyMock() },
-        registrationAttempts: { deleteMany: createDeleteManyMock() },
         softDeleteAuditLog: { create: jest.fn(), deleteMany: createDeleteManyMock() },
         userWorkspace: { deleteMany: createDeleteManyMock() },
       }
@@ -299,7 +295,6 @@ describe('Soft Delete Cleanup Job', () => {
         'offers',
         'services',
         'faq',
-        'documents',
         'suppliers',
         'sales',
         'languages',
@@ -316,7 +311,6 @@ describe('Soft Delete Cleanup Job', () => {
         'billingTransaction',
         'adminSession',
         'workspaceInvitation',
-        'registrationAttempts',
         'softDeleteAuditLog',
         // Relations
         'userWorkspace',
@@ -465,13 +459,13 @@ describe('Soft Delete Cleanup Job', () => {
         'productCategory', 'cartItems', 'carts', 'creditNote', 'orderItems', 'orders',
         'customerFeedback', 'searchConversations', 'customers', 'certification',
         'type', 'products', 'categories', 'offers', 'services', 'fAQ',
-        'documents', 'suppliers', 'sales', 'languages', 'agentConfig', 'whatsappSettings',
+        'suppliers', 'sales', 'languages', 'agentConfig', 'whatsappSettings',
         'gdprContent', 'whatsAppQueue', 'secureToken', 'shortUrls',
         'usage', 'billing', 'billingTransaction', 'adminSession', 'workspaceInvitation',
-        'registrationAttempts', 'softDeleteAuditLog', 'userWorkspace'
+        'softDeleteAuditLog', 'userWorkspace'
       ]
 
-      expect(workspaceRelatedTables.length).toBeGreaterThan(40)
+      expect(workspaceRelatedTables.length).toBeGreaterThan(38)
     })
   })
 
@@ -605,7 +599,6 @@ describe('Soft Delete Cleanup Job', () => {
         'offers',
         'services',
         'fAQ',
-        'documents',
         'suppliers',
         'sales',
         'languages',
@@ -622,7 +615,6 @@ describe('Soft Delete Cleanup Job', () => {
         'billingTransaction',
         'adminSession',
         'workspaceInvitation',
-        'registrationAttempts',
         'registrationToken',
         'softDeleteAuditLog',
         // Relations

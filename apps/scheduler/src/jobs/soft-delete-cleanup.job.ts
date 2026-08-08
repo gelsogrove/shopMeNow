@@ -26,7 +26,7 @@ import logger from '../utils/logger'
  * 7. Order-related: CreditNote, OrderItems, Orders
  * 8. Customer-related: CustomerFeedback, SearchConversations, Customers
  * 9. Support-related: SupportAttachment, SupportMessage, SupportTicket
- * 10. Workspace content: Categories, Products, Offers, Services, FAQ, Documents, etc.
+ * 10. Workspace content: Categories, Products, Offers, Services, FAQ, etc.
  * 11. Workspace config: AgentConfig, WhatsappSettings, GdprContent, etc.
  * 12. UserWorkspace (relation table)
  * 13. Workspaces
@@ -325,10 +325,6 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
-      deletedCounts.documents = (await tx.documents.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
-
       deletedCounts.sales = (await tx.sales.deleteMany({
         where: { workspaceId: { in: workspaceIds } }
       })).count
@@ -379,10 +375,6 @@ export async function softDeleteCleanupJob(): Promise<void> {
       })).count
 
       deletedCounts.workspaceInvitation = (await tx.workspaceInvitation.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
-
-      deletedCounts.registrationAttempts = (await tx.registrationAttempts.deleteMany({
         where: { workspaceId: { in: workspaceIds } }
       })).count
 

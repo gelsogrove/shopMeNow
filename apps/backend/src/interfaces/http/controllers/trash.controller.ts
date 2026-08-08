@@ -639,7 +639,6 @@ export class TrashController {
           await tx.offers.deleteMany({ where: { workspaceId: wsId } })
           await tx.services.deleteMany({ where: { workspaceId: wsId } })
           await tx.fAQ.deleteMany({ where: { workspaceId: wsId } })
-          await tx.documents.deleteMany({ where: { workspaceId: wsId } })
           await tx.sales.deleteMany({ where: { workspaceId: wsId } })
           await tx.languages.deleteMany({ where: { workspaceId: wsId } })
           
@@ -737,7 +736,6 @@ export class TrashController {
             await tx.offers.deleteMany({ where: { workspaceId: wsId } })
             await tx.services.deleteMany({ where: { workspaceId: wsId } })
             await tx.fAQ.deleteMany({ where: { workspaceId: wsId } })
-            await tx.documents.deleteMany({ where: { workspaceId: wsId } })
             await tx.sales.deleteMany({ where: { workspaceId: wsId } })
             await tx.languages.deleteMany({ where: { workspaceId: wsId } })
             

@@ -46,7 +46,6 @@ jest.mock('@echatbot/database', () => ({
     whatsAppQueue: mockModel,
     conversationSession: mockModel,
     chatSession: mockModel,
-    registrationAttempts: mockModel,
     userUnsubscribe: mockModel,
     invoice: mockModel,
     transaction: mockModel,
