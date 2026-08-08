@@ -655,7 +655,7 @@ const DEMO_PHASES: DemoPhase[] = [
       },
       {
         name: "AI personality",
-        description: "You define the assistant's name, tone and rules — no coding needed.",
+        description: "You define the assistant's name, tone and rules",
         status: "done",
         note: "Chatbot name, chatbot personality, AI model, temperature, escalation rules",
       },
@@ -696,9 +696,9 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Operator replay message translation",
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
-        status: "in_progress",
+        status: "done",
         effort: 1,
-        price: 300,
+        price: 0,
       },
       {
         name: "Block spam user",
@@ -708,8 +708,16 @@ const DEMO_PHASES: DemoPhase[] = [
         price: 0,
       },
       {
-        name: "Terms and conditions",
-        description: "Asks for privacy consent before the conversation starts.",
+        name: "Kanban Board",
+        description:
+          "Utility to highlight wrong answers and track their correction.",
+        status: "in_progress",
+        effort: 2,
+        price: 0,
+      },
+      {
+        name: "Text to speech",
+        description: "Replies out loud with a voice note instead of text.",
         status: "todo",
         effort: 1,
       },
@@ -719,22 +727,14 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
-    total: 300,
+    total: 400,
     features: [
       {
         name: "Loading Context Data",
-        description: "Loads your personal data into the platform.",
+        description: "Loads your Faq and Flow into the platform from your document, we have a dedicated AI that can help the process.",
         status: "todo",
         effort: 5,
         price: "tbd",
-      },
-      {
-        name: "Kanban Board",
-        description:
-          "Utility to highlight wrong answers and track their correction.",
-        status: "in_progress",
-        effort: 2,
-        price: 0,
       },
       {
         name: "Forward Human Support logic",
@@ -750,6 +750,13 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         price: "tbd",
         effort: 4,
+      },
+      {
+        name: "Terms and conditions",
+        description: "Asks for privacy consent before the conversation starts.",
+        status: "todo",
+        effort: 1,
+        price: 100,
       },
     ],
   },
@@ -787,23 +794,11 @@ const DEMO_PHASES: DemoPhase[] = [
     total: 850,
     features: [
       {
-        name: "Text to speech",
-        description: "Replies out loud with a voice note instead of text.",
-        status: "todo",
-        effort: 1,
-      },
-      {
-        name: "Speech to text",
-        description: "Understands voice notes sent by the customer.",
-        status: "todo",
-        effort: 1,
-        price: 350,
-      },
-      {
         name: "Presentation Video",
         description: "Short video introducing the assistant and how it works.",
         status: "todo",
         effort: 1,
+        price: 350,
       },
       {
         name: "Send Images and Documents",
