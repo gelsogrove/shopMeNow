@@ -650,7 +650,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        note: "Italian, English, Danish for nowName, personalit",
+        note: "3 languages (Italian, English, Danish)Loading Context Data",
       },
       {
         name: "AI personality",
@@ -703,14 +703,14 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
-    total: 1300,
+    total: 1600,
     features: [
       {
         name: "Loading Context Data",
         description: "Loads your personal data into the platform.",
         status: "todo",
         effort: 5,
-        price: 700,
+        price: 1000,
       },
       {
         name: "Kanban Board",
@@ -718,6 +718,7 @@ const DEMO_PHASES: DemoPhase[] = [
           "Utility to highlight wrong answers and track their correction.",
         status: "in_progress",
         effort: 2,
+        price: 0,
       },
       {
         name: "Forward Human Support logic",
@@ -745,7 +746,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Phase 3 — WhatsApp",
     subtitle: "Reaching customers on their channel, in their language.",
-    total: 1800,
+    total: 2300,
     features: [
       {
         name: "Install software on the client infrastructure",
@@ -774,19 +775,21 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Security analysis.",
         status: "todo",
         effort: 4,
+        price: 500,
       },
       {
         name: "Block spam user",
         description: "Blocked numbers are ignored: no reply, no notification, no cost.",
         status: "todo",
         effort: 1,
+        price: 0,
       },
     ],
   },
   {
     title: "Phase 4 — Other features",
     subtitle: "New channels, richer replies, and your calendar and CRM connected.",
-    total: 500,
+    total: 850,
     features: [
       {
         name: "Text to speech",
@@ -799,6 +802,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Understands voice notes sent by the customer.",
         status: "todo",
         effort: 1,
+        price: 350,
       },
       {
         name: "Presentation Video",
@@ -824,21 +828,14 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Maybe Later",
     subtitle: "Parked for later — prioritized on request.",
-    total: 4500,
+    total: 5000,
     features: [
       {
-        name: "Appointment and Calendar",
-        description: "Books, moves and cancels appointments against a live calendar.",
-        status: "todo",
-        effort: 5,
-        price: 1000,
-      },
-      {
-        name: "Booking",
+        name: "Sales modules",
         description: "Takes reservations directly in the chat.",
         status: "todo",
         effort: 5,
-        price: 1500,
+        price: 2000,
       },
       {
         name: "Push Message",
@@ -853,6 +850,13 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 3,
         price: 500,
+      },
+      {
+        name: "Appointment and Calendar",
+        description: "Books, moves and cancels appointments against a live calendar.",
+        status: "todo",
+        effort: 5,
+        price: 1000,
       },
       {
         name: "Emoticons",
@@ -1112,7 +1116,7 @@ export function DemoWidgetPage() {
                       </td>
                       {/* Price — per-feature cost, when quoted. */}
                       <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>
-                        {feature.price ? formatEuro(feature.price) : ""}
+                        {feature.price != null ? formatEuro(feature.price) : ""}
                       </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
                       <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
