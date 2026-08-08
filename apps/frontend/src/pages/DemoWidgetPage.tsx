@@ -1034,25 +1034,6 @@ export function DemoWidgetPage() {
           {slug === "demorobot" && (
             <div className="mt-7 w-full">
               <table className="w-full border-collapse text-left text-base">
-                <thead>
-                  <tr className={`border-b border-white/25 ${brand.tryLabel}`}>
-                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
-                      Feature
-                    </th>
-                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
-                      Status
-                    </th>
-                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
-                      Effort
-                    </th>
-                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
-                      Price
-                    </th>
-                    <th className="py-2 text-sm font-semibold uppercase tracking-wide">
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
                 <tbody>
                   {DEMO_PHASES.map((phase) => (
                   <Fragment key={phase.title}>
@@ -1067,6 +1048,25 @@ export function DemoWidgetPage() {
                           {phase.subtitle}
                         </span>
                       </td>
+                    </tr>
+                    {/* Column header repeated per phase, so every block reads
+                        as a self-contained table. */}
+                    <tr className={`border-b border-white/25 ${brand.tryLabel}`}>
+                      <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
+                        Feature
+                      </th>
+                      <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
+                        Status
+                      </th>
+                      <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
+                        Effort
+                      </th>
+                      <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
+                        Price
+                      </th>
+                      <th className="py-2 text-sm font-semibold uppercase tracking-wide">
+                        Notes
+                      </th>
                     </tr>
                     {phase.features.map((feature) => (
                     <tr key={feature.name} className="border-b border-white/10 align-top">
