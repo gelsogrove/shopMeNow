@@ -608,6 +608,9 @@ interface DemoFeature {
   // Price in euro for the single feature, shown in the Price column.
   // "tbd" renders as a question mark: the price is still to be evaluated.
   price?: number | "tbd"
+  // Development progress % shown in the Status column. Defaults by status:
+  // done 100, in_progress 50, todo 0 — set it to override (e.g. 80).
+  progress?: number
 }
 
 // Delivery phases. The roadmap is presented as separate blocks so a visitor
@@ -642,6 +645,18 @@ const EFFORT_LABELS: Record<number, string> = {
 }
 
 const DEMO_PHASES: DemoPhase[] = [
+  {
+    title: "Phase 0",
+    subtitle: "Extra features already included.",
+    features: [
+      {
+        name: "Speech to text",
+        description: "Customers can send audio instead of text",
+        status: "done",
+        effort: 1,
+      },
+    ],
+  },
   {
     title: "Phase 1 — Basic functionality",
     subtitle: "Available today — everything you can try right now in this demo.",
@@ -758,12 +773,6 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 4,
         price: 500,
-      },
-      {
-        name: "Speech to text",
-        description: "Customers can send audio instead of text",
-        status: "done",
-        effort: 1,
       },
       {
         name: "Security",
@@ -1069,15 +1078,15 @@ export function DemoWidgetPage() {
                       <td className="whitespace-nowrap py-2.5 pr-4">
                         {feature.status === "done" ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
-                            ✅ Done
+                            ✅ {feature.progress ?? 100}%
                           </span>
                         ) : feature.status === "in_progress" ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-sky-300">
-                            🚧 In progress
+                            🚧 {feature.progress ?? 50}%
                           </span>
                         ) : feature.status === "todo" ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-amber-200/90">
-                            🕒 To do
+                            🕒 {feature.progress ?? 0}%
                           </span>
                         ) : (
                           <span className={brand.itemsText}>{feature.status}</span>
