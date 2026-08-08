@@ -683,6 +683,12 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Embeddable chat for any website.",
         status: "done",
       },
+      {
+        name: "Terms and conditions",
+        description: "Asks for privacy consent before the conversation starts.",
+        status: "todo",
+        effort: 1,
+      },
     ],
   },
   {
@@ -716,12 +722,6 @@ const DEMO_PHASES: DemoPhase[] = [
           "Opens and tracks a support ticket for every escalated conversation.",
         status: "todo",
         effort: 4,
-      },
-      {
-        name: "Terms and conditions",
-        description: "Asks for privacy consent before the conversation starts.",
-        status: "todo",
-        effort: 1,
       },
       {
         name: "More languages",
@@ -797,12 +797,6 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 5,
       },
       {
-        name: "Emoticons",
-        description: "Replies use emoji so the conversation feels natural on WhatsApp.",
-        status: "todo",
-        effort: 1,
-      },
-      {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
         status: "todo",
@@ -837,6 +831,12 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Sends and understands voice messages in the chat.",
         status: "todo",
         effort: 3,
+      },
+      {
+        name: "Emoticons",
+        description: "Replies use emoji so the conversation feels natural on WhatsApp.",
+        status: "todo",
+        effort: 1,
       },
     ],
   },
