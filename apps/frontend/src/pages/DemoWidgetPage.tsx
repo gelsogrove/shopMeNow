@@ -1009,7 +1009,7 @@ export function DemoWidgetPage() {
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
                       Software
@@ -1036,14 +1036,26 @@ export function DemoWidgetPage() {
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Monthly fee
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €90/month
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      Hosting of the AI gateway, updates, monitoring and
+                      support.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
                       Usage
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
                       €0.05/message
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      You pay in proportion to how much the assistant actually
-                      works.
+                      On top of the monthly fee: you pay in proportion to how
+                      much the assistant actually works.
                     </span>
                   </div>
                 </div>
