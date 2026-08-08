@@ -645,13 +645,13 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Phase 1 — Basic functionality",
     subtitle: "Available today — everything you can try right now in this demo.",
-    total: 1500,
+    total: 2000,
     features: [
       {
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        note: "3 languages (Italian, English, Danish)Loading Context Data",
+        note: "Italian, English, Danish, German, Franch",
       },
       {
         name: "AI personality",
@@ -693,6 +693,14 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "done",
       },
       {
+        name: "Operator replay message translation",
+        description:
+          "Your operators reply in their own language: each message is translated into the customer's language automatically.",
+        status: "in_progress",
+        effort: 1,
+        price: 300,
+      },
+      {
         name: "Terms and conditions",
         description: "Asks for privacy consent before the conversation starts.",
         status: "todo",
@@ -704,7 +712,7 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
-    total: 1600,
+    total: 1300,
     features: [
       {
         name: "Loading Context Data",
@@ -736,19 +744,12 @@ const DEMO_PHASES: DemoPhase[] = [
         price: "tbd",
         effort: 4,
       },
-      {
-        name: "More languages",
-        description: "Adds French, Portuguese and German to the supported languages.",
-        status: "todo",
-        effort: 3,
-        price: 300,
-      },
     ],
   },
   {
     title: "Phase 3 — WhatsApp",
     subtitle: "Reaching customers on their channel, in their language.",
-    total: 2300,
+    total: 2000,
     features: [
       {
         name: "Install software on the client infrastructure",
@@ -763,14 +764,6 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 4,
         price: 500,
-      },
-      {
-        name: "Operator replay message translation",
-        description:
-          "Your operators reply in their own language: each message is translated into the customer's language automatically.",
-        status: "in_progress",
-        effort: 1,
-        price: 300,
       },
       {
         name: "Security",
