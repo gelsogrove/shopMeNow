@@ -1031,26 +1031,14 @@ export function DemoWidgetPage() {
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Loading data
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,000
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Importing your FAQ and troubleshooting flows from
-                      your own documents.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
                       Customizations
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,400
+                      €2,400
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Only what is tailor-made for you: the optional
-                      modules you pick from the phases above.
+                      One-time. Only what is tailor-made for you: loading your
+                      own data plus the optional modules you pick.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
