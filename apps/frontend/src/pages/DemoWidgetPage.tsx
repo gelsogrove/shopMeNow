@@ -723,8 +723,15 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "",
-    total: 2400,
+    total: 3500,
     features: [
+      {
+        name: "Installation on-premise",
+        description: "Deploys and configures the assistant on the server of the customer.",
+        status: "todo",
+        effort: 5,
+        price: 1000,
+      },
       {
         name: "Loading Context Data",
         description: "Loads your Faq and Flow into the platform from your document, we have a dedicated AI that can help the process.",
@@ -766,21 +773,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Asks for privacy consent before the conversation starts.",
         status: "todo",
         effort: 1,
-        price: 100,
-      },
-    ],
-  },
-  {
-    title: "Installation",
-    subtitle: "",
-    total: 1000,
-    features: [
-      {
-        name: "Install software on the client infrastructure",
-        description: "Deploys and configures the assistant on the server of the customer.",
-        status: "todo",
-        effort: 5,
-        price: 1000,
+        price: 200,
       },
     ],
   },
@@ -1016,7 +1009,7 @@ export function DemoWidgetPage() {
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
                       Software
@@ -1034,23 +1027,11 @@ export function DemoWidgetPage() {
                       Customizations
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €2,400
+                      €3,500
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Only what is tailor-made for you: loading your
-                      own data plus the optional modules you pick.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Installation
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,000
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Deploy and configuration of the software on the
-                      server of the customer.
+                      One-time. Everything tailor-made for you: on-premise
+                      installation, loading your data and the modules you pick.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
