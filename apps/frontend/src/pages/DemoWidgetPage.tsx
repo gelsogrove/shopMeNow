@@ -605,6 +605,8 @@ interface DemoFeature {
   // Rough build effort, rendered as a 5-segment bar. Shown on every row that
   // sets one, so delivered work is sized on the same scale as pending work.
   effort?: 1 | 2 | 3 | 4 | 5
+  // Price for the single feature, shown in the Price column (e.g. "€700").
+  price?: string
 }
 
 // Delivery phases. The roadmap is presented as separate blocks so a visitor
@@ -614,6 +616,8 @@ interface DemoPhase {
   title: string
   subtitle: string
   features: DemoFeature[]
+  // Price for the whole phase, rendered as a closing "Total" row (e.g. "€1,500").
+  total?: string
 }
 
 // Effort bar styling. Green→amber→red reads as "quick" → "significant build";
@@ -636,8 +640,9 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 1 — Demo",
+    title: "Phase 1 — Basic functionality",
     subtitle: "Available today — everything you can try right now in this demo.",
+    total: "€1,500",
     features: [
       {
         name: "Languages",
@@ -698,10 +703,10 @@ const DEMO_PHASES: DemoPhase[] = [
     features: [
       {
         name: "Loading Context Data",
-        description:
-          "Loads your products, documents and company information so every answer comes from your real data.",
+        description: "Loads your personal data into the platform.",
         status: "todo",
         effort: 5,
+        price: "€700",
       },
       {
         name: "Kanban Board",
@@ -715,6 +720,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Forwards the conversation to the agent for the customer's country.",
         status: "todo",
         effort: 3,
+        price: "€300",
       },
       {
         name: "Ticketing platform Integration",
@@ -740,12 +746,14 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Deploys and configures the assistant on your own server.",
         status: "todo",
         effort: 5,
+        price: "€1,000",
       },
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
         effort: 4,
+        price: "€500",
       },
       {
         name: "Operator replay message translation",
@@ -753,6 +761,7 @@ const DEMO_PHASES: DemoPhase[] = [
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "in_progress",
         effort: 1,
+        price: "€300",
       },
       {
         name: "Security",
@@ -795,12 +804,14 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
         effort: 5,
+        price: "€500",
       },
       {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
         status: "todo",
         effort: 5,
+        price: "€500",
       },
     ],
   },
@@ -1015,6 +1026,9 @@ export function DemoWidgetPage() {
                     <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
                       Effort
                     </th>
+                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
+                      Price
+                    </th>
                     <th className="py-2 text-sm font-semibold uppercase tracking-wide">
                       Notes
                     </th>
@@ -1026,7 +1040,7 @@ export function DemoWidgetPage() {
                     {/* Phase separator — turns the roadmap into readable
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
-                      <td colSpan={4} className="pb-3 pt-7">
+                      <td colSpan={5} className="pb-3 pt-7">
                         <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                           {phase.title}
                         </span>
@@ -1084,12 +1098,30 @@ export function DemoWidgetPage() {
                           </span>
                         ) : null}
                       </td>
+                      {/* Price — per-feature cost, when quoted. */}
+                      <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>
+                        {feature.price ?? ""}
+                      </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
                       <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
                         {feature.note ?? ""}
                       </td>
                     </tr>
                     ))}
+                    {/* Phase total — closing price row for the whole block. */}
+                    {phase.total && (
+                      <tr className="border-b border-white/20">
+                        <td className={`py-3 pr-4 font-extrabold ${brand.itemsText}`}>
+                          Total
+                        </td>
+                        <td
+                          colSpan={4}
+                          className={`py-3 text-lg font-extrabold ${brand.itemsText}`}
+                        >
+                          {phase.total}
+                        </td>
+                      </tr>
+                    )}
                   </Fragment>
                   ))}
                 </tbody>
