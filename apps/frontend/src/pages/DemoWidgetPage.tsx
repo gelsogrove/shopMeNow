@@ -606,7 +606,8 @@ interface DemoFeature {
   // sets one, so delivered work is sized on the same scale as pending work.
   effort?: 1 | 2 | 3 | 4 | 5
   // Price in euro for the single feature, shown in the Price column.
-  price?: number
+  // "tbd" renders as a question mark: the price is still to be evaluated.
+  price?: number | "tbd"
 }
 
 // Delivery phases. The roadmap is presented as separate blocks so a visitor
@@ -731,7 +732,8 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Ticketing platform Integration",
         description:
           "Opens and tracks a support ticket for every escalated conversation.",
-        status: "To evaluate",
+        status: "todo",
+        price: "tbd",
         effort: 4,
       },
       {
@@ -820,15 +822,16 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
-        status: "To evaluate",
+        status: "todo",
         effort: 5,
+        price: "tbd",
       },
     ],
   },
   {
     title: "Maybe Later",
     subtitle: "Parked for later — prioritized on request.",
-    total: 5000,
+    total: 6000,
     features: [
       {
         name: "Sales modules",
@@ -842,7 +845,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
         effort: 5,
-        price: 1000,
+        price: 1500,
       },
       {
         name: "Voice message",
@@ -856,7 +859,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Books, moves and cancels appointments against a live calendar.",
         status: "todo",
         effort: 5,
-        price: 1000,
+        price: 1500,
       },
       {
         name: "Emoticons",
@@ -1116,7 +1119,9 @@ export function DemoWidgetPage() {
                       </td>
                       {/* Price — per-feature cost, when quoted. */}
                       <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>
-                        {feature.price != null ? formatEuro(feature.price) : ""}
+                        {feature.price === "tbd"
+                          ? "❓"
+                          : formatEuro(feature.price ?? 0)}
                       </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
                       <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
@@ -1127,15 +1132,18 @@ export function DemoWidgetPage() {
                     {/* Phase total — closing price row for the whole block. */}
                     {phase.total && (
                       <tr className="border-b border-white/20">
-                        <td className={`py-3 pr-4 font-extrabold ${brand.itemsText}`}>
+                        <td
+                          colSpan={3}
+                          className={`py-3 pr-4 font-extrabold ${brand.itemsText}`}
+                        >
                           Total
                         </td>
                         <td
-                          colSpan={4}
-                          className={`py-3 text-lg font-extrabold ${brand.itemsText}`}
+                          className={`whitespace-nowrap py-3 pr-4 text-lg font-extrabold ${brand.itemsText}`}
                         >
                           {formatEuro(phase.total)}
                         </td>
+                        <td />
                       </tr>
                     )}
                   </Fragment>
@@ -1143,17 +1151,20 @@ export function DemoWidgetPage() {
                   {/* Grand total — sum of every phase total, computed so it
                       never drifts when a single phase price changes. */}
                   <tr>
-                    <td className={`py-4 pr-4 text-lg font-extrabold ${brand.itemsText}`}>
+                    <td
+                      colSpan={3}
+                      className={`py-4 pr-4 text-lg font-extrabold ${brand.itemsText}`}
+                    >
                       Grand total
                     </td>
                     <td
-                      colSpan={4}
-                      className={`py-4 text-xl font-extrabold ${brand.itemsText}`}
+                      className={`whitespace-nowrap py-4 pr-4 text-xl font-extrabold ${brand.itemsText}`}
                     >
                       {formatEuro(
                         DEMO_PHASES.reduce((sum, p) => sum + (p.total ?? 0), 0)
                       )}
                     </td>
+                    <td />
                   </tr>
                 </tbody>
               </table>
