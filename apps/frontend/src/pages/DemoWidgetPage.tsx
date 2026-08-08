@@ -1176,26 +1176,26 @@ export function DemoWidgetPage() {
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Setup
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      from €1,900
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Full configuration of your assistant: basic
-                      functionality plus the optional modules you pick above.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Annual license
+                      License
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
                       €1,500/year
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      On-premise: the software runs on your own infrastructure.
+                      The whole basic functionality, on your own infrastructure.
                       Updates, maintenance and support included.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Customizations
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      one-time
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      Only what is tailor-made for you: the optional modules you
+                      pick from the phases above, billed once.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
