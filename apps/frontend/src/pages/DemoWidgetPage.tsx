@@ -622,6 +622,9 @@ interface DemoPhase {
   features: DemoFeature[]
   // Price in euro for the whole phase, rendered as a closing "Total" row.
   total?: number
+  // Flat-rate phase: the total covers everything, so features without their
+  // own price render "—" instead of €0.
+  flat?: boolean
 }
 
 const formatEuro = (amount: number) => `€${amount.toLocaleString("en-US")}`
@@ -646,21 +649,10 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 0",
-    subtitle: "Extra features already included.",
-    features: [
-      {
-        name: "Speech to text",
-        description: "Customers can send audio instead of text",
-        status: "done",
-        effort: 1,
-      },
-    ],
-  },
-  {
     title: "Phase 1 — Basic functionality",
     subtitle: "Available today — everything you can try right now in this demo.",
-    total: 2000,
+    total: 1900,
+    flat: true,
     features: [
       {
         name: "Languages",
@@ -739,6 +731,12 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 2,
         price: 0,
       },
+      {
+        name: "Speech to text",
+        description: "Customers can send audio instead of text",
+        status: "done",
+        effort: 1,
+      },
     ],
   },
   {
@@ -776,7 +774,7 @@ const DEMO_PHASES: DemoPhase[] = [
       },
       {
         name: "Security",
-        description: "Security analysis.",
+        description: "Security analysis directly on your server.",
         status: "todo",
         effort: 4,
         price: 500,
@@ -1119,7 +1117,9 @@ export function DemoWidgetPage() {
                       <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>
                         {feature.price === "tbd"
                           ? "❓"
-                          : formatEuro(feature.price ?? 0)}
+                          : phase.flat && !feature.price
+                            ? "—"
+                            : formatEuro(feature.price ?? 0)}
                       </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
                       <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
