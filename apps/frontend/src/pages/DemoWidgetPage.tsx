@@ -1173,7 +1173,7 @@ export function DemoWidgetPage() {
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
                       License
@@ -1196,6 +1196,18 @@ export function DemoWidgetPage() {
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       Only what is tailor-made for you: the optional modules you
                       pick from the phases above, billed once.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Installation
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €1,000
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. Deploy and configuration of the software on your
+                      own server.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
