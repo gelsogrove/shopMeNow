@@ -701,6 +701,13 @@ const DEMO_PHASES: DemoPhase[] = [
         price: 300,
       },
       {
+        name: "Block spam user",
+        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
+        status: "todo",
+        effort: 1,
+        price: 0,
+      },
+      {
         name: "Terms and conditions",
         description: "Asks for privacy consent before the conversation starts.",
         status: "todo",
@@ -712,14 +719,14 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
-    total: 1300,
+    total: 300,
     features: [
       {
         name: "Loading Context Data",
         description: "Loads your personal data into the platform.",
         status: "todo",
         effort: 5,
-        price: 1000,
+        price: "tbd",
       },
       {
         name: "Kanban Board",
@@ -771,13 +778,6 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 4,
         price: 500,
-      },
-      {
-        name: "Block spam user",
-        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
-        status: "todo",
-        effort: 1,
-        price: 0,
       },
     ],
   },
