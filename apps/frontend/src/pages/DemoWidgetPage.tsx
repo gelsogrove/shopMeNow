@@ -642,13 +642,14 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
-        status: "in_progress",
+        status: "done",
         note: "Italian, English, Danish for now — more on request.",
       },
       {
         name: "AI personality",
         description: "You define the assistant's name, tone and rules — no coding needed.",
         status: "done",
+        note: "Name, personality, AI model, temperature.",
       },
       {
         name: "Welcome message",
@@ -658,20 +659,19 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "FAQ",
         description: "Answers common questions from a curated knowledge base — never invented.",
-        status: "in_progress",
+        status: "done",
         note: 'Try: "How do I clean my robot?" · "Can I fit a second battery?" · "What does the warranty cover?"',
       },
       {
         name: "Flow",
         description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
-        status: "in_progress",
+        status: "done",
         note: 'Try: "My robot shows ERROR 001" · "It lost a wheel while mowing" · "It no longer cuts the grass evenly"',
       },
       {
         name: "Escalate to Human support",
         description: "Hands the conversation to a real operator and notifies them by email.",
-        status: "in_progress",
-        note: "To investigate: the handover should open a case on the ticketing platform instead of sending an email.",
+        status: "done",
       },
       {
         name: "Chats history",
@@ -681,7 +681,7 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Widget",
         description: "Embeddable chat for any website.",
-        status: "in_progress",
+        status: "done",
       },
     ],
   },
@@ -700,7 +700,7 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Kanban Board",
         description:
-          "Track conversations across columns so nothing is left unanswered.",
+          "Utility to highlight wrong answers and track their correction.",
         status: "in_progress",
         effort: 2,
       },
@@ -729,6 +729,12 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 1,
       },
+      {
+        name: "More languages",
+        description: "Adds French, Portuguese and German to the supported languages.",
+        status: "todo",
+        effort: 3,
+      },
     ],
   },
   {
@@ -739,25 +745,19 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Install software on the client infrastructure",
         description: "Deploys and configures the assistant on your own server.",
         status: "todo",
-        effort: 3,
+        effort: 5,
       },
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
-        effort: 5,
-      },
-      {
-        name: "Speech to text",
-        description: "Understands voice notes sent by the customer.",
-        status: "todo",
-        effort: 1,
+        effort: 4,
       },
       {
         name: "Operator replay message translation",
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
-        status: "todo",
+        status: "in_progress",
         effort: 1,
       },
       {
@@ -775,6 +775,12 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Text to speech",
         description: "Replies out loud with a voice note instead of text.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Speech to text",
+        description: "Understands voice notes sent by the customer.",
         status: "todo",
         effort: 1,
       },
