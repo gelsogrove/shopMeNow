@@ -665,21 +665,21 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        effort: 2,
+        effort: 3,
         note: "Italian, English, Danish, German, Franch",
       },
       {
         name: "AI personality",
         description: "You define the assistant's name, tone and rules",
         status: "done",
-        effort: 2,
+        effort: 5,
         note: "Chatbot name, chatbot personality, AI model, temperature, escalation rules",
       },
       {
         name: "Welcome message",
         description: "Greets new customers and welcomes returning ones back by name.",
         status: "done",
-        effort: 1,
+        effort: 2,
         note: "Includes the welcome-back message: the chatbot greets returning customers by name.",
       },
       {
@@ -700,19 +700,19 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Escalate to Human support",
         description: "Hands the conversation to a real operator and notifies them by email.",
         status: "done",
-        effort: 3,
+        effort: 4,
       },
       {
         name: "Chats history",
         description: "Picks up where you left off: nothing is lost between conversations.",
         status: "done",
-        effort: 2,
+        effort: 4,
       },
       {
         name: "Widget",
         description: "Embeddable chat for any website.",
         status: "done",
-        effort: 3,
+        effort: 4,
       },
       {
         name: "Operator replay message translation",
@@ -725,15 +725,9 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Block spam user",
         description: "Blocked numbers are ignored: no reply, no notification, no cost.",
-        status: "todo",
-        effort: 1,
+        status: "done",
+        effort: 2,
         price: 0,
-      },
-      {
-        name: "Text to speech",
-        description: "Replies out loud with a voice note instead of text.",
-        status: "todo",
-        effort: 1,
       },
     ],
   },
@@ -775,8 +769,8 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 3 — WhatsApp",
-    subtitle: "Reaching customers on their channel, in their language.",
+    title: "Phase 3 — Customize",
+    subtitle: "Deploying and tailoring the assistant to your infrastructure.",
     total: 2000,
     features: [
       {
@@ -792,6 +786,12 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 4,
         price: 500,
+      },
+      {
+        name: "Speech to text",
+        description: "Customers can send audio instead of text",
+        status: "done",
+        effort: 1,
       },
       {
         name: "Security",
