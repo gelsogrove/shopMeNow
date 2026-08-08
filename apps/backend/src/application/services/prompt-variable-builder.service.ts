@@ -28,6 +28,7 @@ import {
 } from "../../types/prompt-variables.types"
 import { SmartPromptBuilder } from "../../services/smart-prompt-builder.service"
 import { getCurrencySymbol } from "../../utils/currency"
+import { formatFaqsForPrompt } from "../../utils/format-faqs-for-prompt"
 import logger from "../../utils/logger"
 
 /**
@@ -819,9 +820,10 @@ export class PromptVariableBuilder {
   private static async loadFAQs(prisma: PrismaClient, workspaceId: string): Promise<string> {
     const faqs = await prisma.fAQ.findMany({
       where: { workspaceId, isActive: true },
-      select: { question: true, answer: true },
+      select: { question: true, answer: true, category: true },
+      orderBy: { order: 'asc' },
       take: 20
     })
-    return faqs.map(faq => `Q: ${faq.question}\nA: ${faq.answer}`).join('\n\n')
+    return formatFaqsForPrompt(faqs)
   }
 }

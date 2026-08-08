@@ -5,6 +5,7 @@ export interface FAQ {
   id: string
   question: string
   answer: string
+  category?: string | null
   isActive: boolean
   workspaceId: string
   createdAt: string
@@ -14,12 +15,14 @@ export interface FAQ {
 export interface CreateFAQData {
   question: string
   answer: string
+  category?: string | null
   isActive?: boolean
 }
 
 export interface UpdateFAQData {
   question?: string
   answer?: string
+  category?: string | null
   isActive?: boolean
 }
 
@@ -198,6 +201,7 @@ export const createFAQ = async (
       id: `mock-faq-${Date.now()}`,
       question: data.question,
       answer: data.answer,
+      category: data.category ?? null,
       isActive: data.isActive ?? true,
       workspaceId,
       createdAt: new Date().toISOString(),

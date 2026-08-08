@@ -156,10 +156,11 @@ export class FaqController {
         return res.status(400).json({ error: "Workspace ID is required" })
       }
 
-      const { question, answer, isActive } = req.body
+      const { question, answer, category, isActive } = req.body
       const faqData = {
         question,
         answer,
+        category,
         isActive: isActive !== undefined ? isActive : true,
         workspaceId,
       }
@@ -224,7 +225,7 @@ export class FaqController {
   async updateFaq(req: Request, res: Response): Promise<Response> {
     try {
       const { id, workspaceId } = req.params
-      const { question, answer, isActive } = req.body
+      const { question, answer, category, isActive } = req.body
 
       if (!workspaceId) {
         return res.status(400).json({ error: "Workspace ID is required" })
@@ -233,6 +234,7 @@ export class FaqController {
       const faq = await this.faqService.update(id, workspaceId, {
         question,
         answer,
+        category,
         isActive,
       })
 

@@ -14,6 +14,7 @@ import * as path from "path"
 import { PrismaClient } from "@echatbot/database"
 import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
+import { formatFaqsForPrompt } from "../../utils/format-faqs-for-prompt"
 import logger from "../../utils/logger"
 import { ChannelMode } from "@echatbot/database"
 import {
@@ -229,8 +230,8 @@ export class PromptRenderService {
         where: { workspaceId, isActive: true },
         orderBy: { order: "asc" },
       })
-      const faqsText = faqs.length > 0 
-        ? faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n")
+      const faqsText = faqs.length > 0
+        ? formatFaqsForPrompt(faqs)
         : "No FAQs available"
 
       // Get Products (use isActive filter - no soft delete on Products)

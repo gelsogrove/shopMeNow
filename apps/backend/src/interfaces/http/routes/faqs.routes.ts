@@ -25,6 +25,10 @@ import { checkTrialValid } from "../middlewares/billing.middleware"
  *         answer:
  *           type: string
  *           description: Answer text
+ *         category:
+ *           type: string
+ *           nullable: true
+ *           description: Optional category used to group FAQs (e.g. "Orders", "Shipping")
  *         isActive:
  *           type: boolean
  *           description: Whether the FAQ is active
@@ -109,6 +113,10 @@ export const faqsRouter = (): Router => {
    *               answer:
    *                 type: string
    *                 description: Answer text
+   *               category:
+   *                 type: string
+   *                 nullable: true
+   *                 description: Optional category used to group FAQs
    *               isActive:
    *                 type: boolean
    *                 description: Whether the FAQ is active
@@ -190,6 +198,10 @@ export const faqsRouter = (): Router => {
    *               answer:
    *                 type: string
    *                 description: Answer text
+   *               category:
+   *                 type: string
+   *                 nullable: true
+   *                 description: Optional category used to group FAQs
    *               isActive:
    *                 type: boolean
    *                 description: Whether the FAQ is active

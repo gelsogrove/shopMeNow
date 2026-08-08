@@ -78,8 +78,19 @@ export function FAQPage() {
 
   const filteredFAQs = faqs.filter((faq) =>
     faq.question.toLowerCase().includes(searchValue.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchValue.toLowerCase())
+    faq.answer.toLowerCase().includes(searchValue.toLowerCase()) ||
+    (faq.category ?? "").toLowerCase().includes(searchValue.toLowerCase())
   )
+
+  // Distinct categories already in use, offered as suggestions in the form
+  // so the same category is spelled consistently across FAQs.
+  const existingCategories = Array.from(
+    new Set(
+      faqs
+        .map((faq) => faq.category?.trim())
+        .filter((category): category is string => !!category)
+    )
+  ).sort()
 
   // Pagination
   const totalPages = Math.ceil(filteredFAQs.length / ITEMS_PER_PAGE)
@@ -103,6 +114,7 @@ export function FAQPage() {
     const data = {
       question: formData.get("question") as string,
       answer: formData.get("answer") as string,
+      category: (formData.get("category") as string)?.trim() || null,
       isActive: formData.get("isActive") === "on",
     }
 
@@ -132,6 +144,7 @@ export function FAQPage() {
     const data = {
       question: formData.get("question") as string,
       answer: formData.get("answer") as string,
+      category: (formData.get("category") as string)?.trim() || null,
       isActive: formData.get("isActive") === "on",
     }
 
@@ -203,6 +216,25 @@ export function FAQPage() {
         />
         <p className="text-xs text-gray-500">
           Provide a clear and detailed answer to the question.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="category">Category</Label>
+        <Input
+          id="category"
+          name="category"
+          list="faq-categories"
+          placeholder="Enter category (optional)"
+          defaultValue={faq?.category ?? ""}
+        />
+        <datalist id="faq-categories">
+          {existingCategories.map((category) => (
+            <option key={category} value={category} />
+          ))}
+        </datalist>
+        <p className="text-xs text-gray-500">
+          Group related FAQs under the same category. The chatbot uses it to
+          navigate answers by topic.
         </p>
       </div>
       <div className="flex items-center space-x-2">
@@ -292,6 +324,12 @@ export function FAQPage() {
                 <div className="flex items-start justify-between gap-4">
                   {/* Content */}
                   <div className="flex-1 min-w-0">
+                    {/* Category */}
+                    {faq.category && (
+                      <span className="inline-block px-2 py-0.5 mb-2 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        {faq.category}
+                      </span>
+                    )}
                     {/* Question */}
                     <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:line-clamp-none cursor-pointer">
                       {faq.question}

@@ -9,6 +9,7 @@ export class FAQ {
   id: string;
   question: string;
   answer: string;
+  category?: string | null;
   isActive: boolean;
   workspaceId: string;
   createdAt: Date;
