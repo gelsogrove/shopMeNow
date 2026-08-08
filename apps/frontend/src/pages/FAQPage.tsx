@@ -3,16 +3,14 @@ import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { FormSheet } from "@/components/shared/FormSheet"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateWorkspace } from "@/services/workspaceApi"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { FAQ, faqApi } from "@/services/faqApi"
 import { commonStyles } from "@/styles/common"
-import { ArrowLeft, HelpCircle, Edit2, Trash2, Plus } from "lucide-react"
+import { ArrowLeft, HelpCircle, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
@@ -22,6 +20,8 @@ import {
   FaqCategoryFolders,
   FaqCategoryRow,
 } from "@/components/faq/FaqCategoryFolders"
+import { FaqCardList } from "@/components/faq/FaqCardList"
+import { FaqFormFields } from "@/components/faq/FaqFormFields"
 
 // FAQs without a category have no real category value, so they never appear
 // inside a named folder. This synthetic id backs an "Uncategorized" row —
@@ -294,70 +294,9 @@ export function FAQPage() {
     return <PageLayout><div className="text-center py-12">Loading FAQs...</div></PageLayout>
   }
 
-  const renderFormFields = (faq: FAQ | null) => (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="question">Question</Label>
-        <Input
-          id="question"
-          name="question"
-          placeholder="Enter question"
-          defaultValue={faq?.question}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="answer">Answer</Label>
-        <Textarea
-          id="answer"
-          name="answer"
-          className="min-h-[400px]"
-          placeholder="Enter detailed answer"
-          defaultValue={faq?.answer}
-          required
-        />
-        <p className="text-xs text-gray-500">
-          Provide a clear and detailed answer to the question.
-        </p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
-        <Input
-          id="category"
-          name="category"
-          list="faq-categories"
-          placeholder="Enter category (optional)"
-          defaultValue={
-            // Adding from inside a folder prefills that folder's category.
-            faq?.category ??
-            (openCategory && openCategory !== UNCATEGORIZED_ID
-              ? openCategory
-              : "")
-          }
-        />
-        <datalist id="faq-categories">
-          {existingCategories.map((category) => (
-            <option key={category} value={category} />
-          ))}
-        </datalist>
-        <p className="text-xs text-gray-500">
-          Group related FAQs under the same category. The chatbot uses it to
-          navigate answers by topic.
-        </p>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="isActive"
-          name="isActive"
-          defaultChecked={faq ? faq.isActive : true}
-        />
-        <Label htmlFor="isActive">Active</Label>
-        <p className="text-xs text-gray-500 ml-2">
-          Only active FAQs will be visible to customers
-        </p>
-      </div>
-    </div>
-  )
+  // Adding from inside a folder prefills that folder's category.
+  const addDefaultCategory =
+    openCategory && openCategory !== UNCATEGORIZED_ID ? openCategory : ""
 
   return (
     <PageLayout>
@@ -462,102 +401,19 @@ export function FAQPage() {
             No FAQs found. Create one to get started!
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 gap-4">
-            {paginatedFAQs.map((faq) => (
-              <Card key={faq.id} className="p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between gap-4">
-                  {/* Content — no category pill: the card list only renders
-                      inside a folder, where the category is already known. */}
-                  <div className="flex-1 min-w-0">
-                    {/* Question */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:line-clamp-none cursor-pointer">
-                      {faq.question}
-                    </h3>
-                    {/* Answer Preview/Full */}
-                    <p className="text-sm text-gray-700 mb-3 line-clamp-3 whitespace-pre-wrap">
-                      {faq.answer}
-                    </p>
-                  </div>
-
-                  {/* Right Side: Status + Actions */}
-                  <div className="flex gap-4 flex-shrink-0 items-center">
-                    {/* Status Badge */}
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                        faq.isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {faq.isActive ? "Active" : "Inactive"}
-                    </span>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(faq)}
-                        className="hover:bg-green-50 text-green-600 hover:text-green-700"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(faq)}
-                        className="hover:bg-red-50 text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t">
-                <p className="text-sm text-gray-600">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredFAQs.length)} of {filteredFAQs.length} FAQs
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
+          <FaqCardList
+            faqs={paginatedFAQs}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            pagination={{
+              currentPage,
+              totalPages,
+              startIndex,
+              endIndex,
+              totalCount: filteredFAQs.length,
+              onPageChange: setCurrentPage,
+            }}
+          />
         )}
         </>
         )}
@@ -570,7 +426,11 @@ export function FAQPage() {
         description="Add a new frequently asked question"
         onSubmit={handleAdd}
       >
-        {renderFormFields(null)}
+        <FaqFormFields
+          faq={null}
+          existingCategories={existingCategories}
+          defaultCategory={addDefaultCategory}
+        />
       </FormSheet>
 
       <FormSheet
@@ -580,7 +440,13 @@ export function FAQPage() {
         description="Edit this frequently asked question"
         onSubmit={handleEditSubmit}
       >
-        {selectedFAQ && renderFormFields(selectedFAQ)}
+        {selectedFAQ && (
+          <FaqFormFields
+            faq={selectedFAQ}
+            existingCategories={existingCategories}
+            defaultCategory=""
+          />
+        )}
       </FormSheet>
 
       <ConfirmDialog

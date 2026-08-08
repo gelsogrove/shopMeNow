@@ -959,7 +959,7 @@ export function DemoWidgetPage() {
           centers it on tall screens and lets it scroll on short ones instead of
           being clipped (the feature table makes the column tall). */}
       <div className="relative z-10 flex h-full flex-col items-center overflow-y-auto px-6 py-12 text-center sm:items-start sm:px-16 sm:text-left">
-        <div className="max-w-xl">
+        <div className="max-w-4xl">
           <div className={`mb-4 inline-flex items-center gap-2 rounded-full ${brand.badge} px-4 py-1.5 text-sm font-medium backdrop-blur`}>
             <span className={`h-2 w-2 rounded-full ${brand.dot}`} />
             {t.liveDemo}
@@ -991,19 +991,19 @@ export function DemoWidgetPage() {
               still coming. Only on demorobot, where the list applies. */}
           {slug === "demorobot" && (
             <div className="mt-7 w-full">
-              <table className="w-full border-collapse text-left text-sm">
+              <table className="w-full border-collapse text-left text-base">
                 <thead>
                   <tr className={`border-b border-white/25 ${brand.tryLabel}`}>
-                    <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
                       Feature
                     </th>
-                    <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
                       Status
                     </th>
-                    <th className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
                       Effort
                     </th>
-                    <th className="py-2 text-xs font-semibold uppercase tracking-wide">
+                    <th className="py-2 text-sm font-semibold uppercase tracking-wide">
                       Notes
                     </th>
                   </tr>
@@ -1015,10 +1015,10 @@ export function DemoWidgetPage() {
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
                       <td colSpan={4} className="pb-3 pt-7">
-                        <span className={`block text-lg font-extrabold tracking-tight sm:text-xl ${brand.itemsText}`}>
+                        <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                           {phase.title}
                         </span>
-                        <span className={`mt-1 block text-sm leading-snug ${brand.openHint}`}>
+                        <span className={`mt-1 block text-base leading-snug ${brand.openHint}`}>
                           {phase.subtitle}
                         </span>
                       </td>
@@ -1028,7 +1028,7 @@ export function DemoWidgetPage() {
                       {/* Name + one-line description of what the feature does. */}
                       <td className="py-2.5 pr-4">
                         <span className={`font-medium ${brand.itemsText}`}>{feature.name}</span>
-                        <span className={`mt-0.5 block text-xs leading-snug ${brand.openHint}`}>
+                        <span className={`mt-0.5 block text-sm leading-snug ${brand.openHint}`}>
                           {feature.description}
                         </span>
                       </td>
@@ -1073,7 +1073,7 @@ export function DemoWidgetPage() {
                         ) : null}
                       </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
-                      <td className={`py-2.5 text-xs leading-snug ${brand.openHint}`}>
+                      <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
                         {feature.note ?? ""}
                       </td>
                     </tr>
