@@ -1167,23 +1167,35 @@ export function DemoWidgetPage() {
                 </tbody>
               </table>
 
-              {/* Pricing model — how the offer is billed: one-time setup,
-                  monthly license with included volume, then pay-per-use. */}
+              {/* Pricing model — the five billable items, four one-time (each
+                  mapping to a phase above) plus metered usage. */}
               <div className="mt-10">
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      License
+                      Software
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,500/year
+                      €2,500
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      The whole basic functionality, on your own infrastructure.
-                      Updates, maintenance and support included.
+                      One-time. The assistant itself, with the whole basic
+                      functionality already working today.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Loading data
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €1,000
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. Importing your FAQ and troubleshooting flows from
+                      your own documents.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
@@ -1191,11 +1203,11 @@ export function DemoWidgetPage() {
                       Customizations
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      one-time
+                      €1,000
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      Only what is tailor-made for you: the optional modules you
-                      pick from the phases above, billed once.
+                      One-time. Only what is tailor-made for you: the optional
+                      modules you pick from the phases above.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
