@@ -658,104 +658,85 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        effort: 3,
         note: "Italian, English, Danish, German, Franch",
       },
       {
         name: "AI personality",
         description: "You define the assistant's name, tone and rules",
         status: "done",
-        effort: 5,
         note: "Chatbot name, chatbot personality, AI model, temperature, escalation rules",
       },
       {
         name: "Welcome message",
         description: "Greets new customers and welcomes returning ones back by name.",
         status: "done",
-        effort: 2,
         note: "Includes the welcome-back message: the chatbot greets returning customers by name.",
       },
       {
         name: "FAQ",
         description: "Answers common questions from a curated knowledge base — never invented.",
         status: "done",
-        effort: 3,
         note: 'Try: "How do I clean my robot?" · "Can I fit a second battery?" · "What does the warranty cover?"',
       },
       {
         name: "Flow",
         description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
         status: "done",
-        effort: 5,
         note: 'Try: "My robot shows ERROR 001" · "It lost a wheel while mowing" · "It no longer cuts the grass evenly"',
       },
       {
         name: "Escalate to Human support",
         description: "Hands the conversation to a real operator and notifies them by email.",
         status: "done",
-        effort: 4,
         note: "If the assistant can't find the answer, the conversation is handed to a human operator.",
       },
       {
         name: "Chats history",
         description: "Picks up where you left off: nothing is lost between conversations.",
         status: "done",
-        effort: 4,
       },
       {
         name: "Widget",
         description: "Embeddable chat for any website.",
         status: "done",
-        effort: 4,
       },
       {
         name: "Operator replay message translation",
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "done",
-        effort: 3,
         price: 0,
       },
       {
         name: "Block spam user",
         description: "Blocked numbers are ignored: no reply, no notification, no cost.",
         status: "done",
-        effort: 2,
-        price: 0,
-      },
-      {
-        name: "Kanban Board",
-        description:
-          "Utility to highlight wrong answers and track their correction.",
-        status: "done",
-        effort: 2,
         price: 0,
       },
       {
         name: "Speech to text",
         description: "Customers can send audio instead of text",
         status: "done",
-        effort: 1,
       },
     ],
   },
   {
     title: "Loading data (optional)",
-    subtitle:
-      "Feeding the assistant your own content so it answers from your data.",
+    subtitle: "",
+    total: 1000,
     features: [
       {
         name: "Loading Context Data",
         description: "Loads your Faq and Flow into the platform from your document, we have a dedicated AI that can help the process.",
         status: "todo",
         effort: 5,
-        price: "tbd",
+        price: 1000,
       },
     ],
   },
   {
     title: "Customizations",
-    subtitle: "Tailoring the assistant to your channels and your operators.",
+    subtitle: "",
     total: 1400,
     features: [
       {
@@ -798,7 +779,7 @@ const DEMO_PHASES: DemoPhase[] = [
   },
   {
     title: "Installation",
-    subtitle: "Putting the assistant into production on your own infrastructure.",
+    subtitle: "",
     total: 1000,
     features: [
       {
@@ -812,7 +793,7 @@ const DEMO_PHASES: DemoPhase[] = [
   },
   {
     title: "Maybe Later",
-    subtitle: "Parked for later — prioritized on request.",
+    subtitle: "",
     total: 7350,
     features: [
       {
@@ -1048,7 +1029,7 @@ export function DemoWidgetPage() {
                       Software
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €2,500
+                      €1,900
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. The assistant itself, with the whole basic
@@ -1072,7 +1053,7 @@ export function DemoWidgetPage() {
                       Customizations
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,000
+                      €1,400
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Only what is tailor-made for you: the optional
@@ -1116,9 +1097,11 @@ export function DemoWidgetPage() {
                         <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                           {phase.title}
                         </span>
-                        <span className={`mt-1 block text-base leading-snug ${brand.openHint}`}>
-                          {phase.subtitle}
-                        </span>
+                        {phase.subtitle && (
+                          <span className={`mt-1 block text-base leading-snug ${brand.openHint}`}>
+                            {phase.subtitle}
+                          </span>
+                        )}
                       </td>
                     </tr>
                     {/* Column header repeated per phase, so every block reads
