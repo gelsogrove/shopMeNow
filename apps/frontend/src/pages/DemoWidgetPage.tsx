@@ -643,7 +643,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "in_progress",
-        note: "Italian and English for now — more on request.",
+        note: "Italian, English, Danish for now — more on request.",
       },
       {
         name: "AI personality",
@@ -701,8 +701,26 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Kanban Board",
         description:
           "Track conversations across columns so nothing is left unanswered.",
-        status: "todo",
+        status: "in_progress",
         effort: 2,
+      },
+      {
+        name: "Forward Human Support logic",
+        description: "Forwards the conversation to the agent for the customer's country.",
+        status: "todo",
+        effort: 3,
+      },
+      {
+        name: "Block spam user",
+        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
+        status: "todo",
+        effort: 1,
+      },
+      {
+        name: "Terms and conditions",
+        description: "Asks for privacy consent before the conversation starts.",
+        status: "todo",
+        effort: 1,
       },
     ],
   },
@@ -710,6 +728,18 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 3 — WhatsApp",
     subtitle: "Reaching customers on their channel, in their language.",
     features: [
+      {
+        name: "Install software on the client infrastructure",
+        description: "Deploys and configures the assistant on your own server.",
+        status: "todo",
+        effort: 3,
+      },
+      {
+        name: "WhatsApp settings",
+        description: "Same assistant answering directly on your WhatsApp business number.",
+        status: "todo",
+        effort: 3,
+      },
       {
         name: "Speech to text",
         description: "Understands voice notes sent by the customer.",
@@ -724,29 +754,10 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
-        name: "Install software on the client infrastructure",
-        description: "Deploys and configures the assistant on your own server.",
-        status: "todo",
-        effort: 3,
-      },
-      {
-        name: "WhatsApp settings",
-        description: "Same assistant answering directly on your WhatsApp business number.",
-        status: "todo",
-        effort: 3,
-      },
-      {
         name: "Security",
-        description:
-          "Encrypted data, access control and full isolation between workspaces.",
+        description: "Security analysis.",
         status: "todo",
         effort: 3,
-      },
-      {
-        name: "Emoticons",
-        description: "Replies use emoji so the conversation feels natural on WhatsApp.",
-        status: "todo",
-        effort: 1,
       },
     ],
   },
@@ -757,18 +768,6 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Text to speech",
         description: "Replies out loud with a voice note instead of text.",
-        status: "todo",
-        effort: 1,
-      },
-      {
-        name: "Block spam user",
-        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
-        status: "todo",
-        effort: 1,
-      },
-      {
-        name: "Terms and conditions",
-        description: "Asks for privacy consent before the conversation starts.",
         status: "todo",
         effort: 1,
       },
@@ -785,10 +784,10 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
-        name: "Forward Human Support logic",
-        description: "Forwards the conversation to the agent for the customer's country.",
+        name: "Emoticons",
+        description: "Replies use emoji so the conversation feels natural on WhatsApp.",
         status: "todo",
-        effort: 3,
+        effort: 1,
       },
       {
         name: "Ticketing platform Integration",
