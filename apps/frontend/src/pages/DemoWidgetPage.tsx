@@ -687,6 +687,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Hands the conversation to a real operator and notifies them by email.",
         status: "done",
         effort: 4,
+        note: "If the assistant can't find the answer, the conversation is handed to a human operator.",
       },
       {
         name: "Chats history",
