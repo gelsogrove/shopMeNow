@@ -711,6 +711,13 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 3,
       },
       {
+        name: "Ticketing platform Integration",
+        description:
+          "Opens and tracks a support ticket for every escalated conversation.",
+        status: "todo",
+        effort: 4,
+      },
+      {
         name: "Block spam user",
         description: "Blocked numbers are ignored: no reply, no notification, no cost.",
         status: "todo",
@@ -738,7 +745,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
-        effort: 3,
+        effort: 5,
       },
       {
         name: "Speech to text",
@@ -757,7 +764,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Security",
         description: "Security analysis.",
         status: "todo",
-        effort: 3,
+        effort: 4,
       },
     ],
   },
@@ -781,20 +788,13 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Send Images and Documents",
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
-        effort: 1,
+        effort: 5,
       },
       {
         name: "Emoticons",
         description: "Replies use emoji so the conversation feels natural on WhatsApp.",
         status: "todo",
         effort: 1,
-      },
-      {
-        name: "Ticketing platform Integration",
-        description:
-          "Opens and tracks a support ticket for every escalated conversation.",
-        status: "todo",
-        effort: 4,
       },
       {
         name: "Appointment and Calendar",
@@ -818,7 +818,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
-        effort: 3,
+        effort: 5,
       },
     ],
   },
