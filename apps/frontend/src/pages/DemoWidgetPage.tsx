@@ -643,6 +643,20 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
+    title: "Phase 0",
+    subtitle: "Internal quality tools.",
+    features: [
+      {
+        name: "Kanban Board",
+        description:
+          "Utility to highlight wrong answers and track their correction.",
+        status: "done",
+        effort: 2,
+        price: 0,
+      },
+    ],
+  },
+  {
     title: "Phase 1 — Basic functionality",
     subtitle: "Available today — everything you can try right now in this demo.",
     total: 2000,
@@ -705,14 +719,6 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Blocked numbers are ignored: no reply, no notification, no cost.",
         status: "todo",
         effort: 1,
-        price: 0,
-      },
-      {
-        name: "Kanban Board",
-        description:
-          "Utility to highlight wrong answers and track their correction.",
-        status: "in_progress",
-        effort: 2,
         price: 0,
       },
       {
