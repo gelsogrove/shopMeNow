@@ -836,6 +836,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
         effort: 5,
+        price: "€750",
       },
       {
         name: "Voice message",
