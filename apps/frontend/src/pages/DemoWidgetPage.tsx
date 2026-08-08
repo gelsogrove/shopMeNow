@@ -706,7 +706,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "done",
-        effort: 1,
+        effort: 3,
         price: 0,
       },
       {
@@ -730,7 +730,6 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
-    total: 400,
     features: [
       {
         name: "Loading Context Data",
@@ -739,34 +738,12 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 5,
         price: "tbd",
       },
-      {
-        name: "Forward Human Support logic",
-        description: "Forwards the conversation to the agent for the customer's country.",
-        status: "todo",
-        effort: 3,
-        price: 300,
-      },
-      {
-        name: "Ticketing platform Integration",
-        description:
-          "Opens and tracks a support ticket for every escalated conversation.",
-        status: "todo",
-        price: "tbd",
-        effort: 4,
-      },
-      {
-        name: "Terms and conditions",
-        description: "Asks for privacy consent before the conversation starts.",
-        status: "todo",
-        effort: 1,
-        price: 100,
-      },
     ],
   },
   {
     title: "Phase 3 — Customize",
     subtitle: "Deploying and tailoring the assistant to your infrastructure.",
-    total: 2000,
+    total: 2400,
     features: [
       {
         name: "Install software on the client infrastructure",
@@ -795,6 +772,28 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 4,
         price: 500,
       },
+      {
+        name: "Forward Human Support logic",
+        description: "Forwards the conversation to the agent for the customer's country.",
+        status: "todo",
+        effort: 3,
+        price: 300,
+      },
+      {
+        name: "Ticketing platform Integration",
+        description:
+          "Opens and tracks a support ticket for every escalated conversation.",
+        status: "todo",
+        price: "tbd",
+        effort: 4,
+      },
+      {
+        name: "Terms and conditions",
+        description: "Asks for privacy consent before the conversation starts.",
+        status: "todo",
+        effort: 1,
+        price: 100,
+      },
     ],
   },
   {
@@ -807,14 +806,14 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Short video introducing the assistant and how it works.",
         status: "todo",
         effort: 1,
-        price: 350,
+        price: 150,
       },
       {
         name: "Send Images and Documents",
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
         effort: 5,
-        price: 500,
+        price: 700,
       },
       {
         name: "CRM integration",
@@ -845,7 +844,7 @@ const DEMO_PHASES: DemoPhase[] = [
         price: 1500,
       },
       {
-        name: "Voice message",
+        name: "Voice message (evenLabs)Operator replay message translatio",
         description: "Sends and understands voice messages in the chat.",
         status: "todo",
         effort: 3,
@@ -859,7 +858,7 @@ const DEMO_PHASES: DemoPhase[] = [
         price: 1500,
       },
       {
-        name: "Emoticons",
+        name: "Whatsapp Emoticons",
         description: "Replies use emoji so the conversation feels natural on WhatsApp.",
         status: "todo",
         effort: 1,
