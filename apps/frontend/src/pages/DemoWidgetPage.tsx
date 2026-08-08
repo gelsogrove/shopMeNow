@@ -605,8 +605,8 @@ interface DemoFeature {
   // Rough build effort, rendered as a 5-segment bar. Shown on every row that
   // sets one, so delivered work is sized on the same scale as pending work.
   effort?: 1 | 2 | 3 | 4 | 5
-  // Price for the single feature, shown in the Price column (e.g. "€700").
-  price?: string
+  // Price in euro for the single feature, shown in the Price column.
+  price?: number
 }
 
 // Delivery phases. The roadmap is presented as separate blocks so a visitor
@@ -616,9 +616,11 @@ interface DemoPhase {
   title: string
   subtitle: string
   features: DemoFeature[]
-  // Price for the whole phase, rendered as a closing "Total" row (e.g. "€1,500").
-  total?: string
+  // Price in euro for the whole phase, rendered as a closing "Total" row.
+  total?: number
 }
+
+const formatEuro = (amount: number) => `€${amount.toLocaleString("en-US")}`
 
 // Effort bar styling. Green→amber→red reads as "quick" → "significant build";
 // the colour carries the meaning at a glance, the tooltip spells it out.
@@ -642,24 +644,25 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Phase 1 — Basic functionality",
     subtitle: "Available today — everything you can try right now in this demo.",
-    total: "€1,500",
+    total: 1500,
     features: [
       {
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        note: "Italian, English, Danish for now — more on request.",
+        note: "Italian, English, Danish for nowName, personalit",
       },
       {
         name: "AI personality",
         description: "You define the assistant's name, tone and rules — no coding needed.",
         status: "done",
-        note: "Name, personality, AI model, temperature.",
+        note: "Chatbot name, chatbot personality, AI model, temperature, escalation rules",
       },
       {
         name: "Welcome message",
         description: "Greets new customers and welcomes returning ones back by name.",
         status: "done",
+        note: "Includes the welcome-back message: the chatbot greets returning customers by name.",
       },
       {
         name: "FAQ",
@@ -700,13 +703,14 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
+    total: 1000,
     features: [
       {
         name: "Loading Context Data",
         description: "Loads your personal data into the platform.",
         status: "todo",
         effort: 5,
-        price: "€700",
+        price: 700,
       },
       {
         name: "Kanban Board",
@@ -720,13 +724,13 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Forwards the conversation to the agent for the customer's country.",
         status: "todo",
         effort: 3,
-        price: "€300",
+        price: 300,
       },
       {
         name: "Ticketing platform Integration",
         description:
           "Opens and tracks a support ticket for every escalated conversation.",
-        status: "todo",
+        status: "To evaluate",
         effort: 4,
       },
       {
@@ -740,20 +744,21 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Phase 3 — WhatsApp",
     subtitle: "Reaching customers on their channel, in their language.",
+    total: 1800,
     features: [
       {
         name: "Install software on the client infrastructure",
         description: "Deploys and configures the assistant on your own server.",
         status: "todo",
         effort: 5,
-        price: "€1,000",
+        price: 1000,
       },
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
         effort: 4,
-        price: "€500",
+        price: 500,
       },
       {
         name: "Operator replay message translation",
@@ -761,7 +766,7 @@ const DEMO_PHASES: DemoPhase[] = [
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "in_progress",
         effort: 1,
-        price: "€300",
+        price: 300,
       },
       {
         name: "Security",
@@ -780,6 +785,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Phase 4 — Other features",
     subtitle: "New channels, richer replies, and your calendar and CRM connected.",
+    total: 500,
     features: [
       {
         name: "Text to speech",
@@ -804,51 +810,55 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
         effort: 5,
-        price: "€500",
+        price: 500,
       },
       {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
-        status: "todo",
+        status: "To evaluate",
         effort: 5,
-        price: "€500",
       },
     ],
   },
   {
     title: "Maybe Later",
     subtitle: "Parked for later — prioritized on request.",
+    total: 4500,
     features: [
       {
         name: "Appointment and Calendar",
         description: "Books, moves and cancels appointments against a live calendar.",
         status: "todo",
         effort: 5,
+        price: 1000,
       },
       {
         name: "Booking",
         description: "Takes reservations directly in the chat.",
         status: "todo",
         effort: 5,
+        price: 1500,
       },
       {
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
         effort: 5,
-        price: "€750",
+        price: 1000,
       },
       {
         name: "Voice message",
         description: "Sends and understands voice messages in the chat.",
         status: "todo",
         effort: 3,
+        price: 500,
       },
       {
         name: "Emoticons",
         description: "Replies use emoji so the conversation feels natural on WhatsApp.",
         status: "todo",
         effort: 1,
+        price: 500,
       },
     ],
   },
@@ -1101,7 +1111,7 @@ export function DemoWidgetPage() {
                       </td>
                       {/* Price — per-feature cost, when quoted. */}
                       <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>
-                        {feature.price ?? ""}
+                        {feature.price ? formatEuro(feature.price) : ""}
                       </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
                       <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
@@ -1119,12 +1129,27 @@ export function DemoWidgetPage() {
                           colSpan={4}
                           className={`py-3 text-lg font-extrabold ${brand.itemsText}`}
                         >
-                          {phase.total}
+                          {formatEuro(phase.total)}
                         </td>
                       </tr>
                     )}
                   </Fragment>
                   ))}
+                  {/* Grand total — sum of every phase total, computed so it
+                      never drifts when a single phase price changes. */}
+                  <tr>
+                    <td className={`py-4 pr-4 text-lg font-extrabold ${brand.itemsText}`}>
+                      Grand total
+                    </td>
+                    <td
+                      colSpan={4}
+                      className={`py-4 text-xl font-extrabold ${brand.itemsText}`}
+                    >
+                      {formatEuro(
+                        DEMO_PHASES.reduce((sum, p) => sum + (p.total ?? 0), 0)
+                      )}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
