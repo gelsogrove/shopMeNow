@@ -703,7 +703,7 @@ const DEMO_PHASES: DemoPhase[] = [
     title: "Phase 2 — Context",
     subtitle:
       "To evaluate — feeding the assistant your own content so it answers from your data.",
-    total: 1000,
+    total: 1300,
     features: [
       {
         name: "Loading Context Data",
@@ -738,6 +738,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Adds French, Portuguese and German to the supported languages.",
         status: "todo",
         effort: 3,
+        price: 300,
       },
     ],
   },
