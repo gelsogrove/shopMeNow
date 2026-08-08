@@ -1016,7 +1016,7 @@ export function DemoWidgetPage() {
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
                       Software
