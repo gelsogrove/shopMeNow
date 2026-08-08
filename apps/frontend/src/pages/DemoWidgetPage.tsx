@@ -649,7 +649,7 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Phase 1 — Basic functionality",
+    title: "Software",
     subtitle: "Available today — everything you can try right now in this demo.",
     total: 1900,
     flat: true,
@@ -740,9 +740,9 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 2 — Context",
+    title: "Loading data (optional)",
     subtitle:
-      "To evaluate — feeding the assistant your own content so it answers from your data.",
+      "Feeding the assistant your own content so it answers from your data.",
     features: [
       {
         name: "Loading Context Data",
@@ -754,8 +754,8 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 3 — Customize",
-    subtitle: "Deploying and tailoring the assistant to your infrastructure.",
+    title: "Customizations",
+    subtitle: "Tailoring the assistant to your channels and your operators.",
     total: 2400,
     features: [
       {
