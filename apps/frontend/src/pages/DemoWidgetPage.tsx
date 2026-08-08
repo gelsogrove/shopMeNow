@@ -797,37 +797,9 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 4 — Other features",
-    subtitle: "New channels, richer replies, and your calendar and CRM connected.",
-    total: 850,
-    features: [
-      {
-        name: "Presentation Video",
-        description: "Short video introducing the assistant and how it works.",
-        status: "todo",
-        effort: 1,
-        price: 150,
-      },
-      {
-        name: "Send Images and Documents",
-        description: "The chatbot can send images and documents to the customer.",
-        status: "todo",
-        effort: 5,
-        price: 700,
-      },
-      {
-        name: "CRM integration",
-        description: "Syncs customers and conversations with your existing CRM.",
-        status: "todo",
-        effort: 5,
-        price: "tbd",
-      },
-    ],
-  },
-  {
     title: "Maybe Later",
     subtitle: "Parked for later — prioritized on request.",
-    total: 6500,
+    total: 7350,
     features: [
       {
         name: "Sales modules",
@@ -863,6 +835,27 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 1,
         price: 500,
+      },
+      {
+        name: "Presentation Video",
+        description: "Short video introducing the assistant and how it works.",
+        status: "todo",
+        effort: 1,
+        price: 150,
+      },
+      {
+        name: "Send Images and Documents",
+        description: "The chatbot can send images and documents to the customer.",
+        status: "todo",
+        effort: 5,
+        price: 700,
+      },
+      {
+        name: "CRM integration",
+        description: "Syncs customers and conversations with your existing CRM.",
+        status: "todo",
+        effort: 5,
+        price: "tbd",
       },
     ],
   },
