@@ -803,12 +803,6 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 1,
       },
       {
-        name: "Appointment and Calendar",
-        description: "Books, moves and cancels appointments against a live calendar.",
-        status: "todo",
-        effort: 5,
-      },
-      {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
         status: "todo",
@@ -817,14 +811,32 @@ const DEMO_PHASES: DemoPhase[] = [
     ],
   },
   {
-    title: "Phase 5 — Push message",
-    subtitle: "Reaching customers outside the chat.",
+    title: "Maybe Later",
+    subtitle: "Parked for later — prioritized on request.",
     features: [
+      {
+        name: "Appointment and Calendar",
+        description: "Books, moves and cancels appointments against a live calendar.",
+        status: "todo",
+        effort: 5,
+      },
+      {
+        name: "Booking",
+        description: "Takes reservations directly in the chat.",
+        status: "todo",
+        effort: 5,
+      },
       {
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
         effort: 5,
+      },
+      {
+        name: "Voice message",
+        description: "Sends and understands voice messages in the chat.",
+        status: "todo",
+        effort: 3,
       },
     ],
   },
