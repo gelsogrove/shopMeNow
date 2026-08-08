@@ -824,7 +824,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Maybe Later",
     subtitle: "Parked for later — prioritized on request.",
-    total: 6000,
+    total: 6500,
     features: [
       {
         name: "Sales modules",
@@ -845,7 +845,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Sends and understands voice messages in the chat.",
         status: "todo",
         effort: 3,
-        price: 500,
+        price: 1000,
       },
       {
         name: "Appointment and Calendar",
