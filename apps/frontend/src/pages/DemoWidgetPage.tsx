@@ -756,15 +756,8 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "Tailoring the assistant to your channels and your operators.",
-    total: 2400,
+    total: 1400,
     features: [
-      {
-        name: "Install software on the client infrastructure",
-        description: "Deploys and configures the assistant on your own server.",
-        status: "todo",
-        effort: 5,
-        price: 1000,
-      },
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
@@ -800,6 +793,20 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 1,
         price: 100,
+      },
+    ],
+  },
+  {
+    title: "Installation",
+    subtitle: "Putting the assistant into production on your own infrastructure.",
+    total: 1000,
+    features: [
+      {
+        name: "Install software on the client infrastructure",
+        description: "Deploys and configures the assistant on the server of the customer.",
+        status: "todo",
+        effort: 5,
+        price: 1000,
       },
     ],
   },
