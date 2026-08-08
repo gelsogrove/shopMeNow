@@ -718,12 +718,6 @@ const DEMO_PHASES: DemoPhase[] = [
         effort: 4,
       },
       {
-        name: "Block spam user",
-        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
-        status: "todo",
-        effort: 1,
-      },
-      {
         name: "Terms and conditions",
         description: "Asks for privacy consent before the conversation starts.",
         status: "todo",
@@ -765,6 +759,12 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Security analysis.",
         status: "todo",
         effort: 4,
+      },
+      {
+        name: "Block spam user",
+        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
+        status: "todo",
+        effort: 1,
       },
     ],
   },

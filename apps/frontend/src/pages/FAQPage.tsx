@@ -12,12 +12,22 @@ import { updateWorkspace } from "@/services/workspaceApi"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { FAQ, faqApi } from "@/services/faqApi"
 import { commonStyles } from "@/styles/common"
-import { HelpCircle, Edit2, Trash2, Plus } from "lucide-react"
+import { ArrowLeft, HelpCircle, Edit2, Trash2, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { resolveLogoUrl } from "@/config"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
+import {
+  FaqCategoryFolders,
+  FaqCategoryRow,
+} from "@/components/faq/FaqCategoryFolders"
+
+// FAQs without a category have no real category value, so they never appear
+// inside a named folder. This synthetic id backs an "Uncategorized" row —
+// same pattern as the Flow categories page — that is not a real category:
+// no rename/delete, just an entry point to those FAQs.
+const UNCATEGORIZED_ID = "__uncategorized__"
 
 export function FAQPage() {
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
@@ -29,6 +39,9 @@ export function FAQPage() {
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null)
+  // Folder navigation, like the Flow categories page: null shows the list of
+  // category folders; a category name (or UNCATEGORIZED_ID) shows its FAQs.
+  const [openCategory, setOpenCategory] = useState<string | null>(null)
   // Master switch, persisted on the workspace. Saved immediately on toggle —
   // this page has no Save button, unlike the Settings sections.
   const [faqsEnabled, setFaqsEnabled] = useState(true)
@@ -76,10 +89,43 @@ export function FAQPage() {
     }
   }, [workspace?.id, isLoadingWorkspace])
 
-  const filteredFAQs = faqs.filter((faq) =>
+  // FAQs inside the currently open folder; search only applies within it.
+  const faqsInOpenCategory =
+    openCategory === null
+      ? faqs
+      : openCategory === UNCATEGORIZED_ID
+        ? faqs.filter((faq) => !faq.category?.trim())
+        : faqs.filter((faq) => faq.category?.trim() === openCategory)
+
+  const filteredFAQs = faqsInOpenCategory.filter((faq) =>
     faq.question.toLowerCase().includes(searchValue.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchValue.toLowerCase()) ||
     (faq.category ?? "").toLowerCase().includes(searchValue.toLowerCase())
+  )
+
+  // Category folders derived from the FAQs themselves (categories are free
+  // text on the FAQ row, not a table): one row per distinct name plus the
+  // synthetic "Uncategorized" row, mirroring the Flow categories page.
+  const categoryRows: FaqCategoryRow[] = [
+    ...Array.from(
+      faqs.reduce((map, faq) => {
+        const name = faq.category?.trim()
+        if (name) map.set(name, (map.get(name) ?? 0) + 1)
+        return map
+      }, new Map<string, number>())
+    )
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, count]) => ({ id: name, name, count, isSynthetic: false })),
+    {
+      id: UNCATEGORIZED_ID,
+      name: "Uncategorized",
+      count: faqs.filter((faq) => !faq.category?.trim()).length,
+      isSynthetic: true,
+    },
+  ]
+
+  const filteredCategoryRows = categoryRows.filter((row) =>
+    row.name.toLowerCase().includes(searchValue.toLowerCase())
   )
 
   // Distinct categories already in use, offered as suggestions in the form
@@ -184,6 +230,62 @@ export function FAQPage() {
     }
   }
 
+  // Folder navigation resets search + pagination so each view starts clean.
+  const handleOpenCategory = (row: FaqCategoryRow) => {
+    setOpenCategory(row.id)
+    setSearchValue("")
+    setCurrentPage(1)
+  }
+
+  const handleBackToCategories = () => {
+    setOpenCategory(null)
+    setSearchValue("")
+    setCurrentPage(1)
+  }
+
+  // Renaming a category = updating every FAQ that carries it (categories are
+  // free text on the FAQ rows, so there is no category record to update).
+  // The prompt extraction groups FAQs by this same string, so the chatbot's
+  // [Category] block follows the rename automatically.
+  const handleRenameCategory = async (row: FaqCategoryRow, newName: string) => {
+    if (!workspace?.id || newName === row.name) return
+    const targets = faqs.filter((faq) => faq.category?.trim() === row.id)
+    try {
+      const updated = await Promise.all(
+        targets.map((faq) =>
+          faqApi.updateFAQ(workspace.id, faq.id, { category: newName })
+        )
+      )
+      const byId = new Map(updated.map((faq) => [faq.id, faq]))
+      setFaqs(faqs.map((faq) => byId.get(faq.id) ?? faq))
+      toast.success("Category renamed")
+    } catch (error) {
+      logger.error("Error renaming category:", error)
+      toast.error("Failed to rename category")
+      // Resync: some FAQs may have been renamed before the failure.
+      loadFAQs()
+    }
+  }
+
+  // Deleting a category deletes every FAQ inside it — same semantics as
+  // deleting a Flow category; the confirm dialog states it explicitly.
+  const handleDeleteCategory = async (row: FaqCategoryRow) => {
+    if (!workspace?.id) return
+    const targets = faqs.filter((faq) => faq.category?.trim() === row.id)
+    try {
+      await Promise.all(
+        targets.map((faq) => faqApi.deleteFAQ(workspace.id, faq.id))
+      )
+      const deleted = new Set(targets.map((faq) => faq.id))
+      setFaqs(faqs.filter((faq) => !deleted.has(faq.id)))
+      toast.success("Category deleted")
+    } catch (error) {
+      logger.error("Error deleting category:", error)
+      toast.error("Failed to delete category")
+      loadFAQs()
+    }
+  }
+
   if (!workspace?.id) {
     return <PageLayout><div>No workspace selected</div></PageLayout>
   }
@@ -225,7 +327,13 @@ export function FAQPage() {
           name="category"
           list="faq-categories"
           placeholder="Enter category (optional)"
-          defaultValue={faq?.category ?? ""}
+          defaultValue={
+            // Adding from inside a folder prefills that folder's category.
+            faq?.category ??
+            (openCategory && openCategory !== UNCATEGORIZED_ID
+              ? openCategory
+              : "")
+          }
         />
         <datalist id="faq-categories">
           {existingCategories.map((category) => (
@@ -270,7 +378,9 @@ export function FAQPage() {
                 <HelpCircle className="h-5 w-5 text-amber-500" />
                 FAQ Answers
                 <span className="text-sm font-normal text-gray-500">
-                  ({filteredFAQs.length} items)
+                  {openCategory === null
+                    ? `(${filteredCategoryRows.length} categories)`
+                    : `(${filteredFAQs.length} items)`}
                 </span>
               </CardTitle>
               <Switch
@@ -287,26 +397,61 @@ export function FAQPage() {
           </CardHeader>
           {faqsEnabled && (
             <CardContent className="pt-6">
-              <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add FAQ
-              </Button>
+              {/* Same card layout as the Flow categories page: search next to
+                  the primary action. The search scopes to the current view —
+                  category folders at the top level, FAQs inside a folder. */}
+              <div className="flex items-center gap-3">
+                <Input
+                  placeholder={
+                    openCategory === null
+                      ? "Search categories..."
+                      : "Search FAQs..."
+                  }
+                  value={searchValue}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="max-w-md"
+                />
+                <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add FAQ
+                </Button>
+              </div>
             </CardContent>
           )}
         </Card>
 
-        {/* Search + list are hidden while the section is off: browsing answers
-            the chatbot is not using only invites confusion. Nothing is deleted —
+        {/* Content is hidden while the section is off: browsing answers the
+            chatbot is not using only invites confusion. Nothing is deleted —
             switching back on brings everything straight back. */}
-        {!faqsEnabled ? null : (
-        <>
-        <div>
-          <Input
-            placeholder="Search FAQs..."
-            value={searchValue}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="max-w-md"
+        {!faqsEnabled ? null : openCategory === null ? (
+          /* Top level: category folders, same representation as Flow. A new
+             category is created by typing a new name in the Add FAQ form. */
+          <FaqCategoryFolders
+            rows={filteredCategoryRows}
+            isLoading={isLoading}
+            onOpen={handleOpenCategory}
+            onRename={handleRenameCategory}
+            onDelete={handleDeleteCategory}
           />
+        ) : (
+        <>
+        {/* Inside a folder: back affordance + the FAQs of this category. */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackToCategories}
+            className="text-green-700 hover:text-green-800 hover:bg-green-50"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
+            All categories
+          </Button>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {openCategory === UNCATEGORIZED_ID ? "Uncategorized" : openCategory}
+          </h2>
+          <span className="text-sm text-gray-500">
+            ({filteredFAQs.length} FAQs)
+          </span>
         </div>
 
         {/* Cards Grid */}
@@ -322,14 +467,9 @@ export function FAQPage() {
             {paginatedFAQs.map((faq) => (
               <Card key={faq.id} className="p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-4">
-                  {/* Content */}
+                  {/* Content — no category pill: the card list only renders
+                      inside a folder, where the category is already known. */}
                   <div className="flex-1 min-w-0">
-                    {/* Category */}
-                    {faq.category && (
-                      <span className="inline-block px-2 py-0.5 mb-2 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                        {faq.category}
-                      </span>
-                    )}
                     {/* Question */}
                     <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:line-clamp-none cursor-pointer">
                       {faq.question}
