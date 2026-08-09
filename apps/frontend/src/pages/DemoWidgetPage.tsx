@@ -723,7 +723,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "",
-    total: 2900,
+    total: 3500,
     features: [
       {
         name: "Installation on-premise",
@@ -737,7 +737,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Loads your Faq and Flow into the platform from your document, we have a dedicated AI that can help the process.",
         status: "todo",
         effort: 5,
-        price: 400,
+        price: 500,
       },
       {
         name: "WhatsApp settings",
@@ -765,7 +765,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description:
           "Opens and tracks a support ticket for every escalated conversation.",
         status: "todo",
-        price: "tbd",
+        price: 500,
         effort: 4,
       },
       {
@@ -1027,7 +1027,7 @@ export function DemoWidgetPage() {
                       Customizations
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €2,900
+                      €3,500
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Everything tailor-made for you: on-premise
