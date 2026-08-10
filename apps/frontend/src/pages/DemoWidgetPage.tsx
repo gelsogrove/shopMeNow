@@ -767,7 +767,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "Tailor-made for you — setup, integrations and adaptations on top of the software.",
-    total: 3150,
+    total: 3200,
     features: [
       {
         name: "Loading Context Data",
@@ -809,14 +809,14 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Ticketing platform Integration",
         status: "todo",
         price: 300,
-        effort: 4,
+        effort: 3,
         note: "The chatbot interacts with your ticketing platform. To be assessed together: the price is an estimate, it depends on the platform you use.",
       },
       {
         name: "Terms and conditions",
         status: "todo",
-        effort: 1,
-        price: 150,
+        effort: 2,
+        price: 200,
         note: "The welcome message includes a link to a page on your website with terms and conditions and other privacy rules.",
       },
     ],
@@ -1066,7 +1066,7 @@ export function DemoWidgetPage() {
                       Customization
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €3,150
+                      €3,200
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Everything tailor-made for you: loading your
