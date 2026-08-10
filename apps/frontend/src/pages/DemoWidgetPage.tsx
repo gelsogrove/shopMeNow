@@ -596,12 +596,11 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
 // for the supported-languages row).
 interface DemoFeature {
   name: string
-  description: string
   status: "done" | "in_progress" | "todo" | string
-  // Free-text note shown in the Notes column — scope, caveats, what is covered
-  // so far (e.g. which languages are live). Left out when there is nothing
-  // worth saying; the cell then renders empty.
-  note?: string
+  // The ONLY explanatory text for the feature, shown in the Notes column.
+  // There is no per-feature subtitle: the note must be self-sufficient —
+  // what the feature does, plus scope/caveats/examples where useful.
+  note: string
   // Rough build effort, rendered as a 5-segment bar. Shown on every row that
   // sets one, so delivered work is sized on the same scale as pending work.
   effort?: 1 | 2 | 3 | 4 | 5
@@ -656,133 +655,122 @@ const DEMO_PHASES: DemoPhase[] = [
     features: [
       {
         name: "Languages",
-        description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        note: "English, Danish, German, French, Italian, Spanish",
+        note: "Detects the customer's language and replies in it automatically. Live: English, Danish, German, French, Italian, Spanish.",
       },
       {
         name: "AI personality",
-        description: "You define the assistant personality",
         status: "done",
-        note: "Assistance name, chatbot tone, channel rules, AI models, temperature, escalation rules",
+        note: "You define the assistant personality: assistant name, chatbot tone, channel rules, AI models, temperature, escalation rules.",
       },
       {
         name: "Welcome message",
-        description: "Welcome message in the customer's language.",
         status: "done",
-        note: "The first time a customer writes, the chatbot sends the welcome message. If the customer has written before, it sends a welcome back message greeting them by name — so the conversation feels natural.",
+        note: "The first time a customer writes, the chatbot sends the welcome message in the customer's language. If the customer has written before, it sends a welcome back message greeting them by name — so the conversation feels natural.",
       },
       {
         name: "FAQ",
-        description: "Answers common questions.",
         status: "done",
-        note: 'Try: "How do I clean my robot?" · "Can I fit a second battery?" · "What does the warranty cover?"',
+        note: 'Answers common questions. Try: "How do I clean my robot?" · "Can I fit a second battery?" · "What does the warranty cover?"',
       },
       {
         name: "Flow",
-        description: "You define the procedure, the chatbot guides the customer through it step by step.",
         status: "done",
-        note: 'Try: "My robot shows ERROR 001" · "It lost a wheel while mowing" · "It no longer cuts the grass evenly"',
+        note: 'You define the procedure, the chatbot guides the customer through it step by step. Try: "My robot shows ERROR 001" · "It lost a wheel while mowing" · "It no longer cuts the grass evenly"',
       },
       {
         name: "Escalate to Human support",
-        description: "Hands the conversation to a real operator and notifies them by email.",
         status: "done",
-        note: "If the assistant can't find the answer in FAQ or Flow, the conversation is forwarded to a human operator.",
+        note: "If the assistant can't find the answer in FAQ or Flow, the conversation is handed over to a real operator, who is notified by email.",
       },
       {
         name: "Summary for Support",
-        description: "When a conversation is handed over, the operator receives a summary of what has been said — no need to reread the whole chat.",
         status: "done",
+        note: "When a conversation is handed over, the operator receives a summary of what has been said — no need to reread the whole chat.",
       },
       {
         name: "Chat history",
-        description: "The chatbot remembers previous conversations with each customer and picks up where they left off.",
         status: "done",
-        note: "Operators can also review the full conversation history of every customer from the backoffice.",
+        note: "The chatbot remembers previous conversations with each customer and picks up where they left off. Operators can review the full conversation history of every customer from the backoffice.",
       },
       {
         name: "Widget",
-        description: "Embeddable chat for any website.",
         status: "done",
+        note: "Embeddable chat for any website.",
       },
       {
         name: "Two-way live translation",
-        description:
-          "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "done",
         price: 0,
+        note: "Your operators reply in their own language: each message is translated into the customer's language automatically.",
       },
       {
         name: "Block spam user",
-        description: "Blocked numbers are ignored: no reply, no notification, no cost.",
         status: "done",
         price: 0,
+        note: "Blocked numbers are ignored: no reply, no notification, no cost.",
       },
       {
         name: "Speech to text",
-        description: "Customers can send voice messages: the chatbot understands them and replies as usual.",
         status: "done",
+        note: "Customers can send voice messages: the chatbot understands them and replies as usual.",
       },
     ],
   },
   {
     title: "Customizations",
     subtitle: "Tailor-made for you — setup, integrations and adaptations on top of the software.",
-    total: 2850,
+    total: 3150,
     features: [
       {
+        name: "Loading Context Data",
+        status: "todo",
+        effort: 5,
+        price: 500,
+        note: "We load your FAQs and Flows into the platform from your documents — a dedicated AI assists the process.",
+      },
+      {
         name: "Installation on-premise",
-        description: "Deploys and configures the assistant on the customer's server.",
         status: "todo",
         effort: 5,
         price: 700,
+        note: "We deploy and configure the assistant on your server.",
       },
       {
-        name: "Loading Context Data",
-        description: "We load your FAQs and Flows into the platform from your documents — a dedicated AI assists the process.",
-        status: "todo",
-        effort: 5,
-        price: 400,
-      },
-      {
-        name: "WhatsApp integration (Meta setup)",
-        description: "We configure your Meta WhatsApp Business account end to end, so the same assistant answers directly on your WhatsApp business number.",
+        name: "WhatsApp setup with Meta",
         status: "todo",
         effort: 4,
         price: 700,
+        note: "We configure your Meta WhatsApp Business account end to end, so the same assistant answers directly on your WhatsApp business number.",
       },
       {
         name: "Security",
-        description: "Security analysis directly on your server.",
         status: "todo",
         effort: 4,
-        price: 300,
-        note: "We take care of your security: we make sure all security best practices are in place.",
+        price: 500,
+        note: "Security analysis directly on your server: we make sure all security best practices are in place.",
       },
       {
         name: "Forward Human Support logic",
-        description: "Forwards the conversation to the agent for the customer's country.",
-        status: "todo",
+        status: "in_progress",
+        progress: 30,
         effort: 3,
         price: 300,
-        note: "Example: a customer writing in Danish is forwarded to your Danish support team, a German customer to the German one.",
+        note: "Forwards the conversation to the support agent for the customer's country. Example: a customer writing in Danish is forwarded to your Danish support team, a German customer to the German one.",
       },
       {
         name: "Ticketing platform Integration",
-        description: "Let that the Chabot can interact with the Ticketing platform ",
         status: "todo",
         price: 300,
         effort: 4,
-        note: "To be assessed together: the price is an estimate, it depends on the ticketing platform you use.",
+        note: "The chatbot interacts with your ticketing platform. To be assessed together: the price is an estimate, it depends on the platform you use.",
       },
       {
         name: "Terms and conditions",
-        description: "Shows terms and conditions in the welcome message.",
         status: "todo",
         effort: 1,
         price: 150,
-        note: "A link to a page on your website informing the customer about terms and conditions and other privacy rules.",
+        note: "The welcome message includes a link to a page on your website with terms and conditions and other privacy rules.",
       },
     ],
   },
@@ -793,53 +781,52 @@ const DEMO_PHASES: DemoPhase[] = [
     features: [
       {
         name: "Sales modules",
-        description: "Takes reservations directly in the chat.",
         status: "todo",
         effort: 5,
         price: 1000,
+        note: "Takes reservations directly in the chat.",
       },
       {
         name: "Push Message",
-        description: "Proactive promotions and reminder messages.",
         status: "todo",
         effort: 5,
-        price: 0,
-        note: "No setup cost: push messages are billed per use, €1 per message sent.",
+        price: 150,
+        note: "Proactive promotions and reminder messages. No setup cost: push messages are billed per use, €1 per message sent.",
       },
       {
         name: "Voice message (evenLabs)",
-        description: "Sends and understands voice messages in the chat.",
         status: "todo",
         effort: 3,
         price: 1000,
+        note: "Sends and understands voice messages in the chat.",
       },
       {
         name: "Appointment and Calendar",
-        description: "Books, moves and cancels appointments against a live calendar.",
         status: "todo",
         effort: 5,
         price: 1000,
+        note: "Books, moves and cancels appointments against a live calendar.",
       },
       {
         name: "Presentation Video",
-        description: "Short video introducing the assistant and how it works.",
         status: "todo",
         effort: 1,
         price: 150,
+        note: "Short video introducing the assistant and how it works.",
       },
       {
         name: "Send Images and Documents",
-        description: "The chatbot can send images and documents to the customer.",
         status: "todo",
         effort: 5,
         price: 750,
+        note: "The chatbot can send images and documents to the customer.",
       },
       {
         name: "CRM integration",
-        description: "Syncs customers and conversations with your existing CRM.",
         status: "todo",
         effort: 5,
         price: 1000,
+        note: "Syncs customers and conversations with your existing CRM.",
       },
     ],
   },
@@ -1080,12 +1067,9 @@ export function DemoWidgetPage() {
                     </tr>
                     {phase.features.map((feature) => (
                     <tr key={feature.name} className="border-b border-white/10 align-top">
-                      {/* Name + one-line description of what the feature does. */}
+                      {/* Feature name only — the explanation lives in the Notes column. */}
                       <td className="py-2.5 pr-4">
                         <span className={`font-medium ${brand.itemsText}`}>{feature.name}</span>
-                        <span className={`mt-0.5 block text-sm leading-snug ${brand.openHint}`}>
-                          {feature.description}
-                        </span>
                       </td>
                       <td className="whitespace-nowrap py-2.5 pr-4">
                         {feature.status === "done" ? (
