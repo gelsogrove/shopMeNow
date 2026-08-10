@@ -780,7 +780,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Installation on-premise",
         status: "todo",
         effort: 5,
-        price: 700,
+        price: 1000,
         note: "We deploy and configure the assistant on your server.",
       },
       {
@@ -803,7 +803,7 @@ const DEMO_PHASES: DemoPhase[] = [
         progress: 30,
         effort: 3,
         price: 300,
-        note: "Forwards the conversation to the support agent for the customer's country. Example: a customer writing in Danish is forwarded to your Danish support team, a German customer to the German one.",
+        note: "Forwards the conversation to the support agent for the customer's country. Example: a customer writing in Danish is forwarded to your Danish support agent, a German customer to the German one.",
       },
       {
         name: "Ticketing platform Integration",
@@ -1079,7 +1079,7 @@ export function DemoWidgetPage() {
                       Usage
                     </span>
                     <span className={`mt-2 block text-xl font-extrabold ${brand.itemsText}`}>
-                      €90/month + €0.05/message
+                      €60/month + €0.05/message
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       Hosting of the AI gateway, updates, monitoring and

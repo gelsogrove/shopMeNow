@@ -355,6 +355,9 @@ export function AIPersonalitySection({
             data-focus-key="botDescription"
           >
             <Label htmlFor="botIdentityResponse">Bot Identity</Label>
+            <p className="text-xs text-gray-500">
+              Used for the question "who are you?"
+            </p>
             <div className="border rounded-md overflow-hidden">
               <Editor
                 height="250px"
@@ -535,12 +538,16 @@ export function AIPersonalitySection({
               Behavior
             </CardTitle>
             <p className="text-sm text-gray-500">
-              Extra rules the bot must follow in every reply
+              Things the bot must always or never do, whatever the customer asks
             </p>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
               <Label htmlFor="customAiRules">Override Rules</Label>
+              <p className="text-xs text-gray-500">
+                Used to add rules on top of every reply — for example "never promise
+                delivery dates"
+              </p>
               <Textarea
                 id="customAiRules"
                 value={formData.customAiRules}
@@ -550,8 +557,7 @@ export function AIPersonalitySection({
                 className="min-h-[140px]"
               />
               <p className="text-xs text-gray-500">
-                One rule per line. These are added on top of the bot's normal behaviour —
-                use them for things it must always or never do.
+                One rule per line.
               </p>
             </div>
           </CardContent>
