@@ -790,7 +790,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Push Message",
         status: "todo",
         effort: 5,
-        price: 150,
+        price: 300,
         note: "Proactive promotions and reminder messages. No setup cost: push messages are billed per use, €1 per message sent.",
       },
       {
