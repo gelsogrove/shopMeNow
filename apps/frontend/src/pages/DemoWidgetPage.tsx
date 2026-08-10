@@ -767,14 +767,14 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "Tailor-made for you — setup, integrations and adaptations on top of the software.",
-    total: 3800,
+    total: 3200,
     features: [
       {
         name: "Loading Context Data",
         status: "todo",
         effort: 5,
         price: 500,
-        note: "We load your FAQs and Flows into the platform from your documents — a dedicated AI assists the process.",
+        note: "We load your FAQs and Flows into the platform from your documents — a dedicated AI will assists the process.",
       },
       {
         name: "Installation on-premise",
@@ -787,7 +787,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "WhatsApp setup with Meta",
         status: "todo",
         effort: 4,
-        price: 500,
+        price: 300,
         note: "We configure your Meta WhatsApp Business account end to end, so the same assistant answers directly on your WhatsApp business number.",
       },
       {
@@ -802,7 +802,7 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "in_progress",
         progress: 30,
         effort: 3,
-        price: 100,
+        price: 200,
         note: "Forwards the conversation to the support agent for the customer's country. Example: a customer writing in Danish is forwarded to your Danish support agent, a German customer to the German one.",
       },
       {
@@ -823,7 +823,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "CRM integration",
         status: "todo",
         effort: 5,
-        price: 1000,
+        price: 500,
         note: "Syncs information with your CRM.",
       },
     ],
@@ -1066,7 +1066,7 @@ export function DemoWidgetPage() {
                       Customization
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €3,800
+                      €3,200
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Everything tailor-made for you: loading your
