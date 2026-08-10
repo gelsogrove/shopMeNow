@@ -649,9 +649,9 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Software + Customizations",
-    subtitle: "Available today — everything you can try right now in this demo, plus everything tailor-made for you.",
-    total: 3500,
+    title: "Software",
+    subtitle: "Available today — everything you can try right now in this demo.",
+    total: 1300,
     flat: true,
     features: [
       {
@@ -724,23 +724,30 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Customers can send voice messages: the chatbot understands them and replies as usual.",
         status: "done",
       },
+    ],
+  },
+  {
+    title: "Customizations",
+    subtitle: "Tailor-made for you — setup, integrations and adaptations on top of the software.",
+    total: 2850,
+    features: [
       {
         name: "Installation on-premise",
-        description: "Deploys and configures the assistant on the server of the customer.",
+        description: "Deploys and configures the assistant on the customer's server.",
         status: "todo",
         effort: 5,
         price: 700,
       },
       {
         name: "Loading Context Data",
-        description: "Loads your Faq and Flow into the platform from your document, we have a dedicated AI that can help the process.",
+        description: "We load your FAQs and Flows into the platform from your documents — a dedicated AI assists the process.",
         status: "todo",
         effort: 5,
         price: 400,
       },
       {
-        name: "WhatsApp settings",
-        description: "Same assistant answering directly on your WhatsApp business number.",
+        name: "WhatsApp integration (Meta setup)",
+        description: "We configure your Meta WhatsApp Business account end to end, so the same assistant answers directly on your WhatsApp business number.",
         status: "todo",
         effort: 4,
         price: 700,
@@ -751,35 +758,38 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 4,
         price: 300,
+        note: "We take care of your security: we make sure all security best practices are in place.",
       },
       {
         name: "Forward Human Support logic",
         description: "Forwards the conversation to the agent for the customer's country.",
         status: "todo",
         effort: 3,
-        price: 250,
+        price: 300,
+        note: "Example: a customer writing in Danish is forwarded to your Danish support team, a German customer to the German one.",
       },
       {
         name: "Ticketing platform Integration",
-        description:
-          "Opens and tracks a support ticket for every escalated conversation.",
+        description: "Let that the Chabot can interact with the Ticketing platform ",
         status: "todo",
         price: 300,
         effort: 4,
+        note: "To be assessed together: the price is an estimate, it depends on the ticketing platform you use.",
       },
       {
         name: "Terms and conditions",
-        description: "Asks for privacy consent before the conversation starts.",
+        description: "Shows terms and conditions in the welcome message.",
         status: "todo",
         effort: 1,
         price: 150,
+        note: "A link to a page on your website informing the customer about terms and conditions and other privacy rules.",
       },
     ],
   },
   {
     title: "Maybe Later",
     subtitle: "",
-    total: 5900,
+    total: 4900,
     features: [
       {
         name: "Sales modules",
@@ -790,10 +800,11 @@ const DEMO_PHASES: DemoPhase[] = [
       },
       {
         name: "Push Message",
-        description: "Proactive promotions and reminders sent to customers outside the chat.",
+        description: "Proactive promotions and reminder messages.",
         status: "todo",
         effort: 5,
-        price: 1000,
+        price: 0,
+        note: "No setup cost: push messages are billed per use, €1 per message sent.",
       },
       {
         name: "Voice message (evenLabs)",
