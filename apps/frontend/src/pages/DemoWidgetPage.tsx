@@ -767,7 +767,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "Tailor-made for you — setup, integrations and adaptations on top of the software.",
-    total: 4300,
+    total: 3800,
     features: [
       {
         name: "Loading Context Data",
@@ -787,7 +787,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "WhatsApp setup with Meta",
         status: "todo",
         effort: 4,
-        price: 700,
+        price: 500,
         note: "We configure your Meta WhatsApp Business account end to end, so the same assistant answers directly on your WhatsApp business number.",
       },
       {
@@ -808,7 +808,7 @@ const DEMO_PHASES: DemoPhase[] = [
       {
         name: "Ticketing platform Integration",
         status: "todo",
-        price: 300,
+        price: 100,
         effort: 3,
         note: "The chatbot interacts with your ticketing platform. To be assessed together: the price is an estimate, it depends on the platform you use.",
       },
@@ -816,7 +816,7 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Terms and conditions",
         status: "todo",
         effort: 2,
-        price: 200,
+        price: 100,
         note: "The welcome message includes a link to a page on your website with terms and conditions and other privacy rules.",
       },
       {
@@ -1066,7 +1066,7 @@ export function DemoWidgetPage() {
                       Customization
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €4,300
+                      €3,800
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Everything tailor-made for you: loading your
