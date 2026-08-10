@@ -649,9 +649,9 @@ const EFFORT_LABELS: Record<number, string> = {
 
 const DEMO_PHASES: DemoPhase[] = [
   {
-    title: "Software",
-    subtitle: "Available today — everything you can try right now in this demo.",
-    total: 1900,
+    title: "Software + Customizations",
+    subtitle: "Available today — everything you can try right now in this demo, plus everything tailor-made for you.",
+    total: 3500,
     flat: true,
     features: [
       {
@@ -718,54 +718,47 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Customers can send audio instead of text",
         status: "done",
       },
-    ],
-  },
-  {
-    title: "Customizations",
-    subtitle: "",
-    total: 3500,
-    features: [
       {
         name: "Installation on-premise",
         description: "Deploys and configures the assistant on the server of the customer.",
         status: "todo",
         effort: 5,
-        price: 1000,
+        price: 700,
       },
       {
         name: "Loading Context Data",
         description: "Loads your Faq and Flow into the platform from your document, we have a dedicated AI that can help the process.",
         status: "todo",
         effort: 5,
-        price: 500,
+        price: 400,
       },
       {
         name: "WhatsApp settings",
         description: "Same assistant answering directly on your WhatsApp business number.",
         status: "todo",
         effort: 4,
-        price: 500,
+        price: 700,
       },
       {
         name: "Security",
         description: "Security analysis directly on your server.",
         status: "todo",
         effort: 4,
-        price: 500,
+        price: 300,
       },
       {
         name: "Forward Human Support logic",
         description: "Forwards the conversation to the agent for the customer's country.",
         status: "todo",
         effort: 3,
-        price: 300,
+        price: 250,
       },
       {
         name: "Ticketing platform Integration",
         description:
           "Opens and tracks a support ticket for every escalated conversation.",
         status: "todo",
-        price: 500,
+        price: 300,
         effort: 4,
       },
       {
@@ -773,31 +766,31 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Asks for privacy consent before the conversation starts.",
         status: "todo",
         effort: 1,
-        price: 200,
+        price: 150,
       },
     ],
   },
   {
     title: "Maybe Later",
     subtitle: "",
-    total: 7350,
+    total: 5900,
     features: [
       {
         name: "Sales modules",
         description: "Takes reservations directly in the chat.",
         status: "todo",
         effort: 5,
-        price: 2000,
+        price: 1000,
       },
       {
         name: "Push Message",
         description: "Proactive promotions and reminders sent to customers outside the chat.",
         status: "todo",
         effort: 5,
-        price: 1500,
+        price: 1000,
       },
       {
-        name: "Voice message (evenLabs)Operator replay message translatio",
+        name: "Voice message (evenLabs)",
         description: "Sends and understands voice messages in the chat.",
         status: "todo",
         effort: 3,
@@ -808,14 +801,7 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "Books, moves and cancels appointments against a live calendar.",
         status: "todo",
         effort: 5,
-        price: 1500,
-      },
-      {
-        name: "Whatsapp Emoticons",
-        description: "Replies use emoji so the conversation feels natural on WhatsApp.",
-        status: "todo",
-        effort: 1,
-        price: 500,
+        price: 1000,
       },
       {
         name: "Presentation Video",
@@ -829,14 +815,14 @@ const DEMO_PHASES: DemoPhase[] = [
         description: "The chatbot can send images and documents to the customer.",
         status: "todo",
         effort: 5,
-        price: 700,
+        price: 750,
       },
       {
         name: "CRM integration",
         description: "Syncs customers and conversations with your existing CRM.",
         status: "todo",
         effort: 5,
-        price: "tbd",
+        price: 1000,
       },
     ],
   },
@@ -1003,35 +989,25 @@ export function DemoWidgetPage() {
               still coming. Only on demorobot, where the list applies. */}
           {slug === "demorobot" && (
             <div className="mt-7 w-full">
-              {/* Pricing model — the five billable items, four one-time (each
-                  mapping to a phase above) plus metered usage. */}
+              {/* Pricing model — the one-time bundle (mapping to the phase
+                  below) plus metered usage. */}
               <div className="mb-12">
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-4 grid gap-5 sm:grid-cols-2">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Software
-                    </span>
-                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,900
-                    </span>
-                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. The assistant itself, with the whole basic
-                      functionality already working today.
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
-                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Customizations
+                      Software + Customizations
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
                       €3,500
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
-                      One-time. Everything tailor-made for you: on-premise
-                      installation, loading your data and the modules you pick.
+                      One-time. The assistant with the whole basic functionality
+                      already working today, plus everything tailor-made for
+                      you: on-premise installation, loading your data and the
+                      modules you pick.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
