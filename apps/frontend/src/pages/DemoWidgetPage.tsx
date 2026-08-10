@@ -658,19 +658,19 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Languages",
         description: "Detects the customer's language and replies in it automatically.",
         status: "done",
-        note: "Italian, English, Danish, German, Franch",
+        note: "English, Danish, German, French, Italian, Spanish",
       },
       {
         name: "AI personality",
-        description: "You define the assistant's name, tone and rules",
+        description: "You define the assistant personality",
         status: "done",
-        note: "Chatbot name, chatbot personality, AI model, temperature, escalation rules",
+        note: "Chatbot name, chatbot Tone, Channel rules, AI models, temperature, escalation rules",
       },
       {
         name: "Welcome message",
-        description: "Greets new customers and welcomes returning ones back by name.",
+        description: "Welcome message in the customer's language.",
         status: "done",
-        note: "Includes the welcome-back message: the chatbot greets returning customers by name.",
+        note: "First time a customer writes, the chatbot sends the welcome message. If the customer has written before, it greets them back by name — so the conversation feels natural.",
       },
       {
         name: "FAQ",
@@ -680,7 +680,7 @@ const DEMO_PHASES: DemoPhase[] = [
       },
       {
         name: "Flow",
-        description: "Guided step-by-step troubleshooting until the issue is solved or escalated.",
+        description: "You define the procedure, the chatbot guides the customer through it step by step — like a real support technician.",
         status: "done",
         note: 'Try: "My robot shows ERROR 001" · "It lost a wheel while mowing" · "It no longer cuts the grass evenly"',
       },
@@ -688,12 +688,18 @@ const DEMO_PHASES: DemoPhase[] = [
         name: "Escalate to Human support",
         description: "Hands the conversation to a real operator and notifies them by email.",
         status: "done",
-        note: "If the assistant can't find the answer, the conversation is handed to a human operator.",
+        note: "If the assistant can't find the answer in FAQ or Flow, the conversation is forwarded to a human operator.",
       },
       {
-        name: "Chats history",
-        description: "Picks up where you left off: nothing is lost between conversations.",
+        name: "Summary for Support",
+        description: "When a conversation is handed over, the operator receives a summary of what has been said — no need to reread the whole chat.",
         status: "done",
+      },
+      {
+        name: "Chat history",
+        description: "The chatbot remembers previous conversations with each customer and picks up where they left off.",
+        status: "done",
+        note: "Operators can also review the full conversation history of every customer from the backoffice.",
       },
       {
         name: "Widget",
@@ -701,7 +707,7 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "done",
       },
       {
-        name: "Operator replay message translation",
+        name: "Two-way live translation",
         description:
           "Your operators reply in their own language: each message is translated into the customer's language automatically.",
         status: "done",
@@ -715,7 +721,7 @@ const DEMO_PHASES: DemoPhase[] = [
       },
       {
         name: "Speech to text",
-        description: "Customers can send audio instead of text",
+        description: "Customers can send voice messages: the chatbot understands them and replies as usual.",
         status: "done",
       },
       {
