@@ -646,6 +646,53 @@ const EFFORT_LABELS: Record<number, string> = {
   5: "Very high effort",
 }
 
+// Status pill and effort bar are shared by the mobile card layout and the
+// desktop table, so the two never drift apart.
+function FeatureStatus({ feature, itemsText }: { feature: DemoFeature; itemsText: string }) {
+  if (feature.status === "done") {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
+        ✅ {feature.progress ?? 100}%
+      </span>
+    )
+  }
+  if (feature.status === "in_progress") {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-medium text-sky-300">
+        🚧 {feature.progress ?? 50}%
+      </span>
+    )
+  }
+  if (feature.status === "todo") {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-medium text-amber-200/90">
+        🕒 {feature.progress ?? 0}%
+      </span>
+    )
+  }
+  return <span className={itemsText}>{feature.status}</span>
+}
+
+function EffortBar({ effort }: { effort?: 1 | 2 | 3 | 4 | 5 }) {
+  if (!effort) return null
+  return (
+    <span
+      className="inline-flex items-center gap-[3px] align-middle"
+      title={EFFORT_LABELS[effort]}
+      aria-label={`Effort: ${EFFORT_LABELS[effort]}`}
+    >
+      {[1, 2, 3, 4, 5].map((segment) => (
+        <span
+          key={segment}
+          className={`block h-3.5 w-2 rounded-sm ${
+            segment <= effort ? EFFORT_COLORS[effort] : "bg-white/15"
+          }`}
+        />
+      ))}
+    </span>
+  )
+}
+
 const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Software",
@@ -788,9 +835,10 @@ const DEMO_PHASES: DemoPhase[] = [
       },
       {
         name: "Push Message",
-        status: "todo",
+        status: "in_progress",
+        progress: 30,
         effort: 5,
-        price: 300,
+        price: 0,
         note: "Proactive promotions and reminder messages. No setup cost: push messages are billed per use, €1 per message sent.",
       },
       {
@@ -812,7 +860,7 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 1,
         price: 150,
-        note: "Short video introducing the assistant and how it works.",
+        note: "Short video to show on the welcome message. ",
       },
       {
         name: "Send Images and Documents",
@@ -826,7 +874,7 @@ const DEMO_PHASES: DemoPhase[] = [
         status: "todo",
         effort: 5,
         price: 1000,
-        note: "Syncs customers and conversations with your existing CRM.",
+        note: "Syncs information with your CRM.",
       },
     ],
   },
@@ -999,24 +1047,36 @@ export function DemoWidgetPage() {
                 <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
                   Pricing model
                 </span>
-                <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                <div className="mt-4 grid gap-5 sm:grid-cols-3">
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Software + Customizations
+                      Software
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €3,500
+                      €1,300
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. The assistant with the whole basic functionality
-                      already working today, plus everything tailor-made for
-                      you: on-premise installation, loading your data and the
+                      already working today — everything you can try right now
+                      in this demo.
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
+                    <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
+                      Customization
+                    </span>
+                    <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
+                      €3,150
+                    </span>
+                    <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                      One-time. Everything tailor-made for you: loading your
+                      data, on-premise installation, WhatsApp setup and the
                       modules you pick.
                     </span>
                   </div>
                   <div className="rounded-xl bg-white/10 p-5 backdrop-blur">
                     <span className={`block text-sm font-semibold uppercase tracking-wide ${brand.tryLabel}`}>
-                      Monthly fee + usage
+                      Usage
                     </span>
                     <span className={`mt-2 block text-xl font-extrabold ${brand.itemsText}`}>
                       €90/month + €0.05/message
@@ -1028,7 +1088,70 @@ export function DemoWidgetPage() {
                   </div>
                 </div>
               </div>
-              <table className="w-full border-collapse text-left text-base">
+              {/* Mobile layout — a 5-column table cannot fit a phone screen, so
+                  each feature is rendered as its own card. Hidden from sm: up,
+                  where the table below takes over. */}
+              <div className="space-y-8 sm:hidden">
+                {DEMO_PHASES.map((phase) => (
+                  <div key={phase.title}>
+                    <span className={`block text-xl font-extrabold tracking-tight ${brand.itemsText}`}>
+                      {phase.title}
+                    </span>
+                    {phase.subtitle && (
+                      <span className={`mt-1 block text-sm leading-snug ${brand.openHint}`}>
+                        {phase.subtitle}
+                      </span>
+                    )}
+                    <div className="mt-4 space-y-3">
+                      {phase.features.map((feature) => (
+                        <div
+                          key={feature.name}
+                          className="rounded-xl bg-white/10 p-4 backdrop-blur"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <span className={`font-semibold ${brand.itemsText}`}>
+                              {feature.name}
+                            </span>
+                            <span className={`whitespace-nowrap font-semibold ${brand.itemsText}`}>
+                              {feature.price === "tbd"
+                                ? "❓"
+                                : phase.flat && !feature.price
+                                  ? "—"
+                                  : formatEuro(feature.price ?? 0)}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-3">
+                            <FeatureStatus feature={feature} itemsText={brand.itemsText} />
+                            <EffortBar effort={feature.effort} />
+                          </div>
+                          <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
+                            {feature.note}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {phase.total && (
+                      <div
+                        className={`mt-4 flex items-center justify-between border-t border-white/20 pt-3 font-extrabold ${brand.itemsText}`}
+                      >
+                        <span>Total</span>
+                        <span className="text-lg">{formatEuro(phase.total)}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div
+                  className={`flex items-center justify-between border-t border-white/30 pt-4 text-lg font-extrabold ${brand.itemsText}`}
+                >
+                  <span>Grand total</span>
+                  <span className="text-xl">
+                    {formatEuro(DEMO_PHASES.reduce((sum, p) => sum + (p.total ?? 0), 0))}
+                  </span>
+                </div>
+              </div>
+
+              {/* Desktop/tablet layout — the full 5-column table. */}
+              <table className="hidden w-full border-collapse text-left text-base sm:table">
                 <tbody>
                   {DEMO_PHASES.map((phase) => (
                   <Fragment key={phase.title}>
@@ -1072,44 +1195,13 @@ export function DemoWidgetPage() {
                         <span className={`font-medium ${brand.itemsText}`}>{feature.name}</span>
                       </td>
                       <td className="whitespace-nowrap py-2.5 pr-4">
-                        {feature.status === "done" ? (
-                          <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
-                            ✅ {feature.progress ?? 100}%
-                          </span>
-                        ) : feature.status === "in_progress" ? (
-                          <span className="inline-flex items-center gap-1.5 font-medium text-sky-300">
-                            🚧 {feature.progress ?? 50}%
-                          </span>
-                        ) : feature.status === "todo" ? (
-                          <span className="inline-flex items-center gap-1.5 font-medium text-amber-200/90">
-                            🕒 {feature.progress ?? 0}%
-                          </span>
-                        ) : (
-                          <span className={brand.itemsText}>{feature.status}</span>
-                        )}
+                        <FeatureStatus feature={feature} itemsText={brand.itemsText} />
                       </td>
                       {/* Effort bar — 5 segments, filled up to `effort`. Shown
                           on any row that declares one, so the work already done
                           is sized on the same scale as what is still pending. */}
                       <td className="whitespace-nowrap py-2.5 pr-4">
-                        {feature.effort ? (
-                          <span
-                            className="inline-flex items-center gap-[3px] align-middle"
-                            title={EFFORT_LABELS[feature.effort]}
-                            aria-label={`Effort: ${EFFORT_LABELS[feature.effort]}`}
-                          >
-                            {[1, 2, 3, 4, 5].map((segment) => (
-                              <span
-                                key={segment}
-                                className={`block h-3.5 w-2 rounded-sm ${
-                                  segment <= feature.effort!
-                                    ? EFFORT_COLORS[feature.effort!]
-                                    : "bg-white/15"
-                                }`}
-                              />
-                            ))}
-                          </span>
-                        ) : null}
+                        <EffortBar effort={feature.effort} />
                       </td>
                       {/* Price — per-feature cost, when quoted. */}
                       <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>

@@ -326,6 +326,35 @@
       animation: popupOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
+    /* On a phone the fixed 390x610 panel is wider than the screen, which pushes
+       the close button out of the viewport: the chat cannot be closed. Below
+       640px the panel covers the whole screen instead, anchored to the viewport
+       rather than to the launcher container. 100dvh follows the browser chrome
+       so the header stays reachable on iOS Safari. */
+    @media (max-width: 640px) {
+      .echatbot-widget-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+        transform-origin: center;
+      }
+
+      /* The launcher would otherwise float above the full-screen panel. Only
+         the popup carries the open state, and it is appended AFTER the button,
+         so the container is matched on its open child. */
+      .echatbot-widget-container:has(.echatbot-widget-popup.open) .echatbot-widget-button {
+        display: none;
+      }
+    }
+
     @keyframes popupOpen {
       from {
         opacity: 0;
