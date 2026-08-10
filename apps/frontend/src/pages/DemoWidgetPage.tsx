@@ -767,7 +767,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Customizations",
     subtitle: "Tailor-made for you — setup, integrations and adaptations on top of the software.",
-    total: 3200,
+    total: 4300,
     features: [
       {
         name: "Loading Context Data",
@@ -831,7 +831,7 @@ const DEMO_PHASES: DemoPhase[] = [
   {
     title: "Maybe Later",
     subtitle: "",
-    total: 4900,
+    total: 3900,
     features: [
       {
         name: "Sales modules",
@@ -1066,7 +1066,7 @@ export function DemoWidgetPage() {
                       Customization
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €3,200
+                      €4,300
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Everything tailor-made for you: loading your
