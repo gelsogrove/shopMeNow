@@ -93,7 +93,9 @@ describe("WhatsApp Webhook - Contact Name Extraction", () => {
   })
 
   it("should handle missing contact profile gracefully", () => {
-    const mockPayload = {
+    // typed as any: the payload deliberately OMITS contacts, so the inferred
+    // literal type would reject the optional-chain access below
+    const mockPayload: any = {
       entry: [{
         changes: [{
           value: {
