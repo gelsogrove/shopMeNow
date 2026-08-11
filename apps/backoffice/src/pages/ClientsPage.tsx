@@ -1240,6 +1240,17 @@ export function ClientsPage() {
                     />
                     <span className="text-xs font-medium text-gray-600">Dev</span>
                   </div>
+
+                  {/* Demo Toggle - hides the billing blocks in the user's app */}
+                  <div className="flex items-center gap-1.5">
+                    <Switch
+                      checked={user.isDemoUser}
+                      onCheckedChange={() => handleDemoToggle(user.id, user.isDemoUser)}
+                      disabled={updating === user.id}
+                      className="data-[state=checked]:bg-amber-500 scale-90"
+                    />
+                    <span className="text-xs font-medium text-gray-600">Demo</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
