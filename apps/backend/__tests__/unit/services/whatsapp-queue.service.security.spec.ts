@@ -38,7 +38,7 @@ jest.mock("../../../src/services/whatsapp/whatsapp-provider.factory", () => ({
 
 import { beforeAll, afterAll, describe, it, expect, jest, beforeEach } from "@jest/globals"
 import { WhatsAppQueueService } from "../../../src/services/whatsapp-queue.service"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Mock PrismaClient
 const mockPrisma = {

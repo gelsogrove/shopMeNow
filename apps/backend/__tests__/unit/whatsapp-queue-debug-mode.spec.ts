@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, beforeEach, jest } from "@jest/globals"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 import { WhatsAppQueueService } from "../../src/services/whatsapp-queue.service"
 
 // Mock dependencies

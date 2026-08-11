@@ -8,7 +8,7 @@
  * @author Andrea's AI Agent
  */
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@echatbot/database"
 
 // Mock dependencies
 const mockPrisma = {
