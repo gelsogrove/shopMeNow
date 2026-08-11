@@ -242,6 +242,16 @@ export class UserController {
         return res.status(403).json({ message: 'Modifying privileged fields is not allowed' })
       }
       
+      // Email is the login identity: an empty/invalid value here silently
+      // locks the account out (owner rows have been wiped this way).
+      if (userData.email !== undefined) {
+        const email = typeof userData.email === "string" ? userData.email.trim() : ""
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return res.status(400).json({ message: "A valid email is required" })
+        }
+        userData.email = email
+      }
+
       logger.info(`Updating profile for user ID: ${userId}`)
       logger.info(`🔍 Request body received:`, JSON.stringify(userData, null, 2))
       

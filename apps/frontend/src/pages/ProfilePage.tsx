@@ -146,7 +146,6 @@ export default function ProfilePage() {
       const updateData: any = {
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email,
         phoneNumber: user.phoneNumber,
         language: user.language,
         companyName: user.companyName,
@@ -155,7 +154,13 @@ export default function ProfilePage() {
         billingPhone: user.billingPhone,
         billingAddress: user.billingAddress,
       }
-      
+
+      // Never send an empty email: it is the login identity and the backend
+      // rejects it — an empty value once wiped an owner account.
+      if (user.email && user.email.trim()) {
+        updateData.email = user.email.trim()
+      }
+
       // Include logo file if selected
       if (logoFile) {
         updateData.logo = logoFile

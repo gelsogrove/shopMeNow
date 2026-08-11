@@ -375,14 +375,10 @@ export function TeamMembersTable({
                           )}
                         </TableCell>
                         <TableCell>
-                          {isOwner ? (
+                          {isOwner && (
                             <Badge variant="default" className="bg-amber-500 hover:bg-amber-600">
                               <Crown className="h-3 w-3 mr-1" />
                               Owner
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              Admin
                             </Badge>
                           )}
                         </TableCell>

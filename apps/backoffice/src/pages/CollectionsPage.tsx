@@ -1345,7 +1345,7 @@ export function CollectionsPage() {
                       <div className="mt-4 space-y-3">
                         {invoice.paidAt && (
                           <div className="text-xs text-slate-500">
-                            Paid on {new Date(invoice.paidAt).toLocaleDateString('it-IT')}
+                            Paid on {new Date(invoice.paidAt).toLocaleDateString('en-GB')}
                           </div>
                         )}
                         {invoice.adminNotes && (
@@ -1472,7 +1472,7 @@ export function CollectionsPage() {
                                     Credit note {note.reason ? `• ${note.reason}` : ''}
                                   </div>
                                   <div className="text-xs text-slate-500">
-                                    {new Date(note.createdAt).toLocaleDateString('it-IT')}
+                                    {new Date(note.createdAt).toLocaleDateString('en-GB')}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -1810,7 +1810,7 @@ export function CollectionsPage() {
                     {rechargesTransactions.map((tx) => (
                       <tr key={tx.id} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          {new Date(tx.createdAt).toLocaleDateString('it-IT')}
+                          {new Date(tx.createdAt).toLocaleDateString('en-GB')}
                         </td>
                         <td className="px-4 py-3">
                           <Badge className="bg-green-600 text-white">{tx.type}</Badge>

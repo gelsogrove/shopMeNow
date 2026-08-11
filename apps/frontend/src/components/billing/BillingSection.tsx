@@ -840,7 +840,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   return (
                     <div className="flex justify-between items-center pt-3 border-t mt-3">
                       <span className="font-semibold">
-                        Next monthly charge{billing.nextBillingDate && ` (${new Date(billing.nextBillingDate).toLocaleDateString("it-IT")})`}:
+                        Next monthly charge{billing.nextBillingDate && ` (${new Date(billing.nextBillingDate).toLocaleDateString("en-GB")})`}:
                       </span>
                       <span className="text-green-600 font-bold text-lg">
                         {isLoadingCurrentInvoice || invoiceTotal === undefined
