@@ -688,10 +688,13 @@ export function ClientsPage() {
         }
       }
       
+      // The playground webhook route requires a JWT (it triggers the LLM)
+      const backofficeToken = localStorage.getItem('backoffice_token')
       const response = await fetch('/api/whatsapp/webhook', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(backofficeToken ? { Authorization: `Bearer ${backofficeToken}` } : {}),
         },
         body: JSON.stringify(payload)
       })

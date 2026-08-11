@@ -460,9 +460,14 @@ describe("SecurityAgent", () => {
         customerName: "Test",
       })
 
-      // Fail-open: allow message on parse error
+      // Fail-open: allow message on parse error.
+      // WHY no blockedReason: the message is NOT blocked, so returning a
+      // reason alongside safe:true was contradictory (it rendered in the
+      // timeline as "passed" with a block reason). The parse failure is
+      // logged, not surfaced in the result. (Changed with Andrea's approval,
+      // 2026-08-11.)
       expect(result.safe).toBe(true)
-      expect(result.blockedReason).toContain("JSON parse error")
+      expect(result.blockedReason).toBeUndefined()
     })
   })
 

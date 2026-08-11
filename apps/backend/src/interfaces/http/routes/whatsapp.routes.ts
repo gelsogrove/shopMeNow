@@ -104,9 +104,10 @@ router.post(
  * /api/whatsapp/webhook:
  *   post:
  *     summary: Receive incoming WhatsApp messages (playground/no webhookId)
- *     description: Alternative webhook endpoint for playground and direct API calls without webhookId in path
+ *     description: Playground/simulator endpoint without webhookId in path. Requires JWT auth — real Meta traffic uses /webhook/:webhookId with HMAC signature instead.
  *     tags: [WhatsApp]
- *     security: []
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -130,8 +131,12 @@ router.post(
  */
 router.post(
   "/webhook",
-  // mTLS removed: Heroku does not pass through mTLS client certs.
-  // Security is provided by HMAC signature (X-Hub-Signature-256) verified in the controller.
+  // This webhookId-less route exists ONLY for the playground/simulator, which
+  // is driven by logged-in users — so it requires a JWT. Without it, anyone
+  // knowing a workspaceId could run the LLM (OpenRouter cost) anonymously.
+  // Real Meta traffic never lands here: Meta is configured with
+  // /webhook/:webhookId and authenticated via HMAC signature.
+  authMiddleware,
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )
