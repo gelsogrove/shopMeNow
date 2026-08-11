@@ -46,6 +46,8 @@ const router = Router()
  *                 type: boolean
  *               isDeveloperUser:
  *                 type: boolean
+ *               isDemoUser:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Permissions updated
@@ -94,8 +96,18 @@ router.put(
       // Build update data with mutual exclusion logic
       // If isPlatformAdmin becomes true -> isDeveloperUser becomes false
       // If isDeveloperUser becomes true -> isPlatformAdmin becomes false
-      const updateData: { isPlatformAdmin?: boolean; isDeveloperUser?: boolean } = {}
-      
+      // isDemoUser is orthogonal to the admin/dev pair: a demo account can also
+      // be an admin, so it is never part of the mutual exclusion below.
+      const updateData: {
+        isPlatformAdmin?: boolean
+        isDeveloperUser?: boolean
+        isDemoUser?: boolean
+      } = {}
+
+      if (isDemoUser !== undefined) {
+        updateData.isDemoUser = isDemoUser
+      }
+
       if (isPlatformAdmin === true) {
         updateData.isPlatformAdmin = true
         updateData.isDeveloperUser = false  // Mutual exclusion
@@ -121,11 +133,12 @@ router.put(
           email: true,
           isPlatformAdmin: true,
           isDeveloperUser: true,
+          isDemoUser: true,
         },
       })
 
       logger.info(
-        `🔐 Platform admin updated permissions for ${updatedUser.email}: isPlatformAdmin=${updatedUser.isPlatformAdmin}, isDeveloperUser=${updatedUser.isDeveloperUser}`
+        `🔐 Platform admin updated permissions for ${updatedUser.email}: isPlatformAdmin=${updatedUser.isPlatformAdmin}, isDeveloperUser=${updatedUser.isDeveloperUser}, isDemoUser=${updatedUser.isDemoUser}`
       )
 
       res.json({
