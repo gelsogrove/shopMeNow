@@ -28,6 +28,7 @@ export class UserRepository implements UserRepositoryInterface {
       role: data.role,
       isPlatformAdmin: data.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
       isDeveloperUser: data.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
+      isDemoUser: data.isDemoUser || false, // 🎭 Demo account flag (hides billing blocks)
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       lastLogin: data.lastLogin,
@@ -170,7 +171,7 @@ export class UserRepository implements UserRepositoryInterface {
 
     // BUG#16 FIX: Defense-in-depth — strip privilege-escalation fields even if
     // the caller somehow bypasses the controller-level allowlist.
-    const BLOCKED_FIELDS = ['isPlatformAdmin', 'isDeveloperUser', 'passwordHash',
+    const BLOCKED_FIELDS = ['isPlatformAdmin', 'isDeveloperUser', 'isDemoUser', 'passwordHash',
       'isVerified', 'twoFactorEnabled', 'twoFactorSecret', 'deletedAt'] as const
     for (const field of BLOCKED_FIELDS) {
       if (field in data) {

@@ -12,6 +12,7 @@ export interface UserProps {
   role?: string;
   isPlatformAdmin?: boolean; // 🔐 Platform Admin flag for Backoffice access
   isDeveloperUser?: boolean; // 🔧 Developer user flag (skip 2FA)
+  isDemoUser?: boolean; // 🎭 Demo account flag (hides billing blocks in the app)
   createdAt?: Date;
   updatedAt?: Date;
   lastLogin?: Date;
@@ -89,6 +90,11 @@ export class User extends Entity<UserProps> {
   // 🔧 Developer User getter (skip 2FA)
   get isDeveloperUser(): boolean {
     return this.props.isDeveloperUser || false;
+  }
+
+  // 🎭 Demo User getter (hides billing blocks in the app)
+  get isDemoUser(): boolean {
+    return this.props.isDemoUser || false;
   }
 
   get createdAt(): Date | undefined {

@@ -440,6 +440,7 @@ export class AuthController {
         role: user.role,
         isPlatformAdmin: user.isPlatformAdmin || false, // 🔐 Platform Admin flag for Backoffice access
         isDeveloperUser: user.isDeveloperUser || false, // 🔧 Developer user flag (skip 2FA)
+        isDemoUser: user.isDemoUser || false, // 🎭 Demo account: billing blocks hidden in the app
         // 📱 Personal phone (optional)
         phoneNumber: user.phoneNumber,
         // 🌐 Language preference
