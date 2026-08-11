@@ -396,9 +396,8 @@ Il sistema è organizzato in **4 applicazioni Heroku indipendenti**:
 
 #### **SubscriptionStatus** (Enum)
 - `ACTIVE`: Operativo normale
-- `PAUSE_PENDING`: Pausa richiesta (effettiva prossimo mese)
 - `PAUSED`: Sottoscrizione in pausa - no billing, no chatbot
-- `PAYMENT_FAILED`: Pagamento fallito - chatbot bloccato
+- `PAYMENT_FAILED`: LEGACY (2026-08-11, credit-wallet model) — non più impostato da nessun flusso; il valore enum resta per righe storiche e viene azzerato a ogni cambio status. Vedi `docs/billing-model.md`
 
 #### **BillingTransaction**
 - Storico movimenti credit per owner (user-based billing)
@@ -410,8 +409,8 @@ Il sistema è organizzato in **4 applicazioni Heroku indipendenti**:
 - Fattura mensile per owner (user-based)
 - Period: `periodStart`, `periodEnd`, `periodMonth`, `periodYear`
 - Amounts: `subscriptionAmount` (piano mensile) + `creditUsage` (consumo) + `creditDebt` (saldo negativo pregresso)
-- Status: `DRAFT` → `PENDING` → `PAID` / `FAILED` / `CANCELLED`
-- PayPal: `paypalTransactionId`, `paymentRetryCount`
+- Status: `DRAFT` (mese corrente, live) → `PAID` (finalizzata dallo scheduler a fine mese, scalata dal credito). `PENDING`/`FAILED` sono LEGACY del vecchio modello PayPal
+- PayPal: `paypalTransactionId`, `paymentRetryCount` (LEGACY)
 - Breakdown: `itemsBreakdown` JSON (messages, orders, pushes count)
 - Credit notes: `InvoiceCreditNote[]`, `InvoiceAdjustment[]`
 
@@ -1148,52 +1147,40 @@ INPUT: customerMessage, customer, workspace, chatSession
 │ - IF creditBalance < lowBalanceThreshold (€5):              │
 │   → Send email notification (once per day max)              │
 │   → Update User.lowBalanceNotifiedAt                        │
-│ - IF creditBalance < -10:                                   │
-│   → Block ALL workspaces (channelStatus=false)              │
-│   → subscriptionStatus=PAYMENT_FAILED                       │
-│   → Send urgent email                                       │
+│ - IF creditBalance < CREDIT_MIN_THRESHOLD (-€10):           │
+│   → Chatbots stop responding (read-guard in                 │
+│     workspace-access.service) until owner recharges         │
 └──────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ Monthly Billing (1st of month - Scheduler job)              │
+│ ⚠️ CREDIT-WALLET MODEL (2026-08-11) — single money source.  │
+│ Full spec: docs/billing-model.md                            │
 │                                                              │
-│ For each User WHERE subscriptionStatus=ACTIVE:              │
-│  1. Calculate:                                              │
-│     - subscriptionAmount = planType monthly fee             │
-│     - creditUsage = SUM(BillingTransaction) last month      │
-│     - creditDebt = creditBalance < 0 ? abs(creditBalance) : 0│
-│     - totalAmount = subscriptionAmount + creditDebt         │
+│ For each ACTIVE owner (skip PAUSED / FREE_TRIAL):           │
+│  1. Apply pending plan changes (scheduled downgrades)       │
+│  2. Deduct from credit: monthlyFee + VAT(users.taxRate)     │
+│     → balance MAY go negative ("in rosso")                  │
+│     → BillingTransaction type=MONTHLY_FEE                   │
+│  3. Finalize closed month's invoice as PAID:                │
+│     subscription + VAT + usage breakdown + recharges        │
+│     → archived, downloadable as PDF                         │
+│     → invoiceNumber (YYYY-NNNN) assigned at first download  │
+│  4. Set nextBillingDate                                     │
 │                                                              │
-│  2. Create MonthlyInvoice:                                  │
-│     - status=PENDING                                        │
-│     - periodStart=1st, periodEnd=last day of month          │
-│     - invoiceNumber=INV-2026-03-0001                        │
-│     - itemsBreakdown={messages: 150, orders: 10, pushes: 5}│
-│                                                              │
-│  3. Charge via PayPal (if connected):                       │
-│     - IF User.paypalStatus=CONNECTED:                       │
-│       → Create PayPal subscription charge                   │
-│       → Update invoice.status=PAID / FAILED                 │
-│       → Create BillingTransaction (type=INVOICE_PAID)       │
-│     - ELSE:                                                 │
-│       → Send email with bank transfer instructions          │
-│                                                              │
-│  4. Reset trial:                                            │
-│     - IF planType=FREE_TRIAL AND trialEndsAt < NOW:         │
-│       → Force downgrade to BASIC or BLOCK                   │
+│ PayPal NEVER collects the subscription.                     │
 └──────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ Credit Recharge (Manual)                                    │
 │ - Owner → Frontend /billing → "Recharge €50"                │
-│ - Redirects to PayPal Checkout                              │
-│ - PayPal webhook confirms payment                           │
+│ - PayPal one-off payment (the ONLY role PayPal keeps)       │
 │ - Backend:                                                  │
 │   → BillingTransaction: type=RECHARGE, amount=+50           │
 │   → User.creditBalance += 50                                │
-│   → IF was blocked: Unblock workspaces                      │
+│   → IF was below -€10: chatbots resume automatically        │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -1384,37 +1371,15 @@ Used for: Order payments, credit recharges
 ```
 
 #### **B) PayPal Subscriptions (Recurring Monthly Billing)**
-**Status**: ✅ Implemented but needs testing
+**Status**: ❌ REMOVED (2026-08-11) — replaced by the credit-wallet model
 
-**Setup Flow**:
-```
-1. Owner → Frontend /billing → "Connect PayPal"
-2. Backend creates subscription:
-   POST https://api.paypal.com/v1/billing/subscriptions
-   {
-     "plan_id": "P-BASIC-PLAN-ID", // Pre-created in PayPal dashboard
-     "start_time": "2026-04-01T00:00:00Z",
-     "subscriber": {"email_address": "owner@example.com"}
-   }
-   → Returns: subscriptionID + approval_url
+The subscription is deducted from `users.creditBalance` by the scheduler on
+the 1st of the month; PayPal never collects it. PayPal's only remaining role
+is one-off payments for credit recharges (section A above). The connect flow
+and payment webhook remain in the codebase only to record events from legacy
+subscriptions; do not extend them. Full spec: `docs/billing-model.md`.
 
-3. Redirect to approval_url
-4. User approves subscription
-5. PayPal webhook: BILLING.SUBSCRIPTION.ACTIVATED
-   → Update User.paypalSubscriptionId, paypalSubscriptionStatus=ACTIVE
-```
-
-**Monthly Billing Webhook**:
-```
-PayPal sends: PAYMENT.SALE.COMPLETED
-→ Backend:
-  - Find User by paypalSubscriptionId
-  - Create MonthlyInvoice (status=PAID)
-  - Create BillingTransaction (type=INVOICE_PAID, amount=plan monthly fee)
-  - NO credit deduction (invoice paid via bank)
-```
-
-**Sandbox Config**:
+**Sandbox Config** (still used for recharges):
 - `process.env.PAYPAL_CLIENT_ID_SANDBOX`
 - `process.env.PAYPAL_CLIENT_SECRET_SANDBOX`
 - Test accounts: buyer/seller from PayPal Developer Dashboard

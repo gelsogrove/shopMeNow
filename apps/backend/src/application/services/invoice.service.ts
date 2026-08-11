@@ -738,7 +738,7 @@ export class InvoiceService {
     )
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'A4', margin: 50 })
+      const doc = new PDFDocument({ size: 'A4', margin: 0 })
       const chunks: Buffer[] = []
 
       doc.on('data', (chunk) => chunks.push(chunk))
@@ -748,137 +748,195 @@ export class InvoiceService {
       const pageWidth = doc.page.width
       const margin = 50
       const contentWidth = pageWidth - margin * 2
+      const rightEdge = pageWidth - margin
+
+      const INK = '#0f172a'
+      const MUTED = '#64748b'
+      const FAINT = '#94a3b8'
+      const ACCENT = '#16a34a'
+      const ROW_ALT = '#f8fafc'
+      const LINE = '#e2e8f0'
 
       const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
       const formatEur = (amount: number, isCredit = false) =>
         `${isCredit ? '-' : ''}€${amount.toFixed(2)}`
 
-      const invoiceNumber = invoice.invoiceNumber || 'UNASSIGNED'
+      const invoiceNumber = invoice.invoiceNumber || 'DRAFT'
       const periodLabel = `${String(invoice.periodMonth).padStart(2, '0')}/${invoice.periodYear}`
       const periodRange = `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
-      let yPos = margin
 
+      // ── Header band ─────────────────────────────────────────────────────
+      doc.rect(0, 0, pageWidth, 118).fill(INK)
       if (logoPath) {
         try {
-          doc.image(logoPath, margin, yPos, { width: 72, height: 72 })
+          doc.image(logoPath, margin, 28, { width: 62, height: 62 })
         } catch (error) {
           logger.warn('[Invoice] Logo load failed', error)
         }
       }
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(15)
+      doc.text(issuer.name, logoPath ? margin + 76 : margin, 40)
+      doc.fillColor(FAINT).font('Helvetica').fontSize(8.5)
+      if (issuer.address) doc.text(issuer.address, logoPath ? margin + 76 : margin, 60)
+      if (issuer.vat) doc.text(`VAT ${issuer.vat}`, logoPath ? margin + 76 : margin, 72)
 
-      const rightX = pageWidth - margin - 220
-      doc.fontSize(18).font('Helvetica-Bold').text('Invoice', rightX, yPos, { width: 220, align: 'right' })
-      yPos += 24
-      doc.fontSize(10).font('Helvetica').text(`Invoice No: ${invoiceNumber}`, rightX, yPos, { width: 220, align: 'right' })
-      yPos += 14
-      doc.text(`Issued: ${formatDate(invoice.paidAt ?? invoice.createdAt)}`, rightX, yPos, { width: 220, align: 'right' })
-      yPos += 14
-      doc.text(`Period: ${periodLabel}`, rightX, yPos, { width: 220, align: 'right' })
-      yPos += 14
-      doc.text(`Status: ${invoice.status}`, rightX, yPos, { width: 220, align: 'right' })
-      yPos += 26
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26)
+      doc.text('INVOICE', rightEdge - 220, 34, { width: 220, align: 'right' })
+      doc.fillColor('#4ade80').font('Helvetica-Bold').fontSize(12)
+      doc.text(`No. ${invoiceNumber}`, rightEdge - 220, 66, { width: 220, align: 'right' })
+      doc.fillColor(FAINT).font('Helvetica').fontSize(9)
+      doc.text(`Period ${periodLabel}  ·  Issued ${formatDate(invoice.paidAt ?? invoice.createdAt)}`, rightEdge - 260, 84, { width: 260, align: 'right' })
 
+      // Status pill
+      const statusText = invoice.status
+      const pillW = doc.widthOfString(statusText) + 22
+      const pillX = rightEdge - pillW
+      const pillColor = invoice.status === 'PAID' ? ACCENT : invoice.status === 'DRAFT' ? '#d97706' : MUTED
+      doc.roundedRect(pillX, 98, pillW, 15, 7.5).fill(pillColor)
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8)
+      doc.text(statusText, pillX, 102, { width: pillW, align: 'center' })
+
+      let yPos = 142
+
+      // ── FROM / BILL TO cards ────────────────────────────────────────────
       const customerName =
         invoice.user?.companyName ||
         `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim() ||
         invoice.user?.email ||
         'Customer'
 
-      const columnGap = 20
-      const columnWidth = (contentWidth - columnGap) / 2
+      const cardGap = 16
+      const cardW = (contentWidth - cardGap) / 2
+      const cardH = 92
       const leftX = margin
-      const rightColX = margin + columnWidth + columnGap
+      const rightColX = margin + cardW + cardGap
 
-      const blockY = yPos
-      doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold').text('FROM', leftX, blockY)
-      doc.fontSize(10).font('Helvetica').text(issuer.name, leftX, blockY + 14)
-      if (issuer.address) doc.text(issuer.address, leftX, blockY + 28)
-      if (issuer.vat)     doc.text(`VAT: ${issuer.vat}`, leftX, blockY + 42)
-      if (issuer.email)   doc.text(`Email: ${issuer.email}`, leftX, blockY + 56)
-      if (issuer.phone)   doc.text(`Phone: ${issuer.phone}`, leftX, blockY + 70)
-
-      doc.fontSize(10).font('Helvetica-Bold').text('BILL TO', rightColX, blockY)
-      doc.fontSize(10).font('Helvetica').text(customerName, rightColX, blockY + 14)
-      if (invoice.user?.billingAddress)
-        doc.text(invoice.user.billingAddress, rightColX, blockY + 28, { width: columnWidth })
-      if (invoice.user?.vatNumber)
-        doc.text(`VAT: ${invoice.user.vatNumber}`, rightColX, blockY + 42)
-      if (invoice.user?.billingPhone)
-        doc.text(`Phone: ${invoice.user.billingPhone}`, rightColX, blockY + 56)
-
-      yPos = blockY + 100
-      doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
-      yPos += 18
-      doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold').text('DETAILS', margin, yPos)
-      yPos += 18
-
-      const lineGap = 18
-      const addLine = (label: string, amount: number, isCredit = false) => {
-        doc.fontSize(10).font('Helvetica').text(label, margin, yPos, { width: 340 })
-        doc.font('Helvetica').text(formatEur(amount, isCredit), pageWidth - margin - 100, yPos, {
-          width: 100,
-          align: 'right',
-        })
-        yPos += lineGap
-        doc.moveTo(margin, yPos - 6).lineTo(pageWidth - margin, yPos - 6).stroke('#eef2f7')
+      const drawParty = (x: number, title: string, lines: string[]) => {
+        doc.roundedRect(x, yPos, cardW, cardH, 8).fill(ROW_ALT)
+        doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(8.5)
+        doc.text(title, x + 14, yPos + 12)
+        doc.fillColor(INK).font('Helvetica-Bold').fontSize(10.5)
+        doc.text(lines[0] || '', x + 14, yPos + 26, { width: cardW - 28 })
+        doc.fillColor(MUTED).font('Helvetica').fontSize(9)
+        let ly = yPos + 42
+        for (const line of lines.slice(1)) {
+          if (!line) continue
+          doc.text(line, x + 14, ly, { width: cardW - 28, height: 12, ellipsis: true })
+          ly += 13
+        }
       }
 
-      addLine(`Subscription fee (${planName})`, Number(invoice.subscriptionAmount))
+      drawParty(leftX, 'FROM', [
+        issuer.name,
+        issuer.address,
+        issuer.vat ? `VAT ${issuer.vat}` : '',
+        issuer.email,
+        issuer.phone,
+      ])
+      drawParty(rightColX, 'BILL TO', [
+        customerName,
+        invoice.user?.billingAddress || '',
+        invoice.user?.vatNumber ? `VAT ${invoice.user.vatNumber}` : '',
+        invoice.user?.email || '',
+        invoice.user?.billingPhone || '',
+      ])
+
+      yPos += cardH + 26
+
+      // ── Charges table ───────────────────────────────────────────────────
+      const amountColW = 110
+      const rowH = 22
+
+      const tableHeader = (title: string) => {
+        doc.roundedRect(margin, yPos, contentWidth, rowH, 6).fill(INK)
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8.5)
+        doc.text(title, margin + 14, yPos + 7)
+        doc.text('AMOUNT', rightEdge - amountColW - 14, yPos + 7, { width: amountColW, align: 'right' })
+        yPos += rowH
+      }
+
+      let rowIndex = 0
+      const tableRow = (label: string, amount: number, isCredit = false) => {
+        if (rowIndex % 2 === 1) {
+          doc.rect(margin, yPos, contentWidth, rowH).fill(ROW_ALT)
+        }
+        doc.fillColor(INK).font('Helvetica').fontSize(9.5)
+        doc.text(label, margin + 14, yPos + 7, { width: contentWidth - amountColW - 40 })
+        doc.fillColor(isCredit ? ACCENT : INK)
+        doc.text(formatEur(amount, isCredit), rightEdge - amountColW - 14, yPos + 7, {
+          width: amountColW,
+          align: 'right',
+        })
+        yPos += rowH
+        rowIndex++
+      }
+
+      tableHeader('DESCRIPTION')
+      tableRow(`Subscription fee — ${planName} plan (${periodLabel})`, Number(invoice.subscriptionAmount))
       if (Number(rechargesTotal) > 0) {
-        addLine('Recharges', Number(rechargesTotal))
+        tableRow('Credit recharges during the period', Number(rechargesTotal))
       }
       adjustments.forEach((adj) => {
-        const label = `Adjustment: ${adj.reason || 'Manual adjustment'}`
-        const isCredit = Number(adj.amount) < 0
-        addLine(label, Math.abs(Number(adj.amount)), isCredit)
+        tableRow(`Adjustment — ${adj.reason || 'manual'}`, Math.abs(Number(adj.amount)), Number(adj.amount) < 0)
       })
-      yPos += 10
-      doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
-      yPos += 12
-      addLine('Subtotal', Number(invoice.subtotalAmount))
-      addLine(`VAT (${(Number(invoice.taxRate) * 100).toFixed(0)}%)`, Number(invoice.taxAmount))
-      yPos += 6
-      doc.fontSize(12).font('Helvetica-Bold')
-      doc.text('Total', margin, yPos)
-      doc.text(formatEur(Number(invoice.totalAmount)), pageWidth - margin - 100, yPos, {
-        width: 100,
-        align: 'right',
-      })
-      yPos += 24
+      doc.moveTo(margin, yPos).lineTo(rightEdge, yPos).lineWidth(0.5).stroke(LINE)
 
-      // Usage detail: operations already deducted from the prepaid credit
-      // during the period. Informational — NOT part of the invoice total.
+      // ── Totals box (right aligned) ──────────────────────────────────────
+      yPos += 14
+      const totalsW = 230
+      const totalsX = rightEdge - totalsW
+      const totalLine = (label: string, value: string, bold = false) => {
+        doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 12 : 9.5)
+        doc.fillColor(bold ? INK : MUTED)
+        doc.text(label, totalsX, yPos, { width: totalsW - amountColW, align: 'left' })
+        doc.fillColor(bold ? ACCENT : INK)
+        doc.text(value, totalsX + totalsW - amountColW, yPos, { width: amountColW, align: 'right' })
+        yPos += bold ? 20 : 16
+      }
+      totalLine('Subtotal', formatEur(Number(invoice.subtotalAmount)))
+      totalLine(`VAT (${(Number(invoice.taxRate) * 100).toFixed(0)}%)`, formatEur(Number(invoice.taxAmount)))
+      doc.moveTo(totalsX, yPos + 1).lineTo(rightEdge, yPos + 1).lineWidth(1).stroke(INK)
+      yPos += 8
+      totalLine('TOTAL', formatEur(Number(invoice.totalAmount)), true)
+
+      // ── Usage section (informational, already paid from credit) ─────────
       const breakdown = invoice.itemsBreakdown as unknown as ConsumptionBreakdown | null
       if (breakdown && Number(breakdown.totalConsumption) > 0) {
-        doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
-        yPos += 14
-        doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold')
-        doc.text('USAGE PAID FROM CREDIT', margin, yPos)
         yPos += 16
-        doc.fillColor('#111827')
-        if (breakdown.messages.count > 0)
-          addLine(`Messages (${breakdown.messages.count})`, Number(breakdown.messages.amount))
-        if (breakdown.orders.count > 0)
-          addLine(`Orders (${breakdown.orders.count})`, Number(breakdown.orders.amount))
-        if (breakdown.pushNotifications.count > 0)
-          addLine(`Push notifications (${breakdown.pushNotifications.count})`, Number(breakdown.pushNotifications.amount))
-        if (breakdown.adjustments.count > 0)
-          addLine(`Usage adjustments (${breakdown.adjustments.count})`, Number(breakdown.adjustments.amount))
-        doc.fontSize(10).font('Helvetica-Bold')
-        doc.text('Total usage', margin, yPos)
-        doc.text(formatEur(Number(breakdown.totalConsumption)), pageWidth - margin - 100, yPos, {
-          width: 100,
+        doc.fillColor(INK).font('Helvetica-Bold').fontSize(10)
+        doc.text('Usage paid from credit', margin, yPos)
+        doc.fillColor(FAINT).font('Helvetica').fontSize(8)
+        doc.text('Already deducted from your prepaid balance during the period — not added to this invoice total.', margin, yPos + 14)
+        yPos += 30
+        rowIndex = 0
+        const usageRow = (label: string, count: number, amount: number) => {
+          if (count > 0) tableRow(`${label} (${count})`, amount)
+        }
+        usageRow('Messages', breakdown.messages.count, Number(breakdown.messages.amount))
+        usageRow('Orders', breakdown.orders.count, Number(breakdown.orders.amount))
+        usageRow('Push notifications', breakdown.pushNotifications.count, Number(breakdown.pushNotifications.amount))
+        usageRow('Usage adjustments', breakdown.adjustments.count, Number(breakdown.adjustments.amount))
+        doc.moveTo(margin, yPos).lineTo(rightEdge, yPos).lineWidth(0.5).stroke(LINE)
+        yPos += 8
+        doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.5)
+        doc.text('Total usage', margin + 14, yPos)
+        doc.text(formatEur(Number(breakdown.totalConsumption)), rightEdge - amountColW - 14, yPos, {
+          width: amountColW,
           align: 'right',
         })
-        yPos += 22
+        yPos += 24
       }
 
-      doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
-      if (invoice.status === 'PAID') {
-        doc.text('Payment: deducted from prepaid credit balance', margin, yPos)
-        yPos += 12
-      }
-      doc.text(`Invoice covers ${periodRange}`, margin, yPos)
+      // ── Footer ──────────────────────────────────────────────────────────
+      const footerY = Math.max(yPos + 24, doc.page.height - 72)
+      doc.moveTo(margin, footerY).lineTo(rightEdge, footerY).lineWidth(0.5).stroke(LINE)
+      doc.fillColor(MUTED).font('Helvetica').fontSize(8)
+      const footerParts = [
+        invoice.status === 'PAID' ? 'Payment: deducted from prepaid credit balance' : null,
+        `Invoice covers ${periodRange}`,
+        issuer.email || null,
+      ].filter(Boolean)
+      doc.text(footerParts.join('   ·   '), margin, footerY + 10, { width: contentWidth, align: 'center' })
 
       doc.end()
     })

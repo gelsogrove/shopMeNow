@@ -553,40 +553,6 @@ class BackofficeApi {
       return this.fetch('/users/admin/invoices/unpaid')
     },
 
-    /**
-     * Get failed invoices (previous months only)
-     */
-    getFailedInvoices: async (): Promise<ApiResponse<Array<{
-      owner: {
-        id: string
-        email: string
-        firstName: string | null
-        lastName: string | null
-        companyName: string | null
-        planType: string
-        subscriptionStatus: string
-        creditBalance: number
-        paymentFailureCount: number
-        lastPaymentFailedAt: string | null
-      }
-      invoice: {
-        id: string
-        invoiceNumber?: string | null
-        periodMonth: number
-        periodYear: number
-        totalAmount: number
-        subtotalAmount?: number
-        taxAmount?: number
-        creditNotesTotal?: number
-        status: string
-        paidAt: string | null
-        adminNotes: string | null
-        adminMarkedById: string | null
-        adminMarkedAt: string | null
-      }
-    }>>> => {
-      return this.fetch('/users/admin/invoices/failed')
-    },
 
     /**
      * Get monthly invoice summary for analytics
@@ -630,39 +596,7 @@ class BackofficeApi {
       return this.fetch(`/users/admin/analytics/revenue-stats?${query.toString()}`)
     },
 
-    /**
-     * Record a payment failure for a user (increments failure count)
-     */
-    recordPaymentFailure: async (
-      userId: string,
-      adminNotes?: string
-    ): Promise<ApiResponse<{
-      paymentFailureCount: number
-      subscriptionStatus: string
-      lastPaymentFailedAt: string
-      blocked: boolean
-    }>> => {
-      return this.fetch(`/users/admin/${userId}/payment-failure`, {
-        method: 'POST',
-        body: JSON.stringify({ adminNotes }),
-      })
-    },
 
-    /**
-     * Reset payment failure status for a user
-     */
-    resetPaymentFailure: async (
-      userId: string,
-      adminNotes?: string
-    ): Promise<ApiResponse<{
-      paymentFailureCount: number
-      subscriptionStatus: string
-    }>> => {
-      return this.fetch(`/users/admin/${userId}/payment-reset`, {
-        method: 'POST',
-        body: JSON.stringify({ adminNotes }),
-      })
-    },
 
     /**
      * Update invoice status/notes (admin)
@@ -879,18 +813,6 @@ class BackofficeApi {
       return this.fetch(`/users/admin/${userId}/paypal`)
     },
 
-    /**
-     * Mock PayPal monthly payment for invoice
-     */
-    mockPayPalPayment: async (
-      invoiceId: string,
-      notes?: string
-    ): Promise<ApiResponse<{ success: boolean; transactionId: string; status: string }>> => {
-      return this.fetch(`/users/admin/invoices/${invoiceId}/paypal/mock-payment`, {
-        method: 'POST',
-        body: JSON.stringify({ notes }),
-      })
-    },
 
     /**
      * Get all PayPal transactions (for admin Transactions tab)

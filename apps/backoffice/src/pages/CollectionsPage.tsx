@@ -92,9 +92,6 @@ const getPreviousMonthFromDate = (date: Date) => {
 const isSamePeriod = (periodMonth: number, periodYear: number, targetMonth: number, targetYear: number) =>
   periodMonth === targetMonth && periodYear === targetYear
 
-const isBeforePeriod = (periodMonth: number, periodYear: number, targetMonth: number, targetYear: number) =>
-  periodYear < targetYear || (periodYear === targetYear && periodMonth < targetMonth)
-
 const getPeriodRange = (month: number, year: number) => {
   const start = new Date(year, month - 1, 1)
   const end = new Date(year, month, 0)
@@ -829,30 +826,6 @@ export function CollectionsPage() {
     setUpdating(null)
   }
 
-  const findRowByInvoiceId = (invoiceId: string): OwnerInvoiceRow | undefined =>
-    currentRows.find((row) => row.invoice.id === invoiceId) ||
-    previousRows.find((row) => row.invoice.id === invoiceId) ||
-    failedRows.find((row) => row.invoice.id === invoiceId) ||
-    historyRows.find((row) => row.invoice.id === invoiceId)
-
-  const syncPreviewStatus = (invoiceId: string, status: string, paidAt: string | null) => {
-    setInvoicePreviews((prev) => {
-      const existing = prev[invoiceId]
-      if (!existing?.data) return prev
-      return {
-        ...prev,
-        [invoiceId]: {
-          loading: false,
-          data: {
-            ...existing.data,
-            status,
-            paidAt,
-          },
-        },
-      }
-    })
-  }
-
   const isViewLoading =
     viewMode === 'history'
       ? isHistoryLoading
@@ -874,8 +847,6 @@ export function CollectionsPage() {
   const emptyStateText =
     viewMode === 'current'
       ? 'No current month totals available.'
-      : viewMode === 'failed'
-      ? 'No failed payments to review.'
       : viewMode === 'history'
       ? `No paid invoices for ${historyLabel || 'the selected period'}.`
       : 'No invoices to charge for the previous month.'
@@ -906,8 +877,6 @@ export function CollectionsPage() {
           <p className="text-sm text-gray-600">
             {viewMode === 'current'
               ? 'Live EUR totals for the current month.'
-              : viewMode === 'failed'
-              ? 'Retry or move failed payments to trash.'
               : viewMode === 'history'
               ? 'Paid invoices and documents.'
               : viewMode === 'transactions'
@@ -924,7 +893,6 @@ export function CollectionsPage() {
           onClick={() => {
             loadCurrentInvoices()
             loadPreviousInvoices()
-            loadFailedInvoices()
             if (viewMode === 'history') {
               loadHistory({ month: historyMonth, year: historyYear })
             }
@@ -1103,17 +1071,10 @@ export function CollectionsPage() {
                 const isHistoryView = viewMode === 'history'
                 const isTrackingView = viewMode === 'current'
                 const isPreviousView = viewMode === 'previous'
-                const isFailedView = viewMode === 'failed'
                 const previewState = invoicePreviews[invoice.id]
                 const detail = previewState?.data
                 const formattedPeriod = formatMonthYear(invoice.periodMonth, invoice.periodYear)
                 const periodRange = getPeriodRange(invoice.periodMonth, invoice.periodYear)
-                const canReturnToPrevious = isSamePeriod(
-                  invoice.periodMonth,
-                  invoice.periodYear,
-                  previousDefaults.month,
-                  previousDefaults.year
-                )
                 return (
                   <div
                     key={invoice.id}
@@ -1127,11 +1088,6 @@ export function CollectionsPage() {
                             {row.owner.email}
                           </span>
                           {getStatusBadge(invoice.status)}
-                          {isFailedView && invoice.paymentRetryCount > 0 && (
-                            <Badge variant="destructive" className="text-xs">
-                              {invoice.paymentRetryCount} {invoice.paymentRetryCount === 1 ? 'retry' : 'retries'}
-                            </Badge>
-                          )}
                         </div>
                         <div className="text-sm text-gray-600">
                           {ownerName || '—'} · {row.owner.companyName || '—'} · {row.owner.planType}
@@ -1163,7 +1119,7 @@ export function CollectionsPage() {
                             Credit notes: -{formatEur(invoice.creditNotesTotal ?? 0)}
                           </div>
                         )}
-                        {!isHistoryView && !isTrackingView && !isFailedView && (
+                        {!isHistoryView && !isTrackingView && (
                           <div className="flex items-center justify-end gap-2 text-xs text-gray-500">
                             <span>Payment:</span>
                             {renderPaymentToggle(invoice.status)}
