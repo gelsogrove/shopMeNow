@@ -1517,8 +1517,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       handleSelectWorkspace(workspace)
                     }}
                   >
-                  {/* 🎨 Header Bar — soft emerald for every channel mode */}
-                  <div className="relative px-4 py-3 flex items-center justify-end gap-2 bg-gradient-to-r from-emerald-400 to-emerald-500">
+                  {/* 🎨 Header Bar — deep emerald for every channel mode */}
+                  <div className="relative px-4 py-3 flex items-center justify-end gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600">
                     <TooltipProvider delayDuration={100}>
                       {/* Try the Chatbot */}
                       <Tooltip>
@@ -1727,7 +1727,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             <span>Active</span>
                             <span
                               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                channelActive ? "bg-green-500" : "bg-gray-300"
+                                channelActive ? "bg-green-600" : "bg-gray-300"
                               }`}
                             >
                               <span
@@ -3067,6 +3067,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 instantChat
                 useChannelLogo
                 hideWorkspaceName
+                useWindowConfig={false}
                 onOpenChange={(open) => {
                   if (!open) setTryChatbotWorkspace(null)
                 }}
