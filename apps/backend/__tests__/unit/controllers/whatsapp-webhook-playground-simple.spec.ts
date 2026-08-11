@@ -21,10 +21,13 @@ describe("WhatsApp Webhook - Playground Feature (Unit Tests)", () => {
 
   describe("Playground Flag Behavior", () => {
     it("should document that isPlayground=true bypasses signature verification", () => {
-      // CODE LOCATION: whatsapp-webhook.controller.ts line ~399
-      // LOGIC: if (!isPlayground) { verify signature }
-      // RESULT: Playground requests skip x-hub-signature-256 check
-      
+      // CODE LOCATION: whatsapp-webhook.controller.ts (_receiveMessageLocked)
+      // LOGIC: if (!webhookId && !isPlayground) { verify signature }
+      // RESULT: Playground requests (webhookId-less route) skip the
+      // x-hub-signature-256 check. On the PRODUCTION route (webhookId in
+      // path) the signature is ALWAYS verified in SECURITY STEP 0 before any
+      // side effect, and the client-sent isPlayground flag is ignored.
+
       expect(true).toBe(true)
     })
 

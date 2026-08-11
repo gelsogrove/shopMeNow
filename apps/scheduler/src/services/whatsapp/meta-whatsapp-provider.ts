@@ -227,7 +227,8 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
   async sendTemplateMessage(
     to: string,
     templateName: string,
-    params: string[]
+    params: string[],
+    languageCode: string
   ): Promise<WhatsAppSendMessageResult> {
     try {
       const formattedPhone = to.replace(/[\s+]/g, '')
@@ -254,7 +255,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
           type: 'template',
           template: {
             name: templateName,
-            language: { code: 'en' },
+            language: { code: languageCode },
             components,
           },
         },

@@ -117,7 +117,7 @@ describe("WhatsAppQueueService", () => {
       })
 
       // Execute
-      const result = await service.validateAndSend(mockMessage)
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
 
       // Verify SecurityAgent was called first
       expect(mockSecurityAgent.process).toHaveBeenCalledWith({
@@ -164,7 +164,7 @@ describe("WhatsAppQueueService", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(null)
 
       // Execute
-      const result = await service.validateAndSend(mockMessage)
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
 
       // Verify SecurityAgent was called (validation happens before workspace check)
       expect(mockSecurityAgent.process).toHaveBeenCalled()
@@ -212,7 +212,7 @@ describe("WhatsAppQueueService", () => {
       })
 
       // Execute
-      const result = await service.validateAndSend(mockMessage)
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
 
       // Verify SecurityAgent was called first
       expect(mockSecurityAgent.process).toHaveBeenCalled()
@@ -264,7 +264,7 @@ describe("WhatsAppQueueService", () => {
       })
 
       // Execute
-      const result = await service.validateAndSend(mockMessage)
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
 
       // Verify SecurityAgent was called first
       expect(mockSecurityAgent.process).toHaveBeenCalled()
@@ -318,7 +318,7 @@ describe("WhatsAppQueueService", () => {
       })
 
       // Execute
-      const result = await service.validateAndSend(mockMessage)
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
 
       // Verify SecurityAgent was called
       expect(mockSecurityAgent.process).toHaveBeenCalled()

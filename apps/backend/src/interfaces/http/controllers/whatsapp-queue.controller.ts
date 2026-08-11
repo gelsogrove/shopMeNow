@@ -123,8 +123,7 @@ export class WhatsAppQueueController {
       const workspaceId = (req as any).workspaceId
       const { id } = req.params
 
-      const repository = this.service["repository"] // Access private repository
-      const message = await repository.findById(id, workspaceId)
+      const message = await this.service.getMessageById(id, workspaceId)
 
       if (!message) {
         return res.status(404).json({ error: "Message not found" })

@@ -39,7 +39,8 @@ export interface WhatsAppProvider {
   sendTemplateMessage?(
     to: string,
     templateName: string,
-    params: string[]
+    params: string[],
+    languageCode: string
   ): Promise<WhatsAppSendMessageResult>
 
   /**

@@ -71,11 +71,14 @@ export interface WhatsAppProvider {
   /**
    * Send a template message (Meta Business API only)
    * Optional - not all providers support templates
+   * languageCode must match the language the template was approved in on Meta
+   * (e.g. "it", "en_US") — there is no default, the caller decides.
    */
   sendTemplateMessage?(
     to: string,
     templateName: string,
-    params: string[]
+    params: string[],
+    languageCode: string
   ): Promise<WhatsAppSendMessageResult>
 
   /**

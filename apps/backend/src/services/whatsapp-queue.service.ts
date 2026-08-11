@@ -13,6 +13,7 @@ import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.reposito
 // Services
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
+import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 
 export interface EnqueueMessageDto {
   workspaceId: string
@@ -74,6 +75,19 @@ export class WhatsAppQueueService {
       logger.error(`[WhatsAppQueueService] Error in getQueueStatus:`, error)
       throw new Error("Failed to get queue status")
     }
+  }
+
+  /**
+   * Get a single queue message by id (workspace isolation enforced)
+   * @param id Message ID
+   * @param workspaceId Workspace ID (workspace isolation)
+   * @returns Message or null
+   */
+  async getMessageById(
+    id: string,
+    workspaceId: string
+  ): Promise<WhatsAppQueue | null> {
+    return await this.repository.findById(id, workspaceId)
   }
 
   /**
@@ -608,10 +622,12 @@ export class WhatsAppQueueService {
         }
       }
 
-      // Send message via provider
+      // Send message via provider. Markdown → WhatsApp formatting is applied
+      // here exactly like the direct-send path does: queued content (push
+      // campaigns) can contain rich Markdown that WhatsApp renders as raw text.
       const sendResult = await provider.sendTextMessage(
         message.phoneNumber,
-        message.messageContent
+        mdToWhatsApp(message.messageContent)
       )
 
       const whatsappDuration = Date.now() - whatsappStartTime

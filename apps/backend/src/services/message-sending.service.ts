@@ -50,10 +50,11 @@ export interface SendMessageResult {
 
 /**
  * Message Sending Service
- * Punto UNICO per tutti gli invii WhatsApp
- * 
- * 🎯 IMPORTANTE: Usa la Queue per tutti gli invii!
- * La queue rispetta debugMode e applica Security Agent nello scheduler
+ * Single entry point for WhatsApp sends
+ *
+ * 🎯 IMPORTANT: sends are SYNCHRONOUS via WhatsAppDirectSendService, which
+ * runs the Security Agent before the provider send. The WhatsAppQueue table
+ * is NOT used by this path — it belongs to push campaigns only.
  */
 export class MessageSendingService {
   private translationAgent: TranslationAgent
@@ -132,8 +133,8 @@ export class MessageSendingService {
         })
       }
 
-      // 4. Enqueue to WhatsApp Queue (rispetta debugMode!)
-      logger.info("📱 [MESSAGE-SEND] Enqueueing to WhatsApp Queue", {
+      // 4. Send synchronously via WhatsAppDirectSendService (Security Agent runs there)
+      logger.info("📱 [MESSAGE-SEND] Sending via WhatsAppDirectSendService", {
         phoneNumber: options.phoneNumber,
         messageLength: finalMessage.length,
         sendType: options.sendType,
@@ -160,7 +161,7 @@ export class MessageSendingService {
         phoneNumber: options.phoneNumber,
         messageContent: finalMessage,
         conversationMessageId: messageId,
-        skipSecurityCheck: securityChecked, // security already applied above if needed
+        skipSecurityCheck: securityChecked, // always false here → DirectSend runs the Security Agent
       })
 
       logger.info("✅ [MESSAGE-SEND] Message sent successfully", {
