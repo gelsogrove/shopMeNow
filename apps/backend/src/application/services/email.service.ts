@@ -171,7 +171,7 @@ export class EmailService {
         <p>${t.intro}</p>
         
         <p style="text-align: center;">
-            <a href="${data.resetUrl}" class="button">${t.resetButton}</a>
+            <a href="${data.resetUrl}" class="button" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold;">${t.resetButton}</a>
         </p>
         
         <p>${t.copyLink}</p>
@@ -275,7 +275,7 @@ ${t.rights}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Richiesta Assistenza Operatore</title>
+    <title>Operator Assistance Request</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background-color: #f59e0b; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
@@ -289,21 +289,21 @@ ${t.rights}
 </head>
 <body>
     <div class="header">
-        <h1>🔔 Richiesta Assistenza Operatore</h1>
+        <h1>🔔 Operator Assistance Request</h1>
     </div>
     <div class="content">
         <div class="urgent">
-            <strong>⚠️ ATTENZIONE:</strong> L'utente <strong>${data.customerName}</strong> ha richiesto di parlare con un operatore.
+            <strong>⚠️ ATTENTION:</strong> User <strong>${data.customerName}</strong> has requested to speak with an operator.
         </div>
-        
-        <h3>📋 Dettagli della richiesta:</h3>
+
+        <h3>📋 Request details:</h3>
         <ul>
-            <li><strong>Cliente:</strong> ${data.customerName}</li>
+            <li><strong>Customer:</strong> ${data.customerName}</li>
             <li><strong>Workspace:</strong> ${data.workspaceName || "N/A"}</li>
-            <li><strong>Data/Ora:</strong> ${new Date().toLocaleString("it-IT")}</li>
+            <li><strong>Date/Time:</strong> ${new Date().toLocaleString("en-GB")}</li>
         </ul>
-        
-        <h3>🤖 Riassunto AI della conversazione (ultime 24h):</h3>
+
+        <h3>🤖 AI conversation summary (last 24h):</h3>
         <div class="summary-box">
             ${data.chatSummary}
         </div>
@@ -312,19 +312,19 @@ ${t.rights}
           chatLink
             ? `
         <p style="text-align: center;">
-            <a href="${chatLink}" class="button">📱 Visualizza Chat Completa</a>
+            <a href="${chatLink}" class="button" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold;">📱 View Full Chat</a>
         </p>
         `
             : ""
         }
         
-        <p><strong>Azione richiesta:</strong> Contattare il cliente il prima possibile per fornire assistenza personalizzata.</p>
-        
-        <p>Cordiali saluti,<br>Sistema di Notifiche eChatbot</p>
+        <p><strong>Action required:</strong> Contact the customer as soon as possible to provide personalized assistance.</p>
+
+        <p>Best regards,<br>eChatbot Notification System</p>
     </div>
     <div class="footer">
-        <p>Questa email è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore.</p>
-        <p>eChatbot - La tua piattaforma e-commerce di fiducia</p>
+        <p>This email was generated automatically by the eChatbot system when a customer requested operator assistance.</p>
+        <p>eChatbot - Your trusted e-commerce platform</p>
     </div>
 </body>
 </html>
@@ -339,28 +339,28 @@ ${t.rights}
       : null
 
     return `
-🔔 RICHIESTA ASSISTENZA OPERATORE
+🔔 OPERATOR ASSISTANCE REQUEST
 
-⚠️ ATTENZIONE: L'utente ${data.customerName} ha richiesto di parlare con un operatore.
+⚠️ ATTENTION: User ${data.customerName} has requested to speak with an operator.
 
-📋 Dettagli della richiesta:
-- Cliente: ${data.customerName}
+📋 Request details:
+- Customer: ${data.customerName}
 - Workspace: ${data.workspaceName || "N/A"}
-- Data/Ora: ${new Date().toLocaleString("it-IT")}
+- Date/Time: ${new Date().toLocaleString("en-GB")}
 
-🤖 Riassunto AI della conversazione (ultime 24h):
+🤖 AI conversation summary (last 24h):
 ${data.chatSummary}
 
-${chatLink ? `📱 Link alla chat completa: ${chatLink}` : ""}
+${chatLink ? `📱 Full chat link: ${chatLink}` : ""}
 
-Azione richiesta: Contattare il cliente il prima possibile per fornire assistenza personalizzata.
+Action required: Contact the customer as soon as possible to provide personalized assistance.
 
-Cordiali saluti,
-Sistema di Notifiche eChatbot
+Best regards,
+eChatbot Notification System
 
 ---
-Questa email è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore.
-eChatbot - La tua piattaforma e-commerce di fiducia
+This email was generated automatically by the eChatbot system when a customer requested operator assistance.
+eChatbot - Your trusted e-commerce platform
     `
   }
 

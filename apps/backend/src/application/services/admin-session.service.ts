@@ -3,7 +3,77 @@ import { randomUUID } from "crypto"
 import logger from "../../utils/logger"
 import { config } from "../../config"
 
+/**
+ * Durata di default di una sessione admin del backoffice.
+ *
+ * Deliberatamente SEPARATA da TOKEN_EXPIRATION: quella variabile governa la
+ * scadenza dei link sicuri inviati ai clienti su WhatsApp (checkout, fatture,
+ * profilo), che ha vincoli di sicurezza completamente diversi. Allungare la
+ * sessione dell'admin non deve allungare la vita di quei link.
+ */
+const DEFAULT_ADMIN_SESSION_DURATION = "2h"
+
+/**
+ * Converte una durata in formato "15m" | "2h" | "7d" in millisecondi.
+ *
+ * Il parser precedente faceva `parseInt(value.replace("h", ""))` e trattava il
+ * risultato come ore: con "30m" restituiva 30 ORE invece di 30 minuti.
+ *
+ * @param value - durata con suffisso di unita' (m/h/d)
+ * @param fallback - durata usata se `value` e' assente o malformato
+ * @returns durata in millisecondi
+ */
+function parseDurationToMs(
+  value: string | undefined,
+  fallback: string
+): number {
+  const UNIT_TO_MS: Record<string, number> = {
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  }
+
+  const parse = (input: string): number | null => {
+    const match = /^(\d+)\s*([mhd])$/i.exec(input.trim())
+    if (!match) return null
+
+    const amount = parseInt(match[1], 10)
+    if (!Number.isFinite(amount) || amount <= 0) return null
+
+    return amount * UNIT_TO_MS[match[2].toLowerCase()]
+  }
+
+  if (value) {
+    const parsed = parse(value)
+    if (parsed !== null) return parsed
+
+    logger.warn(
+      `⚠️ Invalid ADMIN_SESSION_DURATION "${value}" - expected formats: 15m, 2h, 7d. Falling back to ${fallback}`
+    )
+  }
+
+  // Il fallback e' una costante interna: se non parsa e' un bug, non input utente.
+  const parsedFallback = parse(fallback)
+  if (parsedFallback === null) {
+    throw new Error(`Invalid fallback duration: ${fallback}`)
+  }
+  return parsedFallback
+}
+
 export class AdminSessionService {
+  /**
+   * Legge la durata configurata della sessione admin.
+   *
+   * Letta a ogni chiamata (non memoizzata) perche' i test modificano
+   * process.env a runtime.
+   */
+  private getSessionDurationMs(): number {
+    return parseDurationToMs(
+      process.env.ADMIN_SESSION_DURATION,
+      DEFAULT_ADMIN_SESSION_DURATION
+    )
+  }
+
   /**
    * Crea una nuova sessione admin al login
    * POLICY: Una sola sessione attiva per user, la vecchia viene revocata
@@ -32,12 +102,9 @@ export class AdminSessionService {
       // 2. Genera nuovo sessionId univoco
       const sessionId = randomUUID()
 
-      // 3. Calcola scadenza: durata configurabile da TOKEN_EXPIRATION env
+      // 3. Calcola scadenza: durata configurabile da ADMIN_SESSION_DURATION env
       const now = new Date()
-      // Use env variable directly to allow runtime changes (important for testing)
-      const tokenExpiration = process.env.TOKEN_EXPIRATION || "1h"
-      const hours = parseInt(tokenExpiration.replace("h", "")) || 1
-      const expiresAt = new Date(now.getTime() + hours * 60 * 60 * 1000)
+      const expiresAt = new Date(now.getTime() + this.getSessionDurationMs())
 
       // 4. Crea nuova sessione
       await prisma.adminSession.create({
@@ -106,7 +173,7 @@ export class AdminSessionService {
         return { valid: false, error: "Session revoked" }
       }
 
-      // 3. Sessione scaduta (>1h dalla creazione)
+      // 3. Sessione scaduta (inattiva oltre ADMIN_SESSION_DURATION)
       if (session.expiresAt < new Date()) {
         logger.warn(
           `⚠️ Session expired: ${sessionId.substring(0, 8)}... (expired: ${session.expiresAt.toISOString()})`
@@ -121,10 +188,21 @@ export class AdminSessionService {
         return { valid: false, error: "Session expired" }
       }
 
-      // 4. Sessione valida → Aggiorna lastActivityAt
+      // 4. Sessione valida → sliding window: rinnova lastActivityAt E expiresAt
+      //
+      // expiresAt viene ricalcolato dall'istante corrente, non dal login. La
+      // sessione diventa cosi' un timeout di INATTIVITA': chi lavora senza
+      // pause non viene mai disconnesso, chi resta inattivo oltre la durata
+      // configurata deve rifare login.
+      const now = new Date()
+      const renewedExpiresAt = new Date(now.getTime() + this.getSessionDurationMs())
+
       await prisma.adminSession.update({
         where: { id: session.id },
-        data: { lastActivityAt: new Date() },
+        data: {
+          lastActivityAt: now,
+          expiresAt: renewedExpiresAt,
+        },
       })
 
       logger.debug(

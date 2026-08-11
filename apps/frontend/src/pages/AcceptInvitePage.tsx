@@ -108,21 +108,11 @@ export function AcceptInvitePage() {
       if (errorMessage.includes("expired")) {
         setPageState("expired")
       } else if (errorMessage.includes("already accepted") || errorMessage.includes("already a member")) {
-        // If invitation was already accepted and user is logged in, redirect to workspace selection
-        if (isLoggedIn) {
-          logger.info("Invitation already accepted and user is logged in - redirecting to workspace selection")
-          toast.success("You're already part of the team!")
-          navigate("/workspace-selection")
-          return
-        }
         setPageState("already-accepted")
       } else {
-        // For other invalid tokens, if user is logged in just redirect to workspace
-        if (isLoggedIn) {
-          logger.info("Invalid token but user is logged in - redirecting to workspace selection")
-          navigate("/workspace-selection")
-          return
-        }
+        // Never redirect on an unclassified failure: the membership has NOT been
+        // created, so sending the user away hides the error and leaves them with
+        // no workspace. Show the real reason instead.
         setPageState("invalid")
       }
       setError(errorMessage)
@@ -283,7 +273,18 @@ export function AcceptInvitePage() {
                 {error || "This invitation link is not valid."}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
+              <Button
+                onClick={() => {
+                  setHasAutoAccepted(false)
+                  setError(null)
+                  setPageState("loading")
+                  validateToken()
+                }}
+                className="w-full"
+              >
+                Try Again
+              </Button>
               <Button
                 onClick={() => navigate("/")}
                 variant="outline"

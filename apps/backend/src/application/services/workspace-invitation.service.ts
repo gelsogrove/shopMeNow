@@ -338,7 +338,7 @@ export class WorkspaceInvitationService {
             <p><strong>${data.inviterName}</strong> has invited you to join <strong>${data.workspaceName}</strong> on eChatbot.</p>
             <p>Click the button below to accept the invitation:</p>
             <p style="text-align: center;">
-              <a href="${acceptUrl}" class="button">Accept Invitation</a>
+              <a href="${acceptUrl}" class="button" style="display: inline-block; background: #4F46E5; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold;">Accept Invitation</a>
             </p>
             <p>Or copy this link: ${acceptUrl}</p>
             <p style="color: #666; font-size: 14px;">
