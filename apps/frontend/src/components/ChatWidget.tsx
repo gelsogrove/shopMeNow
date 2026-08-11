@@ -2169,19 +2169,6 @@ export function ChatWidget({
                 )}
               </div>
             <div className="flex items-center gap-2">
-              {/* Profile button - only visible for registered users (not during registration form).
-                  🎮 Hidden in demo (instantChat): no profile for anonymous demo visitors. */}
-              {customerId && !showRegistrationForm && !instantChat && (
-                <button
-                  onClick={handleOpenProfile}
-                  className="hover:brightness-95 p-2 rounded-lg transition-colors"
-                  style={{ backgroundColor: showProfilePanel ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)" }}
-                  title="My Profile"
-                  aria-label="My Profile"
-                >
-                  <User className="w-5 h-5" />
-                </button>
-              )}
               {!instantChat && workspaceConfig?.debugMode === true && (
                 <button
                   onClick={() => setIsDebugPanelOpen(true)}
