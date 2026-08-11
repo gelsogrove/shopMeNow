@@ -172,7 +172,9 @@ describe("TeamMembersTable", () => {
       const ownerElements = screen.getAllByText("Owner")
       expect(ownerElements.length).toBeGreaterThan(0)
     })
-    expect(screen.getByText("Admin")).toBeInTheDocument()
+    // Andrea's request (2026-08-11): non-owner members show NO role badge in
+    // the Members tab — only the Owner row is badged.
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument()
   })
 
   it("should show empty state when no members", async () => {
