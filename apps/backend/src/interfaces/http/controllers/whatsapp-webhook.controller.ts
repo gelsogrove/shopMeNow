@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
@@ -92,7 +93,16 @@ export class WhatsAppWebhookController {
         return
       }
 
-      if (mode === "subscribe" && token === settings.webhookToken) {
+      // Constant-time comparison (hash both sides so length differences don't leak)
+      const tokenMatches =
+        typeof token === "string" &&
+        !!settings.webhookToken &&
+        crypto.timingSafeEqual(
+          crypto.createHash("sha256").update(token).digest(),
+          crypto.createHash("sha256").update(settings.webhookToken).digest()
+        )
+
+      if (mode === "subscribe" && tokenMatches) {
         logger.info("[WEBHOOK-VERIFY] ✅ Verification successful", { webhookId })
         if (challenge === undefined) {
           res.status(400).send("Missing hub.challenge")
@@ -195,6 +205,54 @@ export class WhatsAppWebhookController {
     const { webhookId } = req.params
     try {
       logger.info("[WEBHOOK] 📨 Receiving message")
+
+      // 🔒 SECURITY STEP 0: Authenticate production webhooks BEFORE any side
+      // effect. Delivery-status writes, reaction updates and audio
+      // transcription (Whisper, paid) all run below — none of them may happen
+      // on an unsigned payload. The client-supplied isPlayground flag is
+      // NEVER trusted on this path: anything posted to /webhook/:webhookId
+      // must carry a valid X-Hub-Signature-256.
+      if (webhookId) {
+        const authSettings = await prisma.whatsappSettings.findUnique({
+          where: { webhookId },
+          select: { appSecret: true },
+        })
+
+        if (!authSettings) {
+          logger.warn("[WEBHOOK] ❌ Unknown webhookId", { webhookId })
+          res.status(404).json({ error: "workspace_not_found_for_webhook" })
+          return
+        }
+
+        const sigHeader = req.header("x-hub-signature-256")
+        if (!sigHeader) {
+          logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
+          res.status(403).json({ error: "missing_signature" })
+          return
+        }
+
+        if (!authSettings.appSecret) {
+          logger.error("[WEBHOOK] ❌ Missing app secret in WhatsApp settings", { webhookId })
+          res.status(500).json({ error: "webhook_signature_config_missing" })
+          return
+        }
+
+        try {
+          const rawBody = (req as any).rawBody || req.body || {}
+          const isValid = verifyWhatsAppSignature(rawBody, sigHeader, authSettings.appSecret)
+          if (!isValid) {
+            logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
+            res.status(403).json({ error: "invalid_signature" })
+            return
+          }
+        } catch (err) {
+          logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
+            error: (err as Error).message,
+          })
+          res.status(403).json({ error: "invalid_signature" })
+          return
+        }
+      }
 
       // ✓✓ DELIVERY RECEIPTS: Meta sends message status (sent/delivered/read) in
       // `value.statuses` — NOT in `value.messages`. Handle it first and return,
@@ -353,7 +411,10 @@ export class WhatsAppWebhookController {
         }
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
-        isPlayground = value.isPlayground === true // 🧪 Extract playground flag from value (frontend simulator uses entry format)
+        // 🧪 Playground flag: only honored on the webhookId-less route — a
+        // production request (webhookId present) is already HMAC-verified and
+        // must never downgrade itself to playground via a client-sent flag.
+        isPlayground = value.isPlayground === true && !webhookId
         messageTimestamp = message.timestamp ? Number(message.timestamp) * 1000 : undefined
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
@@ -370,7 +431,7 @@ export class WhatsAppWebhookController {
         messageText = data.message
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from standard format
-        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
+        isPlayground = data.isPlayground === true && !webhookId // 🧪 Playground flag: never trusted on the production (webhookId) route
 
         logger.info(
           "[WEBHOOK] 📨 Frontend simulator format (standard) detected",
@@ -388,7 +449,7 @@ export class WhatsAppWebhookController {
         messageText = extractedMessage
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from weird format
-        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
+        isPlayground = data.isPlayground === true && !webhookId // 🧪 Playground flag: never trusted on the production (webhookId) route
 
         logger.info("[WEBHOOK] 📨 Frontend simulator format (weird) detected", {
           from: phoneNumber,
@@ -514,8 +575,12 @@ export class WhatsAppWebhookController {
         messageText = inboundReaction.emoji
       }
 
-      // 🔒 SECURITY: Verify Meta signature (skip for playground — no HMAC header)
-      if (!isPlayground) {
+      // 🔒 SECURITY: Verify Meta signature on the webhookId-less route.
+      // The production route (webhookId present) was already verified in
+      // SECURITY STEP 0 at the top of this method, before any side effect.
+      // Here we only cover non-playground posts to /webhook (no webhookId),
+      // which resolve the workspace from the payload.
+      if (!webhookId && !isPlayground) {
         const sigHeader = req.header("x-hub-signature-256")
         if (!sigHeader) {
           logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
