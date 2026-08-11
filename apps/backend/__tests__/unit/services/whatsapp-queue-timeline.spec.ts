@@ -37,7 +37,7 @@ const mockPrisma = {
 // Mock security agent
 jest.mock("../../../src/application/agents/SecurityAgent", () => ({
   SecurityAgent: jest.fn().mockImplementation(() => ({
-    process: jest.fn().mockResolvedValue({
+    process: (jest.fn() as any).mockResolvedValue({
       safe: true,
       blockedReason: null,
     }),
@@ -47,8 +47,8 @@ jest.mock("../../../src/application/agents/SecurityAgent", () => ({
 // Mock subscription billing service
 jest.mock("../../../src/application/services/subscription-billing.service", () => ({
   SubscriptionBillingService: jest.fn().mockImplementation(() => ({
-    deductOwnerMessageCredit: jest.fn().mockResolvedValue({ success: true, newBalance: 100 }),
-    deductMessageCredit: jest.fn().mockResolvedValue({ success: true, newBalance: 100 }),
+    deductOwnerMessageCredit: (jest.fn() as any).mockResolvedValue({ success: true, newBalance: 100 }),
+    deductMessageCredit: (jest.fn() as any).mockResolvedValue({ success: true, newBalance: 100 }),
   })),
 }))
 
@@ -94,12 +94,12 @@ describe("WhatsApp Queue Timeline Append", () => {
     it("should append Security Check step to existing timeline", async () => {
       const messageId = "msg-123"
       
-      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue({
         id: messageId,
         debugInfo: JSON.stringify(existingDebugInfo),
       })
 
-      mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+      mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({})
 
       // Call private method via reflection or expose it for testing
       await (service as any).appendTimelineStep(messageId, {
@@ -135,12 +135,12 @@ describe("WhatsApp Queue Timeline Append", () => {
         ],
       }
 
-      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue({
         id: messageId,
         debugInfo: JSON.stringify(withSecurityStep),
       })
 
-      mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+      mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({})
 
       await (service as any).appendTimelineStep(messageId, {
         type: "sub_agent",
@@ -163,12 +163,12 @@ describe("WhatsApp Queue Timeline Append", () => {
     it("should handle null debugInfo gracefully", async () => {
       const messageId = "msg-789"
       
-      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue({
         id: messageId,
         debugInfo: null,
       })
 
-      mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+      mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({})
 
       await (service as any).appendTimelineStep(messageId, {
         type: "sub_agent",
@@ -186,7 +186,7 @@ describe("WhatsApp Queue Timeline Append", () => {
     })
 
     it("should not fail if message not found", async () => {
-      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue(null)
+      mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue(null)
 
       // Should not throw
       await expect(
@@ -206,14 +206,14 @@ describe("WhatsApp Queue Timeline Append", () => {
       const conversationMessageId = "cmsg-789"
 
       // Mock workspace (not in debug mode)
-      mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.workspace.findUnique = (jest.fn() as any).mockResolvedValue({
         debugMode: false,
         name: "Test Workspace",
       })
 
       // Mock pending message with conversationMessageId
       const mockRepository = (service as any).repository
-      mockRepository.findPending = jest.fn().mockResolvedValue({
+      mockRepository.findPending = (jest.fn() as any).mockResolvedValue({
         id: "queue-123",
         workspaceId,
         customerId,
@@ -224,7 +224,7 @@ describe("WhatsApp Queue Timeline Append", () => {
       })
 
       // Mock conversation message for timeline append
-      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue({
         id: conversationMessageId,
         debugInfo: JSON.stringify({
           steps: [{ type: "router", agent: "Router", timestamp: new Date().toISOString() }],
@@ -234,8 +234,8 @@ describe("WhatsApp Queue Timeline Append", () => {
         }),
       })
 
-      mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
-      mockRepository.updateStatus = jest.fn().mockResolvedValue(undefined)
+      mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({})
+      mockRepository.updateStatus = (jest.fn() as any).mockResolvedValue(undefined)
 
       // Process
       await service.processPendingMessages(workspaceId)
@@ -253,14 +253,14 @@ describe("WhatsApp Queue Timeline Append", () => {
     it("should skip timeline append if conversationMessageId is null", async () => {
       const workspaceId = "ws-123"
 
-      mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.workspace.findUnique = (jest.fn() as any).mockResolvedValue({
         debugMode: false,
         name: "Test Workspace",
       })
 
       // Mock pending message WITHOUT conversationMessageId
       const mockRepository = (service as any).repository
-      mockRepository.findPending = jest.fn().mockResolvedValue({
+      mockRepository.findPending = (jest.fn() as any).mockResolvedValue({
         id: "queue-456",
         workspaceId,
         customerId: "cust-789",
@@ -271,7 +271,7 @@ describe("WhatsApp Queue Timeline Append", () => {
       })
 
       mockPrisma.conversationMessage.findUnique = jest.fn()
-      mockRepository.updateStatus = jest.fn().mockResolvedValue(undefined)
+      mockRepository.updateStatus = (jest.fn() as any).mockResolvedValue(undefined)
 
       await service.processPendingMessages(workspaceId)
 
@@ -284,7 +284,7 @@ describe("WhatsApp Queue Timeline Append", () => {
     it("should append Security Check with blocked=true when message is blocked", async () => {
       const messageId = "msg-blocked"
 
-      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+      mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue({
         id: messageId,
         debugInfo: JSON.stringify({
           steps: [{ type: "router", agent: "Router", timestamp: new Date().toISOString() }],
@@ -294,7 +294,7 @@ describe("WhatsApp Queue Timeline Append", () => {
         }),
       })
 
-      mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+      mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({})
 
       await (service as any).appendTimelineStep(messageId, {
         type: "sub_agent",
