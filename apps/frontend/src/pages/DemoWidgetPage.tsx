@@ -19,6 +19,7 @@
  *   That base is www.echatbot.ai — the backend serves the API from the same
  *   host as the frontend, and api.echatbot.ai does NOT resolve.
  */
+import { ChevronDown } from "lucide-react"
 import { Fragment, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { ChatWidget, type PushDemoCase } from "@/components/ChatWidget"
@@ -915,6 +916,16 @@ export function DemoWidgetPage() {
   const [demo, setDemo] = useState<ResolvedDemo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  // Collapsible pricing phases — each block (Software / Customizations /
+  // Maybe Later) opens and closes on click. Software starts open because it
+  // is what the visitor can try right now; the collapsed header still shows
+  // the phase total so pricing stays visible at a glance.
+  const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({
+    Software: true,
+  })
+  const togglePhase = (title: string) =>
+    setOpenPhases((s) => ({ ...s, [title]: !s[title] }))
+  const isPhaseOpen = (title: string) => !!openPhases[title]
   // 📣 Each click increments this → the ChatWidget fires the next promo push
   // (and shows a clickable notification above its icon when closed).
   const [pushTrigger, setPushTrigger] = useState(0)
@@ -1094,14 +1105,38 @@ export function DemoWidgetPage() {
               <div className="space-y-8 sm:hidden">
                 {DEMO_PHASES.map((phase) => (
                   <div key={phase.title}>
-                    <span className={`block text-xl font-extrabold tracking-tight ${brand.itemsText}`}>
-                      {phase.title}
-                    </span>
-                    {phase.subtitle && (
-                      <span className={`mt-1 block text-sm leading-snug ${brand.openHint}`}>
-                        {phase.subtitle}
+                    {/* Collapsible header — tap to open/close the block. The
+                        phase total is shown while collapsed so pricing never
+                        disappears from view. */}
+                    <button
+                      type="button"
+                      onClick={() => togglePhase(phase.title)}
+                      className="flex w-full items-center justify-between gap-3 text-left"
+                    >
+                      <span>
+                        <span className={`block text-xl font-extrabold tracking-tight ${brand.itemsText}`}>
+                          {phase.title}
+                        </span>
+                        {phase.subtitle && (
+                          <span className={`mt-1 block text-sm leading-snug ${brand.openHint}`}>
+                            {phase.subtitle}
+                          </span>
+                        )}
                       </span>
-                    )}
+                      <span className={`flex items-center gap-2 ${brand.itemsText}`}>
+                        {!isPhaseOpen(phase.title) && phase.total && (
+                          <span className="whitespace-nowrap font-extrabold">
+                            {formatEuro(phase.total)}
+                          </span>
+                        )}
+                        <ChevronDown
+                          className={`h-5 w-5 shrink-0 transition-transform ${
+                            isPhaseOpen(phase.title) ? "rotate-180" : ""
+                          }`}
+                        />
+                      </span>
+                    </button>
+                    {isPhaseOpen(phase.title) && (
                     <div className="mt-4 space-y-3">
                       {phase.features.map((feature) => (
                         <div
@@ -1130,7 +1165,8 @@ export function DemoWidgetPage() {
                         </div>
                       ))}
                     </div>
-                    {phase.total && (
+                    )}
+                    {isPhaseOpen(phase.title) && phase.total && (
                       <div
                         className={`mt-4 flex items-center justify-between border-t border-white/20 pt-3 font-extrabold ${brand.itemsText}`}
                       >
@@ -1159,18 +1195,42 @@ export function DemoWidgetPage() {
                         blocks instead of one long list. */}
                     <tr className="border-b border-white/20">
                       <td colSpan={5} className="pb-3 pt-7">
-                        <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
-                          {phase.title}
-                        </span>
-                        {phase.subtitle && (
-                          <span className={`mt-1 block text-base leading-snug ${brand.openHint}`}>
-                            {phase.subtitle}
+                        {/* Collapsible header — click to open/close the block.
+                            The phase total is shown while collapsed so pricing
+                            never disappears from view. */}
+                        <button
+                          type="button"
+                          onClick={() => togglePhase(phase.title)}
+                          className="flex w-full items-center justify-between gap-3 text-left"
+                        >
+                          <span>
+                            <span className={`block text-xl font-extrabold tracking-tight sm:text-2xl ${brand.itemsText}`}>
+                              {phase.title}
+                            </span>
+                            {phase.subtitle && (
+                              <span className={`mt-1 block text-base leading-snug ${brand.openHint}`}>
+                                {phase.subtitle}
+                              </span>
+                            )}
                           </span>
-                        )}
+                          <span className={`flex items-center gap-3 ${brand.itemsText}`}>
+                            {!isPhaseOpen(phase.title) && phase.total && (
+                              <span className="whitespace-nowrap text-lg font-extrabold">
+                                {formatEuro(phase.total)}
+                              </span>
+                            )}
+                            <ChevronDown
+                              className={`h-6 w-6 shrink-0 transition-transform ${
+                                isPhaseOpen(phase.title) ? "rotate-180" : ""
+                              }`}
+                            />
+                          </span>
+                        </button>
                       </td>
                     </tr>
                     {/* Column header repeated per phase, so every block reads
-                        as a self-contained table. */}
+                        as a self-contained table. Hidden while collapsed. */}
+                    {isPhaseOpen(phase.title) && (
                     <tr className={`border-b border-white/25 ${brand.tryLabel}`}>
                       <th className="py-2 pr-4 text-sm font-semibold uppercase tracking-wide">
                         Feature
@@ -1188,7 +1248,8 @@ export function DemoWidgetPage() {
                         Notes
                       </th>
                     </tr>
-                    {phase.features.map((feature) => (
+                    )}
+                    {isPhaseOpen(phase.title) && phase.features.map((feature) => (
                     <tr key={feature.name} className="border-b border-white/10 align-top">
                       {/* Feature name only — the explanation lives in the Notes column. */}
                       <td className="py-2.5 pr-4">
@@ -1218,7 +1279,7 @@ export function DemoWidgetPage() {
                     </tr>
                     ))}
                     {/* Phase total — closing price row for the whole block. */}
-                    {phase.total && (
+                    {isPhaseOpen(phase.title) && phase.total && (
                       <tr className="border-b border-white/20">
                         <td
                           colSpan={3}

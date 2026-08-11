@@ -268,7 +268,7 @@ export function TeamMembersTable({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-green-600">
+              <CardTitle className="flex items-center gap-2 text-green-800">
                 <Users className="h-5 w-5" />
                 Team
               </CardTitle>
@@ -288,7 +288,7 @@ export function TeamMembersTable({
                       onClick={() => setInviteModalOpen(true)}
                       className={`gap-1.5 ${
                         canInvite
-                          ? "text-green-600 border-green-600 hover:bg-green-50"
+                          ? "text-green-800 border-green-800 hover:bg-green-50"
                           : ""
                       }`}
                     >
