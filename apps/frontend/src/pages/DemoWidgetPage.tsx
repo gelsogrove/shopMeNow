@@ -627,8 +627,6 @@ interface DemoPhase {
   flat?: boolean
 }
 
-const formatEuro = (amount: number) => `€${amount.toLocaleString("en-US")}`
-
 // Effort bar styling. Green→amber→red reads as "quick" → "significant build";
 // the colour carries the meaning at a glance, the tooltip spells it out.
 const EFFORT_COLORS: Record<number, string> = {
@@ -653,21 +651,21 @@ function FeatureStatus({ feature, itemsText }: { feature: DemoFeature; itemsText
   if (feature.status === "done") {
     return (
       <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
-        ✅ {feature.progress ?? 100}%
+        ✅
       </span>
     )
   }
   if (feature.status === "in_progress") {
     return (
       <span className="inline-flex items-center gap-1.5 font-medium text-sky-300">
-        🚧 {feature.progress ?? 50}%
+        🚧
       </span>
     )
   }
   if (feature.status === "todo") {
     return (
       <span className="inline-flex items-center gap-1.5 font-medium text-amber-200/90">
-        🕒 {feature.progress ?? 0}%
+        🕒
       </span>
     )
   }
@@ -917,12 +915,8 @@ export function DemoWidgetPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   // Collapsible pricing phases — each block (Software / Customizations /
-  // Maybe Later) opens and closes on click. Software starts open because it
-  // is what the visitor can try right now; the collapsed header still shows
-  // the phase total so pricing stays visible at a glance.
-  const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({
-    Software: true,
-  })
+  // Maybe Later) opens and closes on click. All closed by default.
+  const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({})
   const togglePhase = (title: string) =>
     setOpenPhases((s) => ({ ...s, [title]: !s[title] }))
   const isPhaseOpen = (title: string) => !!openPhases[title]
@@ -1064,7 +1058,7 @@ export function DemoWidgetPage() {
                       Software
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €1,300
+                      €X,XXX
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. The assistant with the whole basic functionality
@@ -1077,7 +1071,7 @@ export function DemoWidgetPage() {
                       Customization
                     </span>
                     <span className={`mt-2 block text-2xl font-extrabold ${brand.itemsText}`}>
-                      €3,200
+                      €X,XXX
                     </span>
                     <span className={`mt-2 block text-sm leading-snug ${brand.openHint}`}>
                       One-time. Everything tailor-made for you: loading your
@@ -1126,7 +1120,7 @@ export function DemoWidgetPage() {
                       <span className={`flex items-center gap-2 ${brand.itemsText}`}>
                         {!isPhaseOpen(phase.title) && phase.total && (
                           <span className="whitespace-nowrap font-extrabold">
-                            {formatEuro(phase.total)}
+                            €X,XXX
                           </span>
                         )}
                         <ChevronDown
@@ -1148,11 +1142,7 @@ export function DemoWidgetPage() {
                               {feature.name}
                             </span>
                             <span className={`whitespace-nowrap font-semibold ${brand.itemsText}`}>
-                              {feature.price === "tbd"
-                                ? "❓"
-                                : phase.flat && !feature.price
-                                  ? "—"
-                                  : formatEuro(feature.price ?? 0)}
+                              —
                             </span>
                           </div>
                           <div className="mt-2 flex items-center gap-3">
@@ -1171,7 +1161,7 @@ export function DemoWidgetPage() {
                         className={`mt-4 flex items-center justify-between border-t border-white/20 pt-3 font-extrabold ${brand.itemsText}`}
                       >
                         <span>Total</span>
-                        <span className="text-lg">{formatEuro(phase.total)}</span>
+                        <span className="text-lg">€X,XXX</span>
                       </div>
                     )}
                   </div>
@@ -1181,7 +1171,7 @@ export function DemoWidgetPage() {
                 >
                   <span>Grand total</span>
                   <span className="text-xl">
-                    {formatEuro(DEMO_PHASES.reduce((sum, p) => sum + (p.total ?? 0), 0))}
+                    €X,XXX
                   </span>
                 </div>
               </div>
@@ -1216,7 +1206,7 @@ export function DemoWidgetPage() {
                           <span className={`flex items-center gap-3 ${brand.itemsText}`}>
                             {!isPhaseOpen(phase.title) && phase.total && (
                               <span className="whitespace-nowrap text-lg font-extrabold">
-                                {formatEuro(phase.total)}
+                                €X,XXX
                               </span>
                             )}
                             <ChevronDown
@@ -1266,11 +1256,7 @@ export function DemoWidgetPage() {
                       </td>
                       {/* Price — per-feature cost, when quoted. */}
                       <td className={`whitespace-nowrap py-2.5 pr-4 font-medium ${brand.itemsText}`}>
-                        {feature.price === "tbd"
-                          ? "❓"
-                          : phase.flat && !feature.price
-                            ? "—"
-                            : formatEuro(feature.price ?? 0)}
+                        —
                       </td>
                       {/* Notes — free-text scope/caveat for the feature. */}
                       <td className={`py-2.5 text-sm leading-snug ${brand.openHint}`}>
@@ -1290,15 +1276,14 @@ export function DemoWidgetPage() {
                         <td
                           className={`whitespace-nowrap py-3 pr-4 text-lg font-extrabold ${brand.itemsText}`}
                         >
-                          {formatEuro(phase.total)}
+                          €X,XXX
                         </td>
                         <td />
                       </tr>
                     )}
                   </Fragment>
                   ))}
-                  {/* Grand total — sum of every phase total, computed so it
-                      never drifts when a single phase price changes. */}
+                  {/* Grand total — price masked on the public demo. */}
                   <tr>
                     <td
                       colSpan={3}
@@ -1309,9 +1294,7 @@ export function DemoWidgetPage() {
                     <td
                       className={`whitespace-nowrap py-4 pr-4 text-xl font-extrabold ${brand.itemsText}`}
                     >
-                      {formatEuro(
-                        DEMO_PHASES.reduce((sum, p) => sum + (p.total ?? 0), 0)
-                      )}
+                      €X,XXX
                     </td>
                     <td />
                   </tr>
