@@ -394,11 +394,15 @@ class BackofficeApi {
     },
 
     /**
-     * Update user permissions (isPlatformAdmin, isDeveloperUser)
+     * Update user permissions (isPlatformAdmin, isDeveloperUser, isDemoUser)
      */
     updatePermissions: async (
       userId: string,
-      permissions: { isPlatformAdmin?: boolean; isDeveloperUser?: boolean }
+      permissions: {
+        isPlatformAdmin?: boolean
+        isDeveloperUser?: boolean
+        isDemoUser?: boolean
+      }
     ): Promise<ApiResponse<{ success: boolean }>> => {
       return this.fetch(`/users/admin/${userId}/permissions`, {
         method: 'PUT',

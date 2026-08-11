@@ -65,6 +65,7 @@ interface User {
   lastName: string | null
   isPlatformAdmin: boolean
   isDeveloperUser: boolean
+  isDemoUser: boolean
   twoFactorEnabled: boolean
   requires2FA: boolean  // true if user should have 2FA (not admin/dev)
   status: string
