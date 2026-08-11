@@ -23,7 +23,7 @@ import { WhatsAppQueueService } from "../../src/services/whatsapp-queue.service"
 jest.mock("../../src/application/agents/SecurityAgent", () => {
   return {
     SecurityAgent: jest.fn().mockImplementation(() => ({
-      process: jest.fn().mockResolvedValue({
+      process: (jest.fn() as any).mockResolvedValue({
         safe: true,
         message: "Message passed security check",
         tokensUsed: 100,
@@ -36,11 +36,11 @@ jest.mock("../../src/application/agents/SecurityAgent", () => {
 jest.mock("../../src/application/services/subscription-billing.service", () => {
   return {
     SubscriptionBillingService: jest.fn().mockImplementation(() => ({
-      deductOwnerMessageCredit: jest.fn().mockResolvedValue({
+      deductOwnerMessageCredit: (jest.fn() as any).mockResolvedValue({
         success: true,
         newBalance: 100,
       }),
-      deductMessageCredit: jest.fn().mockResolvedValue({
+      deductMessageCredit: (jest.fn() as any).mockResolvedValue({
         success: true,
         newBalance: 100,
       }),
@@ -52,9 +52,9 @@ jest.mock("../../src/application/services/subscription-billing.service", () => {
 jest.mock("../../src/repositories/whatsapp-queue.repository", () => {
   return {
     WhatsAppQueueRepository: jest.fn().mockImplementation(() => ({
-      findPending: jest.fn().mockResolvedValue(null),
-      updateStatus: jest.fn().mockResolvedValue(undefined),
-      create: jest.fn().mockResolvedValue({ id: "test-id" }),
+      findPending: (jest.fn() as any).mockResolvedValue(null),
+      updateStatus: (jest.fn() as any).mockResolvedValue(undefined),
+      create: (jest.fn() as any).mockResolvedValue({ id: "test-id" }),
     })),
   }
 })

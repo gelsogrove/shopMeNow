@@ -10,7 +10,7 @@
  * 3. ✅ Multiple messages → Each passes through Security sequentially
  */
 
-const mockSecurityAgentProcess = jest.fn()
+const mockSecurityAgentProcess: any = jest.fn()
 
 jest.mock("../../../src/application/agents/SecurityAgent", () => ({
   SecurityAgent: jest.fn().mockImplementation(() => ({
@@ -27,7 +27,7 @@ jest.mock("../../../src/services/whatsapp/whatsapp-provider.factory", () => ({
     isConfigured: jest.fn().mockReturnValue(true),
     getProviderDisplayName: jest.fn().mockReturnValue("UltraMsg"),
     create: jest.fn().mockReturnValue({
-      sendTextMessage: jest.fn().mockResolvedValue({
+      sendTextMessage: (jest.fn() as any).mockResolvedValue({
         success: true,
         messageId: "wamid_test_123",
       }),
@@ -70,7 +70,7 @@ describe("🛡️ WhatsAppQueueService - Security Agent Integration", () => {
     jest.clearAllMocks()
     
     // Mock workspace with WhatsApp configuration
-    mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
+    mockPrisma.workspace.findUnique = (jest.fn() as any).mockResolvedValue({
       id: testWorkspaceId,
       whatsappProvider: "ultramsg",
       ultraMsgInstanceId: "161048",
@@ -78,14 +78,14 @@ describe("🛡️ WhatsAppQueueService - Security Agent Integration", () => {
     })
     
     // Mock conversationMessage (if needed for timeline)
-    mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+    mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue({
       id: "conv-msg-123",
       debugInfo: null,
     })
-    mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+    mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({})
     
     // Mock user with credit
-    mockPrisma.user.findUnique = jest.fn().mockResolvedValue({
+    mockPrisma.user.findUnique = (jest.fn() as any).mockResolvedValue({
       creditBalance: 100,
     })
     
