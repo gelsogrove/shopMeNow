@@ -36,6 +36,11 @@ import {
   Trash2,
 } from 'lucide-react'
 
+// Mirrors MAX_PAYMENT_ATTEMPTS in apps/backend/src/services/paypal-invoice-charge.service.ts:
+// 1 automatic scheduler attempt + 3 manual operator retries. The server enforces
+// the cap (409); this constant only drives the disabled state and the counter label.
+const MAX_PAYMENT_ATTEMPTS = 4
+
 interface OwnerInvoiceRow {
   owner: {
     id: string
@@ -1264,6 +1269,24 @@ export function CollectionsPage() {
                           <FileText className="h-4 w-4 mr-2" />
                           Adjustments
                         </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleRetryCharge(invoice.id)}
+                      disabled={
+                        isUpdatingRow ||
+                        invoice.status === 'PAID' ||
+                        (invoice.paymentRetryCount || 0) >= MAX_PAYMENT_ATTEMPTS
+                      }
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      title={
+                        (invoice.paymentRetryCount || 0) >= MAX_PAYMENT_ATTEMPTS
+                          ? 'Attempt limit reached — decide: mark paid, grant credit, or cancel/block'
+                          : 'Charge this invoice now via the owner PayPal mandate'
+                      }
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry Charge ({invoice.paymentRetryCount || 0}/{MAX_PAYMENT_ATTEMPTS})
+                    </Button>
                     <Button
                       variant="outline"
                       onClick={() =>
