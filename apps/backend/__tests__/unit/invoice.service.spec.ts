@@ -52,8 +52,12 @@ const mockPrisma = {
   },
 }
 
-// Mock modules BEFORE imports
+// Mock modules BEFORE imports.
+// billing-math/billing-queries are pulled in REAL (requireActual) so the
+// service runs the same shared formulas as production — only prisma is mocked.
 jest.mock('@echatbot/database', () => ({
+  ...jest.requireActual('../../../../packages/database/src/billing-math'),
+  ...jest.requireActual('../../../../packages/database/src/billing-queries'),
   prisma: mockPrisma,
   InvoiceStatus: {
     DRAFT: 'DRAFT',
@@ -94,6 +98,8 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     creditBalance: 50.0,
     subscriptionStatus: 'ACTIVE',
     pausedAt: null,
+    // Per-user VAT (users.taxRate): the service reads it for every calculation
+    taxRate: 0.22,
   }
 
   const mockInvoice = {

@@ -18,7 +18,6 @@ import { format } from "date-fns"
 import { toast } from "@/lib/toast"
 import { roundMoney } from "@/utils/money"
 
-const TAX_RATE = 0.22 // 22% IVA
 const ITEMS_PER_PAGE = 10
 
 export function BillingPage() {
@@ -144,8 +143,9 @@ export function BillingPage() {
   // Calculate current month billing
   const subscriptionFee = billingOverview?.planConfig?.monthlyFee || billingOverview?.limits?.monthlyFee || 0
   const totalRecharges = billingOverview?.billing?.totalRecharges || 0
+  const taxRate = billingOverview?.billing?.taxRate ?? 0
   const subtotal = roundMoney(subscriptionFee + totalRecharges)
-  const taxAmount = roundMoney(subtotal * TAX_RATE)
+  const taxAmount = roundMoney(subtotal * taxRate)
   const total = roundMoney(subtotal + taxAmount)
   const nextBillingDate = billingOverview?.billing?.nextBillingDate 
     ? new Date(billingOverview.billing.nextBillingDate) 

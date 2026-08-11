@@ -849,9 +849,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Taxes (21%):</span>
+                  <span className="text-muted-foreground">Taxes ({((billing.taxRate ?? 0) * 100).toFixed(0)}%):</span>
                   <span className="font-medium text-emerald-600">
-                    {formatEur((planConfig.monthlyFee + (billing.totalRecharges || 0)) * 0.21)}
+                    {formatEur((planConfig.monthlyFee + (billing.totalRecharges || 0)) * (billing.taxRate ?? 0))}
                   </span>
                 </div>
                 {billing.planType !== "FREE_TRIAL" && (() => {
@@ -1636,7 +1636,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                               </TableRow>
                             )}
                             <TableRow>
-                              <TableCell className="font-medium">Taxes (22%)</TableCell>
+                              <TableCell className="font-medium">Taxes ({((invoice.taxRate ?? 0) * 100).toFixed(0)}%)</TableCell>
                               <TableCell className="text-right font-medium text-emerald-600">
                                 {invoice.taxAmount > 0 ? `+${formatEur(invoice.taxAmount)}` : '—'}
                               </TableCell>

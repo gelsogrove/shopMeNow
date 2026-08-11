@@ -17,6 +17,9 @@ export const buildPlanChangeUpdateData = (planType: PlanType, now: Date) => ({
   pendingPlanEffectiveDate: null,
 })
 
+export const isValidTaxRate = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 && value < 1
+
 router.post(
   "/admin/:userId/change-plan",
   authMiddleware,
@@ -97,6 +100,64 @@ router.post(
       res.status(500).json({
         success: false,
         error: error.message || "Failed to change plan",
+      })
+    }
+  }
+)
+
+router.patch(
+  "/admin/:userId/tax-rate",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { taxRate } = req.body as { taxRate?: unknown }
+      const adminUser = (req as any).user
+
+      if (!isValidTaxRate(taxRate)) {
+        return res.status(400).json({
+          success: false,
+          error: "taxRate must be a number between 0 and 1 (e.g. 0.22 for 22%)",
+        })
+      }
+
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, taxRate: true },
+      })
+
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          error: "User not found",
+        })
+      }
+
+      await prisma.user.update({
+        where: { id: targetUser.id },
+        data: { taxRate },
+      })
+
+      logger.info(
+        `📋 Admin ${adminUser.email} changed tax rate for user ${targetUser.email}: ` +
+          `${(Number(targetUser.taxRate) * 100).toFixed(2)}% → ${(taxRate * 100).toFixed(2)}%`
+      )
+
+      res.json({
+        success: true,
+        data: {
+          userId: targetUser.id,
+          email: targetUser.email,
+          previousTaxRate: Number(targetUser.taxRate),
+          newTaxRate: taxRate,
+        },
+      })
+    } catch (error: any) {
+      logger.error("Error changing user tax rate:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to change tax rate",
       })
     }
   }

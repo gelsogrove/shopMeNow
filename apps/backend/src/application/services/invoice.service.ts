@@ -12,7 +12,7 @@
  * - Generate invoice data for display
  */
 
-import { prisma, InvoiceStatus, PlanType, TransactionType, SubscriptionStatus } from '@echatbot/database'
+import { prisma, InvoiceStatus, PlanType, TransactionType, SubscriptionStatus, computeInvoiceTotals, calculateConsumptionBreakdown, getRechargesTotal } from '@echatbot/database'
 import fs from 'fs'
 import path from 'path'
 import PDFDocument from 'pdfkit'
@@ -69,8 +69,6 @@ interface InvoiceData {
 }
 
 export class InvoiceService {
-  private readonly TAX_RATE = 0.22
-
   // Format: YYYY-NNNN (e.g. 2026-0001). Sequence resets to 1 each year.
   private formatInvoiceNumber(year: number, sequence: number): string {
     return `${year}-${String(sequence).padStart(4, '0')}`
@@ -219,9 +217,9 @@ export class InvoiceService {
       // Get user's plan type
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true },
+        select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true, taxRate: true },
       })
-      
+
       if (!user) {
         throw new Error('User not found')
       }
@@ -252,7 +250,7 @@ export class InvoiceService {
           creditDebt: 0,
           creditNotesTotal: 0,
           subtotalAmount: 0,
-          taxRate: this.TAX_RATE,
+          taxRate: Number(user.taxRate),
           taxAmount: 0,
           totalAmount: subscriptionAmount,
           status: 'DRAFT',
@@ -287,58 +285,7 @@ export class InvoiceService {
     periodStart: Date,
     periodEnd: Date
   ): Promise<ConsumptionBreakdown> {
-    // Get all debit transactions for this period
-    const transactions = await prisma.billingTransaction.findMany({
-      where: {
-        userId,
-        createdAt: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
-        amount: { lt: 0 }, // Only debit transactions
-      },
-    })
-    
-    // Calculate breakdown by type
-    const breakdown: ConsumptionBreakdown = {
-      messages: { count: 0, amount: 0 },
-      orders: { count: 0, amount: 0 },
-      pushNotifications: { count: 0, amount: 0 },
-      adjustments: { count: 0, amount: 0 },
-      totalConsumption: 0,
-    }
-    
-    for (const tx of transactions) {
-      const amount = Math.abs(Number(tx.amount))
-      
-      switch (tx.type) {
-        case 'MESSAGE':
-          breakdown.messages.count++
-          breakdown.messages.amount += amount
-          break
-        case 'NEW_ORDER':
-          breakdown.orders.count++
-          breakdown.orders.amount += amount
-          break
-        case 'PUSH_NOTIFICATION':
-          breakdown.pushNotifications.count++
-          breakdown.pushNotifications.amount += amount
-          break
-        case 'ADJUSTMENT':
-          breakdown.adjustments.count++
-          breakdown.adjustments.amount += amount
-          break
-        // Skip other types like RECHARGE, MONTHLY_FEE, etc.
-      }
-    }
-    
-    breakdown.totalConsumption = 
-      breakdown.messages.amount +
-      breakdown.orders.amount +
-      breakdown.pushNotifications.amount +
-      breakdown.adjustments.amount
-    
-    return breakdown
+    return calculateConsumptionBreakdown(prisma, userId, periodStart, periodEnd)
   }
   
   /**
@@ -497,7 +444,7 @@ export class InvoiceService {
       creditNotesTotal: Number(invoice.creditNotesTotal ?? 0),
       adjustmentsTotal,
       subtotalAmount: Number(invoice.subtotalAmount ?? 0),
-      taxRate: Number(invoice.taxRate ?? this.TAX_RATE),
+      taxRate: Number(invoice.taxRate ?? 0),
       taxAmount: Number(invoice.taxAmount ?? 0),
       totalAmount: Number(invoice.totalAmount),
       status: invoice.status,
@@ -588,24 +535,10 @@ export class InvoiceService {
   }
 
   private async getRechargeTotal(userId: string, periodStart: Date, periodEnd: Date): Promise<number> {
-    const billingTransaction = (prisma as any).billingTransaction
-    if (!billingTransaction?.aggregate) {
-      return 0
+    if (!(prisma as any).billingTransaction?.aggregate) {
+      return 0 // partial prisma mock in unit tests
     }
-
-    const rechargeSum = await billingTransaction.aggregate({
-      where: {
-        userId,
-        type: "RECHARGE",
-        amount: { gt: 0 },
-        createdAt: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
-      },
-      _sum: { amount: true },
-    })
-    return Number(rechargeSum._sum.amount || 0)
+    return getRechargesTotal(prisma, userId, periodStart, periodEnd)
   }
 
   private async getTransactionTotal(userId: string, periodStart: Date, periodEnd: Date): Promise<number> {
@@ -636,7 +569,7 @@ export class InvoiceService {
 
     const user = await prisma.user.findUnique({
       where: { id: invoice.userId },
-      select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true },
+      select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true, taxRate: true },
     })
 
     if (!user) {
@@ -703,14 +636,13 @@ export class InvoiceService {
     const adjustmentsAmount = Number(adjustmentsTotal._sum.amount || 0)
     const rechargesAmount = Number(rechargeTotal || 0)
 
-    const subtotalRaw =
-      Number(subscriptionAmount) +
-      adjustmentsAmount +
-      rechargesAmount
-    const subtotalAmount = roundMoney(subtotalRaw)
-    const taxableBase = Math.max(subtotalAmount, 0)
-    const taxAmount = roundMoney(taxableBase * this.TAX_RATE)
-    const totalAmount = roundMoney(subtotalAmount + taxAmount)
+    const userTaxRate = Number(user.taxRate)
+    const { subtotalAmount, taxAmount, totalAmount } = computeInvoiceTotals(
+      Number(subscriptionAmount),
+      adjustmentsAmount,
+      rechargesAmount,
+      userTaxRate
+    )
 
     return prisma.monthlyInvoice.update({
       where: { id: invoiceId },
@@ -720,7 +652,7 @@ export class InvoiceService {
         creditDebt,
         creditNotesTotal: creditNotesAmount,
         subtotalAmount,
-        taxRate: this.TAX_RATE,
+        taxRate: userTaxRate,
         taxAmount,
         totalAmount,
         itemsBreakdown: consumption as any,
@@ -904,7 +836,7 @@ export class InvoiceService {
       doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
       yPos += 12
       addLine('Subtotal', Number(invoice.subtotalAmount))
-      addLine(`Tax (${(Number(invoice.taxRate) * 100).toFixed(0)}% IVA)`, Number(invoice.taxAmount))
+      addLine(`VAT (${(Number(invoice.taxRate) * 100).toFixed(0)}%)`, Number(invoice.taxAmount))
       yPos += 6
       doc.fontSize(12).font('Helvetica-Bold')
       doc.text('Total', margin, yPos)
@@ -913,7 +845,39 @@ export class InvoiceService {
         align: 'right',
       })
       yPos += 24
+
+      // Usage detail: operations already deducted from the prepaid credit
+      // during the period. Informational — NOT part of the invoice total.
+      const breakdown = invoice.itemsBreakdown as unknown as ConsumptionBreakdown | null
+      if (breakdown && Number(breakdown.totalConsumption) > 0) {
+        doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
+        yPos += 14
+        doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold')
+        doc.text('USAGE PAID FROM CREDIT', margin, yPos)
+        yPos += 16
+        doc.fillColor('#111827')
+        if (breakdown.messages.count > 0)
+          addLine(`Messages (${breakdown.messages.count})`, Number(breakdown.messages.amount))
+        if (breakdown.orders.count > 0)
+          addLine(`Orders (${breakdown.orders.count})`, Number(breakdown.orders.amount))
+        if (breakdown.pushNotifications.count > 0)
+          addLine(`Push notifications (${breakdown.pushNotifications.count})`, Number(breakdown.pushNotifications.amount))
+        if (breakdown.adjustments.count > 0)
+          addLine(`Usage adjustments (${breakdown.adjustments.count})`, Number(breakdown.adjustments.amount))
+        doc.fontSize(10).font('Helvetica-Bold')
+        doc.text('Total usage', margin, yPos)
+        doc.text(formatEur(Number(breakdown.totalConsumption)), pageWidth - margin - 100, yPos, {
+          width: 100,
+          align: 'right',
+        })
+        yPos += 22
+      }
+
       doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
+      if (invoice.status === 'PAID') {
+        doc.text('Payment: deducted from prepaid credit balance', margin, yPos)
+        yPos += 12
+      }
       doc.text(`Invoice covers ${periodRange}`, margin, yPos)
 
       doc.end()

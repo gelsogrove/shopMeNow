@@ -20,6 +20,7 @@ import { CREDIT_MIN_THRESHOLD } from "../application/services/workspace-access.s
 export interface BillingInfo {
   planType: PlanType
   creditBalance: number
+  taxRate: number
   trialEndsAt: Date | null
   planStartedAt: Date
   nextBillingDate: Date | null
@@ -74,6 +75,7 @@ export class SubscriptionBillingRepository {
       select: {
         creditBalance: true,
         planType: true,
+        taxRate: true,
         trialEndsAt: true,
         planStartedAt: true,
         nextBillingDate: true,
@@ -143,6 +145,7 @@ export class SubscriptionBillingRepository {
     return {
       planType: user.planType,
       creditBalance,
+      taxRate: Number(user.taxRate),
       trialEndsAt: effectiveTrialEndsAt,
       planStartedAt: user.planStartedAt,
       nextBillingDate: user.nextBillingDate,

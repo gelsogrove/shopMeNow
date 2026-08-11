@@ -153,6 +153,19 @@ export type {
   WorkspaceEnvironmentVariable, // 🔐 Secure encrypted credentials per workspace
 } from './generated/prisma/index.js'
 
+// Shared billing math + aggregations (single source of truth for invoices)
+export {
+  roundMoney,
+  computeInvoiceTotals,
+  computeMonthlyCharge,
+} from './billing-math'
+export type { InvoiceTotals } from './billing-math'
+export {
+  calculateConsumptionBreakdown,
+  getRechargesTotal,
+} from './billing-queries'
+export type { ConsumptionBreakdown } from './billing-queries'
+
 // Export prisma as default
 export default prisma
 

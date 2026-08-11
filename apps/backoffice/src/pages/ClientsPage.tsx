@@ -86,6 +86,7 @@ interface User {
   planType: string
   subscriptionStatus: string
   creditBalance: number
+  taxRate: number
   planStartedAt: string | null
   pendingPlanType: string | null
   pendingPlanEffectiveDate: string | null
@@ -152,6 +153,11 @@ export function ClientsPage() {
   const [newPlanType, setNewPlanType] = useState('')
   const [changePlanReason, setChangePlanReason] = useState('')
   const [changingPlan, setChangingPlan] = useState(false)
+
+  // Tax Rate modal state
+  const [taxRateModal, setTaxRateModal] = useState<{ userId: string; email: string; currentTaxRate: number } | null>(null)
+  const [newTaxRatePercent, setNewTaxRatePercent] = useState('')
+  const [changingTaxRate, setChangingTaxRate] = useState(false)
 
   // Extend Trial modal state
   const [extendTrialModal, setExtendTrialModal] = useState<{ workspaceId: string; workspaceName: string; planStartedAt: string } | null>(null)
@@ -480,6 +486,45 @@ export function ClientsPage() {
       console.error('Error changing plan:', err)
     } finally {
       setChangingPlan(false)
+    }
+  }
+
+  // Handle Change Tax Rate - Admin sets per-user VAT (input in percent, stored as fraction)
+  const handleChangeTaxRate = async () => {
+    if (!taxRateModal) return
+
+    const percent = parseFloat(newTaxRatePercent)
+    if (isNaN(percent) || percent < 0 || percent >= 100) {
+      setError('Please enter a valid VAT percentage (0-99)')
+      return
+    }
+
+    setChangingTaxRate(true)
+    setError(null)
+
+    try {
+      const response = await api.users.changeTaxRate(taxRateModal.userId, percent / 100)
+
+      if (response.success && response.data) {
+        setUsers(prev => prev.map(user =>
+          user.id === taxRateModal.userId
+            ? { ...user, taxRate: response.data!.newTaxRate }
+            : user
+        ))
+
+        setSuccessMessage(`VAT for ${taxRateModal.email}: ${(response.data.previousTaxRate * 100).toFixed(0)}% → ${(response.data.newTaxRate * 100).toFixed(0)}%`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+
+        setTaxRateModal(null)
+        setNewTaxRatePercent('')
+      } else {
+        setError(response.error || 'Failed to change VAT rate')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to change VAT rate')
+      console.error('Error changing VAT rate:', err)
+    } finally {
+      setChangingTaxRate(false)
     }
   }
 
@@ -935,6 +980,18 @@ export function ClientsPage() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
+                      {/* VAT rate - click to edit (drives every invoice calculation) */}
+                      <button
+                        type="button"
+                        title="Change VAT rate"
+                        className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        onClick={() => {
+                          setTaxRateModal({ userId: user.id, email: user.email, currentTaxRate: user.taxRate })
+                          setNewTaxRatePercent(((user.taxRate ?? 0) * 100).toFixed(0))
+                        }}
+                      >
+                        VAT {((user.taxRate ?? 0) * 100).toFixed(0)}%
+                      </button>
                       {/* Subscription Status Badge - Feature 198: Now from User level */}
                       {getSubscriptionBadge(user.subscriptionStatus) && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getSubscriptionBadge(user.subscriptionStatus)!.className}`}>
@@ -1329,6 +1386,75 @@ export function ClientsPage() {
       )}
       
       {/* Extend Trial Modal */}
+      {/* Tax Rate Modal - per-user VAT used by every invoice calculation */}
+      {taxRateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-600">
+              <Pencil className="h-5 w-5" />
+              Change VAT Rate
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              Set VAT rate for user:
+            </p>
+            <p className="font-medium text-gray-900 mb-4 bg-gray-50 p-2 rounded">
+              {taxRateModal.email}
+            </p>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                This rate is applied to all of this user's invoices: the live draft, the month-end charge and the PDF.
+                Current invoices are recalculated automatically.
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  VAT percentage (current: {(taxRateModal.currentTaxRate * 100).toFixed(0)}%)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="99"
+                  step="1"
+                  value={newTaxRatePercent}
+                  onChange={(e) => setNewTaxRatePercent(e.target.value)}
+                  placeholder="e.g. 22 for Italy, 21 for Spain"
+                  disabled={changingTaxRate}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setTaxRateModal(null)
+                  setNewTaxRatePercent('')
+                }}
+                disabled={changingTaxRate}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-blue-500 hover:bg-blue-600"
+                onClick={handleChangeTaxRate}
+                disabled={changingTaxRate}
+              >
+                {changingTaxRate ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Pencil className="h-4 w-4 mr-2" />
+                )}
+                Save VAT Rate
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Change Plan Modal - admin manual plan override */}
       {changePlanModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

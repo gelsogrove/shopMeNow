@@ -704,6 +704,7 @@ model User {
   planStartedAt        DateTime  @default(now())
   nextBillingDate      DateTime?
   lowBalanceNotifiedAt DateTime? // Last time low balance notification was sent
+  taxRate              Decimal   @default(0.22) @db.Decimal(5, 4) // VAT rate applied to this owner's invoices (0.22 = 22%)
 
   // Subscription Status
   subscriptionStatus SubscriptionStatus @default(ACTIVE)

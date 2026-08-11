@@ -1842,23 +1842,30 @@ export class SubscriptionBillingController {
       })
 
       if (!invoice) {
-        res.status(404).json({ error: "Fattura non trovata" })
+        res.status(404).json({ error: "Invoice not found" })
         return
       }
 
       const { invoiceService } = await import("../../../application/services/invoice.service")
       const pdfBuffer = await invoiceService.generateInvoicePdf(invoiceId)
 
+      // Re-read after generation: the invoice number is assigned lazily on
+      // first download of a PAID invoice, so it may exist only now.
+      const numbered = await this.prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { invoiceNumber: true, periodMonth: true, periodYear: true },
+      })
+      const filename = numbered?.invoiceNumber
+        ? `invoice-${numbered.invoiceNumber}.pdf`
+        : `invoice-${String(numbered?.periodMonth ?? 0).padStart(2, "0")}-${numbered?.periodYear ?? ""}.pdf`
+
       res.setHeader("Content-Type", "application/pdf")
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=invoice-${invoiceId}.pdf`
-      )
+      res.setHeader("Content-Disposition", `attachment; filename=${filename}`)
       res.status(200).send(pdfBuffer)
     } catch (error) {
       logger.error("[BILLING] Error downloading invoice PDF:", error)
       res.status(500).json({
-        error: "Errore download fattura",
+        error: "Failed to download invoice",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }

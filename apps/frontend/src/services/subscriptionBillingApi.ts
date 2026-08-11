@@ -34,6 +34,7 @@ export type TransactionType =
 export interface BillingInfo {
   planType: PlanType
   creditBalance: number
+  taxRate: number
   trialEndsAt: string | null
   planStartedAt: string
   nextBillingDate: string | null

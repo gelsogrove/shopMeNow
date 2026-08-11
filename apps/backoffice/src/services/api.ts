@@ -1069,6 +1069,25 @@ class BackofficeApi {
       })
     },
 
+    /**
+     * Set a user's VAT rate (admin)
+     * taxRate is a fraction: 0.22 = 22%. Used by every invoice calculation.
+     */
+    changeTaxRate: async (
+      userId: string,
+      taxRate: number
+    ): Promise<ApiResponse<{
+      userId: string
+      email: string
+      previousTaxRate: number
+      newTaxRate: number
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/tax-rate`, {
+        method: 'PATCH',
+        body: JSON.stringify({ taxRate }),
+      })
+    },
+
   }
 
   // Calling Functions - Admin endpoints for custom functions

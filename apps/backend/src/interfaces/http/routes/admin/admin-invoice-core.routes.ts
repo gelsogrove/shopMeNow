@@ -114,11 +114,18 @@ router.get(
 
       const pdfBuffer = await invoiceService.generateInvoicePdf(invoiceId)
 
+      // Re-read after generation: the invoice number is assigned lazily on
+      // first download of a PAID invoice, so it may exist only now.
+      const numbered = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { invoiceNumber: true, periodMonth: true, periodYear: true },
+      })
+      const filename = numbered?.invoiceNumber
+        ? `invoice-${numbered.invoiceNumber}.pdf`
+        : `invoice-${String(numbered?.periodMonth ?? 0).padStart(2, "0")}-${numbered?.periodYear ?? ""}.pdf`
+
       res.setHeader("Content-Type", "application/pdf")
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=invoice-${invoiceId}.pdf`
-      )
+      res.setHeader("Content-Disposition", `attachment; filename=${filename}`)
       res.status(200).send(pdfBuffer)
     } catch (error) {
       logger.error("[ADMIN] Error downloading invoice PDF:", error)
