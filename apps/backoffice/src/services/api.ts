@@ -1045,6 +1045,29 @@ class BackofficeApi {
       })
     },
 
+    /**
+     * Manually change a user's plan (admin override)
+     * Resets planStartedAt and clears any pending scheduled plan change.
+     * Does NOT touch an active PayPal subscription (paypalWarning is set when one exists).
+     */
+    changePlan: async (
+      userId: string,
+      planType: string,
+      reason?: string
+    ): Promise<ApiResponse<{
+      userId: string
+      email: string
+      previousPlanType: string
+      newPlanType: string
+      planStartedAt: string
+      reason: string | null
+      paypalWarning: string | null
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/change-plan`, {
+        method: 'POST',
+        body: JSON.stringify({ planType, reason }),
+      })
+    },
 
   }
 

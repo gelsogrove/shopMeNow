@@ -678,6 +678,19 @@ export function SettingsPage() {
           delete updateData.sessionResetTimeout
         }
 
+        // 🌍 Language settings - protect if unchanged, so a save from a tab
+        // holding stale workspace data (localStorage cache / isDirty guard)
+        // cannot silently revert defaultLanguage/enabledLanguages in the DB
+        if (updateData.defaultLanguage === (currentWorkspace.defaultLanguage || "it")) {
+          delete updateData.defaultLanguage
+        }
+        if (
+          JSON.stringify(updateData.enabledLanguages ?? []) ===
+          JSON.stringify(currentWorkspace.enabledLanguages ?? [])
+        ) {
+          delete updateData.enabledLanguages
+        }
+
         // Appointment reminder fields MUST ALWAYS be sent (never delete!)
         // They are explicitly set above and should always be persisted
       }

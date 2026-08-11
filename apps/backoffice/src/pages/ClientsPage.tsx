@@ -36,7 +36,8 @@ import {
   LogIn,
   Clock,
   Trash2,
-  Plus
+  Plus,
+  Pencil
 } from 'lucide-react'
 
 interface OwnedWorkspace {
@@ -146,6 +147,12 @@ export function ClientsPage() {
   const [enable2FAModal, setEnable2FAModal] = useState<{ userId: string; email: string } | null>(null)
   const [enabling2FA, setEnabling2FA] = useState(false)
   
+  // Change Plan modal state
+  const [changePlanModal, setChangePlanModal] = useState<{ userId: string; email: string; currentPlan: string } | null>(null)
+  const [newPlanType, setNewPlanType] = useState('')
+  const [changePlanReason, setChangePlanReason] = useState('')
+  const [changingPlan, setChangingPlan] = useState(false)
+
   // Extend Trial modal state
   const [extendTrialModal, setExtendTrialModal] = useState<{ workspaceId: string; workspaceName: string; planStartedAt: string } | null>(null)
   const [extendDays, setExtendDays] = useState('7')
@@ -419,6 +426,60 @@ export function ClientsPage() {
       console.error('Error enabling 2FA:', err)
     } finally {
       setEnabling2FA(false)
+    }
+  }
+
+  // Handle Change Plan - Admin manual plan override (User-level planType)
+  const handleChangePlan = async () => {
+    if (!changePlanModal) return
+
+    if (!newPlanType || newPlanType === changePlanModal.currentPlan) {
+      setError('Please select a different plan')
+      return
+    }
+
+    setChangingPlan(true)
+    setError(null)
+
+    try {
+      const response = await api.users.changePlan(
+        changePlanModal.userId,
+        newPlanType,
+        changePlanReason.trim() || undefined
+      )
+
+      if (response.success && response.data) {
+        // Update local state: new plan, fresh planStartedAt, pending change cleared
+        setUsers(prev => prev.map(user =>
+          user.id === changePlanModal.userId
+            ? {
+                ...user,
+                planType: response.data!.newPlanType,
+                planStartedAt: response.data!.planStartedAt,
+                pendingPlanType: null,
+                pendingPlanEffectiveDate: null,
+              }
+            : user
+        ))
+
+        setSuccessMessage(
+          `Plan changed for ${changePlanModal.email}: ${response.data.previousPlanType} → ${response.data.newPlanType}` +
+          (response.data.paypalWarning ? ` — ⚠️ ${response.data.paypalWarning}` : '')
+        )
+        setTimeout(() => setSuccessMessage(null), response.data.paypalWarning ? 10000 : 5000)
+
+        // Close modal and reset
+        setChangePlanModal(null)
+        setNewPlanType('')
+        setChangePlanReason('')
+      } else {
+        setError(response.error || 'Failed to change plan')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to change plan')
+      console.error('Error changing plan:', err)
+    } finally {
+      setChangingPlan(false)
     }
   }
 
@@ -862,6 +923,18 @@ export function ClientsPage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPlanBadge(user.planType).className}`}>
                         {getPlanBadge(user.planType).label}
                       </span>
+                      {/* Change Plan trigger - admin manual plan override */}
+                      <button
+                        type="button"
+                        title="Change plan"
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        onClick={() => {
+                          setChangePlanModal({ userId: user.id, email: user.email, currentPlan: user.planType })
+                          setNewPlanType(user.planType)
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
                       {/* Subscription Status Badge - Feature 198: Now from User level */}
                       {getSubscriptionBadge(user.subscriptionStatus) && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getSubscriptionBadge(user.subscriptionStatus)!.className}`}>
@@ -1256,6 +1329,88 @@ export function ClientsPage() {
       )}
       
       {/* Extend Trial Modal */}
+      {/* Change Plan Modal - admin manual plan override */}
+      {changePlanModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-600">
+              <Pencil className="h-5 w-5" />
+              Change Plan
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              Change plan for user:
+            </p>
+            <p className="font-medium text-gray-900 mb-4 bg-gray-50 p-2 rounded">
+              {changePlanModal.email}
+            </p>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-amber-800">
+                <strong>⚠️ Immediate effect:</strong> the plan changes now and the plan start date resets.
+                An active PayPal subscription is NOT modified — handle it separately.
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New plan (current: {getPlanBadge(changePlanModal.currentPlan).label})
+                </label>
+                <select
+                  value={newPlanType}
+                  onChange={(e) => setNewPlanType(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={changingPlan}
+                >
+                  <option value="FREE_TRIAL">FREE_TRIAL</option>
+                  <option value="BASIC">BASIC</option>
+                  <option value="PREMIUM">PREMIUM</option>
+                  <option value="ENTERPRISE">ENTERPRISE</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason (optional)
+                </label>
+                <Input
+                  value={changePlanReason}
+                  onChange={(e) => setChangePlanReason(e.target.value)}
+                  placeholder="e.g., Custom agreement with customer"
+                  disabled={changingPlan}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setChangePlanModal(null)
+                  setNewPlanType('')
+                  setChangePlanReason('')
+                }}
+                disabled={changingPlan}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-blue-500 hover:bg-blue-600"
+                onClick={handleChangePlan}
+                disabled={changingPlan || newPlanType === changePlanModal.currentPlan}
+              >
+                {changingPlan ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Pencil className="h-4 w-4 mr-2" />
+                )}
+                Change Plan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {extendTrialModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
