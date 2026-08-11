@@ -629,7 +629,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   // Require PayPal only for paid plans when we have plan info. Free trial users should NOT see the PayPal warning.
   const requiresPaymentForChannels = hasPlanInfo && currentPlanType !== "FREE_TRIAL"
   // Avoid flicker: show warning only after PayPal status is ready
-  const showPayPalWarning = requiresPaymentForChannels && isPayPalStatusReady && !isPaymentConnected
+  const showPayPalWarning =
+    requiresPaymentForChannels && isPayPalStatusReady && !isPaymentConnected && !isDemoUser
 
   const openWizardDialog = useCallback(() => {
     if (requiresPaymentForChannels && !isPayPalStatusReady) {
@@ -2525,8 +2526,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           </div>
         )}
 
-        {/* PayPal Integration (Owner only) */}
-        {isSuperAdmin && (
+        {/* PayPal Integration (Owner only) - hidden for demo accounts */}
+        {isSuperAdmin && !isDemoUser && (
           <Card className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 hover:shadow-lg transition-all">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
