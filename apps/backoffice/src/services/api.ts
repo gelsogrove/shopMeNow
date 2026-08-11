@@ -873,6 +873,44 @@ class BackofficeApi {
     },
 
     /**
+     * Retry the PayPal charge for a FAILED/PENDING invoice.
+     * Soft-block collections flow: 1 automatic attempt (scheduler) + up to 3
+     * manual retries = 4 total. A 409 means the invoice is not chargeable
+     * (already paid, cancelled, attempt limit reached, or attempt in progress).
+     */
+    retryInvoiceCharge: async (
+      invoiceId: string
+    ): Promise<ApiResponse<{
+      status: 'PAID' | 'FAILED' | 'SKIPPED'
+      reason?: string
+      transactionId?: string
+      attempt?: number
+      maxAttempts: number
+    }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/retry-charge`, {
+        method: 'POST',
+      })
+    },
+
+    /**
+     * Run the month-end billing manually — same run the scheduler performs
+     * on the 1st at 23:30 (Europe/Rome). Idempotent: PAID invoices skipped.
+     */
+    runMonthEndBilling: async (): Promise<ApiResponse<{
+      periodYear: number
+      periodMonth: number
+      ownersProcessed: number
+      invoicesPaid: number
+      invoicesFailed: number
+      invoicesSkipped: number
+      errors: number
+    }>> => {
+      return this.fetch(`/users/admin/billing/run-month-end`, {
+        method: 'POST',
+      })
+    },
+
+    /**
      * Impersonate a user (login as user)
      * Returns a temporary token and sessionId to access the platform as that user
      */

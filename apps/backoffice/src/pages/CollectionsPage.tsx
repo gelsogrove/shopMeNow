@@ -774,6 +774,46 @@ export function CollectionsPage() {
     alert(`Invoice cancelled successfully${response.data.workspacesBlocked ? ' and workspace blocked' : ''}`)
   }
 
+  /**
+   * Retry the PayPal charge for a FAILED/PENDING invoice.
+   * Soft-block collections flow: the scheduler makes 1 automatic attempt and
+   * the operator gets up to 3 manual retries (4 total, enforced server-side).
+   * After the last attempt the operator decides: block, cancel or grant credit.
+   */
+  const handleRetryCharge = async (invoiceId: string) => {
+    setUpdating(invoiceId)
+    const response = await api.users.retryInvoiceCharge(invoiceId)
+    setUpdating(null)
+
+    if (!response.success || !response.data) {
+      toast.error(response.error || 'Charge attempt could not run')
+      // Refresh so the attempt counter / status reflect server truth
+      await loadPreviousInvoices()
+      return
+    }
+
+    const { status, reason, attempt, maxAttempts } = response.data
+
+    if (status === 'PAID') {
+      toast.success(`Payment collected on attempt ${attempt}/${maxAttempts}`)
+      const applyPaid = (row: OwnerInvoiceRow) =>
+        row.invoice.id === invoiceId
+          ? { ...row, invoice: { ...row.invoice, status: 'PAID', paidAt: new Date().toISOString() } }
+          : row
+      setCurrentRows((prev) => prev.map(applyPaid))
+      setPreviousRows((prev) => prev.filter((r) => r.invoice.id !== invoiceId))
+      await loadHistory()
+    } else {
+      toast.error(`Charge failed (attempt ${attempt}/${maxAttempts})${reason ? `: ${reason}` : ''}`)
+      const applyRetry = (row: OwnerInvoiceRow) =>
+        row.invoice.id === invoiceId
+          ? { ...row, invoice: { ...row.invoice, status: 'FAILED', paymentRetryCount: attempt ?? (row.invoice.paymentRetryCount || 0) + 1 } }
+          : row
+      setCurrentRows((prev) => prev.map(applyRetry))
+      setPreviousRows((prev) => prev.map(applyRetry))
+    }
+  }
+
   const handleSaveNotes = async (invoiceId: string, status: string) => {
     setUpdating(invoiceId)
     const response = await api.users.updateInvoice(invoiceId, {

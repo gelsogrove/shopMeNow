@@ -735,7 +735,7 @@ paypalRoutes.post(
           paypalSubscriptionStatus: null,
           paypalSubscriptionApprovedAt: null,
           paypalNextBillingTime: null,
-          paypalOutstandingBalance: null,
+          paypalOutstandingBalance: 0,
           paypalFailedPaymentsCount: 0,
           paypalCyclesCompleted: 0,
         },
