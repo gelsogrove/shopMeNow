@@ -266,27 +266,32 @@ export const getTransactions = async (
 }
 
 /**
- * Recharge credit (Owner only)
+ * Create a PayPal checkout order to recharge credit (Owner only).
+ * The wallet is credited ONLY after the returned approveUrl is approved by
+ * the user on PayPal and the order is captured via captureRechargeOrder.
  * @param amount - Amount in EUR (min €10, max €1000)
- * If on FREE_TRIAL, auto-upgrades to BASIC
  */
-export const rechargeCredit = async (
-  workspaceId: string,
+export const createRechargeOrder = async (
   amount: number
-): Promise<{ newBalance: number; amountCharged: number; upgradedToPlan?: string }> => {
-  if (!workspaceId) {
-    throw new Error("Workspace ID is required")
-  }
-
+): Promise<{ orderId: string; approveUrl: string; environment: string }> => {
   if (amount < 10 || amount > 1000) {
     throw new Error("Amount must be between €10 and €1000")
   }
 
-  // CRITICAL: Billing is per OWNER (User), not per Workspace
-  // Route uses JWT token only, no workspaceId in URL
-  const response = await api.post(`/subscription-billing/recharge`, {
-    amount,
-  })
+  const response = await api.post("/subscription-billing/recharge/create-order", { amount })
+  return response.data.data
+}
+
+/**
+ * Capture an approved PayPal recharge order and credit the wallet.
+ * Idempotent per orderId — a second call does not credit twice.
+ * If on FREE_TRIAL, the first recharge auto-upgrades to BASIC.
+ */
+export const captureRechargeOrder = async (
+  orderId: string
+): Promise<{ amount: number; newBalance: number; upgradedToPlan?: string; alreadyCaptured: boolean }> => {
+  const response = await api.post("/subscription-billing/recharge/capture", { orderId })
+  clearOwnerBillingCaches()
   return response.data.data
 }
 
@@ -661,23 +666,6 @@ export const getOwnerTransactions = async (
     page: response.data.pagination?.page || 1,
     totalPages: response.data.pagination?.totalPages || 1,
   }
-}
-
-/**
- * Recharge credit for authenticated owner (no workspaceId needed)
- * Feature 198: Owner-based billing
- * @param amount - Amount in EUR (min €10, max €1000)
- */
-export const rechargeOwnerCredit = async (
-  amount: number
-): Promise<{ newBalance: number; amountCharged: number; upgradedToPlan?: string }> => {
-  if (amount < 10 || amount > 1000) {
-    throw new Error("Amount must be between €10 and €1000")
-  }
-
-  const response = await api.post("/subscription-billing/recharge", { amount })
-  clearOwnerBillingCaches()
-  return response.data.data
 }
 
 /**

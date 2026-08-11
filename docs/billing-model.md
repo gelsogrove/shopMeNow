@@ -34,6 +34,27 @@ the backoffice (Clients → VAT chip next to the plan badge,
 `PATCH /api/users/admin/:userId/tax-rate`). No hardcoded rate anywhere in the
 platform-billing path.
 
+## Recharges (the only way money enters)
+
+Real PayPal one-off checkout (Orders v2), since 2026-08-11:
+
+1. Owner picks an amount (€10–€1000) → `POST
+   /subscription-billing/recharge/create-order` creates a PayPal order
+   (`custom_id` = userId, EUR, intent CAPTURE) and returns `approveUrl`.
+2. Browser redirects to PayPal; after approval PayPal returns to
+   `/billing?recharge=return&token=<orderId>`.
+3. BillingPage calls `POST /subscription-billing/recharge/capture` — the
+   backend captures server-side, verifies `custom_id` matches the caller,
+   credits the wallet with the amount PAYPAL confirms (never client input),
+   and records a `paypal_transactions` row. `paypalOrderId` is UNIQUE:
+   capturing twice never credits twice.
+4. First recharge on FREE_TRIAL auto-upgrades to BASIC (existing rule).
+
+Admin/dev users get the sandbox environment automatically
+(`resolvePayPalEnvironment`). The old direct-credit endpoint (credited
+without collecting money) was removed. Code:
+`apps/backend/src/services/paypal-checkout.service.ts`.
+
 ## Month cycle
 
 1. **During the month** — consumption debits the wallet live

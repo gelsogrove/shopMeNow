@@ -281,120 +281,6 @@ export class SubscriptionBillingController {
   }
 
   /**
-   * POST /billing/recharge
-   * Recharge credit (Owner only)
-   *
-   * @swagger
-   * /api/workspaces/{workspaceId}/billing/recharge:
-   *   post:
-   *     summary: Recharge credit
-   *     tags: [Billing]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - amount
-   *             properties:
-   *               amount:
-   *                 type: number
-   *                 minimum: 10
-   *                 maximum: 1000
-   *     responses:
-   *       200:
-   *         description: Recharge successful
-   *       402:
-   *         description: Payment required (simulated)
-   *       403:
-   *         description: Owner role required
-   */
-  rechargeCredit = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const workspaceId = (req as any).workspaceId || req.params.workspaceId
-      const { amount } = req.body
-
-      if (!workspaceId) {
-        res.status(400).json({ error: "Workspace ID required" })
-        return
-      }
-
-      if (!(await this.requirePaymentConnectedByWorkspaceId(workspaceId, res))) {
-        return
-      }
-
-      // Validate amount
-      if (!amount || typeof amount !== "number") {
-        res.status(400).json({
-          error: "Importo richiesto",
-          code: "AMOUNT_REQUIRED",
-        })
-        return
-      }
-
-      if (amount < 10) {
-        res.status(400).json({
-          error: "Importo minimo $10",
-          code: "AMOUNT_TOO_LOW",
-        })
-        return
-      }
-
-      if (amount > 1000) {
-        res.status(400).json({
-          error: "Importo massimo $1000",
-          code: "AMOUNT_TOO_HIGH",
-        })
-        return
-      }
-
-      // Perform recharge (simulated payment - always succeeds)
-      // If on FREE_TRIAL, auto-upgrades to BASIC
-      const result = await this.billingService.rechargeCredit(
-        workspaceId,
-        amount
-      )
-
-      if (result.upgradedToPlan) {
-        logger.info(
-          `[BILLING] 🎉 Auto-upgraded to ${result.upgradedToPlan} on recharge (workspace: ${workspaceId})`
-        )
-      }
-
-      logger.info(
-        `[BILLING] 💰 Recharge successful: +$${amount.toFixed(2)} (workspace: ${workspaceId})`
-      )
-
-      res.json({
-        success: true,
-        message: result.upgradedToPlan 
-          ? `Ricarica di $${amount.toFixed(2)} completata! Piano aggiornato a ${result.upgradedToPlan}.`
-          : `Ricarica di $${amount.toFixed(2)} completata con successo!`,
-        data: {
-          newBalance: result.newBalance,
-          amountCharged: amount,
-          upgradedToPlan: result.upgradedToPlan,
-        },
-      })
-    } catch (error) {
-      logger.error("[BILLING] Error recharging credit:", error)
-      res.status(500).json({
-        error: "Credit recharge error",
-        message: error instanceof Error ? error.message : "Unknown error",
-      })
-    }
-  }
-
-  /**
    * POST /billing/upgrade
    * Upgrade plan (Owner only)
    *
@@ -1386,42 +1272,51 @@ export class SubscriptionBillingController {
    * POST /subscription-billing/recharge
    * Recharge credit for owner
    */
-  rechargeOwnerCredit = async (req: Request, res: Response): Promise<void> => {
+  createRechargeOrder = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id
+      const user = (req as any).user
       const { amount } = req.body
 
-      if (!userId) {
+      if (!user?.id) {
         res.status(401).json({ error: "User not authenticated" })
         return
       }
 
-      if (!(await this.requirePaymentConnectedByUserId(userId, res))) {
-        return
-      }
+      const { paypalCheckoutService } = await import("../../../services/paypal-checkout.service")
+      const result = await paypalCheckoutService.createRechargeOrder(user, Number(amount))
 
-      if (!amount || typeof amount !== "number" || amount < 10 || amount > 1000) {
-        res.status(400).json({
-          error: "Importo non valido (min $10, max $1000)",
-          code: "INVALID_AMOUNT",
-        })
-        return
-      }
-
-      const result = await this.billingService.rechargeOwnerCredit(userId, amount)
-
-      logger.info(`[BILLING] 💰 Owner ${userId} recharged $${amount}`)
-
-      res.json({
-        success: true,
-        message: `Credito ricaricato di $${amount}`,
-        data: result,
+      res.json({ success: true, data: result })
+    } catch (error: any) {
+      logger.error("[BILLING] Error creating recharge order:", error)
+      res.status(error.statusCode || 500).json({
+        error: error.message || "Failed to create recharge order",
       })
-    } catch (error) {
-      logger.error("[BILLING] Error recharging owner credit:", error)
-      res.status(500).json({
-        error: "Errore durante la ricarica",
-        message: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+
+  captureRechargeOrder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const user = (req as any).user
+      const { orderId } = req.body
+
+      if (!user?.id) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      if (!orderId || typeof orderId !== "string") {
+        res.status(400).json({ error: "orderId is required" })
+        return
+      }
+
+      const { paypalCheckoutService } = await import("../../../services/paypal-checkout.service")
+      const result = await paypalCheckoutService.captureRechargeOrder(user, orderId)
+
+      res.json({ success: true, data: result })
+    } catch (error: any) {
+      logger.error("[BILLING] Error capturing recharge order:", error)
+      res.status(error.statusCode || 500).json({
+        error: error.message || "Failed to capture recharge order",
       })
     }
   }

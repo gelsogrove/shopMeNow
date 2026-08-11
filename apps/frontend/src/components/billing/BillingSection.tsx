@@ -54,7 +54,7 @@ import { usePlatformConfig } from "@/hooks/usePlatformConfig"
 import {
   formatCurrency,
   getTransactionTypeInfo,
-  rechargeCredit,
+  createRechargeOrder,
   getOwnerTransactions,
   changePlan,
   getOwnerBillingOverview,
@@ -450,29 +450,16 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   }
 
   const handleRecharge = async () => {
-    if (!effectiveWorkspaceId) return
-
-    if (!canManageBilling) {
-      toast.error("Connect PayPal to recharge credit.")
-      return
-    }
-
     setIsRecharging(true)
     try {
-      const result = await rechargeCredit(effectiveWorkspaceId, rechargeAmount)
-
-      // Close dialog and reset
-      setShowRechargeDialog(false)
-      setRechargeAmount(25)
-
-      // Reload page to refresh all data (same as plan change)
-      setTimeout(() => {
-        window.location.reload()
-      }, 300)
+      // Credit-wallet model: create a PayPal order and send the user to
+      // approve it. The wallet is credited only after the capture on return
+      // (handled by BillingPage reading ?recharge=return&token=...).
+      const { approveUrl } = await createRechargeOrder(rechargeAmount)
+      window.location.href = approveUrl
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Failed to recharge credit"
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Failed to start recharge"
       toast.error(errorMessage)
-    } finally {
       setIsRecharging(false)
     }
   }
@@ -817,12 +804,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     onClick={() => setShowRechargeDialog(true)}
                     className="gap-2"
                     size="sm"
-                    disabled={!canManageBilling}
-                    title={
-                      !canManageBilling
-                        ? "Connect PayPal to recharge credit."
-                        : undefined
-                    }
                   >
                     <Plus className="h-4 w-4" />
                     Recharge Credit

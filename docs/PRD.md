@@ -1174,13 +1174,16 @@ INPUT: customerMessage, customer, workspace, chatSession
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Credit Recharge (Manual)                                    │
-│ - Owner → Frontend /billing → "Recharge €50"                │
-│ - PayPal one-off payment (the ONLY role PayPal keeps)       │
-│ - Backend:                                                  │
+│ Credit Recharge (PayPal Checkout — Orders v2)               │
+│ - Owner → "Recharge €50" → create-order → approveUrl        │
+│ - User approves on PayPal → returns to /billing             │
+│ - Backend captures server-side (idempotent per orderId):    │
+│   → verifies custom_id = userId, uses PayPal's amount       │
 │   → BillingTransaction: type=RECHARGE, amount=+50           │
 │   → User.creditBalance += 50                                │
 │   → IF was below -€10: chatbots resume automatically        │
+│ - Endpoints: /subscription-billing/recharge/create-order    │
+│              /subscription-billing/recharge/capture         │
 └──────────────────────────────────────────────────────────────┘
 ```
 

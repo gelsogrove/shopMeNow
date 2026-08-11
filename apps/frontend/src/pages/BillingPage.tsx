@@ -4,13 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Loader2, FileText, ChevronLeft, ChevronRight, Download } from "lucide-react"
-import { 
-  getCurrentInvoice, 
-  getOwnerInvoices, 
+import {
+  getCurrentInvoice,
+  getOwnerInvoices,
   getOwnerBillingOverview,
   downloadInvoicePdf,
   downloadCreditNotePdf,
-  Invoice, 
+  captureRechargeOrder,
+  Invoice,
   InvoiceStatus,
   BillingOverview
 } from "@/services/subscriptionBillingApi"
@@ -32,6 +33,36 @@ export function BillingPage() {
   useEffect(() => {
     loadInvoices()
   }, [currentPage])
+
+  // PayPal recharge return leg: PayPal redirects back to
+  // /billing?recharge=return&token=<orderId>. Capture server-side (idempotent
+  // per orderId), then clean the URL so a refresh doesn't re-trigger.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const recharge = params.get("recharge")
+    const orderId = params.get("token")
+
+    if (recharge === "cancelled") {
+      toast.info("Recharge cancelled — no payment was made")
+      window.history.replaceState({}, "", window.location.pathname)
+      return
+    }
+
+    if (recharge === "return" && orderId) {
+      window.history.replaceState({}, "", window.location.pathname)
+      captureRechargeOrder(orderId)
+        .then((result) => {
+          toast.success(
+            `Credit recharged: +€${result.amount.toFixed(2)} (balance €${result.newBalance.toFixed(2)})` +
+              (result.upgradedToPlan ? ` — plan upgraded to ${result.upgradedToPlan}` : "")
+          )
+          loadInvoices()
+        })
+        .catch((error: any) => {
+          toast.error(error.response?.data?.error || "Payment was not completed")
+        })
+    }
+  }, [])
 
   const loadInvoices = async () => {
     try {

@@ -126,9 +126,9 @@ ownerBillingRoutes.get(
 
 /**
  * @swagger
- * /api/subscription-billing/recharge:
+ * /api/subscription-billing/recharge/create-order:
  *   post:
- *     summary: Recharge credit for authenticated user
+ *     summary: Create a PayPal checkout order to recharge credit
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
@@ -147,14 +147,49 @@ ownerBillingRoutes.get(
  *                 maximum: 1000
  *     responses:
  *       200:
- *         description: Recharge successful
+ *         description: Order created, returns approveUrl to redirect the user to PayPal
  *       400:
  *         description: Invalid amount
+ *       503:
+ *         description: PayPal not configured
  */
 ownerBillingRoutes.post(
-  "/recharge",
+  "/recharge/create-order",
   authMiddleware,
-  controller.rechargeOwnerCredit
+  controller.createRechargeOrder
+)
+
+/**
+ * @swagger
+ * /api/subscription-billing/recharge/capture:
+ *   post:
+ *     summary: Capture an approved PayPal recharge order and credit the wallet
+ *     tags: [Owner Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderId
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Payment captured, credit added (idempotent per orderId)
+ *       402:
+ *         description: Payment not completed
+ *       403:
+ *         description: Order belongs to another user
+ */
+ownerBillingRoutes.post(
+  "/recharge/capture",
+  authMiddleware,
+  controller.captureRechargeOrder
 )
 
 /**

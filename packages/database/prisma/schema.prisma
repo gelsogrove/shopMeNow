@@ -1483,15 +1483,16 @@ model BillingTransaction {
 }
 
 model PayPalTransaction {
-  id          String                  @id @default(cuid())
-  userId      String
-  invoiceId   String?
-  amount      Decimal                 @db.Decimal(10, 2)
-  currency    String                  @default("EUR")
-  status      PayPalTransactionStatus
-  notes       String?
-  createdAt   DateTime                @default(now())
-  adminUserId String?
+  id            String                  @id @default(cuid())
+  userId        String
+  invoiceId     String?
+  paypalOrderId String?                 @unique // PayPal Orders v2 id — idempotency key for recharge captures
+  amount        Decimal                 @db.Decimal(10, 2)
+  currency      String                  @default("EUR")
+  status        PayPalTransactionStatus
+  notes         String?
+  createdAt     DateTime                @default(now())
+  adminUserId   String?
 
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoice   MonthlyInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)

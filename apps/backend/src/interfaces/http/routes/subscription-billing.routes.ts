@@ -190,50 +190,6 @@ billingRoutes.get(
 
 /**
  * @swagger
- * /api/workspaces/{workspaceId}/billing/recharge:
- *   post:
- *     summary: Recharge credit (Owner only)
- *     tags: [Billing]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - amount
- *             properties:
- *               amount:
- *                 type: number
- *                 minimum: 10
- *                 maximum: 1000
- *                 description: Amount to recharge in EUR
- *     responses:
- *       200:
- *         description: Recharge successful
- *       400:
- *         description: Invalid amount
- *       403:
- *         description: Owner role required
- */
-billingRoutes.post(
-  "/recharge",
-  authMiddleware,
-  validateWorkspaceOperation,
-  requireOwnerForBilling,
-  controller.rechargeCredit
-)
-
-/**
- * @swagger
  * /api/workspaces/{workspaceId}/billing/upgrade:
  *   post:
  *     summary: Upgrade subscription plan (Owner only)
