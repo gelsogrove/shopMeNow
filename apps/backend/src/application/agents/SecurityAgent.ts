@@ -232,11 +232,12 @@ export class SecurityAgent {
           llmResponse,
           error,
         })
-        // Fallback: allow message if parsing fails
+        // Fail-open: allow the message when the LLM reply is unparseable.
+        // No blockedReason here — the message is NOT blocked, and a reason
+        // alongside safe:true would show up as contradictory in the timeline.
         return {
           safe: true,
           message: options.message,
-          blockedReason: "JSON parse error",
           tokensUsed,
           executionTimeMs,
         }

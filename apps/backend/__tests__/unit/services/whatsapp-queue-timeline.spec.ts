@@ -32,7 +32,7 @@ const mockPrisma = {
   billingTransaction: {
     create: jest.fn(),
   },
-} as unknown as PrismaClient
+} as any // mock: loosely typed on purpose — spec fakes only the delegates it uses
 
 // Mock security agent
 jest.mock("../../../src/application/agents/SecurityAgent", () => ({

@@ -88,7 +88,7 @@ const mockPrisma = {
   user: {
     findUnique: jest.fn(),
   },
-} as unknown as PrismaClient
+} as any // mock: loosely typed on purpose — spec fakes only the delegates it uses
 
 describe("WhatsAppQueueService - Unit Tests", () => {
   let service: WhatsAppQueueService
@@ -130,7 +130,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         deliveredAt: null,
       }
 
-      const result = await service.validateAndSend(message)
+      const result = await service.validateAndSend(message as any)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Invalid phone number")
@@ -149,7 +149,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         deliveredAt: null,
       }
 
-      const result = await service.validateAndSend(message)
+      const result = await service.validateAndSend(message as any)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Invalid phone number format")
@@ -168,7 +168,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         deliveredAt: null,
       }
 
-      const result = await service.validateAndSend(message)
+      const result = await service.validateAndSend(message as any)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Invalid message")
@@ -196,7 +196,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         whatsappPhoneNumber: "+1234567890",
       })
 
-      const result = await service.validateAndSend(message)
+      const result = await service.validateAndSend(message as any)
 
       expect(result.success).toBe(true)
       expect(result.error).toBeUndefined()
@@ -307,7 +307,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
       }
 
       // Mock repository methods
-      mockPrisma.workspace.findUnique = jest.fn()
+      mockPrisma.workspace.findUnique = (jest.fn() as any)
         .mockResolvedValueOnce({
           debugMode: false,
           name: "Test",
@@ -490,7 +490,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         createdAt: new Date(),
       }
 
-      mockPrisma.workspace.findUnique = jest.fn()
+      mockPrisma.workspace.findUnique = (jest.fn() as any)
         .mockResolvedValueOnce({
           debugMode: false,
           name: "Test",
@@ -508,8 +508,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         ...mockMessage,
         status: "sent",
       })
-      mockPrisma.conversationMessage.findFirst = jest
-        .fn()
+      mockPrisma.conversationMessage.findFirst = (jest.fn() as any)
         .mockResolvedValue(mockConversationMessage)
       mockPrisma.conversationMessage.findUnique = (jest.fn() as any).mockResolvedValue(null)
       mockPrisma.conversationMessage.update = (jest.fn() as any).mockResolvedValue({
