@@ -344,6 +344,7 @@ class BackofficeApi {
       lastName: string | null
       isPlatformAdmin: boolean
       isDeveloperUser: boolean
+      isDemoUser: boolean
       twoFactorEnabled: boolean
       requires2FA: boolean
       status: string
