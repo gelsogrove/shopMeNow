@@ -1,9 +1,9 @@
 /**
  * SINGLE SOURCE OF TRUTH for every money calculation on invoices.
  *
- * Imported by BOTH apps that touch invoices:
- *   - apps/backend  → invoice.service.ts (live DRAFT recalculation shown in UI)
- *   - apps/scheduler → monthly-billing.job.ts (month-end charge + finalization)
+ * Imported by apps/backend → invoice.service.ts (live DRAFT recalculation
+ * shown in the UI) and month-end-billing.service.ts (month-end finalization
+ * + PayPal collection — the wallet-deduction model was retired 2026-08-11).
  *
  * The tax rate is NEVER hardcoded here: it always arrives as an argument,
  * read from users."taxRate" (per-owner, configurable from backoffice).
@@ -40,19 +40,3 @@ export const computeInvoiceTotals = (
   return { subtotalAmount, taxAmount, totalAmount }
 }
 
-/**
- * The amount the scheduler deducts from the owner's credit at month end:
- * the subscription fee plus VAT on it. Consumption is NOT part of this —
- * it is already deducted from credit live, operation by operation.
- * Recharges are NOT part of this — they were paid when made.
- * The balance MAY go negative ("in rosso"): the deduction always happens.
- */
-export const computeMonthlyCharge = (
-  monthlyFee: number,
-  taxRate: number
-): { fee: number; taxAmount: number; chargeAmount: number } => {
-  const fee = roundMoney(monthlyFee)
-  const taxAmount = roundMoney(Math.max(fee, 0) * taxRate)
-  const chargeAmount = roundMoney(fee + taxAmount)
-  return { fee, taxAmount, chargeAmount }
-}

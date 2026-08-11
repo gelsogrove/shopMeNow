@@ -293,7 +293,7 @@ export class SubscriptionBillingRepository {
           return {
             success: false,
             newBalance: currentBalance,
-            error: `Credito esaurito. Saldo: €${currentBalance.toFixed(2)}. Il saldo non può scendere sotto €${CREDIT_MIN_THRESHOLD}.`,
+            error: `Credit exhausted. Balance: €${currentBalance.toFixed(2)}. Balance cannot go below €${CREDIT_MIN_THRESHOLD}.`,
           }
         }
 

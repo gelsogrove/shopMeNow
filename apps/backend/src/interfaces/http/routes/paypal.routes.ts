@@ -1,10 +1,8 @@
 import { Router, Request, Response } from "express"
-import jwt from "jsonwebtoken"
 import { prisma, PayPalStatus } from "@echatbot/database"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { config } from "../../../config"
 import logger from "../../../utils/logger"
-import { encryptSecret } from "../../../utils/encryption"
 import {
   loadPayPalConfigForEnv,
   resolvePayPalEnvironment,
@@ -49,22 +47,6 @@ const ensureOwner = async (userId: string, res: Response): Promise<boolean> => {
   return true
 }
 
-const buildStateToken = (userId: string) =>
-  jwt.sign({ userId }, config.jwt.secret, { expiresIn: "10m" })
-
-const parseStateToken = (state: string): { userId: string } => {
-  const decoded = jwt.verify(state, config.jwt.secret) as { userId: string }
-  return decoded
-}
-
-const PAYPAL_SCOPES = [
-  "openid",
-  "profile",
-  "email",
-  "https://uri.paypal.com/services/paypalattributes",
-  "https://uri.paypal.com/services/payments/payouts",
-]
-
 const getWebhookId = (environment: PayPalEnvironment) => {
   return environment === "live"
     ? process.env.PAYPAL_WEBHOOK_ID_LIVE
@@ -94,7 +76,7 @@ const ensurePlanId = async (
       body: JSON.stringify({
         name: "eChatbot Subscription",
         description:
-          "Monthly platform subscription (anchor $1, variable charges via outstanding balance).",
+          "Monthly platform subscription (anchor €1, variable charges via outstanding balance).",
         type: "SERVICE",
         category: "SOFTWARE",
       }),
@@ -109,7 +91,7 @@ const ensurePlanId = async (
   const product = await productResponse.json()
   const productId = product.id
 
-  // Create a minimal monthly plan with $1 anchor price
+  // Create a minimal monthly plan with €1 anchor price
   const planResponse = await fetch(`${paypalConfig.apiBaseUrl}/v1/billing/plans`, {
     method: "POST",
     headers: {
@@ -222,51 +204,6 @@ const createSubscription = async ({
     approveLink,
   }
 }
-
-const captureOutstandingBalance = async ({
-  paypalConfig,
-  subscriptionId,
-  amount,
-  note,
-}: {
-  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>
-  subscriptionId: string
-  amount: number
-  note?: string
-}): Promise<{ success: boolean; transactionId?: string; status?: string }> => {
-  const appToken = await getPayPalAccessToken(paypalConfig)
-  const captureResponse = await fetch(
-    `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions/${subscriptionId}/capture`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${appToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        note: note || "Monthly invoice charge",
-        capture_type: "OUTSTANDING_BALANCE",
-        amount: {
-          currency_code: "EUR",
-          value: amount.toFixed(2),
-        },
-      }),
-    }
-  )
-
-  if (!captureResponse.ok) {
-    const err = await captureResponse.text()
-    logger.warn("[PAYPAL] Capture failed:", err)
-    return { success: false }
-  }
-
-  const capture = await captureResponse.json()
-  const status = capture.status || capture.capture_status || "UNKNOWN"
-  const transactionId = capture.id || capture.capture_id
-  const success = status === "COMPLETED" || status === "COMPLETED_WITH_PAYMENT"
-  return { success, transactionId, status }
-}
-
 
 const verifyWebhookSignature = async (
   paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>,
@@ -658,63 +595,6 @@ paypalRoutes.post(
       res.status(500).json({
         success: false,
         error: "Failed to create PayPal subscription",
-      })
-    }
-  }
-)
-
-// DEPRECATED: Old OAuth Connect flow - kept for backwards compatibility
-paypalRoutes.post(
-  "/connect-url",
-  authMiddleware,
-  async (req: Request, res: Response) => {
-    try {
-      const userId = req.user?.id
-    if (!userId) {
-      return res.status(401).json({ success: false, error: "Unauthorized" })
-    }
-
-    if (!(await ensureOwner(userId, res))) {
-      return
-    }
-
-      const userConfig = await getUserPayPalConfig(userId)
-      if (!userConfig) {
-        return res
-          .status(404)
-          .json({ success: false, error: "User not found" })
-      }
-
-      const paypalConfig = userConfig.paypalConfig
-      if (!paypalConfig.configured) {
-        return res.status(400).json({
-          success: false,
-          error: "PayPal credentials are not configured",
-          code: "PAYPAL_NOT_CONFIGURED",
-          environment: paypalConfig.environment,
-        })
-      }
-
-      const state = buildStateToken(userId)
-      const scope = PAYPAL_SCOPES.join(" ")
-      const url = `${paypalConfig.connectBaseUrl}/connect?flowEntry=static&client_id=${encodeURIComponent(
-        paypalConfig.clientId
-      )}&response_type=code&scope=${encodeURIComponent(
-        scope
-      )}&state=${encodeURIComponent(state)}`
-
-      res.json({
-        success: true,
-        data: {
-          url,
-          environment: paypalConfig.environment,
-        },
-      })
-    } catch (error) {
-      logger.error("[PAYPAL] Error creating connect url:", error)
-      res.status(500).json({
-        success: false,
-        error: "Failed to create PayPal connect URL",
       })
     }
   }

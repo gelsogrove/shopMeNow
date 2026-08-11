@@ -199,9 +199,20 @@ export class InvoiceService {
    */
   async getOrCreateCurrentInvoice(userId: string): Promise<InvoiceData> {
     const now = new Date()
-    const periodMonth = now.getMonth() + 1 // 1-12
-    const periodYear = now.getFullYear()
-    
+    return this.getOrCreateInvoiceForPeriod(userId, now.getFullYear(), now.getMonth() + 1)
+  }
+
+  /**
+   * Get or create the invoice for an arbitrary period.
+   * Used by the month-end scheduler, which on the 1st bills the PREVIOUS
+   * month — an owner who never opened the billing page during that month has
+   * no DRAFT invoice yet, so it must be creatable after the period has ended.
+   */
+  async getOrCreateInvoiceForPeriod(
+    userId: string,
+    periodYear: number,
+    periodMonth: number
+  ): Promise<InvoiceData> {
     // Try to find existing invoice for this month
     let invoice = await prisma.monthlyInvoice.findUnique({
       where: {
@@ -576,7 +587,13 @@ export class InvoiceService {
       throw new Error('User not found')
     }
 
-    const monthlyFee = await this.getPlanMonthlyFee(user.planType)
+    // FIRST-INVOICE RULE (Andrea, 2026-08-11): the fee comes from the plan
+    // snapshotted on the invoice at creation (invoice.planType), NOT from the
+    // user's current plan. An owner who upgrades mid-month (incl. the
+    // FREE_TRIAL → BASIC auto-upgrade on first recharge) is NOT charged the
+    // fee retroactively for that partial month — the fee starts with the
+    // first full month on the new plan.
+    const monthlyFee = await this.getPlanMonthlyFee(invoice.planType)
     const subscriptionAmount = this.resolveSubscriptionAmount(
       user.subscriptionStatus,
       user.pausedAt,
@@ -757,7 +774,7 @@ export class InvoiceService {
       const ROW_ALT = '#f8fafc'
       const LINE = '#e2e8f0'
 
-      const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
+      const formatDate = (value: Date) => value.toLocaleDateString('en-GB')
       const formatEur = (amount: number, isCredit = false) =>
         `${isCredit ? '-' : ''}€${amount.toFixed(2)}`
 
@@ -932,7 +949,7 @@ export class InvoiceService {
       doc.moveTo(margin, footerY).lineTo(rightEdge, footerY).lineWidth(0.5).stroke(LINE)
       doc.fillColor(MUTED).font('Helvetica').fontSize(8)
       const footerParts = [
-        invoice.status === 'PAID' ? 'Payment: deducted from prepaid credit balance' : null,
+        invoice.status === 'PAID' ? 'Payment: charged automatically via PayPal' : null,
         `Invoice covers ${periodRange}`,
         issuer.email || null,
       ].filter(Boolean)
@@ -980,7 +997,7 @@ export class InvoiceService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
-      const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
+      const formatDate = (value: Date) => value.toLocaleDateString('en-GB')
       const pageWidth = doc.page.width
       const margin = 50
 

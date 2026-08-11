@@ -54,22 +54,27 @@ export async function handlePaymentSuccess(
     return
   }
 
-  // Match invoice by amount (exact match first, then fallback to oldest)
-  // NOTE: do NOT blindly fall back to oldest if amount doesn't match — log warning instead
-  const exactMatch = pendingInvoices.find(
+  // Match invoice by amount — EXACT match only. Never fall back to the oldest
+  // pending invoice: with two invoices of equal/different totals a blind
+  // fallback can mark the WRONG invoice as paid. When nothing matches, leave
+  // everything untouched and let the operator resolve it from Collections.
+  const matchedInvoice = pendingInvoices.find(
     (inv) => Math.abs(Number(inv.totalAmount) - paymentAmount) < 0.01
   )
-  if (!exactMatch) {
-    logger.warn("[PAYPAL] No invoice matched payment amount exactly. Amounts:", {
-      paymentAmount,
-      pendingAmounts: pendingInvoices.map((inv) => ({
-        id: inv.id,
-        amount: Number(inv.totalAmount),
-        period: `${inv.periodMonth}/${inv.periodYear}`,
-      })),
-    })
+  if (!matchedInvoice) {
+    logger.warn(
+      "[PAYPAL] Webhook payment matched NO pending invoice exactly — manual reconciliation needed in Collections:",
+      {
+        paymentAmount,
+        pendingAmounts: pendingInvoices.map((inv) => ({
+          id: inv.id,
+          amount: Number(inv.totalAmount),
+          period: `${inv.periodMonth}/${inv.periodYear}`,
+        })),
+      }
+    )
+    return
   }
-  const matchedInvoice = exactMatch || pendingInvoices[0]
 
   // Update invoice to PAID
   await prisma.monthlyInvoice.update({

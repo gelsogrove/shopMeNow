@@ -4,7 +4,6 @@
  * WHAT: verifies the single source of truth used by BOTH the backend
  * (live DRAFT invoice) and the scheduler (month-end charge):
  *   - computeInvoiceTotals: subtotal composition + VAT + total
- *   - computeMonthlyCharge: what gets deducted from the owner's credit
  *   - roundMoney: cent rounding
  *
  * WHY: Andrea's rule — ONE formula everywhere. These tests pin the formula
@@ -14,7 +13,6 @@
 import {
   roundMoney,
   computeInvoiceTotals,
-  computeMonthlyCharge,
 } from "../../../../packages/database/src/billing-math"
 
 describe("roundMoney", () => {
@@ -61,34 +59,5 @@ describe("computeInvoiceTotals", () => {
     expect(result.subtotalAmount).toBe(-30)
     expect(result.taxAmount).toBe(0)
     expect(result.totalAmount).toBe(-30)
-  })
-})
-
-describe("computeMonthlyCharge", () => {
-  it("charges fee + VAT on the fee (what the scheduler deducts from credit)", () => {
-    // Consumption is NOT here: it is deducted live during the month.
-    // Recharges are NOT here: they were paid when made.
-    const result = computeMonthlyCharge(60, 0.22)
-    expect(result).toEqual({
-      fee: 60,
-      taxAmount: 13.2,
-      chargeAmount: 73.2,
-    })
-  })
-
-  it("charges zero for a zero fee (e.g. FREE plan rows)", () => {
-    expect(computeMonthlyCharge(0, 0.22)).toEqual({
-      fee: 0,
-      taxAmount: 0,
-      chargeAmount: 0,
-    })
-  })
-
-  it("respects a zero tax rate (VAT-exempt customer)", () => {
-    expect(computeMonthlyCharge(60, 0)).toEqual({
-      fee: 60,
-      taxAmount: 0,
-      chargeAmount: 60,
-    })
   })
 })

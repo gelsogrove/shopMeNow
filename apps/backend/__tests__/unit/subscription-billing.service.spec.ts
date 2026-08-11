@@ -1047,21 +1047,21 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
     it("should reject recharge below minimum ($9.99)", async () => {
       // RULE: Minimum recharge is $10 — anything less is rejected immediately
       await expect(service.rechargeOwnerCredit(mockUserId, 9.99)).rejects.toThrow(
-        "Minimum recharge amount is $10"
+        "Minimum recharge amount is €10"
       )
     })
 
     it("should reject recharge above maximum ($1000.01)", async () => {
       // RULE: Maximum recharge is $1000 — prevents accidental extreme charges
       await expect(service.rechargeOwnerCredit(mockUserId, 1000.01)).rejects.toThrow(
-        "Maximum recharge amount is $1000"
+        "Maximum recharge amount is €1000"
       )
     })
 
     it("should reject $0 recharge (zero is also below minimum)", async () => {
       // RULE: $0 is below the $10 minimum — must be rejected
       await expect(service.rechargeOwnerCredit(mockUserId, 0)).rejects.toThrow(
-        "Minimum recharge amount is $10"
+        "Minimum recharge amount is €10"
       )
     })
 

@@ -9,14 +9,9 @@ export function useCurrentUser() {
     queryKey: ['currentUser'],
     queryFn: async () => {
       try {
-        // First check localStorage for cached user data
-        const cachedUser = storage.getUser()
-        
-        // Se non c'è un utente nel localStorage, non fare chiamate API
-        if (!cachedUser) {
-          throw new Error('No user data available')
-        }
-        
+        // The auth token is the source of truth — do NOT gate on a cached user
+        // object: a previous 401 clears it and would leave this query disabled
+        // forever, rendering /profile with empty fields and no network call.
         const response = await api.get('/auth/me')
         if (response.data?.user) {
           // Cache user data in localStorage
@@ -55,8 +50,8 @@ export function useCurrentUser() {
     refetchOnMount: false,
     // Cache successful responses for 10 minutes (using gcTime instead of deprecated cacheTime)
     gcTime: 10 * 60 * 1000,
-    // Disable the query completely if no user data is available
-    enabled: !!storage.getUser(),
+    // Run whenever an auth token exists — the API call itself validates it
+    enabled: !!storage.getToken(),
     retry: (failureCount, error: any) => {
       // Non riprovare in caso di errori 401 o 404 (non autorizzato o utente non trovato)
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 404)) {

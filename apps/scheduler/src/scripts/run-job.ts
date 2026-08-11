@@ -16,7 +16,6 @@
  *   messages-archive          - Archive messages older than 6 months
  *   soft-delete-cleanup       - Hard-delete soft-deleted records after retention period
  *   support-attachments-cleanup - Delete attachments from old closed support tickets
- *   monthly-billing           - Generate billing records for the previous month
  *   conversation-messages-cleanup - Delete LLM context messages older than 90 days
  *   agent-logs-cleanup        - Delete agent audit logs older than 180 days
  *   webhook-events-cleanup    - Delete WhatsApp webhook dedup events older than 30 days
@@ -57,10 +56,6 @@ const JOB_MAP: Record<string, () => Promise<void>> = {
   'support-attachments-cleanup': async () => {
     const { supportAttachmentsCleanupJob } = await import('../jobs/support-attachments-cleanup.job')
     await supportAttachmentsCleanupJob()
-  },
-  'monthly-billing': async () => {
-    const { monthlyBillingJob } = await import('../jobs/monthly-billing.job')
-    await monthlyBillingJob()
   },
   'conversation-messages-cleanup': async () => {
     const { conversationMessagesCleanupJob } = await import('../jobs/conversation-messages-cleanup.job')

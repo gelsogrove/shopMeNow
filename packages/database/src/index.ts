@@ -157,7 +157,6 @@ export type {
 export {
   roundMoney,
   computeInvoiceTotals,
-  computeMonthlyCharge,
 } from './billing-math'
 export type { InvoiceTotals } from './billing-math'
 export {

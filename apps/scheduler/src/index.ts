@@ -9,7 +9,7 @@ import logger from './utils/logger'
 //
 //   npx ts-node src/scripts/run-job.ts <job-name>
 //
-// or via the npm scripts in package.json (e.g. npm run job:monthly-billing).
+// or via the npm scripts in package.json (e.g. npm run job:push-campaigns).
 //
 // WHY:
 //   The only high-frequency job was whatsapp-channel-queue (every 5 sec) which
@@ -33,7 +33,6 @@ import logger from './utils/logger'
 //   messages-archive            - Archive messages older than 6 months
 //   soft-delete-cleanup         - Hard-delete soft-deleted records after retention period
 //   support-attachments-cleanup - Delete attachments from old closed support tickets
-//   monthly-billing             - Generate billing records for the previous month
 //   conversation-messages-cleanup - Delete LLM context messages older than 90 days
 //   agent-logs-cleanup          - Delete agent audit logs older than 180 days
 //   webhook-events-cleanup      - Delete WhatsApp webhook dedup events older than 30 days

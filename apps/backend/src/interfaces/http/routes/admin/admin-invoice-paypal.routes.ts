@@ -470,4 +470,97 @@ router.post(
   }
 )
 
+// ── Charge retry + manual month-end run (Collections page actions) ─────────
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/retry-charge:
+ *   post:
+ *     summary: Retry the PayPal charge for a FAILED/PENDING invoice (admin)
+ *     description: >
+ *       Soft-block collections flow: the scheduler makes 1 automatic attempt,
+ *       the operator gets up to 3 manual retries (4 attempts total). After
+ *       that the operator decides: block, cancel, or grant credit.
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  "/admin/invoices/:invoiceId/retry-charge",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const adminUserId = (req as any).user?.id
+
+      const { paypalInvoiceChargeService, MAX_PAYMENT_ATTEMPTS } = await import(
+        "../../../../services/paypal-invoice-charge.service"
+      )
+      const result = await paypalInvoiceChargeService.chargeInvoice(
+        invoiceId,
+        "ADMIN_RETRY",
+        adminUserId
+      )
+
+      logger.info(
+        `[ADMIN] Invoice ${invoiceId} retry-charge by ${adminUserId}: ${result.status}${result.reason ? ` (${result.reason})` : ""}`
+      )
+
+      if (result.status === "SKIPPED") {
+        return res.status(409).json({ success: false, error: result.reason })
+      }
+
+      res.json({
+        success: result.success,
+        data: {
+          status: result.status,
+          reason: result.reason,
+          transactionId: result.transactionId,
+          attempt: result.attempt,
+          maxAttempts: MAX_PAYMENT_ATTEMPTS,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error retrying invoice charge:", error)
+      res.status(500).json({ success: false, error: "Failed to retry invoice charge" })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/billing/run-month-end:
+ *   post:
+ *     summary: Run the month-end billing manually (admin)
+ *     description: >
+ *       Same run the scheduler performs on the 1st at 23:30 (Europe/Rome).
+ *       Idempotent — PAID invoices are skipped, attempts are claimed
+ *       atomically, so a re-run never double-charges.
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  "/admin/billing/run-month-end",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const adminUserId = (req as any).user?.id
+      logger.info(`[ADMIN] Month-end billing run triggered manually by ${adminUserId}`)
+
+      const { runMonthEndBilling } = await import(
+        "../../../../services/month-end-billing.service"
+      )
+      const summary = await runMonthEndBilling()
+
+      res.json({ success: true, data: summary })
+    } catch (error) {
+      logger.error("[ADMIN] Error running month-end billing:", error)
+      res.status(500).json({ success: false, error: "Failed to run month-end billing" })
+    }
+  }
+)
+
 export default router

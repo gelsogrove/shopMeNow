@@ -4,6 +4,8 @@
  * Uses node-cron to run periodic maintenance tasks:
  * 1. Mark expired search conversations (every 5 minutes)
  * 2. Delete old search conversations >30 days (weekly)
+ * 3. Month-end billing: invoice + PayPal charge for the PREVIOUS month
+ *    (1st of each month, 23:30 Europe/Rome)
  *
  * Usage:
  * - Import and call startScheduler() in index.ts
@@ -19,6 +21,7 @@
 import cron from "node-cron"
 import { SearchConversationRepository } from "./repositories/searchConversation.repository"
 import { WorkspaceRepository } from "./repositories/workspace.repository"
+import { runMonthEndBilling } from "./services/month-end-billing.service"
 import logger from "./utils/logger"
 
 const searchConversationRepo = new SearchConversationRepository()
@@ -93,6 +96,27 @@ const deleteOldConversationsJob = cron.schedule("0 3 * * 0", async () => {
 })
 
 /**
+ * Job 3: Month-end billing
+ * Runs on the 1st of each month at 23:30 (Europe/Rome).
+ * ALWAYS bills the PREVIOUS month: one invoice per owner
+ * (subscription + recharges), then one automatic PayPal charge.
+ * If the charge fails the invoice stays FAILED and surfaces in the
+ * backoffice Collections page for manual operator retries (soft block).
+ */
+const monthEndBillingJob = cron.schedule(
+  "30 23 1 * *",
+  async () => {
+    try {
+      logger.info("⏰ Running job: Month-end billing")
+      await runMonthEndBilling()
+    } catch (error) {
+      logger.error("❌ Error in monthEndBillingJob:", error)
+    }
+  },
+  { timezone: "Europe/Rome" }
+)
+
+/**
  * Start all scheduled jobs
  * Call this function in index.ts after server startup
  */
@@ -102,10 +126,12 @@ export function startScheduler(): void {
   // Start all jobs
   markExpiredConversationsJob.start()
   deleteOldConversationsJob.start()
+  monthEndBillingJob.start()
 
   logger.info("✅ Scheduler started successfully")
   logger.info("  - Mark expired conversations: Every 5 minutes")
   logger.info("  - Delete old conversations: Every Sunday at 3:00 AM")
+  logger.info("  - Month-end billing: 1st of month at 23:30 (Europe/Rome)")
 }
 
 /**
@@ -117,6 +143,7 @@ export function stopScheduler(): void {
 
   markExpiredConversationsJob.stop()
   deleteOldConversationsJob.stop()
+  monthEndBillingJob.stop()
 
   logger.info("✅ Scheduler stopped successfully")
 }
@@ -128,6 +155,7 @@ export function stopScheduler(): void {
 export function getSchedulerStatus(): {
   markExpiredJob: { running: boolean; schedule: string }
   deleteOldJob: { running: boolean; schedule: string }
+  monthEndBillingJob: { running: boolean; schedule: string }
 } {
   return {
     markExpiredJob: {
@@ -137,6 +165,10 @@ export function getSchedulerStatus(): {
     deleteOldJob: {
       running: deleteOldConversationsJob.getStatus() === "scheduled",
       schedule: "0 3 * * 0",
+    },
+    monthEndBillingJob: {
+      running: monthEndBillingJob.getStatus() === "scheduled",
+      schedule: "30 23 1 * * (Europe/Rome)",
     },
   }
 }
