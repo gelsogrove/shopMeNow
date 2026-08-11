@@ -185,104 +185,6 @@ router.get(
   }
 )
 
-// ── PayPal process payment ──────────────────────────────────────────────────
-
-/**
- * @swagger
- * /api/users/admin/invoices/{invoiceId}/paypal/mock-payment:
- *   post:
- *     summary: Process PayPal monthly payment (admin, Subscriptions v2)
- *     tags: [Users Admin]
- *     security:
- *       - bearerAuth: []
- */
-// Backward-compat path kept for UI, and treated as real capture
-router.post(
-  "/admin/invoices/:invoiceId/paypal/process-payment",
-  authMiddleware,
-  platformAdminMiddleware,
-  async (req: Request, res: Response) => {
-    try {
-      const { invoiceId } = req.params
-      const { notes } = req.body as { notes?: string }
-      const adminUser = (req as any).user
-
-      if (!adminUser?.id) {
-        res.status(401).json({ success: false, error: "Unauthorized" })
-        return
-      }
-
-      // Import and use the PayPal billing service
-      const { processPayment } = await import("../../../../services/paypal-billing.service")
-      
-      const result = await processPayment(invoiceId, adminUser.id, notes)
-
-      if (result.success) {
-        res.json({
-          success: true,
-          data: {
-            transactionId: result.transactionId,
-            message: "Payment initiated. Invoice will be marked PAID when PayPal confirms.",
-          },
-        })
-      } else {
-        const statusCode = result.errorCode === "RATE_LIMITED" ? 429 : 400
-        res.status(statusCode).json({
-          success: false,
-          error: result.error,
-          code: result.errorCode,
-          transactionId: result.transactionId,
-        })
-      }
-    } catch (error) {
-      logger.error("[ADMIN] Error processing PayPal payment:", error)
-      res.status(500).json({
-        success: false,
-        error: "Failed to process payment",
-      })
-    }
-  }
-)
-
-// Legacy mock endpoint - kept for backwards compatibility
-router.post(
-  "/admin/invoices/:invoiceId/paypal/mock-payment",
-  authMiddleware,
-  platformAdminMiddleware,
-  async (req: Request, res: Response) => {
-    const { invoiceId } = req.params
-    const { notes } = req.body as { notes?: string }
-    const adminUser = (req as any).user
-
-    if (!adminUser?.id) {
-      res.status(401).json({ success: false, error: "Unauthorized" })
-      return
-    }
-
-    try {
-      const { processPayment } = await import("../../../../services/paypal-billing.service")
-      const result = await processPayment(invoiceId, adminUser.id, notes)
-
-      res.json({
-        success: result.success,
-        data: {
-          success: result.success,
-          transactionId: result.transactionId,
-          status: result.success ? "SUCCESS" : "FAILED",
-          error: result.error,
-        },
-      })
-    } catch (error) {
-      logger.error("[ADMIN] Error processing mock PayPal payment:", error)
-      const errorMessage = error instanceof Error ? error.message : "Failed to process payment"
-      res.status(500).json({
-        success: false,
-        error: errorMessage,
-      })
-    }
-  }
-)
-
 // ── Mark invoice as paid manually (admin override) ──────────────────────────
 
 /**
@@ -447,19 +349,6 @@ router.post(
         error: error instanceof Error ? error.message : "Failed to mark invoice as paid",
       })
     }
-  }
-)
-
-// Deprecated capture endpoint
-router.post(
-  "/admin/invoices/:invoiceId/paypal/capture",
-  authMiddleware,
-  platformAdminMiddleware,
-  async (req: Request, res: Response) => {
-    return res.status(410).json({
-      success: false,
-      error: "This endpoint is deprecated. Use /admin/invoices/:invoiceId/paypal/mock-payment instead"
-    })
   }
 )
 

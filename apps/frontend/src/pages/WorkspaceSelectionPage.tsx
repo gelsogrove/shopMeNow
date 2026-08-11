@@ -41,7 +41,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power, Monitor, Building2, Link2, RefreshCw, Loader2, PartyPopper, ExternalLink } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power, Building2, Link2, RefreshCw, Loader2, PartyPopper, ExternalLink } from "lucide-react"
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -1507,33 +1507,13 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   >
                   {/* 🎨 REDESIGNED: Colored Header Bar */}
                   <div 
-                    className={`relative px-4 py-3 flex items-center justify-between ${
+                    className={`relative px-4 py-3 flex items-center justify-end ${
                       workspace.channelMode === 'ECOMMERCE'
                         ? "bg-gradient-to-r from-green-500 to-green-600"
                         : "bg-gradient-to-r from-slate-500 to-slate-600"
                     }`}
                   >
-                    {/* Left: Type Badge + Channel Icon */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-white text-sm font-semibold flex items-center gap-2">
-                        <Store className="h-4 w-4" />
-                        {workspace.channelMode === 'ECOMMERCE' ? "E-commerce" : workspace.channelMode === 'FLOW' ? "Flow" : "Info Channel"}
-                      </span>
-                      
-                      {/* WhatsApp/Widget Icon Badge */}
-                      {workspace.channelType === 'WHATSAPP' ? (
-                        <div className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md flex items-center gap-1.5" title="WhatsApp Channel">
-                          <MessageCircle className="h-3.5 w-3.5 text-white" />
-                          <span className="text-xs text-white font-medium">WhatsApp</span>
-                        </div>
-                      ) : workspace.channelType === 'WIDGET' ? (
-                        <div className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md flex items-center gap-1.5" title="Website Widget">
-                          <Monitor className="h-3.5 w-3.5 text-white" />
-                          <span className="text-xs text-white font-medium">Widget</span>
-                        </div>
-                      ) : null}
-                    </div>
-                    
+
                     {/* Right: Settings Button */}
                     <button
                       type="button"

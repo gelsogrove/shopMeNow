@@ -215,15 +215,13 @@ interface PayPalTransactionRow {
 }
 
 export function CollectionsPage() {
-  const [viewMode, setViewMode] = useState<'current' | 'previous' | 'history' | 'failed' | 'transactions'>('current')
+  const [viewMode, setViewMode] = useState<'current' | 'previous' | 'history' | 'transactions'>('current')
   const [currentRows, setCurrentRows] = useState<OwnerInvoiceRow[]>([])
   const [previousRows, setPreviousRows] = useState<OwnerInvoiceRow[]>([])
-  const [failedRows, setFailedRows] = useState<OwnerInvoiceRow[]>([])
   const [historyRows, setHistoryRows] = useState<OwnerInvoiceRow[]>([])
   const [transactionRows, setTransactionRows] = useState<PayPalTransactionRow[]>([])
   const [isCurrentLoading, setIsCurrentLoading] = useState(true)
   const [isPreviousLoading, setIsPreviousLoading] = useState(true)
-  const [isFailedLoading, setIsFailedLoading] = useState(true)
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -325,44 +323,9 @@ export function CollectionsPage() {
     const previousMonthRows = response.data.filter((row) =>
       isSamePeriod(row.invoice.periodMonth, row.invoice.periodYear, previousDefaults.month, previousDefaults.year)
     )
-    const overdueRows = response.data.filter((row) =>
-      isBeforePeriod(row.invoice.periodMonth, row.invoice.periodYear, previousDefaults.month, previousDefaults.year)
-    )
-
-    if (overdueRows.length) {
-      setFailedRows((prev) => {
-        const existing = new Set(prev.map((r) => r.invoice.id))
-        const merged = [...prev]
-        overdueRows.forEach((row) => {
-          if (!existing.has(row.invoice.id)) {
-            merged.push({ ...row, invoice: { ...row.invoice, status: 'FAILED' } })
-          }
-        })
-        return merged
-      })
-    }
-
     setPreviousRows(previousMonthRows)
     applyNotesFromRows(previousMonthRows)
     setIsPreviousLoading(false)
-  }
-
-  const loadFailedInvoices = async () => {
-    setIsFailedLoading(true)
-    setError(null)
-    const response = await api.users.getFailedInvoices()
-
-    if (!response.success || !response.data) {
-      if (!shouldIgnoreError(response.error)) {
-        setError(response.error || 'Failed to load failed invoices')
-      }
-      setIsFailedLoading(false)
-      return
-    }
-
-    setFailedRows(response.data)
-    applyNotesFromRows(response.data)
-    setIsFailedLoading(false)
   }
 
   const loadHistory = async (params?: { month?: number | null; year?: number | null }) => {
@@ -440,15 +403,12 @@ export function CollectionsPage() {
   useEffect(() => {
     loadCurrentInvoices()
     loadPreviousInvoices()
-    loadFailedInvoices()
   }, [])
 
   useEffect(() => {
     const sourceRows =
       viewMode === 'current'
         ? currentRows
-        : viewMode === 'failed'
-        ? failedRows
         : viewMode === 'history'
         ? historyRows
         : previousRows
@@ -458,15 +418,13 @@ export function CollectionsPage() {
         loadInvoicePreview(row.invoice.id)
       }
     })
-  }, [currentRows, previousRows, failedRows, viewMode, invoicePreviews, loadInvoicePreview])
+  }, [currentRows, previousRows, viewMode, invoicePreviews, loadInvoicePreview])
 
   const displayedRows =
     viewMode === 'history'
       ? historyRows
       : viewMode === 'current'
       ? currentRows
-      : viewMode === 'failed'
-      ? failedRows
       : previousRows
 
   const loadRechargesTransactions = async (ownerEmail: string) => {
@@ -735,7 +693,6 @@ export function CollectionsPage() {
         toast.success('Invoice deleted successfully')
         // Refresh appropriate tables
         if (viewMode === 'current') await loadCurrentInvoices()
-        else if (viewMode === 'failed') await loadFailedInvoices()
         else if (viewMode === 'history') await loadHistory()
         else await loadPreviousInvoices()
       }
@@ -745,86 +702,6 @@ export function CollectionsPage() {
     } finally {
       setUpdating(null)
     }
-  }
-
-  const handleMockPayment = async (invoiceId: string) => {
-    const targetRow =
-      previousRows.find((row) => row.invoice.id === invoiceId) ||
-      failedRows.find((row) => row.invoice.id === invoiceId)
-    const amount = targetRow ? resolveDisplayTotal(targetRow.invoice) : undefined
-    const ownerEmail = targetRow?.owner.email || "owner"
-
-    // Simple confirmation popup with amount and email
-    const confirmed = window.confirm(
-      `Charge ${ownerEmail} for ${amount ? formatEur(amount) : "this invoice"}?`
-    )
-    if (!confirmed) return
-
-    setUpdating(invoiceId)
-    const response = await api.users.mockPayPalPayment(
-      invoiceId,
-      notesByInvoice[invoiceId] || undefined
-    )
-
-    if (!response.success || !response.data) {
-      setError(response.error || 'Failed to process payment')
-      setUpdating(null)
-      return
-    }
-
-    const nextStatus = response.data.success ? 'PAID' : 'FAILED'
-    setPreviousRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
-    // Also update currentRows so the button reflects the new status immediately
-    const paymentSucceeded = response.data!.success
-    setCurrentRows((prev) =>
-      prev.map((row) =>
-        row.invoice.id === invoiceId
-          ? { ...row, invoice: { ...row.invoice, status: nextStatus, paidAt: paymentSucceeded ? new Date().toISOString() : null } }
-          : row
-      )
-    )
-    setFailedRows((prev) => {
-      if (paymentSucceeded) {
-        return prev.filter((row) => row.invoice.id !== invoiceId)
-      }
-      const updatedRow = targetRow
-        ? {
-            ...targetRow,
-            invoice: {
-              ...targetRow.invoice,
-              status: nextStatus,
-              paidAt: null,
-              adminNotes: notesByInvoice[invoiceId] || targetRow.invoice.adminNotes,
-            },
-          }
-        : null
-      if (!updatedRow) return prev
-      const existingIndex = prev.findIndex((row) => row.invoice.id === invoiceId)
-      if (existingIndex >= 0) {
-        return prev.map((row) => (row.invoice.id === invoiceId ? updatedRow : row))
-      }
-      return [updatedRow, ...prev]
-    })
-    await loadHistory()
-    const paidAt = response.data.success ? new Date().toISOString() : null
-    setInvoicePreviews((prev) => {
-      const existing = prev[invoiceId]
-      if (!existing?.data) {
-        return prev
-      }
-      return {
-        ...prev,
-        [invoiceId]: {
-          loading: false,
-          data: {
-            ...existing.data,
-            status: nextStatus,
-            paidAt,
-          },
-        },
-      }
-    })
-    setUpdating(null)
   }
 
   const handleMarkPaidManually = async () => {
@@ -855,7 +732,6 @@ export function CollectionsPage() {
 
     setCurrentRows((prev) => prev.map(applyPaid))
     setPreviousRows((prev) => prev.filter((r) => r.invoice.id !== invoiceId))
-    setFailedRows((prev) => prev.filter((r) => r.invoice.id !== invoiceId))
 
     // Update invoice preview cache
     setInvoicePreviews((prev) => {
@@ -885,8 +761,6 @@ export function CollectionsPage() {
       return
     }
 
-    // Remove from failed list
-    setFailedRows((prev) => prev.filter((row) => row.invoice.id !== cancelModal.invoiceId))
     setInvoicePreviews((prev) => {
       const next = { ...prev }
       delete next[cancelModal.invoiceId]
@@ -901,20 +775,6 @@ export function CollectionsPage() {
 
     // Show success message
     alert(`Invoice cancelled successfully${response.data.workspacesBlocked ? ' and workspace blocked' : ''}`)
-  }
-
-  const handleTrashFailed = async (invoiceId: string) => {
-    const targetRow = failedRows.find((row) => row.invoice.id === invoiceId)
-    if (!targetRow) return
-
-    // Open cancel modal instead of direct trash
-    setCancelModal({
-      invoiceId,
-      ownerEmail: targetRow.owner.email,
-      periodMonth: targetRow.invoice.periodMonth,
-      periodYear: targetRow.invoice.periodYear,
-      retryCount: targetRow.invoice.paymentRetryCount || 0,
-    })
   }
 
   const handleSaveNotes = async (invoiceId: string, status: string) => {
@@ -945,7 +805,6 @@ export function CollectionsPage() {
 
     setCurrentRows((prev) => updateNotes(prev))
     setPreviousRows((prev) => updateNotes(prev))
-    setFailedRows((prev) => updateNotes(prev))
 
     setInvoicePreviews((prev) => {
       const existing = prev[invoiceId]
@@ -994,83 +853,11 @@ export function CollectionsPage() {
     })
   }
 
-  const handleMoveToFailed = async (invoiceId: string) => {
-    setUpdating(invoiceId)
-    const response = await api.users.updateInvoice(invoiceId, {
-      status: 'FAILED',
-      adminNotes: notesByInvoice[invoiceId] ?? undefined,
-    })
-
-    if (!response.success || !response.data) {
-      setError(response.error || 'Failed to move invoice to failed')
-      setUpdating(null)
-      return
-    }
-
-    const sourceRow = findRowByInvoiceId(invoiceId)
-    if (sourceRow) {
-      const updatedRow = { ...sourceRow, invoice: { ...sourceRow.invoice, status: 'FAILED', paidAt: null } }
-      setCurrentRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
-      setPreviousRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
-      setFailedRows((prev) => {
-        const without = prev.filter((row) => row.invoice.id !== invoiceId)
-        return [updatedRow, ...without]
-      })
-    }
-
-    syncPreviewStatus(invoiceId, 'FAILED', null)
-    setUpdating(null)
-  }
-
-  const handleMarkUnpaid = async (invoiceId: string) => {
-    const targetRow = findRowByInvoiceId(invoiceId)
-    const canReturnToPrevious = targetRow
-      ? isSamePeriod(
-          targetRow.invoice.periodMonth,
-          targetRow.invoice.periodYear,
-          previousDefaults.month,
-          previousDefaults.year
-        )
-      : false
-
-    if (!canReturnToPrevious) {
-      setError('Only previous-month invoices can be marked unpaid and moved back.')
-      return
-    }
-
-    setUpdating(invoiceId)
-    const response = await api.users.updateInvoice(invoiceId, {
-      status: 'PENDING',
-      adminNotes: notesByInvoice[invoiceId] ?? undefined,
-    })
-
-    if (!response.success || !response.data) {
-      setError(response.error || 'Failed to mark invoice as unpaid')
-      setUpdating(null)
-      return
-    }
-
-    if (targetRow) {
-      const updatedRow = { ...targetRow, invoice: { ...targetRow.invoice, status: 'PENDING', paidAt: null } }
-      setFailedRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
-      setPreviousRows((prev) => {
-        const without = prev.filter((row) => row.invoice.id !== invoiceId)
-        return [updatedRow, ...without]
-      })
-    }
-
-    syncPreviewStatus(invoiceId, 'PENDING', null)
-    setUpdating(null)
-  }
-
-
   const isViewLoading =
     viewMode === 'history'
       ? isHistoryLoading
       : viewMode === 'current'
       ? isCurrentLoading
-      : viewMode === 'failed'
-      ? isFailedLoading
       : isPreviousLoading
 
   if (isViewLoading) {
@@ -1164,12 +951,6 @@ export function CollectionsPage() {
           onClick={() => setViewMode('previous')}
         >
           Previous Month
-        </Button>
-        <Button
-          variant={viewMode === 'failed' ? 'default' : 'outline'}
-          onClick={() => setViewMode('failed')}
-        >
-          Failed
         </Button>
         <Button
           variant={viewMode === 'history' ? 'default' : 'outline'}
@@ -1487,14 +1268,6 @@ export function CollectionsPage() {
                           <FileText className="h-4 w-4 mr-2" />
                           Adjustments
                         </Button>
-                        <Button
-                          variant="default"
-                          onClick={() => handleMockPayment(invoice.id)}
-                          disabled={isUpdatingRow || invoice.status === 'PAID'}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Process Payment
-                        </Button>
                     <Button
                       variant="outline"
                       onClick={() =>
@@ -1510,13 +1283,6 @@ export function CollectionsPage() {
                           className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                         >
                           Mark as Paid
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleMoveToFailed(invoice.id)}
-                          disabled={isUpdatingRow}
-                        >
-                          Move to Failed
                         </Button>
                         <Button
                           variant="outline"
@@ -1542,105 +1308,6 @@ export function CollectionsPage() {
                         >
                           {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
                         </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleDeleteInvoice(invoice.id)}
-                          disabled={isUpdatingRow}
-                          title="Irreversibly delete this invoice"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
-                      </div>
-                    )}
-
-                    {isFailedView && (
-                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto_auto] md:items-center">
-                        <Input
-                          placeholder="Admin notes..."
-                          value={notesByInvoice[invoice.id] || ''}
-                          onChange={(e) =>
-                            setNotesByInvoice((prev) => ({
-                              ...prev,
-                              [invoice.id]: e.target.value,
-                            }))
-                          }
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            handleDownloadInvoice(
-                              invoice.id,
-                              invoice.periodMonth,
-                              invoice.periodYear,
-                              invoice.invoiceNumber
-                            )
-                          }
-                          disabled={isUpdatingRow}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => handleMockPayment(invoice.id)}
-                            disabled={isUpdatingRow}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Retry Payment
-                          </Button>
-                          <Badge
-                            variant={getPayPalEnvironment(row.owner) === 'sandbox' ? 'secondary' : 'destructive'}
-                            className={getPayPalEnvironment(row.owner) === 'sandbox'
-                              ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300'
-                              : 'text-xs bg-red-100 text-red-800 border border-red-300'}
-                          >
-                            {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
-                          </Badge>
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            setMarkPaidModal({
-                              invoiceId: invoice.id,
-                              ownerEmail: row.owner.email || '',
-                              periodMonth: invoice.periodMonth,
-                              periodYear: invoice.periodYear,
-                              amount: resolveDisplayTotal(invoice),
-                            })
-                          }
-                          disabled={isUpdatingRow}
-                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                        >
-                          Mark as Paid
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleMarkUnpaid(invoice.id)}
-                          disabled={isUpdatingRow || !canReturnToPrevious}
-                          title={!canReturnToPrevious ? 'Only previous-month invoices can be moved back' : undefined}
-                        >
-                          Mark as Unpaid
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleSaveNotes(invoice.id, 'FAILED')}
-                          disabled={isUpdatingRow}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Save Notes
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleTrashFailed(invoice.id)}
-                          disabled={isUpdatingRow}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Move to Trash
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
