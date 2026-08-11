@@ -65,10 +65,14 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { userId } = req.params
-      const { isPlatformAdmin, isDeveloperUser } = req.body
+      const { isPlatformAdmin, isDeveloperUser, isDemoUser } = req.body
 
       // Validate at least one permission is being updated
-      if (isPlatformAdmin === undefined && isDeveloperUser === undefined) {
+      if (
+        isPlatformAdmin === undefined &&
+        isDeveloperUser === undefined &&
+        isDemoUser === undefined
+      ) {
         return res.status(400).json({
           success: false,
           error: "At least one permission must be provided",

@@ -287,6 +287,7 @@ router.get(
           lastName: true,
           isPlatformAdmin: true,
           isDeveloperUser: true,
+          isDemoUser: true,
           twoFactorEnabled: true,
           status: true,
           createdAt: true,
@@ -390,6 +391,7 @@ router.get(
           lastName: user.lastName,
           isPlatformAdmin: user.isPlatformAdmin,
           isDeveloperUser: user.isDeveloperUser,
+          isDemoUser: user.isDemoUser,
           // 2FA is required for normal users (not admin/dev)
           // Show as enabled if they should have it AND have completed setup
           twoFactorEnabled: shouldHave2FA && user.twoFactorEnabled,
