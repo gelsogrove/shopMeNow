@@ -283,6 +283,39 @@ export function ClientsPage() {
     }
   }
 
+  // Demo flag is independent from the Admin/Dev pair (no mutual exclusion),
+  // so it does not go through handleToggle.
+  const handleDemoToggle = async (userId: string, currentValue: boolean) => {
+    setUpdating(userId)
+    setError(null)
+    setSuccessMessage(null)
+
+    const newValue = !currentValue
+
+    try {
+      const response = await api.users.updatePermissions(userId, {
+        isDemoUser: newValue
+      })
+
+      if (response.success) {
+        setUsers(prev => prev.map(user =>
+          user.id === userId
+            ? { ...user, isDemoUser: newValue }
+            : user
+        ))
+        setSuccessMessage(`Demo mode ${newValue ? 'enabled' : 'disabled'}`)
+        setTimeout(() => setSuccessMessage(null), 3000)
+      } else {
+        setError(response.error || 'Failed to update demo mode')
+      }
+    } catch (err) {
+      setError('Failed to update demo mode')
+      console.error('Error updating demo mode:', err)
+    } finally {
+      setUpdating(null)
+    }
+  }
+
   const handleStatusToggle = async (userId: string, currentStatus: string) => {
     setUpdating(userId)
     setError(null)
