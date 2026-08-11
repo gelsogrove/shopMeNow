@@ -2471,6 +2471,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
             single column so BillingSection uses the full width. */}
         {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (() => {
           const isCustomChatbot = Boolean(firstWorkspace?.customChatbotId)
+          // Demo accounts never see the Plans/credit card. UsageLimitsCard then
+          // has no sibling feeding it billing data, so it is hidden too.
+          if (isDemoUser) return null
           return (
             <div id="billing-section" className={cn(
               "mt-8 grid gap-4",
