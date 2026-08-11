@@ -39,6 +39,7 @@ import { getOwnerBillingOverview, BillingOverview } from "@/services/subscriptio
 import { PLAN_CONFIGS } from "@/config/planFeatures"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
+import { useIsDemoUser } from "@/hooks/useIsDemoUser"
 
 interface SubscriptionSectionProps {
   onFieldFocus?: (fieldKey: string) => void
@@ -55,6 +56,7 @@ const PLAN_DISPLAY: Record<string, { label: string; color: string; icon: React.R
 export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) {
   const { workspace } = useWorkspace()
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id || "")
+  const isDemoUser = useIsDemoUser()
 
   // Billing state
   const [billingOverview, setBillingOverview] = useState<BillingOverview | null>(null)
@@ -211,7 +213,8 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
   const isPaymentConnected =
     paypalStatus?.isPaymentConnected ?? paypalStatus?.paypalStatus === "CONNECTED"
   const requiresPayment = planType !== "FREE_TRIAL"
-  const showPayPalWarning = requiresPayment && !paypalLoading && !isPaymentConnected
+  const showPayPalWarning =
+    requiresPayment && !paypalLoading && !isPaymentConnected && !isDemoUser
   
   // Calculate days left in trial
   const getTrialDaysLeft = (): number | null => {
@@ -294,8 +297,8 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
         </div>
       )}
 
-      {/* PayPal Connection Card */}
-      {isSuperAdmin && (
+      {/* PayPal Connection Card - hidden for demo accounts */}
+      {isSuperAdmin && !isDemoUser && (
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
