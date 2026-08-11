@@ -1165,40 +1165,28 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 // Show badge if we have workspaces
                 if (workspaces.length > 0) {
                   return (
-                    <TooltipProvider delayDuration={100}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => isSuperAdmin && setOpenChangePlanDialog(true)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${isSuperAdmin ? 'hover:scale-105 cursor-pointer' : 'cursor-default'} ${
-                              planType === 'FREE_TRIAL'
-                                ? 'bg-amber-100 text-amber-700 border border-amber-300'
-                                : planType === 'BASIC'
-                                ? 'bg-green-100 text-green-700 border border-green-300'
-                                : planType === 'PREMIUM'
-                                ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                                : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
-                            }`}
-                          >
-                            <Crown className="h-3.5 w-3.5" />
-                            <span>
-                              {planType === 'FREE_TRIAL' 
-                                ? `Free Trial ${daysRemaining ?? 0}d` 
-                                : planType === 'BASIC'
-                                ? 'Basic'
-                                : planType === 'PREMIUM'
-                                ? 'Premium'
-                                : 'Enterprise'}
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        {isSuperAdmin && (
-                          <TooltipContent>
-                            <p>Click to change your plan</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
+                        planType === 'FREE_TRIAL'
+                          ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                          : planType === 'BASIC'
+                          ? 'bg-green-100 text-green-700 border border-green-300'
+                          : planType === 'PREMIUM'
+                          ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                          : 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-300'
+                      }`}
+                    >
+                      <Crown className="h-3.5 w-3.5" />
+                      <span>
+                        {planType === 'FREE_TRIAL'
+                          ? `Free Trial ${daysRemaining ?? 0}d`
+                          : planType === 'BASIC'
+                          ? 'Basic'
+                          : planType === 'PREMIUM'
+                          ? 'Premium'
+                          : 'Enterprise'}
+                      </span>
+                    </div>
                   )
                 }
                 return null

@@ -762,18 +762,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <History className="h-4 w-4" />
                 Transaction History
               </Button>
-              {isSuperAdmin && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleOpenUpgrade}
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-                  title={!canManageBilling ? "Connect PayPal to change your plan." : undefined}
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Change Plan
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>
