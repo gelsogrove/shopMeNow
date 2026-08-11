@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
+import { ChatWidget } from "@/components/ChatWidget"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
 import { cn } from "@/lib/utils"
 import type { Workspace } from "@/hooks/use-workspace"
@@ -477,6 +478,7 @@ const firstWorkspace = workspaces.length > 0 ? workspaces[0] : null
 const firstWorkspaceId = firstWorkspace?.id ?? null
 const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstWorkspaceId)
   const isDemoUser = useIsDemoUser()
+  const [tryChatbotWorkspace, setTryChatbotWorkspace] = useState<Workspace | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -836,6 +838,13 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     e.stopPropagation()
     storage.setWorkspace(workspace)
     window.location.href = "/settings"
+  }
+
+  // Try-it panel: renders the real ChatWidget already open on the right, so the
+  // owner can talk to their own bot without leaving the card grid.
+  const handleTryChatbot = (workspace: Workspace, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setTryChatbotWorkspace(workspace)
   }
 
   const loadChecklists = async (workspaceList: Workspace[]) => {
@@ -1508,25 +1517,40 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       handleSelectWorkspace(workspace)
                     }}
                   >
-                  {/* 🎨 REDESIGNED: Colored Header Bar */}
-                  <div 
-                    className={`relative px-4 py-3 flex items-center justify-end ${
-                      workspace.channelMode === 'ECOMMERCE'
-                        ? "bg-gradient-to-r from-green-500 to-green-600"
-                        : "bg-gradient-to-r from-slate-500 to-slate-600"
-                    }`}
-                  >
+                  {/* 🎨 Header Bar — soft emerald for every channel mode */}
+                  <div className="relative px-4 py-3 flex items-center justify-end gap-2 bg-gradient-to-r from-emerald-400 to-emerald-500">
+                    <TooltipProvider delayDuration={100}>
+                      {/* Try the Chatbot */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={(e) => handleTryChatbot(workspace, e)}
+                            className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                            aria-label="Try the Chatbot"
+                          >
+                            <MessageCircle className="h-5 w-5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Try the Chatbot</p></TooltipContent>
+                      </Tooltip>
 
-                    {/* Right: Settings Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenSettings(workspace, e)}
-                      className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
-                      aria-label="Open settings"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </button>
-                    
+                      {/* Settings */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenSettings(workspace, e)}
+                            className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                            aria-label="Settings"
+                          >
+                            <Settings className="h-5 w-5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Settings</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
                     {/* Disabled Badge */}
                     {!channelActive && (
                       <span className="absolute -bottom-3 left-4 text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
@@ -1541,21 +1565,35 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     <div className="flex-1 space-y-3">
                       {/* Logo + Name Row */}
                       <div className="flex items-center gap-3">
-                      {/* Small Logo */}
+                      {/* Small Logo — click opens the chatbot widget */}
                       <div className="relative group flex-shrink-0">
-                        {workspace.logoUrl ? (
-                          <img
-                            src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
-                            alt={workspace.name}
-                            className="h-14 w-14 rounded-full object-cover border-2 border-gray-200"
-                          />
-                        ) : (
-                          <div className={`h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-xl ${
-                            channelActive ? "bg-green-500" : "bg-gray-400"
-                          }`}>
-                            {workspace.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={(e) => handleTryChatbot(workspace, e)}
+                                aria-label="Try the Chatbot"
+                                className="block rounded-full transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                              >
+                                {workspace.logoUrl ? (
+                                  <img
+                                    src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
+                                    alt={workspace.name}
+                                    className="h-14 w-14 rounded-full object-cover border-2 border-gray-200"
+                                  />
+                                ) : (
+                                  <div className={`h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-xl ${
+                                    channelActive ? "bg-emerald-500" : "bg-gray-400"
+                                  }`}>
+                                    {workspace.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Try the Chatbot</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         {/* Edit button - appears on hover */}
                         {isSuperAdmin && (
                           <button
@@ -1595,8 +1633,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             {badgeStats[workspace.id].pendingOrders > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
-                                    <ShoppingCart className="h-3 w-3" />
+                                  <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                    <ShoppingCart className="h-4 w-4" />
                                     <span>{badgeStats[workspace.id].pendingOrders}</span>
                                   </div>
                                 </TooltipTrigger>
@@ -1609,7 +1647,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium animate-pulse cursor-help">
-                                    <AlertTriangle className="h-3 w-3" />
+                                    <AlertTriangle className="h-4 w-4" />
                                     <span>{badgeStats[workspace.id].needsIntervention}</span>
                                   </div>
                                 </TooltipTrigger>
@@ -1621,8 +1659,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             {badgeStats[workspace.id].blockedUsers > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
-                                    <Ban className="h-3 w-3" />
+                                  <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                    <Ban className="h-4 w-4" />
                                     <span>{badgeStats[workspace.id].blockedUsers}</span>
                                   </div>
                                 </TooltipTrigger>
@@ -1634,8 +1672,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             {badgeStats[workspace.id].newCustomers > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
-                                    <UserPlus className="h-3 w-3" />
+                                  <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                    <UserPlus className="h-4 w-4" />
                                     <span>{badgeStats[workspace.id].newCustomers}</span>
                                   </div>
                                 </TooltipTrigger>
@@ -2993,6 +3031,50 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         </DialogContent>
       </Dialog>
 
+
+      {/* Try-it chatbot panel — the real widget, rendered already open on the
+          right. Keyed by workspace so switching cards remounts a fresh session
+          instead of showing the previous channel's conversation. */}
+      {tryChatbotWorkspace && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/20"
+            onClick={() => setTryChatbotWorkspace(null)}
+            aria-hidden="true"
+          />
+          <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-emerald-50">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {tryChatbotWorkspace.name}
+                </p>
+                <p className="text-xs text-gray-500">Try the Chatbot</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTryChatbotWorkspace(null)}
+                className="h-9 w-9 rounded-full hover:bg-emerald-100 text-gray-600 flex items-center justify-center transition-colors"
+                aria-label="Close chatbot"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 relative overflow-hidden">
+              <ChatWidget
+                key={tryChatbotWorkspace.id}
+                workspaceId={tryChatbotWorkspace.id}
+                defaultOpen
+                instantChat
+                useChannelLogo
+                hideWorkspaceName
+                onOpenChange={(open) => {
+                  if (!open) setTryChatbotWorkspace(null)
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Footer - Fixed at bottom */}
       <footer className="fixed bottom-0 left-0 right-0 py-4 bg-white/80 backdrop-blur-sm border-t border-gray-200 text-center text-sm text-gray-500">
