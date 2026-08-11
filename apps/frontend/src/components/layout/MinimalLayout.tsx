@@ -198,13 +198,14 @@ export function MinimalLayout() {
               </TooltipProvider>
 
 
-              {/* Plan Badge - Only shown when NOT in a workspace */}
+              {/* Plan Badge - hidden per Andrea's request (2026-08-11)
               {!workspace && (
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${getPlanBadgeColor(planType)}`}>
                   <Crown className="h-3.5 w-3.5" />
                   <span>{getPlanName(planType)}</span>
                 </div>
               )}
+              */}
 
               {/* User Menu */}
               <DropdownMenu>

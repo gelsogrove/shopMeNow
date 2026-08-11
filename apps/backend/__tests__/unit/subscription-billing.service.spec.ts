@@ -210,48 +210,10 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
     })
   })
 
-  describe("recordOwnerPaymentFailure", () => {
-    it("should increment failure count and block after threshold", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
-        paymentFailureCount: 2,
-        subscriptionStatus: "ACTIVE",
-      })
-
-      const result = await service.recordOwnerPaymentFailure(mockUserId)
-
-      expect(mockRepository.updateOwnerSubscriptionStatus).toHaveBeenCalledWith(
-        mockUserId,
-        expect.objectContaining({
-          paymentFailureCount: 3,
-          subscriptionStatus: "PAYMENT_FAILED",
-          lastPaymentFailedAt: expect.any(Date),
-        })
-      )
-      expect(result.paymentFailureCount).toBe(3)
-      expect(result.subscriptionStatus).toBe("PAYMENT_FAILED")
-      expect(result.blocked).toBe(true)
-    })
-
-    it("should keep status when threshold not reached", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
-        paymentFailureCount: 0,
-        subscriptionStatus: "ACTIVE",
-      })
-
-      const result = await service.recordOwnerPaymentFailure(mockUserId)
-
-      expect(mockRepository.updateOwnerSubscriptionStatus).toHaveBeenCalledWith(
-        mockUserId,
-        expect.objectContaining({
-          paymentFailureCount: 1,
-          subscriptionStatus: "ACTIVE",
-          lastPaymentFailedAt: expect.any(Date),
-        })
-      )
-      expect(result.blocked).toBe(false)
-      expect(result.paymentFailureCount).toBe(1)
-    })
-  })
+  // NOTE (2026-08-11, approved by Andrea): recordOwnerPaymentFailure and
+  // resetOwnerPaymentFailures were REMOVED with the credit-wallet billing
+  // model — the subscription is deducted from credit, there is no external
+  // payment that can fail. See docs/billing-model.md.
 
   describe("deductOwnerWidgetMessageCredit", () => {
     it("should use widget message price from pricing config", async () => {
@@ -280,27 +242,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
         "widget_message"
       )
       expect(result.success).toBe(true)
-    })
-  })
-
-  describe("resetOwnerPaymentFailures", () => {
-    it("should reset failure count and restore ACTIVE if previously PAYMENT_FAILED", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
-        subscriptionStatus: "PAYMENT_FAILED",
-      })
-
-      const result = await service.resetOwnerPaymentFailures(mockUserId)
-
-      expect(mockRepository.updateOwnerSubscriptionStatus).toHaveBeenCalledWith(
-        mockUserId,
-        expect.objectContaining({
-          paymentFailureCount: 0,
-          lastPaymentFailedAt: null,
-          subscriptionStatus: "ACTIVE",
-        })
-      )
-      expect(result.subscriptionStatus).toBe("ACTIVE")
-      expect(result.paymentFailureCount).toBe(0)
     })
   })
 

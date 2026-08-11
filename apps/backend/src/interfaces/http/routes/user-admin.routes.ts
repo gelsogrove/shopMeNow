@@ -30,7 +30,7 @@ import adminUserManagementRoutes from "./admin/admin-user-management.routes"
  * Exported for use by admin-user-management sub-router and tests.
  */
 export const buildSubscriptionStatusUpdateData = (
-  subscriptionStatus: "ACTIVE" | "PAUSED" | "PAYMENT_FAILED",
+  subscriptionStatus: "ACTIVE" | "PAUSED",
   existingFailureCount: number,
   now: Date
 ) => {
@@ -44,13 +44,10 @@ export const buildSubscriptionStatusUpdateData = (
     updateData.pauseRequestedAt = null
   }
 
-  if (subscriptionStatus === "PAYMENT_FAILED") {
-    updateData.paymentFailureCount = Math.max(3, existingFailureCount)
-    updateData.lastPaymentFailedAt = now
-  } else {
-    updateData.paymentFailureCount = 0
-    updateData.lastPaymentFailedAt = null
-  }
+  // Credit-wallet model: no external payment can fail. Always clear the
+  // legacy failure state so old PAYMENT_FAILED rows heal on any status change.
+  updateData.paymentFailureCount = 0
+  updateData.lastPaymentFailedAt = null
 
   return updateData
 }

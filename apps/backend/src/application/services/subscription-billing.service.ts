@@ -70,7 +70,6 @@ export interface BillingOverview {
 
 export class SubscriptionBillingService {
   private repository: SubscriptionBillingRepository
-  private readonly PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
   constructor(private prisma: PrismaClient) {
     this.repository = new SubscriptionBillingRepository(prisma)
@@ -1192,75 +1191,6 @@ export class SubscriptionBillingService {
       pausedAt: status.pausedAt,
       pauseRequestedAt: status.pauseRequestedAt,
       pauseEffectiveDate,
-    }
-  }
-
-  /**
-   * Record a payment failure for an owner.
-   * After N failures, subscriptionStatus becomes PAYMENT_FAILED.
-   */
-  async recordOwnerPaymentFailure(userId: string): Promise<{
-    paymentFailureCount: number
-    subscriptionStatus: SubscriptionStatus
-    lastPaymentFailedAt: Date
-    blocked: boolean
-  }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { paymentFailureCount: true, subscriptionStatus: true },
-    })
-
-    if (!user) {
-      throw new Error("User not found")
-    }
-
-    const now = new Date()
-    const nextCount = (user.paymentFailureCount ?? 0) + 1
-    const shouldBlock = nextCount >= this.PAYMENT_FAILURE_BLOCK_THRESHOLD
-    const nextStatus = shouldBlock ? "PAYMENT_FAILED" : user.subscriptionStatus
-
-    await this.repository.updateOwnerSubscriptionStatus(userId, {
-      paymentFailureCount: nextCount,
-      lastPaymentFailedAt: now,
-      subscriptionStatus: nextStatus,
-    })
-
-    return {
-      paymentFailureCount: nextCount,
-      subscriptionStatus: nextStatus,
-      lastPaymentFailedAt: now,
-      blocked: shouldBlock,
-    }
-  }
-
-  /**
-   * Reset payment failure state for an owner.
-   */
-  async resetOwnerPaymentFailures(userId: string): Promise<{
-    paymentFailureCount: number
-    subscriptionStatus: SubscriptionStatus
-  }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { subscriptionStatus: true },
-    })
-
-    if (!user) {
-      throw new Error("User not found")
-    }
-
-    const nextStatus =
-      user.subscriptionStatus === "PAYMENT_FAILED" ? "ACTIVE" : user.subscriptionStatus
-
-    await this.repository.updateOwnerSubscriptionStatus(userId, {
-      paymentFailureCount: 0,
-      lastPaymentFailedAt: null,
-      subscriptionStatus: nextStatus,
-    })
-
-    return {
-      paymentFailureCount: 0,
-      subscriptionStatus: nextStatus,
     }
   }
 

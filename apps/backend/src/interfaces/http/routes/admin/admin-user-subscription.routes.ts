@@ -10,147 +10,10 @@ import { prisma } from "@echatbot/database"
 import { authMiddleware } from "../../middlewares/auth.middleware"
 import { platformAdminMiddleware } from "../../middlewares/platform-admin.middleware"
 import logger from "../../../../utils/logger"
-import { SubscriptionBillingService } from "../../../../application/services/subscription-billing.service"
 import { invoiceService } from "../../../../application/services/invoice.service"
 import { buildSubscriptionStatusUpdateData } from "../user-admin.routes"
 
 const router = Router()
-
-const subscriptionBillingService = new SubscriptionBillingService(prisma)
-
-// =============================================================================
-// 💳 PAYMENT MANAGEMENT
-// =============================================================================
-
-/**
- * @swagger
- * /api/users/admin/{userId}/payment-failure:
- *   post:
- *     summary: Record a payment failure for a user (admin)
- *     tags: [Users Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               adminNotes:
- *                 type: string
- *     responses:
- *       200:
- *         description: Payment failure recorded
- */
-router.post(
-  "/admin/:userId/payment-failure",
-  authMiddleware,
-  platformAdminMiddleware,
-  async (req: Request, res: Response) => {
-    try {
-      const { userId } = req.params
-      const { adminNotes } = req.body as { adminNotes?: string }
-      const adminUser = (req as any).user
-
-      const result = await subscriptionBillingService.recordOwnerPaymentFailure(userId)
-
-      if (adminNotes) {
-        const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
-        await prisma.monthlyInvoice.update({
-          where: { id: invoice.id },
-          data: {
-            adminNotes,
-            adminMarkedById: adminUser?.id ?? null,
-            adminMarkedAt: new Date(),
-          },
-        })
-      }
-
-      res.json({
-        success: true,
-        data: result,
-      })
-    } catch (error) {
-      logger.error("Error recording payment failure:", error)
-      res.status(500).json({
-        success: false,
-        error: "Failed to record payment failure",
-      })
-    }
-  }
-)
-
-/**
- * @swagger
- * /api/users/admin/{userId}/payment-reset:
- *   post:
- *     summary: Reset payment failure state for a user (admin)
- *     tags: [Users Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               adminNotes:
- *                 type: string
- *     responses:
- *       200:
- *         description: Payment failure reset
- */
-router.post(
-  "/admin/:userId/payment-reset",
-  authMiddleware,
-  platformAdminMiddleware,
-  async (req: Request, res: Response) => {
-    try {
-      const { userId } = req.params
-      const { adminNotes } = req.body as { adminNotes?: string }
-      const adminUser = (req as any).user
-
-      const result = await subscriptionBillingService.resetOwnerPaymentFailures(userId)
-
-      if (adminNotes) {
-        const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
-        await prisma.monthlyInvoice.update({
-          where: { id: invoice.id },
-          data: {
-            adminNotes,
-            adminMarkedById: adminUser?.id ?? null,
-            adminMarkedAt: new Date(),
-          },
-        })
-      }
-
-      res.json({
-        success: true,
-        data: result,
-      })
-    } catch (error) {
-      logger.error("Error resetting payment failure:", error)
-      res.status(500).json({
-        success: false,
-        error: "Failed to reset payment failure",
-      })
-    }
-  }
-)
 
 // =============================================================================
 // 📊 SUBSCRIPTION STATUS
@@ -179,7 +42,7 @@ router.post(
  *             properties:
  *               subscriptionStatus:
  *                 type: string
- *                 enum: [ACTIVE, PAUSED, PAYMENT_FAILED]
+ *                 enum: [ACTIVE, PAUSED]
  *               adminNotes:
  *                 type: string
  *     responses:
@@ -194,7 +57,7 @@ router.patch(
     try {
       const { userId } = req.params
       const { subscriptionStatus, adminNotes } = req.body as {
-        subscriptionStatus?: "ACTIVE" | "PAUSED" | "PAYMENT_FAILED"
+        subscriptionStatus?: "ACTIVE" | "PAUSED"
         adminNotes?: string
       }
 
@@ -206,7 +69,7 @@ router.patch(
         return
       }
 
-      const allowedStatuses = ["ACTIVE", "PAUSED", "PAYMENT_FAILED"]
+      const allowedStatuses = ["ACTIVE", "PAUSED"]
       if (!allowedStatuses.includes(subscriptionStatus)) {
         res.status(400).json({
           success: false,

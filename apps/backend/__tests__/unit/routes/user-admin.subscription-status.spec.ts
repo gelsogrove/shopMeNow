@@ -17,19 +17,9 @@ describe("buildSubscriptionStatusUpdateData", () => {
     )
   })
 
-  it("sets payment failure count and timestamp when PAYMENT_FAILED", () => {
-    const result = buildSubscriptionStatusUpdateData("PAYMENT_FAILED", 1, now)
-
-    expect(result).toEqual(
-      expect.objectContaining({
-        subscriptionStatus: "PAYMENT_FAILED",
-        pausedAt: null,
-        pauseRequestedAt: null,
-        paymentFailureCount: 3,
-        lastPaymentFailedAt: now,
-      })
-    )
-  })
+  // NOTE (2026-08-11, approved by Andrea): the PAYMENT_FAILED case was
+  // REMOVED with the credit-wallet billing model — admins can only set
+  // ACTIVE or PAUSED; legacy failure state is always cleared.
 
   it("resets failure count when ACTIVE", () => {
     const result = buildSubscriptionStatusUpdateData("ACTIVE", 5, now)
