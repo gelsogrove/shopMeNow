@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
+import { useIsDemoUser } from "@/hooks/useIsDemoUser"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
@@ -475,6 +476,7 @@ export function WorkspaceSelectionPage() {
 const firstWorkspace = workspaces.length > 0 ? workspaces[0] : null
 const firstWorkspaceId = firstWorkspace?.id ?? null
 const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstWorkspaceId)
+  const isDemoUser = useIsDemoUser()
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
