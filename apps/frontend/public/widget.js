@@ -1711,6 +1711,7 @@
       this.iframe = null
       this.overlay = null
       this.handleMessage = this.handleMessage.bind(this)
+      this.handleResize = this.handleResize.bind(this)
 
       this.init()
     }
@@ -1718,6 +1719,31 @@
     init() {
       this.createDOM()
       window.addEventListener("message", this.handleMessage)
+      // Rotating the phone crosses the mobile breakpoint with the panel already
+      // open, so the frame has to be re-sized for the new viewport.
+      window.addEventListener("resize", this.handleResize)
+      window.addEventListener("orientationchange", this.handleResize)
+    }
+
+    handleResize() {
+      this.applyFrameSize()
+    }
+
+    /**
+     * Closes the panel from the host side: shrinks the frame back to the
+     * launcher, drops the backdrop, and tells the iframe to close its own UI.
+     * Host state is never left waiting on the iframe's reply.
+     */
+    close() {
+      this.isOpen = false
+      if (this.overlay) this.overlay.classList.remove("visible")
+      this.applyFrameSize()
+      if (this.iframe && this.iframe.contentWindow) {
+        this.iframe.contentWindow.postMessage({ type: "echatbot-widget-close" }, "*")
+      }
+      // Same event the iframe emits on its own toggles, so a host listening for
+      // "the widget closed" sees this path too and not only the in-panel X.
+      window.postMessage({ type: "echatbot-widget-toggle", open: false }, "*")
     }
 
     buildIframeSrc() {
@@ -1752,11 +1778,9 @@
       // frame must start at full size instead of the 100x100 launcher bubble.
       const startsOpen = !!this.config.openByDefault
       this.isOpen = startsOpen
-      this.iframe.style.width = startsOpen ? "min(520px, calc(100vw - 2.5rem))" : "100px"
-      this.iframe.style.height = startsOpen ? "min(820px, calc(100vh - 2.5rem))" : "100px"
-      this.iframe.style.borderRadius = startsOpen ? "24px" : "0"
       this.iframe.style.boxShadow = "none"
       this.iframe.style.transition = "width 0.2s ease, height 0.2s ease"
+      this.applyFrameSize()
 
       this.container.appendChild(this.iframe)
 
@@ -1766,13 +1790,64 @@
       this.overlay = document.createElement("div")
       this.overlay.className = "echatbot-widget-overlay"
       this.overlay.classList.toggle("visible", startsOpen)
+      // Closing is applied here immediately rather than waiting for the iframe
+      // to echo a toggle back: if the inner panel is already closed it sends
+      // nothing, and the backdrop would stay up covering the whole page.
       this.overlay.addEventListener("click", () => {
-        if (!this.iframe || !this.iframe.contentWindow) return
-        this.iframe.contentWindow.postMessage({ type: "echatbot-widget-close" }, "*")
+        this.close()
       })
       document.body.appendChild(this.overlay)
 
       this.injectStyles()
+    }
+
+    /**
+     * Sizes the iframe for the current open state and viewport.
+     *
+     * The CSS mobile rules target `.echatbot-widget-popup`, which only exists
+     * inside the iframe — from out here the frame is sized inline, so a media
+     * query can never reach it. On a phone an open panel therefore has to be
+     * made full-screen here, or it stays a 520px box clipped by the viewport.
+     */
+    applyFrameSize() {
+      if (!this.iframe) return
+
+      const isMobile = window.matchMedia("(max-width: 640px)").matches
+
+      if (!this.isOpen) {
+        this.iframe.style.width = "100px"
+        this.iframe.style.height = "100px"
+        this.iframe.style.borderRadius = "0"
+        this.resetContainerPosition()
+        return
+      }
+
+      if (isMobile) {
+        // Full-screen: the container is `position: fixed` with a 20px corner
+        // offset, cancelled here so the panel truly reaches every edge.
+        this.iframe.style.width = "100vw"
+        this.iframe.style.height = "100dvh"
+        this.iframe.style.borderRadius = "0"
+        this.container.style.top = "0"
+        this.container.style.left = "0"
+        this.container.style.right = "0"
+        this.container.style.bottom = "0"
+        return
+      }
+
+      this.iframe.style.width = "min(520px, calc(100vw - 2.5rem))"
+      this.iframe.style.height = "min(820px, calc(100vh - 2.5rem))"
+      this.iframe.style.borderRadius = "24px"
+      this.resetContainerPosition()
+    }
+
+    /** Hands positioning back to the `.bottom-right`/`.bottom-left` CSS class. */
+    resetContainerPosition() {
+      if (!this.container) return
+      this.container.style.top = ""
+      this.container.style.left = ""
+      this.container.style.right = ""
+      this.container.style.bottom = ""
     }
 
     injectStyles() {
@@ -1793,23 +1868,13 @@
       if (this.overlay) this.overlay.classList.toggle("visible", this.isOpen)
       if (!this.iframe) return
 
-      if (this.isOpen) {
-        // Same panel size as the in-app ChatWidget (520x820), capped so it can
-        // never overflow a small viewport.
-        this.iframe.style.width = "min(520px, calc(100vw - 2.5rem))"
-        this.iframe.style.height = "min(820px, calc(100vh - 2.5rem))"
-        this.iframe.style.borderRadius = "24px"
-        this.iframe.style.boxShadow = "none"
-      } else {
-        this.iframe.style.width = "100px"
-        this.iframe.style.height = "100px"
-        this.iframe.style.borderRadius = "0"
-        this.iframe.style.boxShadow = "none"
-      }
+      this.applyFrameSize()
     }
 
     destroy() {
       window.removeEventListener("message", this.handleMessage)
+      window.removeEventListener("resize", this.handleResize)
+      window.removeEventListener("orientationchange", this.handleResize)
       if (this.container) {
         this.container.remove()
       }

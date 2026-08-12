@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { IMG_BASE_URL } from "@/config"
 
 /**
@@ -32,6 +32,12 @@ interface EmbeddedWidgetPreviewProps {
   position?: "bottom-right" | "bottom-left"
   /** Panel open on mount (no launcher bubble to click first). */
   openByDefault?: boolean
+  /**
+   * Called when the panel is closed from inside the widget (its X, or a click
+   * on the dimming backdrop). Lets the host drop the widget entirely instead
+   * of keeping a mounted-but-closed launcher around.
+   */
+  onClose?: () => void
 }
 
 /**
@@ -57,7 +63,25 @@ export function EmbeddedWidgetPreview({
   workspace,
   position = "bottom-right",
   openByDefault = true,
+  onClose,
 }: EmbeddedWidgetPreviewProps) {
+  // Kept in a ref so a caller passing an inline arrow does not tear down and
+  // remount the whole widget (and its conversation) on every render.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    if (!onCloseRef.current) return
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "echatbot-widget-toggle" || event.data.open) return
+      onCloseRef.current?.()
+    }
+    window.addEventListener("message", onMessage)
+    return () => window.removeEventListener("message", onMessage)
+  }, [])
+
   useEffect(() => {
     const w = window as unknown as {
       eChatbotConfig?: Record<string, unknown>

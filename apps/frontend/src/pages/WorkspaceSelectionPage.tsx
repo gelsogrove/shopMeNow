@@ -3041,6 +3041,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         <EmbeddedWidgetPreview
           key={tryChatbotWorkspace.id}
           workspace={tryChatbotWorkspace}
+          onClose={() => setTryChatbotWorkspace(null)}
         />
       )}
 
