@@ -14,10 +14,11 @@ informational on the invoice. Recharges are **on account**: the wallet is
 credited immediately, no payment step. On the **1st of the month at 23:30
 (Europe/Rome)** the backend scheduler bills the month that just ENDED: one
 invoice per owner — subscription fee + recharges of the period + adjustments
-+ VAT (`users.taxRate`) — collected in **ONE PayPal capture** through the
-owner's mandate. The wallet MAY go negative ("in rosso"); below
-`CREDIT_MIN_THRESHOLD` (-€10, `workspace-access.service.ts`) all the owner's
-chatbots stop responding until they recharge.
+
+- VAT (`users.taxRate`) — collected in **ONE PayPal capture** through the
+  owner's mandate. The wallet MAY go negative ("in rosso"); below
+  `CREDIT_MIN_THRESHOLD` (-€10, `workspace-access.service.ts`) all the owner's
+  chatbots stop responding until they recharge.
 
 ## The PayPal mandate (€1 anchor, paid once)
 
@@ -88,11 +89,11 @@ transaction re-entered the month-end invoice total via
 All invoice math lives in `packages/database/src/billing-math.ts` and
 `billing-queries.ts`, imported by backend services:
 
-| Function | What |
-|---|---|
-| `computeInvoiceTotals(fee, adjustments, recharges, taxRate)` | subtotal + VAT + total of the monthly invoice |
-| `getRechargesTotal(db, …)` | recharges in the period — `type = RECHARGE` only, **BONUS is never invoiced** |
-| `calculateConsumptionBreakdown(db, …)` | per-type usage detail (informational) |
+| Function                                                     | What                                                                          |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `computeInvoiceTotals(fee, adjustments, recharges, taxRate)` | subtotal + VAT + total of the monthly invoice                                 |
+| `getRechargesTotal(db, …)`                                   | recharges in the period — `type = RECHARGE` only, **BONUS is never invoiced** |
+| `calculateConsumptionBreakdown(db, …)`                       | per-type usage detail (informational)                                         |
 
 VAT is **per user**: `users.taxRate` (fraction, default 0.22), editable from
 the backoffice. No hardcoded rate anywhere in the platform-billing path.
@@ -100,7 +101,7 @@ the backoffice. No hardcoded rate anywhere in the platform-billing path.
 ## The invoice document (always English)
 
 PDF (`invoice.service.ts → generateInvoicePdf`): FROM (PlatformConfig
-ISSUER_* keys) / BILL TO, lines for Subscription fee, Credit recharges during
+ISSUER\_\* keys) / BILL TO, lines for Subscription fee, Credit recharges during
 the period, Adjustments, then Subtotal, `VAT (nn%)`, Total, then an
 informational **Usage paid from credit** section. BONUS gift credits never
 appear.

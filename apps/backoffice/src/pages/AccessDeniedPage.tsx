@@ -47,19 +47,6 @@ export function AccessDeniedPage() {
           Go to Login
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
-
-        {/* Info */}
-        <div className="mt-8 p-4 bg-white rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600">
-            <strong className="text-gray-700">How to access:</strong>
-            <br />
-            1. Login at <span className="text-green-700">{frontendUrl}</span>
-            <br />
-            2. Use an account with <code className="bg-gray-100 px-1 rounded">isPlatformAdmin</code> enabled
-            <br />
-            3. You'll be automatically redirected here
-          </p>
-        </div>
       </div>
     </div>
   )
