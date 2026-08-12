@@ -1709,6 +1709,7 @@
       this.isOpen = false
       this.container = null
       this.iframe = null
+      this.overlay = null
       this.handleMessage = this.handleMessage.bind(this)
 
       this.init()
@@ -1758,6 +1759,19 @@
       this.iframe.style.transition = "width 0.2s ease, height 0.2s ease"
 
       this.container.appendChild(this.iframe)
+
+      // Dimming backdrop behind the panel, so the page underneath recedes and
+      // only the widget stands out. Same element/CSS the legacy widget uses.
+      // Clicking it closes the panel, which the iframe applies to its own UI.
+      this.overlay = document.createElement("div")
+      this.overlay.className = "echatbot-widget-overlay"
+      this.overlay.classList.toggle("visible", startsOpen)
+      this.overlay.addEventListener("click", () => {
+        if (!this.iframe || !this.iframe.contentWindow) return
+        this.iframe.contentWindow.postMessage({ type: "echatbot-widget-close" }, "*")
+      })
+      document.body.appendChild(this.overlay)
+
       this.injectStyles()
     }
 
@@ -1776,6 +1790,7 @@
       }
 
       this.isOpen = !!event.data.open
+      if (this.overlay) this.overlay.classList.toggle("visible", this.isOpen)
       if (!this.iframe) return
 
       if (this.isOpen) {
@@ -1797,6 +1812,10 @@
       window.removeEventListener("message", this.handleMessage)
       if (this.container) {
         this.container.remove()
+      }
+      if (this.overlay) {
+        this.overlay.remove()
+        this.overlay = null
       }
     }
   }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ChatWidget } from "@/components/ChatWidget"
 
 const getDefaultLogoDataUri = () => {
@@ -49,6 +49,22 @@ export function WidgetEmbedPage() {
     }
   }, [])
 
+  // The host page (widget.js) asks the panel to close when the dimming overlay
+  // is clicked. ChatWidget owns its open state internally, so the close is
+  // applied by remounting it with defaultOpen back to false.
+  const [remountKey, setRemountKey] = useState(0)
+  const [forceClosed, setForceClosed] = useState(false)
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "echatbot-widget-close") return
+      setForceClosed(true)
+      setRemountKey((key) => key + 1)
+    }
+    window.addEventListener("message", onMessage)
+    return () => window.removeEventListener("message", onMessage)
+  }, [])
+
   const config = useMemo(() => {
     const params = new URLSearchParams(window.location.search)
     const workspaceId =
@@ -91,6 +107,7 @@ export function WidgetEmbedPage() {
   return (
     <div className="h-screen w-screen bg-transparent">
       <ChatWidget
+        key={remountKey}
         workspaceId={config.workspaceId}
         title={config.title}
         logoUrl={config.logoUrl}
@@ -100,8 +117,14 @@ export function WidgetEmbedPage() {
         useChannelLogo={config.useChannelLogo === true || config.useChannelLogo === "true"}
         useWindowConfig={false}
         apiUrl={config.apiUrl}
-        defaultOpen={config.openByDefault === true || config.openByDefault === "true"}
+        defaultOpen={
+          !forceClosed &&
+          (config.openByDefault === true || config.openByDefault === "true")
+        }
         onOpenChange={(open) => {
+          // Reopening from the launcher clears the forced-close, so a later
+          // remount does not silently snap the panel shut again.
+          if (open) setForceClosed(false)
           window.parent?.postMessage(
             {
               type: "echatbot-widget-toggle",
