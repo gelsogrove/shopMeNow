@@ -1,4 +1,6 @@
-# Production / delivery stack — run every command from THIS folder (deploy/).
+# Production / delivery stack for client "amreport" — run every command from
+# THIS folder (deploy/amreport/). Independent copy: Dockerfile and compose
+# here can diverge from other clients under deploy/ without affecting them.
 # The docker-compose.yml at the repo root stays as-is for local development.
 #
 #   Build the two images:  docker compose build     (needs the full repo)
@@ -14,8 +16,8 @@ services:
   app:
     image: echatbot-app:latest
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile
+      context: ../..
+      dockerfile: deploy/amreport/Dockerfile
       target: app
       args:
         # Baked into the frontend bundle at build time; empty values are fine
@@ -44,8 +46,8 @@ services:
   scheduler:
     image: echatbot-scheduler:latest
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile
+      context: ../..
+      dockerfile: deploy/amreport/Dockerfile
       target: scheduler
     restart: always
     env_file:

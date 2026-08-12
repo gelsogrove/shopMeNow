@@ -119,11 +119,17 @@ troubleshooting, continue with [RUN.md](./RUN.md).
 
 (Reference for whoever prepares a delivery; customers can ignore this.)
 
-One command from the repo root:
+This is client **amreport**'s own independent deploy copy — one command from
+the repo root, naming this client:
 
 ```bash
-npm run deploy:docker
+npm run deploy:docker -- amreport
 ```
+
+(Each client under `deploy/` — e.g. `deploy/amreport/` — is a full, independent
+copy of the Dockerfile and docker-compose.yml, so clients can diverge without
+affecting each other. `scripts/deploy-docker.sh` requires the client name as
+an argument and operates inside `deploy/<client>/`.)
 
 It prompts for the customer's public domain (e.g. `https://shop.example.com`)
 and uses it to derive `VITE_BACKOFFICE_URL` / `VITE_API_URL` — these are
@@ -132,21 +138,21 @@ they must match where this exact package will be deployed. Leave the prompt
 empty only for a local/dev-only build (e.g. testing against `https://localhost`
 with the Caddy override — see `docker-compose.override.local.yml`).
 
-It then builds both images, exports them to `deploy/echatbot-images.tar.gz`
-and copies `.env.example` next to them. The whole package to deliver is then
-the content of the `deploy/` folder:
+It then builds both images, exports them to
+`deploy/amreport/echatbot-images.tar.gz` and copies `.env.example` next to
+them. The whole package to deliver is then the content of this folder:
 
 ```
 echatbot-images.tar.gz   docker-compose.yml   .env.example   INSTALL.md   RUN.md
 ```
 
 Secrets travel separately (password manager / secure channel), never inside
-the package. Equivalent manual steps, run inside `deploy/`:
+the package. Equivalent manual steps, run inside `deploy/amreport/`:
 
 ```bash
 export VITE_BACKOFFICE_URL="https://shop.example.com/backoffice"
 export VITE_API_URL="https://shop.example.com/api/v1"
 docker compose build
 docker save echatbot-app:latest echatbot-scheduler:latest | gzip > echatbot-images.tar.gz
-cp ../.env.example .env.example
+cp ../../.env.example .env.example
 ```
