@@ -883,6 +883,13 @@ export class WhatsAppInboundPipeline {
         orderBy: { createdAt: "desc" },
       })
 
+      // Voice Replies (workspace.audioOutput) gates the outbound audio: with it
+      // off the bot answers voice notes in text, same rule on every channel.
+      const wsAudio = await prisma.workspace.findUnique({
+        where: { id: customer.workspaceId },
+        select: { audioOutput: true },
+      })
+
       const directSend = new WhatsAppDirectSendService(prisma)
       await directSend.send({
         workspaceId: customer.workspaceId,
@@ -891,7 +898,7 @@ export class WhatsAppInboundPipeline {
         messageContent: routerResult.response,
         conversationMessageId: assistantMessage?.id,
         isPlayground,
-        replyAsAudio: inboundWasAudio,
+        replyAsAudio: inboundWasAudio && wsAudio?.audioOutput === true,
         customerLanguage,
       })
 

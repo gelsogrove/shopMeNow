@@ -1144,6 +1144,7 @@ export class PlaygroundController {
           welcomeMessage: true,
           channelStatus: true,
           debugMode: true,
+          audioOutput: true,
         },
       })
 
@@ -1328,8 +1329,11 @@ export class PlaygroundController {
       //    voice note, synthesize the bot reply with TTS and attach it to the
       //    assistant message so the bubble shows a player. Fail-safe: a TTS
       //    failure leaves the text reply intact.
+      //    Voice Replies (workspace.audioOutput) gates the outbound audio —
+      //    with it off the bot answers voice notes in text, on every channel.
       if (
         inboundAudio &&
+        workspace?.audioOutput === true &&
         assistantMsg &&
         botResponse &&
         !botResponse.startsWith("[Playground debug]")

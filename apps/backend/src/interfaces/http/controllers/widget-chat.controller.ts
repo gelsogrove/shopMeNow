@@ -1461,7 +1461,7 @@ export class WidgetChatController {
       // Demo workspaces (customChatbotId) bypass it, same as the other widget gates.
       const workspaceFlags = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { speechToTextEnabled: true, customChatbotId: true },
+        select: { speechToTextEnabled: true, customChatbotId: true, audioOutput: true },
       })
       if (!workspaceFlags) {
         cleanup()
@@ -1529,7 +1529,15 @@ export class WidgetChatController {
       // place the widget produces audio — the text path never does. A TTS failure
       // leaves the text reply intact. (The `!body.audioUrl` guard is defensive; the
       // text turn no longer attaches audio, so it normally won't be set.)
-      if (!body.audioUrl && typeof body.response === "string" && body.response.trim()) {
+      // Voice Replies (workspace.audioOutput) gates the OUTBOUND audio: with it
+      // off the customer may still speak (Speech to Text), but the bot answers
+      // in text — same rule as the WhatsApp channel.
+      if (
+        workspaceFlags.audioOutput === true &&
+        !body.audioUrl &&
+        typeof body.response === "string" &&
+        body.response.trim()
+      ) {
         try {
           // 🌍 Prefer the language the bot actually replied in (surfaced by
           // sendMessage as body.language) so the spoken audio matches the reply,

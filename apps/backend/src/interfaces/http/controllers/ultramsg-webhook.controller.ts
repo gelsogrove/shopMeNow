@@ -219,6 +219,7 @@ export class UltraMsgWebhookController {
               operatorWhatsappNumber: true,
               ownerId: true,
               customChatbotId: true, // 🤖 Custom chatbot module for FLOW workspaces
+              audioOutput: true, // 🎤 Voice Replies toggle — gates audio replies to voice notes
               owner: {
                 select: { status: true }
               }
@@ -1689,7 +1690,9 @@ export class UltraMsgWebhookController {
           phoneNumber: customer.phone,
           messageContent: routerResult.response,
           conversationMessageId: assistantMessage?.id,
-          replyAsAudio: inboundWasAudio,
+          // Voice Replies (workspace.audioOutput) gates the outbound audio:
+          // with it off the bot answers voice notes in text, same as the widget.
+          replyAsAudio: inboundWasAudio && workspace.audioOutput === true,
         })
 
         logger.info('[ULTRAMSG] ✅ Response sent directly to WhatsApp', { customerId: customer.id })
