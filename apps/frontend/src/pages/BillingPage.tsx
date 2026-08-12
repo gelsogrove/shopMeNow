@@ -60,7 +60,7 @@ export function BillingPage() {
         ["PAID", "PENDING", "FAILED"].includes(inv.status)
       )
       setPastInvoices(closedInvoices)
-      setTotalPages(Math.ceil(result.total / ITEMS_PER_PAGE) || 1)
+      setTotalPages(result.pagination?.totalPages || 1)
     } catch (err) {
       console.error("Failed to load invoices:", err)
       setError("Failed to load billing information")

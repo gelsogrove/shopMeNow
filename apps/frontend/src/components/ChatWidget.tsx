@@ -2138,7 +2138,7 @@ export function ChatWidget({
                   {resolvedTitle}
                   {!hideWorkspaceName &&
                   workspaceConfig?.name &&
-                  workspaceConfig.name !== resolvedTitle
+                  !isRedundantWorkspaceName(workspaceConfig.name, resolvedTitle)
                     ? ` · ${workspaceConfig.name}`
                     : ""}
                 </h2>

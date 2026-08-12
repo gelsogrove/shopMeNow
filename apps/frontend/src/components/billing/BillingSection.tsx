@@ -818,29 +818,53 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               </div>
             </div>
 
-            {/* Plan Details */}
+            {/* Plan Details — the breakdown mirrors the server-side DRAFT
+                invoice (same numbers the month-end PayPal charge will use),
+                falling back to the local estimate only while it loads. */}
             <div className="space-y-3">
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
-                  </div>
-                  <span className="font-medium text-emerald-600">
-                    {formatEur(planConfig.monthlyFee)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Recharges this month:</span>
-                  <span className="font-medium text-emerald-600">
-                    {formatEur(billing.totalRecharges || 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Taxes ({((billing.taxRate ?? 0) * 100).toFixed(0)}%):</span>
-                  <span className="font-medium text-emerald-600">
-                    {formatEur((planConfig.monthlyFee + (billing.totalRecharges || 0)) * (billing.taxRate ?? 0))}
-                  </span>
-                </div>
+                {(() => {
+                  const invoiceSubscription =
+                    currentInvoice?.subscriptionAmount ?? planConfig.monthlyFee
+                  const firstMonthFree =
+                    currentInvoice !== null &&
+                    currentInvoice !== undefined &&
+                    currentInvoice.subscriptionAmount === 0 &&
+                    planConfig.monthlyFee > 0
+                  const invoiceTax =
+                    currentInvoice?.taxAmount ??
+                    (planConfig.monthlyFee + (billing.totalRecharges || 0)) *
+                      (billing.taxRate ?? 0)
+                  return (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
+                          {firstMonthFree && (
+                            <span className="text-xs text-emerald-600 font-medium">
+                              first month free — fee starts next month
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-medium text-emerald-600">
+                          {formatEur(invoiceSubscription)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Recharges this month:</span>
+                        <span className="font-medium text-emerald-600">
+                          {formatEur(billing.totalRecharges || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Taxes ({((billing.taxRate ?? 0) * 100).toFixed(0)}%):</span>
+                        <span className="font-medium text-emerald-600">
+                          {formatEur(invoiceTax)}
+                        </span>
+                      </div>
+                    </>
+                  )
+                })()}
                 {billing.planType !== "FREE_TRIAL" && (() => {
                   const invoiceTotal = currentInvoice?.totalAmount
                   return (
