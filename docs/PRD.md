@@ -1162,36 +1162,40 @@ INPUT: customerMessage, customer, workspace, chatSession
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Monthly Billing (1st of month - Scheduler job)              │
-│ ⚠️ CREDIT-WALLET MODEL (2026-08-11) — single money source.  │
-│ Full spec: docs/billing-model.md                            │
+│ Month-End Billing (1st of month 23:30 Europe/Rome —         │
+│ backend scheduler.ts → runMonthEndBilling)                  │
+│ ⚠️ PAYPAL-COLLECTION MODEL (2026-08-11/12) — bills the      │
+│ PREVIOUS month. Full spec: docs/billing-model.md            │
 │                                                              │
-│ For each ACTIVE owner (skip PAUSED / FREE_TRIAL):           │
-│  1. Apply pending plan changes (scheduled downgrades)       │
-│  2. Deduct from credit: monthlyFee + VAT(users.taxRate)     │
-│     → balance MAY go negative ("in rosso")                  │
-│     → BillingTransaction type=MONTHLY_FEE                   │
-│  3. Finalize closed month's invoice as PAID:                │
-│     subscription + VAT + usage breakdown + recharges        │
-│     → archived, downloadable as PDF                         │
-│     → invoiceNumber (YYYY-NNNN) assigned at first download  │
-│  4. Set nextBillingDate                                     │
+│ For each paying owner:                                       │
+│  1. Apply pending plan changes (scheduled downgrades),      │
+│     pause expired FREE_TRIALs                               │
+│  2. Get/finalize the closed month's invoice:                │
+│     subscription (from invoice.planType snapshot — first    │
+│     partial month pays NO fee) + recharges of the period    │
+│     + adjustments + VAT(users.taxRate)                      │
+│     → invoiceNumber assigned REGARDLESS of payment outcome  │
+│  3. ONE PayPal capture of the invoice total via the owner's │
+│     mandate (outstanding_balance + capture)                 │
+│     → PAID, or FAILED → Collections page (1 auto attempt   │
+│       + 3 manual retries, soft block — operator decides)    │
 │                                                              │
-│ PayPal NEVER collects the subscription.                     │
+│ Consumption is informational only (already paid from        │
+│ credit). PayPal collects ONCE per month, on the 1st.        │
 └──────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Credit Recharge (PayPal Checkout — Orders v2)               │
-│ - Owner → "Recharge €50" → create-order → approveUrl        │
-│ - User approves on PayPal → returns to /billing             │
-│ - Backend captures server-side (idempotent per orderId):    │
-│   → verifies custom_id = userId, uses PayPal's amount       │
-│   → BillingTransaction: type=RECHARGE, amount=+50           │
-│   → User.creditBalance += 50                                │
-│   → IF was below -€10: chatbots resume automatically        │
-│ - Endpoints: /subscription-billing/recharge/create-order    │
-│              /subscription-billing/recharge/capture         │
+│ Credit Recharge — ON ACCOUNT (2026-08-12)                   │
+│ - Owner → "Recharge €50" → wallet credited IMMEDIATELY,     │
+│   NO payment step (billed with the month-end invoice)       │
+│ - Guard: requires an approved PayPal mandate (402), or the  │
+│   credit could never be collected                           │
+│ - €10–€1000; FREE_TRIAL auto-upgrades to BASIC on first     │
+│   recharge; IF was below -€10: chatbots resume             │
+│ - Endpoint: POST /subscription-billing/recharge             │
+│ - Replaces the pay-now checkout, which DOUBLE-charged       │
+│   (paid order + same recharge in the month-end invoice)     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -1353,7 +1357,9 @@ UltraMsg → POST /api/whatsapp/ultramsg/:webhookId
 **Status**: ✅ Implementato (Sandbox + Production)
 
 #### **A) PayPal Checkout (One-time Payments)**
-Used for: Order payments, credit recharges
+Used for: Order payments (end-customer shop). Credit recharges no longer use
+checkout — they are on-account since 2026-08-12 (billed with the month-end
+invoice, see section 10).
 
 **Flow**:
 ```
