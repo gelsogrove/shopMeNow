@@ -121,6 +121,17 @@ const monthEndBillingJob = cron.schedule(
  * Call this function in index.ts after server startup
  */
 export function startScheduler(): void {
+  // Heroku scale-out guard: cron jobs must run on exactly ONE process, or
+  // scaling the web formation to 2+ dynos would fire every job once per dyno
+  // (the month-end billing charges real money — the atomic attempt claims
+  // would hold, but only one scheduler instance should exist by design).
+  // Heroku sets DYNO (web.1, web.2, …); locally it is undefined → start.
+  const dyno = process.env.DYNO
+  if (dyno && dyno !== "web.1") {
+    logger.info(`⏭️ Scheduler skipped on ${dyno} — cron jobs run on web.1 only`)
+    return
+  }
+
   logger.info("🚀 Starting background scheduler...")
 
   // Start all jobs

@@ -59,7 +59,11 @@ describe("AcceptInvitePage", () => {
       <MemoryRouter initialEntries={[`/accept-invite?token=${token}`]}>
         <Routes>
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
+          {/* The real app serves LoginPage on BOTH "/" and "/login"
+              (App.tsx) — the harness must mirror that: the login button
+              navigates to /login?returnUrl=… */}
           <Route path="/" element={<div>Login Page</div>} />
+          <Route path="/login" element={<div>Login Page</div>} />
           <Route path="/workspace-selection" element={<div>Workspace Selection Page</div>} />
         </Routes>
       </MemoryRouter>
