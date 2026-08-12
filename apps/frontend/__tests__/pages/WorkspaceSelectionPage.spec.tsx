@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { BrowserRouter } from "react-router-dom"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { WorkspaceSelectionPage } from "@/pages/WorkspaceSelectionPage"
 import * as workspaceApi from "@/services/workspaceApi"
 import * as paypalApi from "@/services/paypalApi"
@@ -102,8 +103,18 @@ beforeEach(() => {
   })
 })
 
+// The page (via its hooks) uses react-query: the test harness must provide a
+// QueryClient exactly like main.tsx does, with retries off so failures are
+// deterministic. Harness-only fix — assertions are untouched.
 const renderWithRouter = (component: React.ReactNode) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{component}</BrowserRouter>
+    </QueryClientProvider>
+  )
 }
 
 describe("WorkspaceSelectionPage", () => {
