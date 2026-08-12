@@ -488,6 +488,14 @@ Il sistema è organizzato in **4 applicazioni Heroku indipendenti**:
 - Token: SHA-256 hashed, unique
 - Pre-fill: `firstName`, `lastName` (optional)
 
+**Accept flow** (`/accept-invite?token=...`):
+- `GET /api/invitations/validate/:token` (public) returns invite data + `existingUser` (whether a User with the invited email already exists)
+- Logged in + email matches → auto-accept (`POST /api/invitations/accept`, public, token-only) → user added to inviter's workspaces as `ADMIN`
+- Not logged in + `existingUser: true` → CTA "Log in to Accept" → `/login?returnUrl=/accept-invite?token=...` (sign-in tab)
+- Not logged in + `existingUser: false` → CTA "Create Account to Accept" → `/login?returnUrl=...&mode=register&invite=<prefill>` (register tab pre-filled; email/password registration, Google NOT required)
+- Registration → 2FA setup → redirect back to `returnUrl` → auto-accept completes (backend `acceptInvitation` requires the User row to exist; registration creates it first)
+- Invite flow uses the inline register form, NOT the onboarding wizard (the wizard creates a new workspace instead of joining the inviter's team)
+
 ### Support System
 
 #### **SupportTicket**

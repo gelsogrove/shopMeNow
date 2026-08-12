@@ -123,8 +123,13 @@ export function AcceptInvitePage() {
     validateToken()
   }, [validateToken])
 
+  // Backend tells us whether an account already exists for the invited email:
+  // existing account → send to sign-in; no account → send to registration
+  // (pre-filled from invite data). Both land on /login because the auth card
+  // is only rendered there (hidden on the marketing homepage `/`).
+  const hasExistingAccount = validation?.existingUser === true
+
   const handleLoginRedirect = () => {
-    // Pass invite data to login page for pre-filling registration form
     const inviteData = validation ? {
       email: validation.email,
       firstName: validation.firstName,
@@ -132,10 +137,11 @@ export function AcceptInvitePage() {
       workspaceName: validation.workspaceName,
       invitedByName: validation.invitedByName,
     } : null
-    
+
     const returnUrl = encodeURIComponent(`/accept-invite?token=${token}`)
     const inviteParam = inviteData ? `&invite=${encodeURIComponent(JSON.stringify(inviteData))}` : ''
-    navigate(`/?returnUrl=${returnUrl}&mode=register${inviteParam}`)
+    const modeParam = hasExistingAccount ? '' : '&mode=register'
+    navigate(`/login?returnUrl=${returnUrl}${modeParam}${inviteParam}`)
   }
 
   const renderContent = () => {
@@ -176,10 +182,12 @@ export function AcceptInvitePage() {
                 </p>
               </div>
 
-              {/* User needs to log in to accept */}
+              {/* User needs to log in (existing account) or create one (new user) */}
               <div className="space-y-4">
                 <p className="text-center text-gray-600">
-                  Please log in to accept this invitation
+                  {hasExistingAccount
+                    ? "Please log in to accept this invitation"
+                    : "Create your account to accept this invitation"}
                 </p>
                 <Button
                   onClick={handleLoginRedirect}
@@ -187,7 +195,7 @@ export function AcceptInvitePage() {
                   size="lg"
                 >
                   <UserPlus className="h-5 w-5" />
-                  Log in to Accept
+                  {hasExistingAccount ? "Log in to Accept" : "Create Account to Accept"}
                 </Button>
               </div>
             </CardContent>

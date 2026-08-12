@@ -169,21 +169,14 @@ export default function WidgetSettingsPage() {
     }
     setIsSaving(true);
     try {
-      await api.put(`/workspaces/${workspace.id}`, {
+      const response = await api.put(`/workspaces/${workspace.id}`, {
         widgetTitle: title,
         widgetLanguage: language,
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
         widgetUseChannelLogo: useChannelLogo,
       });
-      setCurrentWorkspace({
-        ...workspace,
-        widgetTitle: title,
-        widgetLanguage: language,
-        widgetPrimaryColor: primaryColor,
-        widgetIcon: icon,
-        widgetUseChannelLogo: useChannelLogo,
-      } as any);
+      setCurrentWorkspace(response.data as any);
       toast.success("Widget configuration saved!");
     } catch (error: any) {
       console.error("Save config error:", error);

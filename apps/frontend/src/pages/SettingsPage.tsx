@@ -618,6 +618,13 @@ export function SettingsPage() {
       // This prevents accidental state changes when user is just updating other settings
       // ✅ CRITICAL: Appointment fields MUST ALWAYS be sent - never delete them!
       if (currentWorkspace) {
+        // name - protect if unchanged, so a save from a tab holding stale
+        // workspace data (localStorage cache / isDirty guard) cannot silently
+        // revert the workspace name in the DB
+        if (updateData.name === currentWorkspace.name) {
+          delete updateData.name
+        }
+
         // channelStatus
         if (updateData.channelStatus === currentWorkspace.channelStatus) {
           delete updateData.channelStatus

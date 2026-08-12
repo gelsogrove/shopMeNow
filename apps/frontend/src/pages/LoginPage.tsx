@@ -530,6 +530,13 @@ export function LoginPage() {
 
   // If login is disabled but registration is allowed, show register form by default
   useEffect(() => {
+    // Explicit register request (e.g. invite flow) wins over the flag-based
+    // default — without this guard, this effect re-runs after flags load and
+    // resets the tab back to "signin", hiding the register form the invited
+    // user was sent to.
+    if (actionParam === 'register' || modeParam === 'register') {
+      return
+    }
     if (!canLogin && canRegister && !isAdminBypass) {
       setActiveTab("register")
       return
@@ -539,7 +546,7 @@ export function LoginPage() {
       return
     }
     setActiveTab("signin")
-  }, [canLogin, canRegister, isAdminBypass, registerFirst])
+  }, [canLogin, canRegister, isAdminBypass, registerFirst, actionParam, modeParam])
 
   // 🔗 Hash-anchor scroll (e.g. /#demo from the SiteHeader on other pages).
   // On a full reload to "/", the page first renders the session-validation
@@ -1565,6 +1572,14 @@ export function LoginPage() {
                               if (isRegisterDisabled && !isAdminBypass) {
                                 setWipFeature('register')
                                 setShowWIPModal(true)
+                                return
+                              }
+                              // Invite flow: use the inline register form (keeps
+                              // invite pre-fill + returnUrl), not the wizard —
+                              // the wizard creates a fresh workspace instead of
+                              // joining the inviter's team.
+                              if (inviteParam) {
+                                setActiveTab('register')
                                 return
                               }
                               setShowOnboardingWizard(true)
