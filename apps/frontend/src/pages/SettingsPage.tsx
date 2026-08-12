@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Save, Trash2, Loader2 } from "lucide-react"
 import { toast } from "@/lib/toast"
-import { ChatWidget } from "@/components/ChatWidget"
+import { EmbeddedWidgetPreview } from "@/components/EmbeddedWidgetPreview"
 import { IMG_BASE_URL } from "@/config"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
@@ -1085,16 +1085,19 @@ export function SettingsPage() {
       {/* Live widget preview — only when the widget channel is actually enabled,
           otherwise Settings shows a widget the site would never render. */}
       {currentWorkspace && formData.channelStatus && formData.enableWidget && (
-        <ChatWidget
+        <EmbeddedWidgetPreview
           key={`${formData.widgetTitle}-${formData.widgetPrimaryColor}-${formData.widgetIcon}-${formData.widgetLanguage}-${formData.widgetUseChannelLogo}`}
-          workspaceId={currentWorkspace.id}
-          title={formData.widgetTitle}
-          primaryColor={formData.widgetPrimaryColor}
-          icon={formData.widgetIcon}
-          logoUrl={resolveLogoUrl(formData.logoUrl)}
-          useChannelLogo={formData.widgetUseChannelLogo}
-          useWindowConfig={false}
-          language={formData.widgetLanguage}
+          workspace={{
+            id: currentWorkspace.id,
+            name: currentWorkspace.name,
+            logoUrl: formData.logoUrl,
+            widgetTitle: formData.widgetTitle,
+            widgetPrimaryColor: formData.widgetPrimaryColor,
+            widgetIcon: formData.widgetIcon,
+            widgetLanguage: formData.widgetLanguage,
+            widgetUseChannelLogo: formData.widgetUseChannelLogo,
+          }}
+          openByDefault={false}
         />
       )}
     </div>

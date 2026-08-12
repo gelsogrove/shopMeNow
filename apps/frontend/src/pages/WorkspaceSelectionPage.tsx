@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
-import { ChatWidget } from "@/components/ChatWidget"
+import { EmbeddedWidgetPreview } from "@/components/EmbeddedWidgetPreview"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
 import { cn } from "@/lib/utils"
 import type { Workspace } from "@/hooks/use-workspace"
@@ -840,11 +840,12 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     window.location.href = "/settings"
   }
 
-  // Try-it panel: renders the real ChatWidget already open on the right, so the
-  // owner can talk to their own bot without leaving the card grid.
+  // Try-it: mounts the real /widget.js embed for this workspace, already open,
+  // so the owner can talk to their own bot without leaving the card grid.
+  // Clicking the same card again unmounts it (toggle).
   const handleTryChatbot = (workspace: Workspace, e: React.MouseEvent) => {
     e.stopPropagation()
-    setTryChatbotWorkspace(workspace)
+    setTryChatbotWorkspace((current) => (current?.id === workspace.id ? null : workspace))
   }
 
   const loadChecklists = async (workspaceList: Workspace[]) => {
@@ -3032,49 +3033,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       </Dialog>
 
 
-      {/* Try-it chatbot panel — the real widget, rendered already open on the
-          right. Keyed by workspace so switching cards remounts a fresh session
+      {/* Try-it chatbot — the REAL production embed (/widget.js), mounted
+          already open, exactly as it renders on the customer's own website.
+          Keyed by workspace so switching cards remounts a fresh session
           instead of showing the previous channel's conversation. */}
       {tryChatbotWorkspace && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/20"
-            onClick={() => setTryChatbotWorkspace(null)}
-            aria-hidden="true"
-          />
-          <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-emerald-50">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">
-                  {tryChatbotWorkspace.name}
-                </p>
-                <p className="text-xs text-gray-500">Try the Chatbot</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setTryChatbotWorkspace(null)}
-                className="h-9 w-9 rounded-full hover:bg-emerald-100 text-gray-600 flex items-center justify-center transition-colors"
-                aria-label="Close chatbot"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 relative overflow-hidden">
-              <ChatWidget
-                key={tryChatbotWorkspace.id}
-                workspaceId={tryChatbotWorkspace.id}
-                defaultOpen
-                instantChat
-                useChannelLogo
-                hideWorkspaceName
-                useWindowConfig={false}
-                onOpenChange={(open) => {
-                  if (!open) setTryChatbotWorkspace(null)
-                }}
-              />
-            </div>
-          </div>
-        </>
+        <EmbeddedWidgetPreview
+          key={tryChatbotWorkspace.id}
+          workspace={tryChatbotWorkspace}
+        />
       )}
 
       {/* Footer - Fixed at bottom */}
