@@ -24,6 +24,27 @@ vi.mock("@/services/paypalApi", () => ({
   disconnectPayPal: vi.fn(),
 }))
 
+// The page mounts fire two real XHRs that jsdom can't complete (AggregateError,
+// connection refused): useCurrentUser → GET /auth/me (via useIsDemoUser) and
+// getBillingOverview when workspaces exist. Under full-suite load those slow
+// network failures made waitFor flaky. Harness-only mocks — assertions untouched.
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ data: undefined, isLoading: false }),
+}))
+
+vi.mock("@/services/subscriptionBillingApi", async () => {
+  // Keep actual module for value exports the page imports (PlanType),
+  // override only the network fetcher. The page catches the rejection and
+  // falls back to workspace planType — same path as before, minus the XHR.
+  const actual = await vi.importActual<typeof import("@/services/subscriptionBillingApi")>(
+    "@/services/subscriptionBillingApi"
+  )
+  return {
+    ...actual,
+    getBillingOverview: vi.fn().mockRejectedValue(new Error("billing not mocked in this suite")),
+  }
+})
+
 // Mock useWorkspace hook
 vi.mock("@/hooks/use-workspace", () => ({
   useWorkspace: () => ({
