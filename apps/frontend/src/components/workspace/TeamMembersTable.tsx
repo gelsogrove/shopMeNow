@@ -54,7 +54,7 @@ export function TeamMembersTable({
   workspaceId,
   isSuperAdmin,
 }: TeamMembersTableProps) {
-  const { billingOverview, isLoadingOverview } = useBilling()
+  const { billingOverview, isLoadingOverview, refreshOverview } = useBilling()
   const [activeTab, setActiveTab] = useState<TabType>("members")
   const [members, setMembers] = useState<TeamMember[]>([])
   const [invitations, setInvitations] = useState<PendingInvitation[]>([])
@@ -133,6 +133,12 @@ export function TeamMembersTable({
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (!billingOverview && !isLoadingOverview) {
+      refreshOverview?.()
+    }
+  }, [billingOverview, isLoadingOverview, refreshOverview])
 
   const handleRemoveMember = async () => {
     if (!confirmRemoveMember) return
