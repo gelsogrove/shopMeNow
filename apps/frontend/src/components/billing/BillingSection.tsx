@@ -54,7 +54,7 @@ import { usePlatformConfig } from "@/hooks/usePlatformConfig"
 import {
   formatCurrency,
   getTransactionTypeInfo,
-  createRechargeOrder,
+  rechargeCredit,
   getOwnerTransactions,
   changePlan,
   getOwnerBillingOverview,
@@ -452,14 +452,20 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const handleRecharge = async () => {
     setIsRecharging(true)
     try {
-      // Credit-wallet model: create a PayPal order and send the user to
-      // approve it. The wallet is credited only after the capture on return
-      // (handled by BillingPage reading ?recharge=return&token=...).
-      const { approveUrl } = await createRechargeOrder(rechargeAmount)
-      window.location.href = approveUrl
+      // On-account model: the wallet is credited now without any payment
+      // step — the amount is billed with the month-end invoice and collected
+      // in one PayPal capture on the 1st.
+      const result = await rechargeCredit(rechargeAmount)
+      updateBalanceLocally(result.newBalance, result.amount)
+      toast.success(
+        `Credit added: +€${result.amount.toFixed(2)} — collected with your monthly invoice` +
+          (result.upgradedToPlan ? ` (plan upgraded to ${result.upgradedToPlan})` : "")
+      )
+      setShowRechargeDialog(false)
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Failed to start recharge"
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Failed to recharge credit"
       toast.error(errorMessage)
+    } finally {
       setIsRecharging(false)
     }
   }
@@ -862,7 +868,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
           <DialogHeader>
             <DialogTitle>Recharge Credit</DialogTitle>
             <DialogDescription>
-              Select an amount to recharge
+              Select an amount. The credit is available immediately and will be
+              collected with your monthly invoice on the 1st — no payment now.
             </DialogDescription>
           </DialogHeader>
 
