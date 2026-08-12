@@ -56,6 +56,7 @@
     "test:coverage": "npm run test:coverage -w @echatbot/backend",
     "publish": "./scripts/deploy-all-heroku.sh",
     "deploy:heroku": "./scripts/deploy-all-heroku.sh",
+    "deploy:docker": "./scripts/deploy-docker.sh",
     "setup:heroku": "./scripts/heroku-setup.sh",
     "log:heroku": "heroku logs --tail --app echatbot-app",
     "log:heroku:app": "heroku logs --tail --app echatbot-app",

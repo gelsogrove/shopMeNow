@@ -529,7 +529,7 @@ describe("TeamMembersTable", () => {
         const button = screen.getByRole("button", { name: /invite member/i })
         expect(button).toBeInTheDocument()
         expect(button).not.toBeDisabled()
-        expect(button).toHaveClass("text-green-600") // Green color
+        expect(button).toHaveClass("text-green-800") // Green color (updated in commit 8e6a066: enabled button uses text-green-800)
       })
     })
 
@@ -549,7 +549,7 @@ describe("TeamMembersTable", () => {
       await waitFor(() => {
         const button = screen.getByRole("button", { name: /invite member/i })
         expect(button).not.toBeDisabled()
-        expect(button).toHaveClass("text-green-600")
+        expect(button).toHaveClass("text-green-800")
       })
     })
 

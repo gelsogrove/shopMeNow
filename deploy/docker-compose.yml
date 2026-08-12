@@ -1,0 +1,81 @@
+# Production / delivery stack — run every command from THIS folder (deploy/).
+# The docker-compose.yml at the repo root stays as-is for local development.
+#
+#   Build the two images:  docker compose build     (needs the full repo)
+#   Start the stack:       docker compose up -d     (needs only images + .env)
+#
+# By default the stack expects an EXTERNAL Postgres (e.g. Supabase) reachable
+# through DATABASE_URL in .env — no database container is started.
+# To run a local Postgres instead, enable the "local-db" profile:
+#   docker compose --profile local-db up -d
+# and point DATABASE_URL to postgresql://echatbotfy:echatbotfy@postgres:5432/echatbotfy
+
+services:
+  app:
+    image: echatbot-app:latest
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: app
+      args:
+        # Baked into the frontend bundle at build time; empty values are fine
+        # (Google login / reCAPTCHA stay disabled). Read from .env if present.
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_RECAPTCHA_SITE_KEY: ${VITE_RECAPTCHA_SITE_KEY:-}
+        # Public origin this app is reached at (e.g. https://shop.example.com).
+        # Without it, the backoffice link in LoginPage falls back to the
+        # localhost:3002 dev port, which does not exist in this deploy.
+        VITE_BACKOFFICE_URL: ${VITE_BACKOFFICE_URL:-}
+    restart: always
+    # required: false lets `docker compose build` run before .env exists;
+    # at runtime the app still fails fast (and loudly) without DATABASE_URL.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+
+  scheduler:
+    image: echatbot-scheduler:latest
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: scheduler
+    restart: always
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+    # The scheduler never calls the app over HTTP (they share the database),
+    # but starting after the app lets the app's `migrate deploy` finish first.
+    depends_on:
+      - app
+
+  postgres:
+    # Optional: only started with --profile local-db (see header comment).
+    profiles: ["local-db"]
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: echatbotfy
+      POSTGRES_PASSWORD: echatbotfy
+      POSTGRES_DB: echatbotfy
+    ports:
+      - "5434:5432"
+    volumes:
+      # Named volume: data survives container restarts, rebuilds and
+      # `docker compose down`. Only `down -v` or an explicit volume removal
+      # deletes it. See INSTALL.md for the backup command.
+      - postgres_deploy_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U echatbotfy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_deploy_data:

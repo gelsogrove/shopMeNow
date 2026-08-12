@@ -1,0 +1,30 @@
+# Local-only override for browsing the delivery package on a developer
+# machine, without touching the customer package (deploy-docker.sh never
+# copies or references this file or Caddyfile.local).
+#
+# The app forces an HTTPS redirect whenever NODE_ENV=production (see
+# apps/backend/src/app.ts) — correct behavior for a real deployment sitting
+# behind a reverse proxy, but unreachable when hitting the app directly over
+# plain HTTP. This adds a local Caddy reverse proxy with a self-signed
+# certificate that terminates HTTPS and forwards X-Forwarded-Proto: https,
+# exactly like a production proxy would — instead of weakening the app image
+# (do NOT set NODE_ENV=development here: the image is pruned for production
+# and crashes with MODULE_NOT_FOUND under development).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.override.local.yml up -d
+#   open https://localhost  (accept the self-signed certificate once)
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy_local_data:/data
+    depends_on:
+      - app
+
+volumes:
+  caddy_local_data:
