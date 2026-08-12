@@ -9,6 +9,7 @@ import {
   getPayPalAccessToken,
   PayPalEnvironment,
 } from "../../../utils/paypal-config"
+import { paypalAnchorService } from "../../../services/paypal-anchor.service"
 import { Prisma } from "@echatbot/database"
 
 export const paypalRoutes = Router()
@@ -692,6 +693,25 @@ paypalRoutes.get("/subscription/callback", async (req: Request, res: Response) =
       subscriptionId: subscription_id,
       status: subscription.status,
     })
+
+    // The €1 anchor has done its job (mandate opened): revise THIS
+    // subscription's price to €0 so it never recurs. Best-effort — a failure
+    // is retried via the admin zero-anchors endpoint, never blocks approval.
+    try {
+      const revision = await paypalAnchorService.zeroAnchorPricing(
+        paypalConfig,
+        subscription_id
+      )
+      logger.info("[PAYPAL] Anchor price revision:", {
+        subscriptionId: subscription_id,
+        ...revision,
+      })
+    } catch (anchorError) {
+      logger.warn(
+        "[PAYPAL] Anchor price revision failed (retry via admin zero-anchors):",
+        anchorError
+      )
+    }
 
     const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=subscription_approved`
     return res.redirect(redirectUrl)

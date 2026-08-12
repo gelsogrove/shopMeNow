@@ -563,4 +563,97 @@ router.post(
   }
 )
 
+/**
+ * @swagger
+ * /api/users/admin/billing/zero-anchors:
+ *   post:
+ *     summary: Revise every approved mandate's €1 anchor price to €0 (admin)
+ *     description: >
+ *       One-off backfill for mandates approved BEFORE the automatic anchor
+ *       revision existed (2026-08-12): the €1/month anchor price keeps
+ *       recurring on those subscriptions even though real collections go
+ *       through outstanding-balance captures. Idempotent — subscriptions
+ *       already at €0 are reported as alreadyZero and not touched.
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  "/admin/billing/zero-anchors",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const adminUserId = (req as any).user?.id
+      logger.info(`[ADMIN] Zero-anchors run triggered by ${adminUserId}`)
+
+      const { paypalAnchorService } = await import(
+        "../../../../services/paypal-anchor.service"
+      )
+      const { loadPayPalConfigForEnv, resolvePayPalEnvironment } = await import(
+        "../../../../utils/paypal-config"
+      )
+
+      const owners = await prisma.user.findMany({
+        where: { deletedAt: null, paypalSubscriptionId: { not: null } },
+        select: {
+          id: true,
+          email: true,
+          paypalSubscriptionId: true,
+          paypalEnvironment: true,
+          isPlatformAdmin: true,
+          isDeveloperUser: true,
+        },
+      })
+
+      const results = []
+      for (const owner of owners) {
+        const environment =
+          (owner.paypalEnvironment as "sandbox" | "live" | null) ??
+          resolvePayPalEnvironment(owner)
+        const paypalConfig = loadPayPalConfigForEnv(environment)
+        try {
+          const revision = await paypalAnchorService.zeroAnchorPricing(
+            paypalConfig,
+            owner.paypalSubscriptionId!
+          )
+          results.push({
+            email: owner.email,
+            subscriptionId: owner.paypalSubscriptionId,
+            environment,
+            ...revision,
+          })
+        } catch (error) {
+          results.push({
+            email: owner.email,
+            subscriptionId: owner.paypalSubscriptionId,
+            environment,
+            ok: false,
+            alreadyZero: false,
+            approvalRequired: false,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+
+      const summary = {
+        processed: results.length,
+        revised: results.filter((r) => r.ok && !r.alreadyZero).length,
+        alreadyZero: results.filter((r) => r.alreadyZero).length,
+        failed: results.filter((r) => !r.ok).length,
+      }
+
+      logger.info(
+        `[ADMIN] Zero-anchors finished: ${summary.processed} mandates — ` +
+          `${summary.revised} revised, ${summary.alreadyZero} already zero, ${summary.failed} failed`
+      )
+
+      res.json({ success: true, data: { summary, results } })
+    } catch (error) {
+      logger.error("[ADMIN] Error running zero-anchors:", error)
+      res.status(500).json({ success: false, error: "Failed to run zero-anchors" })
+    }
+  }
+)
+
 export default router

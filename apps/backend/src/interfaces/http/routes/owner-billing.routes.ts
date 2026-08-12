@@ -126,9 +126,14 @@ ownerBillingRoutes.get(
 
 /**
  * @swagger
- * /api/subscription-billing/recharge/create-order:
+ * /api/subscription-billing/recharge:
  *   post:
- *     summary: Create a PayPal checkout order to recharge credit
+ *     summary: Recharge credit on account (billed with the month-end invoice)
+ *     description: >
+ *       On-account model (2026-08-12): the wallet is credited immediately
+ *       WITHOUT collecting money. The amount enters the month-end invoice
+ *       (subscription fee + recharges) and is collected in one PayPal capture
+ *       on the 1st. Requires an approved PayPal mandate.
  *     tags: [Owner Billing]
  *     security:
  *       - bearerAuth: []
@@ -147,49 +152,16 @@ ownerBillingRoutes.get(
  *                 maximum: 1000
  *     responses:
  *       200:
- *         description: Order created, returns approveUrl to redirect the user to PayPal
+ *         description: Credit added, returns new balance (and plan if auto-upgraded)
  *       400:
  *         description: Invalid amount
- *       503:
- *         description: PayPal not configured
- */
-ownerBillingRoutes.post(
-  "/recharge/create-order",
-  authMiddleware,
-  controller.createRechargeOrder
-)
-
-/**
- * @swagger
- * /api/subscription-billing/recharge/capture:
- *   post:
- *     summary: Capture an approved PayPal recharge order and credit the wallet
- *     tags: [Owner Billing]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - orderId
- *             properties:
- *               orderId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Payment captured, credit added (idempotent per orderId)
  *       402:
- *         description: Payment not completed
- *       403:
- *         description: Order belongs to another user
+ *         description: No approved PayPal mandate — connect PayPal first
  */
 ownerBillingRoutes.post(
-  "/recharge/capture",
+  "/recharge",
   authMiddleware,
-  controller.captureRechargeOrder
+  controller.rechargeOnAccount
 )
 
 /**

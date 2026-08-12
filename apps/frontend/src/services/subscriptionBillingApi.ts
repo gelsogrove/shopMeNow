@@ -266,31 +266,21 @@ export const getTransactions = async (
 }
 
 /**
- * Create a PayPal checkout order to recharge credit (Owner only).
- * The wallet is credited ONLY after the returned approveUrl is approved by
- * the user on PayPal and the order is captured via captureRechargeOrder.
+ * Recharge credit ON ACCOUNT (Owner only).
+ * The wallet is credited immediately without any payment step: the amount is
+ * billed with the month-end invoice and collected in one PayPal capture on
+ * the 1st. Requires an approved PayPal mandate (402 otherwise).
+ * If on FREE_TRIAL, the first recharge auto-upgrades to BASIC.
  * @param amount - Amount in EUR (min €10, max €1000)
  */
-export const createRechargeOrder = async (
+export const rechargeCredit = async (
   amount: number
-): Promise<{ orderId: string; approveUrl: string; environment: string }> => {
+): Promise<{ amount: number; newBalance: number; upgradedToPlan?: string }> => {
   if (amount < 10 || amount > 1000) {
     throw new Error("Amount must be between €10 and €1000")
   }
 
-  const response = await api.post("/subscription-billing/recharge/create-order", { amount })
-  return response.data.data
-}
-
-/**
- * Capture an approved PayPal recharge order and credit the wallet.
- * Idempotent per orderId — a second call does not credit twice.
- * If on FREE_TRIAL, the first recharge auto-upgrades to BASIC.
- */
-export const captureRechargeOrder = async (
-  orderId: string
-): Promise<{ amount: number; newBalance: number; upgradedToPlan?: string; alreadyCaptured: boolean }> => {
-  const response = await api.post("/subscription-billing/recharge/capture", { orderId })
+  const response = await api.post("/subscription-billing/recharge", { amount })
   clearOwnerBillingCaches()
   return response.data.data
 }

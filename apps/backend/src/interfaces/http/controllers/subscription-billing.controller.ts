@@ -1270,53 +1270,64 @@ export class SubscriptionBillingController {
 
   /**
    * POST /subscription-billing/recharge
-   * Recharge credit for owner
+   *
+   * ON-ACCOUNT recharge (Andrea, 2026-08-12): the wallet is credited
+   * immediately WITHOUT collecting money. The amount is billed with the
+   * month-end invoice (subscription fee + recharges of the period) and
+   * collected in ONE PayPal capture on the 1st — replacing the pay-now
+   * checkout, which double-charged: the owner paid the order AND the same
+   * recharge re-entered the invoice total (billing-math.ts).
+   *
+   * Deterministic guard: an approved PayPal mandate is required, otherwise
+   * the month-end collection would have nothing to charge against.
    */
-  createRechargeOrder = async (req: Request, res: Response): Promise<void> => {
+  rechargeOnAccount = async (req: Request, res: Response): Promise<void> => {
     try {
       const user = (req as any).user
-      const { amount } = req.body
+      const amount = Number(req.body?.amount)
 
       if (!user?.id) {
         res.status(401).json({ error: "User not authenticated" })
         return
       }
 
-      const { paypalCheckoutService } = await import("../../../services/paypal-checkout.service")
-      const result = await paypalCheckoutService.createRechargeOrder(user, Number(amount))
+      if (!Number.isFinite(amount) || amount <= 0) {
+        res.status(400).json({ error: "A positive amount is required" })
+        return
+      }
 
-      res.json({ success: true, data: result })
-    } catch (error: any) {
-      logger.error("[BILLING] Error creating recharge order:", error)
-      res.status(error.statusCode || 500).json({
-        error: error.message || "Failed to create recharge order",
+      const owner = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { paypalSubscriptionId: true },
       })
-    }
-  }
 
-  captureRechargeOrder = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const user = (req as any).user
-      const { orderId } = req.body
-
-      if (!user?.id) {
-        res.status(401).json({ error: "User not authenticated" })
+      if (!owner?.paypalSubscriptionId) {
+        res.status(402).json({
+          error:
+            "Connect PayPal before recharging: on-account credit is collected with your monthly invoice",
+        })
         return
       }
 
-      if (!orderId || typeof orderId !== "string") {
-        res.status(400).json({ error: "orderId is required" })
-        return
+      try {
+        const result = await this.billingService.rechargeOwnerCredit(user.id, amount)
+        res.json({
+          success: true,
+          data: {
+            amount,
+            newBalance: result.newBalance,
+            upgradedToPlan: result.upgradedToPlan,
+          },
+        })
+      } catch (validationError: any) {
+        res.status(400).json({
+          error: validationError.message || "Invalid recharge amount",
+        })
       }
-
-      const { paypalCheckoutService } = await import("../../../services/paypal-checkout.service")
-      const result = await paypalCheckoutService.captureRechargeOrder(user, orderId)
-
-      res.json({ success: true, data: result })
     } catch (error: any) {
-      logger.error("[BILLING] Error capturing recharge order:", error)
-      res.status(error.statusCode || 500).json({
-        error: error.message || "Failed to capture recharge order",
+      logger.error("[BILLING] Error recharging on account:", error)
+      res.status(500).json({
+        error: error.message || "Failed to recharge credit",
       })
     }
   }
