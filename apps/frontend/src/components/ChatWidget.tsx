@@ -273,6 +273,18 @@ const getApiUrl = () => {
 }
 
 const DEFAULT_API_URL = getApiUrl()
+
+// The header suffix " · <workspace name>" exists to add context when the
+// widget title and the workspace are DIFFERENT brands. When they are the same
+// brand with a spelling variant ("AmRobots" title vs "AmRobot" workspace) the
+// suffix reads as a duplicate, so we drop it whenever one normalized name
+// contains the other.
+function isRedundantWorkspaceName(workspaceName: string, title: string): boolean {
+  const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "")
+  const a = normalize(workspaceName)
+  const b = normalize(title || "")
+  return a.length > 0 && b.length > 0 && (a.includes(b) || b.includes(a))
+}
 const DEFAULT_PRIMARY_COLOR = "#22c55e"
 
 type LangCode = "it" | "en" | "es" | "de" | "fr" | "ca"
