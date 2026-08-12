@@ -22,6 +22,7 @@ export interface InvoiceData {
   }>;
   subtotal: number;
   tax: number;
+  taxRatePercent: string; // from workspace.taxRate, e.g. "22"
   total: number;
 }
 
@@ -75,6 +76,7 @@ export class InvoiceService {
       })),
       subtotal,
       tax,
+      taxRatePercent: (Number(order.workspace.taxRate) * 100).toFixed(0),
       total
     };
 
@@ -239,7 +241,7 @@ export class InvoiceService {
            .text(`€${data.subtotal.toFixed(2)}`, totalsX + 80, yPos, { align: 'right' });
         yPos += 20;
 
-        doc.text('IVA (22%):', totalsX, yPos)
+        doc.text(`IVA (${data.taxRatePercent}%):`, totalsX, yPos)
            .text(`€${data.tax.toFixed(2)}`, totalsX + 80, yPos, { align: 'right' });
         yPos += 25;
 

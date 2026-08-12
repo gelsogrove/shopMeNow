@@ -24,6 +24,7 @@ model Workspace {
   updatedAt                 DateTime  @updatedAt
   deletedAt                 DateTime?
   currency                  String    @default("EUR")
+  taxRate                   Decimal   @default(0.22) @db.Decimal(5, 4) // VAT rate for this workspace's CUSTOMER orders (0.22 = 22%) — order PDF + cart analysis read it; distinct from users.taxRate (platform invoices)
   defaultLanguage           String    @default("en") // Default language for workspace (ISO 639-1: "en", "it", "es", "pt", "de", "fr")
   enabledLanguages          String[]  @default([]) // 🆕 Documentation only: languages the client has requested support for. The chatbot detects language from the customer's message regardless — this list does NOT restrict/filter runtime behaviour.
   termsAndConditions        String?   @db.Text // 🆕 Custom Terms & Conditions text, for future use in widget/WhatsApp opt-in screens. Not yet wired into the runtime — settings container only.

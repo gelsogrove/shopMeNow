@@ -17,9 +17,6 @@ CREATE TYPE "ChannelMode" AS ENUM ('ECOMMERCE', 'INFORMATIONAL', 'FLOW');
 CREATE TYPE "ProductStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'DRAFT', 'OUT_OF_STOCK');
 
 -- CreateEnum
-CREATE TYPE "DocumentStatus" AS ENUM ('UPLOADED', 'PROCESSING', 'PROCESSED', 'ERROR');
-
--- CreateEnum
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED');
 
 -- CreateEnum
@@ -125,13 +122,15 @@ CREATE TABLE "Workspace" (
     "deletedAt" TIMESTAMP(3),
     "currency" TEXT NOT NULL DEFAULT 'EUR',
     "defaultLanguage" TEXT NOT NULL DEFAULT 'en',
+    "enabledLanguages" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "termsAndConditions" TEXT,
     "channelStatus" BOOLEAN NOT NULL DEFAULT true,
     "description" TEXT,
     "messageLimit" INTEGER NOT NULL DEFAULT 50,
     "url" TEXT,
     "welcomeMessage" TEXT DEFAULT 'Welcome! I''m {{chatbotName}}, your digital assistant. How can I help you today?',
+    "welcomeBackMessage" TEXT DEFAULT 'Welcome back, {{customerName}}! How can I help you today?',
     "enableWelcomeMessage" BOOLEAN NOT NULL DEFAULT true,
-    "welcomeVideoUrl" TEXT,
     "sessionResetTimeout" INTEGER NOT NULL DEFAULT 3600,
     "wipMessage" TEXT DEFAULT 'Work in progress. Please contact us later.',
     "afterRegistrationMessages" TEXT DEFAULT 'Thank you for registering, {{customerName}}! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?',
@@ -153,7 +152,6 @@ CREATE TABLE "Workspace" (
     "widgetAutoSuggestionsEnabled" BOOLEAN NOT NULL DEFAULT false,
     "widgetQuickReplies" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "widgetSuggestionsModel" TEXT,
-    "widgetWelcomeVideoUrl" TEXT,
     "channelType" "ChannelType" NOT NULL DEFAULT 'WHATSAPP',
     "enableWhatsapp" BOOLEAN NOT NULL DEFAULT true,
     "enableWidget" BOOLEAN NOT NULL DEFAULT false,
@@ -161,16 +159,24 @@ CREATE TABLE "Workspace" (
     "enableCalendarBooking" BOOLEAN NOT NULL DEFAULT false,
     "hasSalesAgents" BOOLEAN NOT NULL DEFAULT false,
     "hasHumanSupport" BOOLEAN NOT NULL DEFAULT true,
+    "speechToTextEnabled" BOOLEAN NOT NULL DEFAULT false,
     "hasProductCatalog" BOOLEAN NOT NULL DEFAULT true,
     "hasCart" BOOLEAN NOT NULL DEFAULT true,
     "hasOrderTracking" BOOLEAN NOT NULL DEFAULT true,
     "needRegistration" BOOLEAN NOT NULL DEFAULT true,
     "humanSupportInstructions" TEXT,
+    "humanSupportMessage" TEXT DEFAULT 'Hi {{customerName}}, I''m putting you in touch with our operator as soon as possible.',
+    "frustrationTriggers" TEXT,
+    "escalationTrigger" TEXT,
     "operatorContactMethod" TEXT DEFAULT 'email',
     "operatorEmail" TEXT,
     "operatorWhatsappNumber" TEXT,
+    "operatorEmails" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "operatorWhatsappNumbers" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "operatorDeliveryMode" TEXT DEFAULT 'all',
     "toneOfVoice" TEXT DEFAULT 'friendly',
     "translateOperatorMessages" BOOLEAN NOT NULL DEFAULT true,
+    "translateCustomerMessages" BOOLEAN NOT NULL DEFAULT true,
     "whatsappProvider" TEXT NOT NULL DEFAULT 'wasender',
     "metaPhoneNumberId" TEXT,
     "metaAccessToken" TEXT,
@@ -191,6 +197,21 @@ CREATE TABLE "Workspace" (
     "chatbotName" TEXT DEFAULT 'Assistente',
     "businessType" TEXT DEFAULT 'other',
     "customChatbotId" TEXT,
+    "customChatbotSystemPrompt" TEXT,
+    "customChatbotModel" TEXT,
+    "customChatbotTemperature" DOUBLE PRECISION,
+    "customChatbotMaxTokens" INTEGER,
+    "faqsEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "flowsEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "audioOutput" BOOLEAN NOT NULL DEFAULT false,
+    "audioVoices" JSONB,
+    "customChatbotOperatorBriefingLanguage" TEXT,
+    "customChatbotOperatorEmail" TEXT,
+    "customChatbotEmailFrom" TEXT,
+    "customChatbotEmailSubjectPrefix" TEXT,
+    "customChatbotAudioOutput" BOOLEAN,
+    "customChatbotAudioVoices" JSONB,
+    "customChatbotAdvancedSettings" JSONB,
     "registrationPage" TEXT,
     "requireManualApproval" BOOLEAN NOT NULL DEFAULT false,
     "approvalMessage" TEXT,
@@ -561,6 +582,7 @@ CREATE TABLE "users" (
     "role" "UserRole" NOT NULL DEFAULT 'MEMBER',
     "isPlatformAdmin" BOOLEAN NOT NULL DEFAULT false,
     "isDeveloperUser" BOOLEAN NOT NULL DEFAULT false,
+    "isDemoUser" BOOLEAN NOT NULL DEFAULT false,
     "twoFactorSecret" TEXT,
     "twoFactorEnabled" BOOLEAN NOT NULL DEFAULT false,
     "twoFactorEnabledAt" TIMESTAMP(3),
@@ -583,6 +605,7 @@ CREATE TABLE "users" (
     "planStartedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "nextBillingDate" TIMESTAMP(3),
     "lowBalanceNotifiedAt" TIMESTAMP(3),
+    "taxRate" DECIMAL(5,4) NOT NULL DEFAULT 0.22,
     "subscriptionStatus" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',
     "pausedAt" TIMESTAMP(3),
     "pauseRequestedAt" TIMESTAMP(3),
@@ -899,23 +922,6 @@ CREATE TABLE "offers" (
 );
 
 -- CreateTable
-CREATE TABLE "documents" (
-    "id" TEXT NOT NULL,
-    "filename" TEXT NOT NULL,
-    "originalName" TEXT NOT NULL,
-    "filePath" TEXT NOT NULL,
-    "fileSize" INTEGER NOT NULL,
-    "mimeType" TEXT NOT NULL,
-    "status" "DocumentStatus" NOT NULL DEFAULT 'UPLOADED',
-    "workspaceId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-
-    CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "agent_configs" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
@@ -958,20 +964,6 @@ CREATE TABLE "usage" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "usage_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "registration_attempts" (
-    "id" TEXT NOT NULL,
-    "phoneNumber" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
-    "attemptCount" INTEGER NOT NULL DEFAULT 0,
-    "lastAttemptAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "isBlocked" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "registration_attempts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1094,6 +1086,7 @@ CREATE TABLE "paypal_transactions" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "invoiceId" TEXT,
+    "paypalOrderId" TEXT,
     "amount" DECIMAL(10,2) NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'EUR',
     "status" "PayPalTransactionStatus" NOT NULL,
@@ -1468,26 +1461,6 @@ CREATE TABLE "blackout_periods" (
 );
 
 -- CreateTable
-CREATE TABLE "pending_appointments" (
-    "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
-    "customerId" TEXT NOT NULL,
-    "serviceId" TEXT NOT NULL,
-    "requestedStartTime" TIMESTAMP(3) NOT NULL,
-    "requestedEndTime" TIMESTAMP(3) NOT NULL,
-    "customerNotes" TEXT,
-    "adminNotes" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'pending',
-    "syncedEventId" TEXT,
-    "syncedAt" TIMESTAMP(3),
-    "rejectedAt" TIMESTAMP(3),
-    "rejectionReason" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "pending_appointments_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "reminder_locks" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
@@ -1513,19 +1486,6 @@ CREATE TABLE "late_cancellation_attempts" (
     "tooLateThreshold" INTEGER NOT NULL,
 
     CONSTRAINT "late_cancellation_attempts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "appointment_gdpr_logs" (
-    "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
-    "customerId" TEXT NOT NULL,
-    "googleEventId" TEXT,
-    "deletedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deletedBy" TEXT NOT NULL DEFAULT 'customer',
-    "reason" TEXT,
-
-    CONSTRAINT "appointment_gdpr_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1570,15 +1530,16 @@ CREATE TABLE "onboarding_questionnaires" (
 CREATE TABLE "playground_todos" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
-    "dialogId" TEXT NOT NULL,
-    "messageType" TEXT NOT NULL,
-    "messageContent" TEXT NOT NULL,
+    "dialogId" TEXT,
+    "messageType" TEXT,
+    "messageContent" TEXT,
     "chatbotResponse" TEXT,
     "commentTitle" TEXT NOT NULL,
-    "priority" TEXT NOT NULL DEFAULT 'Medio',
+    "priority" TEXT NOT NULL DEFAULT 'MEDIUM',
     "status" TEXT NOT NULL DEFAULT 'TODO',
     "position" INTEGER NOT NULL DEFAULT 0,
     "createdBy" TEXT NOT NULL,
+    "authorKind" TEXT NOT NULL DEFAULT 'STAFF',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -1591,10 +1552,97 @@ CREATE TABLE "playground_comments" (
     "todoId" TEXT NOT NULL,
     "commentText" TEXT NOT NULL,
     "createdBy" TEXT NOT NULL,
+    "authorKind" TEXT NOT NULL DEFAULT 'STAFF',
     "color" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "playground_comments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "flow_categories" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "lookupRules" JSONB NOT NULL DEFAULT '{}',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "flow_categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "demorobot_flows" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "flowCategoryId" TEXT,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "keywords" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "isProtected" BOOLEAN NOT NULL DEFAULT false,
+    "retrievalDocument" TEXT NOT NULL,
+    "embedding" DOUBLE PRECISION[] DEFAULT ARRAY[]::DOUBLE PRECISION[],
+    "compiledPrompt" TEXT NOT NULL,
+    "hash" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "demorobot_flows_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "demorobot_flow_nodes" (
+    "id" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
+    "question" TEXT NOT NULL,
+    "positionX" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "positionY" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "fieldKey" TEXT,
+    "fieldType" TEXT,
+    "terminalType" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "demorobot_flow_nodes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "demorobot_flow_edges" (
+    "id" TEXT NOT NULL,
+    "sourceNodeId" TEXT NOT NULL,
+    "targetNodeId" TEXT,
+    "targetFlowId" TEXT,
+    "label" TEXT NOT NULL,
+    "triggersEscalation" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "demorobot_flow_edges_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "demorobot_assets" (
+    "id" TEXT NOT NULL,
+    "flowCategoryId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "summary" TEXT,
+    "language" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "demorobot_assets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "demorobot_flow_node_attachments" (
+    "nodeId" TEXT NOT NULL,
+    "assetId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "demorobot_flow_node_attachments_pkey" PRIMARY KEY ("nodeId","assetId")
 );
 
 -- CreateTable
@@ -1963,15 +2011,6 @@ CREATE INDEX "faqs_category_idx" ON "faqs"("category");
 CREATE INDEX "offers_workspaceId_idx" ON "offers"("workspaceId");
 
 -- CreateIndex
-CREATE INDEX "documents_workspaceId_idx" ON "documents"("workspaceId");
-
--- CreateIndex
-CREATE INDEX "documents_status_idx" ON "documents"("status");
-
--- CreateIndex
-CREATE INDEX "documents_isActive_idx" ON "documents"("isActive");
-
--- CreateIndex
 CREATE INDEX "agent_configs_workspaceId_idx" ON "agent_configs"("workspaceId");
 
 -- CreateIndex
@@ -1991,9 +2030,6 @@ CREATE INDEX "usage_clientId_idx" ON "usage"("clientId");
 
 -- CreateIndex
 CREATE INDEX "usage_createdAt_idx" ON "usage"("createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "registration_attempts_phoneNumber_workspaceId_key" ON "registration_attempts"("phoneNumber", "workspaceId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "workspace_invitations_tokenHash_key" ON "workspace_invitations"("tokenHash");
@@ -2072,6 +2108,9 @@ CREATE INDEX "billing_transactions_type_idx" ON "billing_transactions"("type");
 
 -- CreateIndex
 CREATE INDEX "billing_transactions_createdAt_idx" ON "billing_transactions"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "paypal_transactions_paypalOrderId_key" ON "paypal_transactions"("paypalOrderId");
 
 -- CreateIndex
 CREATE INDEX "paypal_transactions_userId_idx" ON "paypal_transactions"("userId");
@@ -2254,12 +2293,6 @@ CREATE UNIQUE INDEX "workspace_business_hours_workspaceId_dayOfWeek_key" ON "wor
 CREATE INDEX "blackout_periods_workspaceId_startDate_endDate_idx" ON "blackout_periods"("workspaceId", "startDate", "endDate");
 
 -- CreateIndex
-CREATE INDEX "pending_appointments_workspaceId_status_idx" ON "pending_appointments"("workspaceId", "status");
-
--- CreateIndex
-CREATE INDEX "pending_appointments_customerId_idx" ON "pending_appointments"("customerId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "reminder_locks_lockKey_key" ON "reminder_locks"("lockKey");
 
 -- CreateIndex
@@ -2275,12 +2308,6 @@ CREATE INDEX "late_cancellation_attempts_workspaceId_customerId_idx" ON "late_ca
 CREATE INDEX "late_cancellation_attempts_attemptedAt_idx" ON "late_cancellation_attempts"("attemptedAt");
 
 -- CreateIndex
-CREATE INDEX "appointment_gdpr_logs_workspaceId_customerId_idx" ON "appointment_gdpr_logs"("workspaceId", "customerId");
-
--- CreateIndex
-CREATE INDEX "appointment_gdpr_logs_deletedAt_idx" ON "appointment_gdpr_logs"("deletedAt");
-
--- CreateIndex
 CREATE INDEX "playground_todos_workspaceId_status_idx" ON "playground_todos"("workspaceId", "status");
 
 -- CreateIndex
@@ -2288,6 +2315,39 @@ CREATE INDEX "playground_todos_dialogId_idx" ON "playground_todos"("dialogId");
 
 -- CreateIndex
 CREATE INDEX "playground_comments_todoId_createdAt_idx" ON "playground_comments"("todoId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "flow_categories_workspaceId_idx" ON "flow_categories"("workspaceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "flow_categories_workspaceId_slug_key" ON "flow_categories"("workspaceId", "slug");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flows_workspaceId_idx" ON "demorobot_flows"("workspaceId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flows_flowCategoryId_idx" ON "demorobot_flows"("flowCategoryId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flow_nodes_flowId_idx" ON "demorobot_flow_nodes"("flowId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flow_edges_sourceNodeId_idx" ON "demorobot_flow_edges"("sourceNodeId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flow_edges_targetNodeId_idx" ON "demorobot_flow_edges"("targetNodeId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flow_edges_targetFlowId_idx" ON "demorobot_flow_edges"("targetFlowId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_assets_flowCategoryId_idx" ON "demorobot_assets"("flowCategoryId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flow_node_attachments_nodeId_idx" ON "demorobot_flow_node_attachments"("nodeId");
+
+-- CreateIndex
+CREATE INDEX "demorobot_flow_node_attachments_assetId_idx" ON "demorobot_flow_node_attachments"("assetId");
 
 -- CreateIndex
 CREATE INDEX "_OfferCategories_B_index" ON "_OfferCategories"("B");
@@ -2449,9 +2509,6 @@ ALTER TABLE "offers" ADD CONSTRAINT "offers_categoryId_fkey" FOREIGN KEY ("categ
 ALTER TABLE "offers" ADD CONSTRAINT "offers_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "documents" ADD CONSTRAINT "documents_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "agent_configs" ADD CONSTRAINT "agent_configs_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -2581,12 +2638,6 @@ ALTER TABLE "workspace_business_hours" ADD CONSTRAINT "workspace_business_hours_
 ALTER TABLE "blackout_periods" ADD CONSTRAINT "blackout_periods_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "pending_appointments" ADD CONSTRAINT "pending_appointments_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "pending_appointments" ADD CONSTRAINT "pending_appointments_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "services"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "reminder_locks" ADD CONSTRAINT "reminder_locks_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -2596,10 +2647,34 @@ ALTER TABLE "late_cancellation_attempts" ADD CONSTRAINT "late_cancellation_attem
 ALTER TABLE "late_cancellation_attempts" ADD CONSTRAINT "late_cancellation_attempts_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "services"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "appointment_gdpr_logs" ADD CONSTRAINT "appointment_gdpr_logs_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "playground_comments" ADD CONSTRAINT "playground_comments_todoId_fkey" FOREIGN KEY ("todoId") REFERENCES "playground_todos"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "playground_comments" ADD CONSTRAINT "playground_comments_todoId_fkey" FOREIGN KEY ("todoId") REFERENCES "playground_todos"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "flow_categories" ADD CONSTRAINT "flow_categories_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flows" ADD CONSTRAINT "demorobot_flows_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flows" ADD CONSTRAINT "demorobot_flows_flowCategoryId_fkey" FOREIGN KEY ("flowCategoryId") REFERENCES "flow_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flow_nodes" ADD CONSTRAINT "demorobot_flow_nodes_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "demorobot_flows"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flow_edges" ADD CONSTRAINT "demorobot_flow_edges_sourceNodeId_fkey" FOREIGN KEY ("sourceNodeId") REFERENCES "demorobot_flow_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flow_edges" ADD CONSTRAINT "demorobot_flow_edges_targetFlowId_fkey" FOREIGN KEY ("targetFlowId") REFERENCES "demorobot_flows"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_assets" ADD CONSTRAINT "demorobot_assets_flowCategoryId_fkey" FOREIGN KEY ("flowCategoryId") REFERENCES "flow_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flow_node_attachments" ADD CONSTRAINT "demorobot_flow_node_attachments_nodeId_fkey" FOREIGN KEY ("nodeId") REFERENCES "demorobot_flow_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "demorobot_flow_node_attachments" ADD CONSTRAINT "demorobot_flow_node_attachments_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "demorobot_assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_OfferCategories" ADD CONSTRAINT "_OfferCategories_A_fkey" FOREIGN KEY ("A") REFERENCES "categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;

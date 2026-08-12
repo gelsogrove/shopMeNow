@@ -59,7 +59,8 @@ export interface TransportAnalysis {
   selectedTypeId: string | null
   selectedTypeName: string | null
 
-  // IVA breakdown (22%)
+  // IVA breakdown (rate from workspace.taxRate — never hardcoded)
+  ivaRate: number                // VAT rate applied (0.22 = 22%)
   ivaAmount: number              // IVA included in grandTotal
   netTotal: number               // grandTotal - ivaAmount
 
@@ -104,7 +105,8 @@ export class OrderOptimizationService {
 
   /**
    * Analyze cart transport costs and generate breakdown
-   * All prices are GROSS (IVA 22% included) and ROUNDED to integers
+   * All prices are GROSS (VAT included, rate from workspace.taxRate) and
+   * ROUNDED to integers
    *
    * @param workspaceId Workspace ID
    * @param customerId Customer ID
@@ -121,17 +123,26 @@ export class OrderOptimizationService {
       customerId,
     })
 
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { taxRate: true },
+    })
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`)
+    }
+    const ivaRate = Number(workspace.taxRate)
+
     // 1. Check if transport prices are configured
     const isConfigured = await this.hasTransportPricesConfigured(workspaceId)
     if (!isConfigured) {
       logger.warn("⚠️ Transport prices not configured", { workspaceId })
-      return this.createEmptyAnalysis(workspaceId, "", timestamp, false)
+      return this.createEmptyAnalysis(workspaceId, "", timestamp, false, ivaRate)
     }
 
     // 2. Get cart with items
     const cart = await this.cartRepo.getOrCreateCart(workspaceId, customerId)
     if (!cart.items || cart.items.length === 0) {
-      return this.createEmptyAnalysis(workspaceId, cart.id, timestamp, true)
+      return this.createEmptyAnalysis(workspaceId, cart.id, timestamp, true, ivaRate)
     }
 
     // 3. Get transport types with prices
@@ -240,8 +251,7 @@ export class OrderOptimizationService {
     const roundedProductsCost = Math.round(totalProductsCost * 100) / 100
     const grandTotal = Math.round((roundedProductsCost + totalTransportCost) * 100) / 100
 
-    // IVA 22% (already included in prices)
-    const ivaRate = 0.22
+    // VAT (workspace.taxRate, already included in prices)
     const netTotal = Math.round((grandTotal / (1 + ivaRate)) * 100) / 100
     const ivaAmount = Math.round((grandTotal - netTotal) * 100) / 100
 
@@ -298,6 +308,7 @@ export class OrderOptimizationService {
       totalTransportCost,
       grandTotal,
       shippingCostPerUnit,
+      ivaRate,
       ivaAmount,
       netTotal,
       allocationByItem,
@@ -315,7 +326,8 @@ export class OrderOptimizationService {
     workspaceId: string,
     cartId: string,
     timestamp: Date,
-    isConfigured: boolean
+    isConfigured: boolean,
+    ivaRate: number
   ): TransportAnalysis {
     return {
       workspaceId,
@@ -327,6 +339,7 @@ export class OrderOptimizationService {
       totalTransportCost: 0,
       grandTotal: 0,
       shippingCostPerUnit: 0,
+      ivaRate,
       ivaAmount: 0,
       netTotal: 0,
       allocationByItem: [],
@@ -377,7 +390,7 @@ export class OrderOptimizationService {
     lines.push(`📋 **Subtotale prodotti**: €${analysis.totalProductsCost.toFixed(2)}`)
     lines.push(`🚚 **Totale spedizione**: €${analysis.totalTransportCost.toFixed(2)}`)
     lines.push(`💰 **Totale ordine**: €${analysis.grandTotal.toFixed(2)}`)
-    lines.push(`💶 **IVA 22%**: €${analysis.ivaAmount.toFixed(2)}`)
+    lines.push(`💶 **IVA ${(analysis.ivaRate * 100).toFixed(0)}%**: €${analysis.ivaAmount.toFixed(2)}`)
     lines.push(`📑 **Totale IVA esclusa**: €${analysis.netTotal.toFixed(2)}`)
 
     // Cost per unit insight

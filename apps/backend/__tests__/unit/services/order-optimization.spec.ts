@@ -10,6 +10,10 @@ import { OrderOptimizationService, TransportAnalysis } from "../../../src/applic
 
 // Mock Prisma
 const mockPrisma = {
+  // analyzeCart reads workspace.taxRate (VAT rate, DB-driven — never hardcoded in the service)
+  workspace: {
+    findUnique: jest.fn(),
+  },
   type: {
     count: jest.fn(),
     findMany: jest.fn(),
@@ -113,6 +117,8 @@ describe("OrderOptimizationService", () => {
     ]
 
     beforeEach(() => {
+      // Workspace lookup: taxRate stored as fraction in DB (0.22 = 22%, see schema Decimal(5,4))
+      mockPrisma.workspace.findUnique.mockResolvedValue({ taxRate: 0.22 })
       mockTransportRepo.hasConfiguredPrices.mockResolvedValue(true)
       mockTransportRepo.findActiveWithPrices.mockResolvedValue(mockTypes)
       mockCartRepo.getOrCreateCart.mockResolvedValue(mockCart)
@@ -231,6 +237,7 @@ describe("OrderOptimizationService", () => {
         totalTransportCost: 0,
         grandTotal: 0,
         shippingCostPerUnit: 0,
+        ivaRate: 0.22, // required by TransportAnalysis; value irrelevant here (unconfigured path)
         ivaAmount: 0,
         netTotal: 0,
         allocationByItem: [],
@@ -257,6 +264,7 @@ describe("OrderOptimizationService", () => {
         totalTransportCost: 0,
         grandTotal: 0,
         shippingCostPerUnit: 0,
+        ivaRate: 0.22, // required by TransportAnalysis; value irrelevant here (empty-cart path)
         ivaAmount: 0,
         netTotal: 0,
         allocationByItem: [],
@@ -301,6 +309,7 @@ describe("OrderOptimizationService", () => {
         totalTransportCost: 15,
         grandTotal: 65,
         shippingCostPerUnit: 5,
+        ivaRate: 0.22, // fraction as stored in workspace.taxRate → rendered as "IVA 22%"
         ivaAmount: 12,
         netTotal: 53,
         allocationByItem: [],
