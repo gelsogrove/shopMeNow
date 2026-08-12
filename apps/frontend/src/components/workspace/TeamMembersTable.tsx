@@ -42,7 +42,6 @@ import { useBilling } from "@/contexts/BillingContext"
 interface TeamMembersTableProps {
   workspaceId: string
   isSuperAdmin: boolean
-  paypalConnected?: boolean
 }
 
 type TabType = "members" | "invitations"
@@ -54,7 +53,6 @@ type TabType = "members" | "invitations"
 export function TeamMembersTable({
   workspaceId,
   isSuperAdmin,
-  paypalConnected,
 }: TeamMembersTableProps) {
   const { billingOverview, isLoadingOverview } = useBilling()
   const [activeTab, setActiveTab] = useState<TabType>("members")
@@ -72,30 +70,16 @@ export function TeamMembersTable({
     () => members.length + invitations.length,
     [members.length, invitations.length]
   )
-  const planType = billingOverview?.billing?.planType || "FREE_TRIAL"
-  const isFreePlan = planType === "FREE_TRIAL"
   const isInviteLimitReached =
-    maxTeamMembers !== null && 
-    maxTeamMembers !== undefined && 
+    maxTeamMembers !== null &&
+    maxTeamMembers !== undefined &&
     maxTeamMembers > 0 &&
     currentTeamUsage >= maxTeamMembers
-  const billingPaymentConnected = billingOverview?.billing?.isPaymentConnected
   const isBillingReady = !!billingOverview && !isLoadingOverview
-  const paymentSourceProvided = typeof paypalConnected === "boolean"
-  const isPaymentConnected = paymentSourceProvided
-    ? paypalConnected!
-    : isBillingReady
-      ? billingPaymentConnected ?? true // If billing is loaded but field missing, assume connected
-      : false
 
   const inviteBlockReason = (() => {
     if (!isSuperAdmin) return "Only the workspace owner can invite new members"
-    if (!isFreePlan && !isPaymentConnected) return "Connect PayPal to invite team members"
-    if (!isBillingReady) {
-      // If PayPal status is explicitly provided (connected) but billing not ready yet, allow
-      if (paymentSourceProvided && paypalConnected) return null
-      return "Loading billing status..."
-    }
+    if (!isBillingReady) return "Loading billing status..."
     if (isInviteFeatureEnabled === false) return "Upgrade to Premium or Enterprise to invite team members"
     if (isInviteLimitReached) return "Team member limit reached. Upgrade to add more members."
     return null

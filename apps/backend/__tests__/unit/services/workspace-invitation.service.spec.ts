@@ -245,11 +245,15 @@ describe("WorkspaceInvitationService", () => {
       expect(result.invitation?.email).toBe("invitee@test.com")
     })
 
-    it("should reject when PayPal is not connected", async () => {
+    it("should allow invitations on a paid plan even if PayPal is not connected", async () => {
       mockPrisma.$transaction.mockImplementation(async (callback) => {
         const tx = {
           workspaceInvitation: {
             findFirst: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockImplementation((data) => ({
+              id: "inv-premium",
+              email: data.data.email,
+            })),
             count: jest.fn().mockResolvedValue(0),
           },
           workspace: {
@@ -266,7 +270,12 @@ describe("WorkspaceInvitationService", () => {
                 isPaymentConnected: false,
                 paypalStatus: "DISCONNECTED",
               }) // owner
-              .mockResolvedValueOnce(null),
+              .mockResolvedValueOnce(null)
+              .mockResolvedValueOnce({
+                firstName: "John",
+                lastName: "Doe",
+                email: "inviter@test.com",
+              }),
           },
           planConfiguration: {
             findUnique: jest.fn().mockResolvedValue({ maxTeamMembers: 9999 }),
@@ -281,8 +290,8 @@ describe("WorkspaceInvitationService", () => {
 
       const result = await service.createInvitation(validInput)
 
-      expect(result.success).toBe(false)
-      expect(result.code).toBe("PAYPAL_NOT_CONNECTED")
+      expect(result.success).toBe(true)
+      expect(result.invitation?.email).toBe(validInput.email.toLowerCase())
     })
 
     it("should allow invitations on FREE_TRIAL even if PayPal is not connected", async () => {

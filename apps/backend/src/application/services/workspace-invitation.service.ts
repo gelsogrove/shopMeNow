@@ -1,4 +1,4 @@
-import { prisma, PrismaClient, InvitationStatus, PayPalStatus } from "@echatbot/database"
+import { prisma, PrismaClient, InvitationStatus } from "@echatbot/database"
 import crypto from "crypto"
 import logger from "../../utils/logger"
 import { EmailService } from "./email.service"
@@ -138,28 +138,13 @@ export class WorkspaceInvitationService {
 
       const owner = await tx.user.findUnique({
         where: { id: workspace.ownerId },
-        select: { planType: true, isPaymentConnected: true, paypalStatus: true },
+        select: { planType: true },
       })
 
       if (!owner) {
         return {
           success: false,
           error: "Workspace owner not found",
-        }
-      }
-
-      const ownerPlan = owner.planType || "FREE_TRIAL"
-      const isFreePlan = ownerPlan === "FREE_TRIAL"
-      const isPaymentConnected =
-        owner.isPaymentConnected === true ||
-        owner.paypalStatus === PayPalStatus.CONNECTED
-
-      // Require PayPal only on paid plans; allow FREE_TRIAL even if not connected
-      if (!isFreePlan && !isPaymentConnected) {
-        return {
-          success: false,
-          error: "PayPal connection required to add team members.",
-          code: "PAYPAL_NOT_CONNECTED",
         }
       }
 
