@@ -1,105 +1,122 @@
-# Billing Model — Credit Wallet (2026-08-11)
+# Billing Model — PayPal Collection (2026-08-11, revised 2026-08-12)
 
 Single source of truth for how money moves in eChatbot. Decided by Andrea on
-2026-08-11, replacing the previous split model (PayPal recurring subscription +
-separate credit). **PayPal no longer collects the subscription** — it exists
-only to top up credit.
+2026-08-11 (month-end PayPal collection) and revised on 2026-08-12
+(on-account recharges, €1 anchor neutralized). Replaces both the recurring
+per-plan PayPal subscription AND the pay-now recharge checkout.
 
 ## The model in one paragraph
 
 Every owner (User) has ONE wallet: `users.creditBalance`, shared across all
-their workspaces. Consumption (messages €/msg, orders, pushes, reminders —
-prices from `plan_configurations`) is deducted from the wallet **live**,
-operation by operation. The subscription fee (`plan_configurations.monthlyFee`
-+ VAT at `users.taxRate`) is deducted from the wallet **once a month** by the
-scheduler. The wallet MAY go negative ("in rosso"); below
-`CREDIT_MIN_THRESHOLD` (**-€10**, `workspace-access.service.ts`) all the
-owner's chatbots stop responding until they recharge. Recharges are one-off
-PayPal payments that top up the wallet.
+their workspaces. Consumption (messages, orders, pushes — prices from
+`plan_configurations`) is deducted from the wallet **live** and is therefore
+informational on the invoice. Recharges are **on account**: the wallet is
+credited immediately, no payment step. On the **1st of the month at 23:30
+(Europe/Rome)** the backend scheduler bills the month that just ENDED: one
+invoice per owner — subscription fee + recharges of the period + adjustments
++ VAT (`users.taxRate`) — collected in **ONE PayPal capture** through the
+owner's mandate. The wallet MAY go negative ("in rosso"); below
+`CREDIT_MIN_THRESHOLD` (-€10, `workspace-access.service.ts`) all the owner's
+chatbots stop responding until they recharge.
 
-## One formula, everywhere
+## The PayPal mandate (€1 anchor, paid once)
 
-All invoice math lives in `packages/database/src/billing-math.ts` and
-`billing-queries.ts`, imported by BOTH apps:
+PayPal refuses zero-priced subscription plans, so the mandate is opened
+through a shared €1/month "anchor" plan (`eChatbot Monthly Anchor Plan`,
+`paypal.routes.ts`). The €1 is the price of the signature, not of the
+service:
 
-| Function | What | Used by |
-|---|---|---|
-| `computeInvoiceTotals(fee, adjustments, recharges, taxRate)` | subtotal + VAT + total of the monthly invoice | backend `invoice.service.ts` (live DRAFT) + scheduler (finalization) |
-| `computeMonthlyCharge(fee, taxRate)` | fee + VAT on the fee = what is deducted from the wallet | scheduler |
-| `calculateConsumptionBreakdown(db, …)` | per-type usage detail (messages/orders/pushes/adjustments) | both |
-| `getRechargesTotal(db, …)` | recharges in the period — `type = RECHARGE` only, **BONUS is never invoiced** | both |
+- **At connect**: the owner approves the anchor subscription and pays €1 once.
+- **Right after approval**: the callback revises THAT subscription's price to
+  €0.00 (`paypal-anchor.service.ts`, best-effort — never blocks approval), so
+  the €1 never recurs on the signature anniversary.
+- **The shared PLAN keeps its €1**: new signups still need a priced plan.
+- **Backfill**: mandates approved before 2026-08-12 are revised via
+  `POST /api/users/admin/billing/zero-anchors` (admin, idempotent — already
+  zeroed subscriptions are skipped).
 
-VAT is **per user**: `users.taxRate` (fraction, default 0.22), editable from
-the backoffice (Clients → VAT chip next to the plan badge,
-`PATCH /api/users/admin/:userId/tax-rate`). No hardcoded rate anywhere in the
-platform-billing path.
+Real collections never use the plan price: the charge writes the invoice
+total into the subscription's `outstanding_balance` and captures it
+(`paypal-invoice-charge.service.ts`, `PayPal-Request-Id` =
+`<invoiceId>:attempt-<n>` for idempotency).
 
-## Recharges (the only way money enters)
+## Recharges — ON ACCOUNT (2026-08-12)
 
-Real PayPal one-off checkout (Orders v2), since 2026-08-11:
+`POST /subscription-billing/recharge` (owner, JWT):
 
-1. Owner picks an amount (€10–€1000) → `POST
-   /subscription-billing/recharge/create-order` creates a PayPal order
-   (`custom_id` = userId, EUR, intent CAPTURE) and returns `approveUrl`.
-2. Browser redirects to PayPal; after approval PayPal returns to
-   `/billing?recharge=return&token=<orderId>`.
-3. BillingPage calls `POST /subscription-billing/recharge/capture` — the
-   backend captures server-side, verifies `custom_id` matches the caller,
-   credits the wallet with the amount PAYPAL confirms (never client input),
-   and records a `paypal_transactions` row. `paypalOrderId` is UNIQUE:
-   capturing twice never credits twice.
+1. Deterministic guard: an approved PayPal mandate
+   (`users.paypalSubscriptionId`) is required — 402 otherwise. Without it the
+   month-end capture would have nothing to charge against.
+2. €10–€1000 (validated in `rechargeOwnerCredit`, the single source).
+3. The wallet is credited immediately (`BillingTransaction` type=RECHARGE);
+   no money moves. If the balance was below -€10 the chatbots resume.
 4. First recharge on FREE_TRIAL auto-upgrades to BASIC (existing rule).
+5. The amount enters the month-end invoice and is collected on the 1st.
 
-Admin/dev users get the sandbox environment automatically
-(`resolvePayPalEnvironment`). The old direct-credit endpoint (credited
-without collecting money) was removed. Code:
-`apps/backend/src/services/paypal-checkout.service.ts`.
+No exposure cap (Andrea, 2026-08-12): the owner can accumulate any on-account
+amount; failed collections surface in the backoffice Collections page.
+
+This replaces the pay-now checkout (Orders v2), removed 2026-08-12 because it
+**double-charged**: the owner paid the checkout order AND the same RECHARGE
+transaction re-entered the month-end invoice total via
+`computeInvoiceTotals`.
 
 ## Month cycle
 
 1. **During the month** — consumption debits the wallet live
-   (`BillingTransaction`: MESSAGE / NEW_ORDER / PUSH_NOTIFICATION /
-   APPOINTMENT_REMINDER). The backend keeps a DRAFT invoice for the current
-   month, recalculated on every view (`recalculateInvoiceTotals`), so the app
-   always shows the up-to-date "Next monthly charge".
-2. **1st of the month, 00:05** — `apps/scheduler` `monthly-billing.job.ts`
-   (not yet deployed; will run scheduled) for each ACTIVE owner:
-   - applies pending plan changes (scheduled downgrades)
-   - skips PAUSED and FREE_TRIAL owners (expired trials get paused)
-   - deducts `computeMonthlyCharge(monthlyFee, taxRate)` from the wallet
-     (negative allowed) and writes a MONTHLY_FEE transaction (visible in
-     Transaction History)
-   - finalizes the closed month's invoice as **PAID** with subscription, VAT,
-     usage breakdown, recharges — archived, viewable and downloadable as PDF
-   - sets `nextBillingDate`
-3. **Invoice number** (`YYYY-NNNN`, `invoice_year_sequences`) is assigned
-   lazily on first PDF download of a PAID invoice. Download filename is
-   `invoice-<number>.pdf`.
+   (`BillingTransaction`: MESSAGE / NEW_ORDER / PUSH_NOTIFICATION / …). The
+   backend keeps a DRAFT invoice for the current month, recalculated on view
+   (`recalculateInvoiceTotals`).
+2. **1st of the month, 23:30 Europe/Rome** — `apps/backend/src/scheduler.ts`
+   → `runMonthEndBilling` (manual trigger:
+   `POST /api/users/admin/billing/run-month-end`), always billing the
+   PREVIOUS month:
+   - applies pending plan changes, pauses expired FREE_TRIALs
+   - one invoice per owner: subscription fee (from the `invoice.planType`
+     snapshot — the first PARTIAL month pays no fee) + recharges of the
+     period + adjustments + VAT
+   - the invoice is finalized and NUMBERED regardless of the payment outcome
+   - ONE PayPal capture of the total. FAILED invoices surface in Collections:
+     1 automatic attempt + 3 manual retries (`MAX_PAYMENT_ATTEMPTS` 4), then
+     the operator decides — block, cancel, or grant credit (soft block,
+     nothing automatic).
+3. Idempotent & re-runnable: invoices unique per (userId, year, month),
+   attempts claimed atomically — a re-run never double-charges.
+
+## One formula, everywhere
+
+All invoice math lives in `packages/database/src/billing-math.ts` and
+`billing-queries.ts`, imported by backend services:
+
+| Function | What |
+|---|---|
+| `computeInvoiceTotals(fee, adjustments, recharges, taxRate)` | subtotal + VAT + total of the monthly invoice |
+| `getRechargesTotal(db, …)` | recharges in the period — `type = RECHARGE` only, **BONUS is never invoiced** |
+| `calculateConsumptionBreakdown(db, …)` | per-type usage detail (informational) |
+
+VAT is **per user**: `users.taxRate` (fraction, default 0.22), editable from
+the backoffice. No hardcoded rate anywhere in the platform-billing path.
 
 ## The invoice document (always English)
 
-PDF (`invoice.service.ts → generateInvoicePdf`): FROM (PlatformConfig ISSUER_*
-keys) / BILL TO, lines for Subscription fee, Recharges, Adjustments, Subtotal,
-`VAT (nn%)`, Total, then an informational **USAGE PAID FROM CREDIT** section
-(messages/orders/pushes with counts) and `Payment: deducted from prepaid
-credit balance`. BONUS gift credits never appear.
+PDF (`invoice.service.ts → generateInvoicePdf`): FROM (PlatformConfig
+ISSUER_* keys) / BILL TO, lines for Subscription fee, Credit recharges during
+the period, Adjustments, then Subtotal, `VAT (nn%)`, Total, then an
+informational **Usage paid from credit** section. BONUS gift credits never
+appear.
 
 ## What each surface does
 
-- **Frontend (owner app)**: sees credit, plan, live draft ("Next monthly
-  charge"), Transaction History, past invoices + PDF, Recharge Credit
-  (PayPal). Cannot change plan (removed 2026-08-11).
-- **Backoffice (Andrea)**: Clients page — change plan, change VAT rate, bonus
-  credit, extend trial; Collections — invoice archive.
-- **Scheduler**: month-end charge + invoice finalization only.
+- **Frontend (owner app)**: credit, plan, live draft, Transaction History,
+  past invoices + PDF, Recharge Credit (on account — dialog states the amount
+  is collected with the monthly invoice).
+- **Backoffice (Andrea)**: Clients — plan, VAT, bonus credit, extend trial;
+  Collections — invoice archive, retry-charge, run-month-end, zero-anchors.
+- **Scheduler (backend web process)**: month-end run only.
 
 ## Known leftovers (decided separately, do not silently remove)
 
-- The PayPal **recurring subscription** machinery (outstanding balance,
-  "Process Payment" in Collections, PAYMENT_FAILED status, payment
-  failure/reset endpoints, invoice statuses PENDING/FAILED) is obsolete under
-  this model and pending cleanup with Andrea's approval.
 - E-commerce ORDER documents (`order-optimization.service.ts`,
   `services/invoice/InvoiceService.ts`) still hardcode IVA 22% — that is the
-  end-customer shop domain, not platform billing; needs its own per-workspace
-  decision.
+  end-customer shop domain, not platform billing; needs its own
+  per-workspace decision.

@@ -1387,16 +1387,22 @@ invoice, see section 10).
 5. Redirect user to /paypal-result?success=true
 ```
 
-#### **B) PayPal Subscriptions (Recurring Monthly Billing)**
-**Status**: ❌ REMOVED (2026-08-11) — replaced by the credit-wallet model
+#### **B) PayPal Billing Mandate (€1 Anchor Subscription)**
+**Status**: ✅ Active (2026-08-11/12) — the collection channel
 
-The subscription is deducted from `users.creditBalance` by the scheduler on
-the 1st of the month; PayPal never collects it. PayPal's only remaining role
-is one-off payments for credit recharges (section A above). The connect flow
-and payment webhook remain in the codebase only to record events from legacy
-subscriptions; do not extend them. Full spec: `docs/billing-model.md`.
+PayPal refuses zero-priced subscription plans, so the mandate is opened
+through a €1/month "anchor" plan (`eChatbot Monthly Anchor Plan`). The owner
+pays the €1 ONCE, at signature: right after approval the callback revises
+THAT subscription's price to €0.00 (`paypal-anchor.service.ts`), so the €1
+never recurs. Mandates approved before 2026-08-12 are backfilled via
+`POST /api/users/admin/billing/zero-anchors` (admin, idempotent).
 
-**Sandbox Config** (still used for recharges):
+Real collections never use the plan price: the month-end run writes the
+invoice total into the subscription's `outstanding_balance` and captures it
+(`paypal-invoice-charge.service.ts`) — one charge per month, on the 1st.
+Full spec: `docs/billing-model.md`.
+
+**Sandbox Config** (admin/dev accounts route to sandbox automatically):
 - `process.env.PAYPAL_CLIENT_ID_SANDBOX`
 - `process.env.PAYPAL_CLIENT_SECRET_SANDBOX`
 - Test accounts: buyer/seller from PayPal Developer Dashboard
