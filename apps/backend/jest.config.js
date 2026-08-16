@@ -8,6 +8,11 @@ module.exports = {
       tsconfig: 'tsconfig.json'
     }]
   },
+  // custom-* chatbot modules are ESM and import siblings with an explicit
+  // .js extension; under ts-jest those resolve to the .ts source.
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',

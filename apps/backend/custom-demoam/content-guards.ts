@@ -23,10 +23,12 @@ export function validateSerialNumber(
     return {
       ok: false,
       error: 'invalid_serial_format_exhausted',
-      dictates_text: true,
+      dictates_text: false,
+      force_tool: 'escalate_to_operator',
       instruction:
-        'The customer has failed to provide a valid serial number 3 times. Do NOT ask again: ' +
-        'acknowledge that, and move straight to the pre-operator checks (call escalate_to_operator).',
+        'The customer has failed to provide a valid serial number 3 times. Do NOT ask again and do ' +
+        'NOT ask any diagnostic question of your own: move straight to the pre-operator checks by ' +
+        "calling escalate_to_operator NOW with reason 'diagnostic_exhausted'.",
     }
   }
   return {

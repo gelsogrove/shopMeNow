@@ -1091,15 +1091,21 @@ interface CallLLMParams {
    * question), so this hop can only improve the outcome, never worsen it.
    */
   faqVerifyHop?: boolean
+  /**
+   * Function name a refusing tool demanded be called next (ToolResult.force_tool).
+   * Pins tool_choice to that exact function so the order the code decided cannot
+   * be answered with free text — the failure mode behind an unattached Human
+   * Support flow and an improvised hand-off question.
+   */
+  forceSpecificTool?: string | null
 }
 
 const FAQ_VERIFY_BLOCK = [
   '',
   '═══ FAQ VERIFICATION (this hop only) ═══',
-  'Your drafted reply was free text with no tool call. You MUST pick exactly one of these three:',
+  'Your drafted reply was free text with no tool call. You MUST pick exactly one of these two:',
   "- An entry in the FAQ block answers the customer's last message → call answer_from_faq with its index.",
-  "- The customer asked for information that no FAQ covers → call escalate_to_operator with reason 'faq_not_found': an unanswered question must reach a human operator, never end at \"I don't have this information\" or at a suggestion to contact someone themselves.",
-  '- Neither applies → call keep_draft_reply, declaring why the draft may go out: they are reporting a technical problem the intake questions are handling (technical_problem_intake), or their message asks for no information at all — a greeting, thanks, small talk (greeting_or_smalltalk).',
+  '- No FAQ applies → call keep_draft_reply, declaring why the draft may go out: they are reporting a technical problem the intake questions are handling (technical_problem_intake), or their message asks for no information at all — a greeting, thanks, small talk (greeting_or_smalltalk).',
 ].join('\n')
 
 async function callLLM({
@@ -1119,6 +1125,7 @@ async function callLLM({
   forceToolChoice,
   forceTextOnly,
   faqVerifyHop,
+  forceSpecificTool,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -1218,8 +1225,15 @@ async function callLLM({
     }
 
     if (faqVerifyHop) {
-      body.tools = [answerFromFaqTool(faqCount), ESCALATE_TOOL, KEEP_DRAFT_REPLY_TOOL]
+      body.tools = [answerFromFaqTool(faqCount), KEEP_DRAFT_REPLY_TOOL]
       body.tool_choice = 'required'
+    }
+
+    if (forceSpecificTool) {
+      const offered = body.tools as ReadonlyArray<{ function?: { name?: string } }> | undefined
+      if (offered?.some((t) => t.function?.name === forceSpecificTool)) {
+        body.tool_choice = { type: 'function', function: { name: forceSpecificTool } }
+      }
     }
   }
 
@@ -1725,6 +1739,7 @@ async function agentTurnInternal(
   let faqVerifyHopNext = false
   let faqVerifyAttempted = false
   let faqVerifyDraft: string | null = null
+  let forcedToolNext: string | null = null
 
   const EMPTY_REPLY_RETRY_INSTRUCTION =
     "[SYSTEM: Your previous turn produced no visible text. Write your reply to the customer now — ask the pending question or acknowledge their last message — in the customer's language, ending with the ⟦LANG:xx⟧ tag.]"
@@ -1770,20 +1785,22 @@ async function agentTurnInternal(
       forceToolChoice: mustForceToolChoice && !faqVerifyHopNext,
       forceTextOnly: awaitingDictatedReply,
       faqVerifyHop: faqVerifyHopNext,
+      forceSpecificTool: forcedToolNext,
     })
     const wasFaqVerifyHop = faqVerifyHopNext
     faqVerifyHopNext = false
+    forcedToolNext = null
 
     // On the verify hop the outcome set is closed by construction: the menu
-    // (enforced in executeTool) offers only answer_from_faq, escalate_to_
-    // operator and keep_draft_reply, so anything that is not one of the first
-    // two — an explicit keep_draft_reply, an off-menu attempt, or no call at
-    // all — means the drafted reply stands.
+    // offers only answer_from_faq and keep_draft_reply, so anything that is
+    // not answer_from_faq — an explicit keep_draft_reply, an off-menu
+    // attempt, or no call at all — means the drafted reply stands. Escalation
+    // is NOT reachable from here: a turn that already drafted free text has
+    // not been asked an unanswered question, and offering the tool anyway is
+    // what handed a thank-you ("bene grazie") to a human operator.
     let effectiveToolCalls = toolCalls
     if (wasFaqVerifyHop) {
-      effectiveToolCalls = toolCalls.filter(
-        (c) => c.function.name === 'answer_from_faq' || c.function.name === 'escalate_to_operator',
-      )
+      effectiveToolCalls = toolCalls.filter((c) => c.function.name === 'answer_from_faq')
       if (effectiveToolCalls.length === 0) {
         // eslint-disable-next-line no-console
         console.error(
@@ -1905,6 +1922,10 @@ async function agentTurnInternal(
 
       if (result.dictates_text === true) {
         awaitingDictatedReply = true
+      }
+
+      if (typeof result.force_tool === 'string') {
+        forcedToolNext = result.force_tool
       }
 
       if (call.function.name === 'answer_step' && !result.ok && result.error === 'unrecognized_answer' && answeringNodeId) {
