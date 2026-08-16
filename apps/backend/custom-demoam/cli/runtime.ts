@@ -13,7 +13,13 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import { chatbotFn, type ChatbotInput, type ChatbotOutput, type HistoryEntry } from "../agent.js"
-import { renderWorkspaceCopy } from "../../src/application/services/workspace-copy.render.js"
+// CJS↔ESM boundary: the backend src compiles as CommonJS while this CLI is
+// ESM, so the shared render function is loaded through createRequire — the
+// one interop path that works in both tsx and compiled output.
+import { createRequire } from "node:module"
+const requireCjs = createRequire(import.meta.url)
+const { renderWorkspaceCopy } =
+  requireCjs("../../src/application/services/workspace-copy.render.js") as typeof import("../../src/application/services/workspace-copy.render.js")
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const SESSIONS_DIR = path.join(__dirname, ".demoam-sessions")
