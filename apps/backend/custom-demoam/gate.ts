@@ -316,6 +316,35 @@ export function nextIntakeStep(
 }
 
 /**
+ * The intake question that MUST be the reply right now, or null.
+ *
+ * Non-null only when the conversation is demonstrably mid-intake on the
+ * technical track: no flow node pending, at least one intake fact already on
+ * record (serial saved or exhausted, or a problem description), and a next
+ * intake field still missing. "On record" is read from STATE the customer's
+ * own answers produced — never from classifying their text (CLAUDE.md §14),
+ * which is also why a complaint or a pure FAQ chat (nothing recorded) can
+ * never trip this.
+ *
+ * The caller treats a non-null return as the ENTIRE reply for the turn: the
+ * question comes verbatim from settings.gateQuestions (rule 1A), and model
+ * prose on these turns is dropped, not sent — asking the next question is
+ * dictated by code, not hoped from the model (CONTRACT.md rules 2, 3, 7).
+ */
+export function midIntakePendingQuestion(
+  state: SessionState,
+  questions: GateQuestions | null | undefined,
+): string | null {
+  if (state.currentNodeId) return null
+  const intakeStarted =
+    !!state.serialNumber?.trim() ||
+    !!state.serialNumberExhausted ||
+    state.collectedData?.problemDescription !== undefined
+  if (!intakeStarted) return null
+  return nextIntakeStep(state, questions)?.question?.trim() || null
+}
+
+/**
  * The question the CODE knows is outstanding right now — the active flow's
  * current node, or the next intake step, or nothing.
  *

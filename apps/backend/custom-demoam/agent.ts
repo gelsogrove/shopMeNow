@@ -5,6 +5,7 @@ import {
   commitLanguageFromReply,
   dehydrateState,
   detachFlow,
+  clearPendingEscalation,
   drainPatches,
   extractLanguage,
   FlowGraphNodeSnapshot,
@@ -35,6 +36,7 @@ import {
   formatPreOperatorInstruction,
   caseShapeFor,
   intakeFieldMayAlreadyBeAnswered,
+  midIntakePendingQuestion,
   nextIntakeStep,
   nextPreOperatorAction,
   pendingQuestionText,
@@ -837,6 +839,32 @@ async function executeTool(
     // dictated question instead.
     const stillNeedsIntake = !afterSave.currentNodeId && !!nextIntakeStep(afterSave, ctx.gateQuestions)
 
+    // A save that completes the pre-operator checklist while a hand-over is
+    // waiting (pendingEscalationReason) does not get to end the turn as
+    // prose: escalate_to_operator is force-called NOW. Leaving the re-call
+    // to the model is what produced a saved name followed by an invented
+    // diagnosis instead of the configured hand-off (Andrea 2026-08-16) —
+    // rules 11 and 18 delivered by mechanism, not by instruction.
+    if (!afterSave.currentNodeId && afterSave.pendingEscalationReason) {
+      const gateAction = nextPreOperatorAction(
+        afterSave,
+        ctx.gateQuestions,
+        getAskedCounts(ctx.sessionId),
+        caseShapeFor(afterSave.pendingEscalationReason),
+      )
+      if (gateAction.kind === 'escalate') {
+        return {
+          ok: true,
+          dictates_text: false,
+          force_tool: 'escalate_to_operator',
+          instruction:
+            'Saved — and every pre-operator check is now complete. Call escalate_to_operator NOW, in ' +
+            'this same turn, with the same reason as before. Do not diagnose, summarise or close the ' +
+            'conversation yourself.',
+        }
+      }
+    }
+
     if (key === 'serialNumber') {
       return {
         ok: true,
@@ -980,6 +1008,11 @@ async function executeTool(
       )
 
       if (action.kind === 'ask') {
+        // The hand-over is now officially in progress and waiting on fields:
+        // recorded so that the remember() save completing the checklist can
+        // force the escalate call the model kept forgetting to repeat.
+        updateState(ctx.sessionId, { pendingEscalationReason: reason }, { mirror: false })
+
         if (action.alreadyAsked) {
           return {
             ok: false,
@@ -1009,6 +1042,7 @@ async function executeTool(
 
     const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`
     recordEscalation({ ticketId, reason, summary: rawSummary })
+    clearPendingEscalation(ctx.sessionId)
     // The hand-off sentence is configuration, not something the model writes
     // (CLAUDE.md §1A). dictates_text only when one is actually configured —
     // with nothing to dictate the model still needs to close the turn itself.
@@ -1948,6 +1982,39 @@ async function agentTurnInternal(
       if (declaredLanguageNotEnabled(lang, settings)) {
         replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings)
       }
+      // ── THE INTAKE INVARIANT ────────────────────────────────────────────
+      // Once the customer's own answers put the case on the technical track
+      // (midIntakePendingQuestion: an intake fact on record, no flow node
+      // pending, a field still missing), free text is no longer how the turn
+      // may end: the reply IS the next intake question — wording from
+      // settings.gateQuestions (rule 1A), rendered by the isolated
+      // translation call. The model's prose on these turns is exactly where
+      // the skipped serial question, the re-asked description and the
+      // invented diagnosis all came from (Andrea 2026-08-16); it is logged
+      // and dropped, never sent. One invariant at the exit, not per-branch
+      // patches (CONTRACT.md rule 4). The FAQ detour stays natural (rule
+      // 30): answer first, re-ask in the same message — the composition the
+      // flows already use. Complaints and pure FAQ chats never trip this:
+      // with no intake fact on record the predicate stays null, so their
+      // free-text replies are untouched.
+      const midIntakeQ = midIntakePendingQuestion(getState(ctx.sessionId), ctx.gateQuestions)
+      if (midIntakeQ) {
+        const intakeLang = getState(ctx.sessionId).language || settings.defaultLanguage
+        let composedBody: string
+        if (servedFaqAnswer) {
+          composedBody = await composeFaqReply(replyBody, servedFaqAnswer, settings, intakeLang, midIntakeQ)
+        } else {
+          if (replyBody) {
+            // eslint-disable-next-line no-console
+            console.error(`[demoam][intake-dictated] model prose dropped: ${replyBody.slice(0, 140)}`)
+          }
+          composedBody = (await forceReplyIntoLanguage(midIntakeQ, intakeLang, settings)).trim()
+        }
+        const reply = greetingReply ? `${greetingReply}\n\n${composedBody}`.trim() : composedBody
+        history.push({ role: 'assistant', content: reply })
+        return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+      }
+
       if (!replyBody) {
         // Andrea 2026-08-06, seen live (Danish customer, first turn): the
         // greeting hop always produces text, so the old `!replyBody &&

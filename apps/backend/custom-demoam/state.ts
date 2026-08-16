@@ -62,6 +62,14 @@ export interface SessionState {
   // terminal, which would loop forever.
   humanSupportFlowDone?: boolean
 
+  // Set when escalate_to_operator REFUSED because a pre-operator field was
+  // still missing; cleared when the escalation succeeds. While set, a
+  // remember() save that completes the checklist force-calls
+  // escalate_to_operator in the same turn — asking is what the model kept
+  // skipping (Andrea 2026-08-16: name saved, then "il ronzio viene dalle
+  // lame" invented instead of the hand-off; escalation never re-called).
+  pendingEscalationReason?: string
+
   // How many turns the conversation has spent sitting on each corrective
   // LOOP node, keyed by node id. PERSISTED on purpose, unlike askedCounts:
   // the host runs more than one dyno and the CLI runner starts a fresh
@@ -214,6 +222,12 @@ export function detachFlow(sessionId: string): void {
   e.state.activeFlowHash = undefined
   e.state.activeFlowGraphSnapshot = undefined
   e.state.currentNodeId = undefined
+}
+
+// Named transition, direct mutation like detachFlow: updateState skips
+// undefined values by design, so a patch can never clear this flag.
+export function clearPendingEscalation(sessionId: string): void {
+  entry(sessionId).state.pendingEscalationReason = undefined
 }
 
 export function resetState(sessionId: string): void {
