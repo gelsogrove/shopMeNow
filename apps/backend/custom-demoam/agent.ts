@@ -1092,18 +1092,8 @@ interface CallLLMParams {
   flowsBlock: string | undefined
   settings: Settings
   messages?: WorkspaceMessages | null
-  /** Resolved (customerName substituted) welcome/welcomeBack text still needing translation this turn — see resolveGreetingText. */
-  greetingToTranslate?: string
-  /** True when a greeting was due this turn AND already sent in an earlier hop — see agentTurnInternal's dedicated greeting hop. */
+  /** True when a greeting is due this turn: code prepends it to the reply (withGreeting), so the model must not greet on its own. */
   greetingAlreadyDelivered?: boolean
-  /**
-   * True for the dedicated greeting-only hop itself: suppresses the flow-step
-   * / intake-question blocks so the model sees ONLY "translate this greeting,
-   * say nothing else" — a "which question to ask" instruction competing with
-   * "say only the greeting" is exactly the kind of double-signal that let the
-   * model wander off dictated text before (same lesson as forceTextOnly).
-   */
-  greetingOnlyHop?: boolean
   /**
    * When true, the model MUST call a tool this hop — a free-text reply is
    * rejected by the API itself, not merely discouraged in the prompt.
@@ -1186,9 +1176,7 @@ async function callLLM({
   flowsBlock,
   settings,
   messages,
-  greetingToTranslate,
   greetingAlreadyDelivered,
-  greetingOnlyHop,
   forceToolChoice,
   forceTextOnly,
   faqVerifyHop,
@@ -1198,7 +1186,7 @@ async function callLLM({
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages, greetingToTranslate, greetingAlreadyDelivered)
+  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages, greetingAlreadyDelivered)
 
   // No breakpoint here: mainPrompt alone is ~2.5k tokens, under Haiku 4.5's
   // 4096-token minimum, so marking it cached nothing — and a 5m block before
@@ -1238,7 +1226,7 @@ async function callLLM({
   if (lastStaticBlock) lastStaticBlock.cache_control = { type: 'ephemeral' }
 
   let currentStepLabels: string[] = []
-  if (!greetingOnlyHop && state.currentNodeId && state.activeFlowGraphSnapshot) {
+  if (state.currentNodeId && state.activeFlowGraphSnapshot) {
     const graph = buildFlowGraph(state.activeFlowGraphSnapshot)
     const node = currentNode(graph, state.currentNodeId)
     currentStepLabels = allowedLabels(graph, state.currentNodeId)
@@ -1254,7 +1242,7 @@ async function callLLM({
   // missing, the code dictates the exact question (see formatIntakeBlock in
   // gate.ts) — the model translates it, it does not compose its own.
   let intakeWantsRemember = false
-  if (!greetingOnlyHop && !faqVerifyHop && !state.currentNodeId) {
+  if (!faqVerifyHop && !state.currentNodeId) {
     const intakeStep = nextIntakeStep(state, settings.gateQuestions)
     // Only the customer's own words count as "already told us" — assistant
     // turns are what we are trying to avoid repeating, not evidence.
@@ -1572,7 +1560,6 @@ function formatRuntimeBlock(
   settings: Settings,
   state: SessionState,
   messages: WorkspaceMessages | null | undefined,
-  greetingToTranslate: string | undefined,
   greetingAlreadyDelivered = false,
 ): string {
   const now = new Date()
@@ -1586,28 +1573,14 @@ function formatRuntimeBlock(
   ]
 
   if (state.greeting === 'new' || state.greeting === 'returning') {
-    if (greetingToTranslate) {
+    if (greetingAlreadyDelivered) {
       lines.push(
         '',
-        '## THE GREETING TO OPEN WITH (mandatory, this turn only)',
+        '## DO NOT GREET (the greeting is handled for you)',
         '',
-        'Translate this exact sentence into the language of the customer\'s message — but ONLY if',
-        `that language is one of: ${settings.enabledLanguages.join(', ')}. If the customer wrote in any`,
-        `other language, translate into ${settings.defaultLanguage} instead (this workspace's default),`,
-        'never into the language they actually used. Make the translated sentence your WHOLE reply —',
-        'nothing else, the substance of the conversation continues in a separate message right after',
-        'this one:',
-        '',
-        greetingToTranslate,
-      )
-    } else if (greetingAlreadyDelivered) {
-      lines.push(
-        '',
-        '## DO NOT GREET AGAIN (already sent this turn)',
-        '',
-        `A ${state.greeting === 'new' ? 'new-customer' : 'returning-customer'} greeting was already sent as its`,
-        'own message immediately before this one. Repeating it — even a different-sounding',
-        '"Ciao!" / "Hi there!" / self-introduction — is a duplicate, not a nicety.',
+        `The ${state.greeting === 'new' ? 'new-customer' : 'returning-customer'} greeting is prepended to your`,
+        'reply by the system, in the right language. Writing one of your own — even a',
+        'different-sounding "Ciao!" / "Hi there!" / self-introduction — produces a duplicate.',
         '',
         "If the customer's message was itself just a greeting with no request in it (\"ciao\", \"hi\",",
         '"buongiorno" and nothing else), there is nothing to answer yet: ask how you can help,',
@@ -1816,43 +1789,34 @@ async function agentTurnInternal(
     }
   }
 
-  // The greeting is delivered in its OWN forced-text-only hop, before the
-  // loop that handles the substance of the request. Andrea 2026-08-05, seen
-  // live: with a mandatory greeting due AND a real question in the same
-  // message, tool_choice:'auto' let the model call answer_from_faq and
-  // never write the greeting at all — a "translate this and open with it"
-  // prompt instruction competing with a tool call, and the tool call won.
-  // Splitting into two hops removes the competition structurally: this hop
-  // is capable of producing nothing BUT the translated greeting (no tools
-  // offered), and the customer still sees one message — the two hops' text
-  // is concatenated into a single reply below.
+  // The greeting is dictated copy (welcomeMessage / welcomeBackMessage,
+  // customerName substituted by code), so it is rendered by the ISOLATED
+  // translation call at reply-assembly time — after the substance hops have
+  // established the turn's language — never by a context-bearing hop.
+  //
+  // It used to be its own callLLM hop with the full prompt, history and the
+  // customer's message in view; told to "only translate", it eventually
+  // answered the customer inside the greeting instead (Andrea 2026-08-17,
+  // live: an invented warranty apology plus a staged hand-over, all riding
+  // on "Bentornato Pinotto" while the real FAQ answer followed below). An
+  // isolated call that never receives the customer's message CANNOT answer
+  // it — mechanism, not instruction (iron rule 1). It is also far cheaper:
+  // the dropped hop re-sent ~3k tokens of context to translate one line.
+  //
+  // Language: the substance hops commit the turn's language via the
+  // ⟦LANG:xx⟧ tag (filtered through resolveEnabledLanguage) before any
+  // reply is assembled, and returning customers arrive with the profile
+  // language already seeded — so by assembly time state.language is the
+  // right target, with defaultLanguage as the safety net.
   const greetingToTranslate = resolveGreetingText(state, settings, messages)
-  let greetingReply = ''
-  if (greetingToTranslate) {
-    const greetingHop = await callLLM({
-      commonPrompt,
-      state,
-      history,
-      operatorBriefingLanguageOverride,
-      isFirstTurn,
-      faqBlock: undefined,
-      faqCount: 0,
-      flowsBlock: undefined,
-      settings,
-      messages,
-      greetingToTranslate,
-      greetingOnlyHop: true,
-      forceTextOnly: true,
-    })
-    tokensUsedSoFar += greetingHop.tokensUsed
-    const { reply, lang } = extractLanguage(greetingHop.text)
-    greetingReply = reply.trim()
-    if (lang) {
-      commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
+  let greetingRendered: string | null = null
+  const withGreeting = async (body: string): Promise<string> => {
+    if (!greetingToTranslate) return body
+    if (greetingRendered === null) {
+      const greetingLang = getState(ctx.sessionId).language || settings.defaultLanguage
+      greetingRendered = (await forceReplyIntoLanguage(greetingToTranslate, greetingLang, settings)).trim()
     }
-    if (declaredLanguageNotEnabled(lang, settings)) {
-      greetingReply = await forceReplyIntoLanguage(greetingReply, settings.defaultLanguage, settings)
-    }
+    return greetingRendered && body ? `${greetingRendered}\n\n${body}` : greetingRendered || body
   }
 
   let awaitingDictatedReply = false
@@ -1905,7 +1869,6 @@ async function agentTurnInternal(
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
       messages,
-      greetingToTranslate: undefined,
       greetingAlreadyDelivered: !!greetingToTranslate,
       forceToolChoice: mustForceToolChoice && !faqVerifyHopNext,
       forceTextOnly: awaitingDictatedReply,
@@ -1977,7 +1940,7 @@ async function agentTurnInternal(
             console.error('[demoam][faq-verify] fault report — draft dropped, intake question dictated')
             const verifyLang = getState(ctx.sessionId).language || settings.defaultLanguage
             const asked = (await forceReplyIntoLanguage(step.question, verifyLang, settings)).trim()
-            const reply = greetingReply ? `${greetingReply}\n\n${asked}`.trim() : asked
+            const reply = await withGreeting(asked)
             history.push({ role: 'assistant', content: reply })
             return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
           }
@@ -1990,7 +1953,7 @@ async function agentTurnInternal(
         // eslint-disable-next-line no-console
         console.error(`[demoam][faq-verify] draft kept (reason=${String(declaredReason ?? 'none')})`)
         const draftBody = faqVerifyDraft ?? ''
-        const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
+        const reply = await withGreeting(draftBody)
         history.push({ role: 'assistant', content: reply })
         return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
       }
@@ -2040,7 +2003,7 @@ async function agentTurnInternal(
           }
           composedBody = (await forceReplyIntoLanguage(midIntakeQ, intakeLang, settings)).trim()
         }
-        const reply = greetingReply ? `${greetingReply}\n\n${composedBody}`.trim() : composedBody
+        const reply = await withGreeting(composedBody)
         history.push({ role: 'assistant', content: reply })
         return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
       }
@@ -2096,8 +2059,7 @@ async function agentTurnInternal(
           flowsBlock: state.activeFlowId ? undefined : flowsBlock,
           settings,
           messages,
-          greetingToTranslate: undefined,
-          greetingAlreadyDelivered: !!greetingToTranslate,
+              greetingAlreadyDelivered: !!greetingToTranslate,
           forceTextOnly: true,
         })
         history.pop()
@@ -2132,7 +2094,7 @@ async function agentTurnInternal(
           servedFaqPendingQuestion,
         )
       }
-      const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
+      const reply = await withGreeting(replyBody)
       history.push({ role: 'assistant', content: reply })
       if (LLM_DEBUG) {
         // eslint-disable-next-line no-console
@@ -2214,8 +2176,7 @@ async function agentTurnInternal(
         flowsBlock: undefined,
         settings,
         messages,
-        greetingToTranslate: undefined,
-        greetingAlreadyDelivered: !!greetingToTranslate,
+          greetingAlreadyDelivered: !!greetingToTranslate,
       })
       const finalExtracted = extractLanguage(finalHop.text)
       let reply = finalExtracted.reply
@@ -2237,7 +2198,7 @@ async function agentTurnInternal(
 
       detachFlow(ctx.sessionId)
       const customerReplyBody = reply.trim() || handoffFallback(messages, settings, getState(ctx.sessionId).name) || ''
-      const customerReply = greetingReply ? `${greetingReply}\n\n${customerReplyBody}`.trim() : customerReplyBody
+      const customerReply = await withGreeting(customerReplyBody)
 
       return {
         reply: `${customerReply}\n\n${briefing}`,
@@ -2268,7 +2229,7 @@ async function agentTurnInternal(
   const pendingQuestion = pendingQuestionText(finalState, settings)
 
   if (!pendingQuestion) {
-    return { reply: greetingReply ?? '', tokensUsed: tokensUsedSoFar, escalated: false, answeredFromFaq }
+    return { reply: await withGreeting(''), tokensUsed: tokensUsedSoFar, escalated: false, answeredFromFaq }
   }
 
   const askedInLanguage = await forceReplyIntoLanguage(
@@ -2278,7 +2239,7 @@ async function agentTurnInternal(
   )
 
   return {
-    reply: [greetingReply, askedInLanguage].filter(Boolean).join('\n\n'),
+    reply: await withGreeting(askedInLanguage),
     tokensUsed: tokensUsedSoFar,
     escalated: false,
     answeredFromFaq,

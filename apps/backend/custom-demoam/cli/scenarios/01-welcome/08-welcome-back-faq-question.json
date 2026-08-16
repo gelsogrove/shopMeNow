@@ -1,0 +1,19 @@
+{
+  "description": "Bug visto live 2026-08-17 (caso 'Bentornato Pinotto'): cliente CONOSCIUTO riapre la chat con una domanda coperta da FAQ ('cosa copre la garanzia?') — l'hop del saluto, vedendo la conversazione, rispondeva a modo suo DENTRO il saluto: scusa inventata ('non ho i dettagli'), teatrino dell'operatore ('mi serve il tuo nome — ah, già lo ho!'), mentre la FAQ vera arrivava appesa in fondo. Dopo il fix il saluto è tradotto dalla chiamata isolata (non vede il messaggio del cliente, non può rispondergli): la risposta deve essere welcome-back col nome + risposta FAQ dal tool, e NIENT'ALTRO — nessuna richiesta del nome (il teatrino conteneva 'nome'), nessun seriale, nessuna escalation.",
+  "contractRule": "Regole 2/3 (mai inventare, guard rigidi: il saluto è copy configurata resa da una chiamata isolata senza contesto) + regola 6 (FAQ trovata → risposta dalla FAQ via tool, check strutturale faqAnswered) + regola 16 (utente già presente → welcome back [nomeutente]).",
+  "phone": "+391110000107",
+  "newSession": true,
+  "turns": [
+    { "message": "ciao, sono Pinotto Verdi" }
+  ],
+  "thenForceStaleSecondsAndContinue": 7500,
+  "secondSessionTurns": [
+    { "message": "cosa copre la garanzia del robot?" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": false,
+    "replyContains": ["Pinotto"],
+    "replyExcludes": ["nome", "name", "serial"]
+  }
+}
