@@ -1,12 +1,12 @@
 {
-  "description": "Human Support completo — problema non presente in nessun flow: seriale, descrizione (con il quando), poi l'Human Support flow con l'UNICO check combinato (wifi + cut scheduling + batteria in una sola domanda dal flow builder), poi il nome — verifica che TUTTI i parametri vengano richiesti nell'ordine giusto prima dell'escalation, senza la domanda sul robot acceso (implicita nel wifi).",
+  "description": "Human Support completo — problema non presente in nessun flow: seriale, descrizione (con il quando), poi l'Human Support flow con l'UNICO check combinato (wifi + cut scheduling + batteria in una sola domanda dal flow builder), poi il nome — verifica che TUTTI i parametri vengano richiesti nell'ordine giusto prima dell'escalation, senza la domanda sul robot acceso (implicita nel wifi). ⚠️ Il sintomo DEVE restare fuori da ogni flow attivo: era un ronzio metallico finché il flow 'ERROR 003 - strange noice' (attivo in DB) non ha iniziato a coprirlo, facendo agganciare — correttamente — quel flow e invalidando la premessa del test (2026-08-16, approvato da Andrea). Se questo scenario riprende a fallire con un flow agganciato, controllare prima il catalogo flow, poi il codice.",
   "contractRule": "Il gate pre-operatore chiede, in ordine, tutto ciò che ancora manca: seriale, descrizione, quando; poi il flow fa il check combinato wifi+cut scheduling+batteria; il nome è l'ultimo — mai saltarne uno se non è già noto.",
   "phone": "+391110000012",
   "newSession": true,
   "turns": [
-    { "message": "il mio robot fa un rumore mai sentito prima, tipo un ronzio metallico continuo" },
+    { "message": "la scocca del mio robot si è crepata su un lato" },
     { "message": "HKA4OB100LQ26050212" },
-    { "message": "il ronzio metallico è iniziato ieri sera e non si ferma mai, anche da fermo" },
+    { "message": "ho notato la crepa ieri sera, è sul lato destro vicino alla ruota anteriore e sembra allargarsi" },
     { "message": "sì, il wifi è connesso, la programmazione del taglio è attiva e la batteria è carica" },
     { "message": "Giulia Bianchi" }
   ],

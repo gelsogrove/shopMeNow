@@ -312,11 +312,11 @@ const KEEP_DRAFT_REPLY_TOOL = {
   function: {
     name: 'keep_draft_reply',
     description:
-      'Let the drafted free-text reply go out unchanged. Only valid when no FAQ answers the customer and no escalation is due — you must state which case applies.',
+      "Classify the customer's last message truthfully so the code can decide what happens to your drafted reply. Only valid when no FAQ answers them.",
     parameters: {
       type: 'object',
       properties: {
-        reason: { type: 'string', enum: ['technical_problem_intake', 'greeting_or_smalltalk'] },
+        reason: { type: 'string', enum: ['technical_problem_intake', 'greeting_or_smalltalk', 'question_no_faq'] },
       },
       required: ['reason'],
       additionalProperties: false,
@@ -1155,14 +1155,24 @@ interface CallLLMParams {
    * Support flow and an improvised hand-off question.
    */
   forceSpecificTool?: string | null
+  /**
+   * Exact toolset for this hop, tool_choice 'required' — for the moments the
+   * code knows the next move is one of a specific few tools but which one is
+   * a semantic call that stays with the model (e.g. post-intake: start_flow
+   * or escalate_to_operator, CONTRACT.md rules 5/9).
+   */
+  curatedTools?: ReadonlyArray<Record<string, unknown>>
 }
 
 const FAQ_VERIFY_BLOCK = [
   '',
   '═══ FAQ VERIFICATION (this hop only) ═══',
-  'Your drafted reply was free text with no tool call. You MUST pick exactly one of these two:',
+  'Your drafted reply was free text with no tool call. You MUST pick exactly one:',
   "- An entry in the FAQ block answers the customer's last message → call answer_from_faq with its index.",
-  '- No FAQ applies → call keep_draft_reply, declaring why the draft may go out: they are reporting a technical problem the intake questions are handling (technical_problem_intake), or their message asks for no information at all — a greeting, thanks, small talk (greeting_or_smalltalk).',
+  "- No FAQ applies → call keep_draft_reply, classifying the customer's last message truthfully:",
+  '  • greeting_or_smalltalk — it asks for no information at all: a greeting, thanks, small talk.',
+  '  • technical_problem_intake — it reports a problem with their device; the case intake is handling it.',
+  '  • question_no_faq — it asks for information, and NO entry in the FAQ block covers it.',
 ].join('\n')
 
 async function callLLM({
@@ -1183,6 +1193,7 @@ async function callLLM({
   forceTextOnly,
   faqVerifyHop,
   forceSpecificTool,
+  curatedTools,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -1312,6 +1323,11 @@ async function callLLM({
 
     if (faqVerifyHop) {
       body.tools = [answerFromFaqTool(faqCount), KEEP_DRAFT_REPLY_TOOL]
+      body.tool_choice = 'required'
+    }
+
+    if (curatedTools) {
+      body.tools = curatedTools
       body.tool_choice = 'required'
     }
 
@@ -1847,6 +1863,8 @@ async function agentTurnInternal(
   let faqVerifyAttempted = false
   let faqVerifyDraft: string | null = null
   let forcedToolNext: string | null = null
+  let postIntakeForced = false
+  let curatedToolsNext: ReadonlyArray<Record<string, unknown>> | null = null
 
   const EMPTY_REPLY_RETRY_INSTRUCTION =
     "[SYSTEM: Your previous turn produced no visible text. Write your reply to the customer now — ask the pending question or acknowledge their last message — in the customer's language, ending with the ⟦LANG:xx⟧ tag.]"
@@ -1893,10 +1911,12 @@ async function agentTurnInternal(
       forceTextOnly: awaitingDictatedReply,
       faqVerifyHop: faqVerifyHopNext,
       forceSpecificTool: forcedToolNext,
+      curatedTools: curatedToolsNext ?? undefined,
     })
     const wasFaqVerifyHop = faqVerifyHopNext
     faqVerifyHopNext = false
     forcedToolNext = null
+    curatedToolsNext = null
 
     // On the verify hop the outcome set is closed by construction: the menu
     // offers only answer_from_faq and keep_draft_reply. Escalation is NOT
@@ -1928,39 +1948,49 @@ async function agentTurnInternal(
       if (effectiveToolCalls.length === 0) {
         const keepCall = toolCalls.find((c) => c.function.name === 'keep_draft_reply')
         const declaredReason = keepCall ? safeParseArgs(keepCall.function.arguments).reason : undefined
-        // Only an EXPLICIT technical_problem_intake rejects the draft. A
-        // missing declaration (no tool call at all) is the guard failing to
-        // answer, not evidence against the draft — treating the two the same
-        // replaced ordinary intake replies with the pending question and
-        // desynchronised the whole conversation, asking a customer their name
-        // one turn after they gave it.
-        const draftClaimsToHandleProblem = declaredReason === 'technical_problem_intake'
 
-        // eslint-disable-next-line no-console
-        console.error(
-          '[demoam][faq-verify]',
-          draftClaimsToHandleProblem
-            ? 'draft REJECTED (declared technical_problem_intake) — the gate question is the answer'
-            : `draft kept (reason=${String(declaredReason ?? 'none')})`,
-        )
-
-        if (!draftClaimsToHandleProblem) {
-          const draftBody = faqVerifyDraft ?? ''
-          const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
-          history.push({ role: 'assistant', content: reply })
-          return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+        // Each declared class maps to ONE mechanical outcome — no branch
+        // ends in "send whatever the model wrote" unless the model declared
+        // the message carries no information request at all.
+        if (declaredReason === 'question_no_faq') {
+          // The model's own verdict: a question, and no FAQ covers it. From
+          // here CONTRACT.md rule 8 is mechanical — hand over without the
+          // serial and without the human flow; the escalate gate dictates
+          // the name question and the hand-off. Forced, not hoped: leaving
+          // the call to the model is how this path ended at "mi serve il
+          // numero di serie" instead (2026-08-16).
+          // eslint-disable-next-line no-console
+          console.error('[demoam][faq-verify] question with no FAQ — forcing escalate_to_operator')
+          forcedToolNext = 'escalate_to_operator'
+          tokensUsedSoFar += hopTokens
+          continue
         }
 
-        // The draft claimed to be handling a problem, so it may contain
-        // facts nothing in the system backs. Replace it with what the code
-        // knows is outstanding; with nothing outstanding there is nothing
-        // truthful left to say, so the turn stays silent (CLAUDE.md §1A).
-        const verifyState = getState(ctx.sessionId)
-        const pending = pendingQuestionText(verifyState, settings)
-        const replyBody = pending
-          ? await forceReplyIntoLanguage(pending, verifyState.language || settings.defaultLanguage, settings)
-          : ''
-        const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
+        if (declaredReason === 'technical_problem_intake') {
+          // A fault report: the mechanical next step is intake, and its next
+          // missing question is dictated from settings. The draft — prose
+          // from the model's own knowledge — is dropped; it is where the
+          // invented four-step app procedure came from (2026-08-16).
+          const step = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+          if (step) {
+            // eslint-disable-next-line no-console
+            console.error('[demoam][faq-verify] fault report — draft dropped, intake question dictated')
+            const verifyLang = getState(ctx.sessionId).language || settings.defaultLanguage
+            const asked = (await forceReplyIntoLanguage(step.question, verifyLang, settings)).trim()
+            const reply = greetingReply ? `${greetingReply}\n\n${asked}`.trim() : asked
+            history.push({ role: 'assistant', content: reply })
+            return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+          }
+        }
+
+        // greeting_or_smalltalk, no declaration, or nothing left to dictate:
+        // the draft stands. A missing declaration is the guard failing to
+        // answer, not evidence against the draft — treating the two the same
+        // desynchronised whole conversations (2026-08-16).
+        // eslint-disable-next-line no-console
+        console.error(`[demoam][faq-verify] draft kept (reason=${String(declaredReason ?? 'none')})`)
+        const draftBody = faqVerifyDraft ?? ''
+        const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
         history.push({ role: 'assistant', content: reply })
         return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
       }
@@ -2013,6 +2043,36 @@ async function agentTurnInternal(
         const reply = greetingReply ? `${greetingReply}\n\n${composedBody}`.trim() : composedBody
         history.push({ role: 'assistant', content: reply })
         return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+      }
+
+      // ── POST-INTAKE OBLIGATION ──────────────────────────────────────────
+      // Intake complete on the technical track, no flow ever attached, no
+      // hand-over in progress: the next move is mechanical — match a flow or
+      // hand over (CONTRACT.md rules 5 and 9) — never prose. Free text here
+      // is where "Ora mi serve capire da dove viene il ronzio" stalled a
+      // whole conversation (2026-08-16). WHICH flow matches stays the
+      // model's semantic call (CLAUDE.md §14), so the hop re-runs with
+      // exactly those two tools instead of dictating text. One attempt per
+      // turn: if the model still produces no usable move, prose passes
+      // (logged) rather than burning the hop budget in a loop.
+      const postState = getState(ctx.sessionId)
+      const postIntakeDue =
+        !postIntakeForced &&
+        !servedFaqAnswer &&
+        !postState.currentNodeId &&
+        !(postState.visitedFlowIds && postState.visitedFlowIds.length > 0) &&
+        !postState.pendingEscalationReason &&
+        (!!postState.serialNumber?.trim() ||
+          !!postState.serialNumberExhausted ||
+          postState.collectedData?.problemDescription !== undefined) &&
+        !nextIntakeStep(postState, ctx.gateQuestions)
+      if (postIntakeDue) {
+        postIntakeForced = true
+        // eslint-disable-next-line no-console
+        console.error(`[demoam][post-intake-obligation] prose dropped, forcing flow-or-escalate: ${replyBody.slice(0, 120)}`)
+        curatedToolsNext = [START_FLOW_TOOL, ESCALATE_TOOL]
+        tokensUsedSoFar += hopTokens
+        continue
       }
 
       if (!replyBody) {
