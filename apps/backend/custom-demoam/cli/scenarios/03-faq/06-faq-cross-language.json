@@ -1,0 +1,15 @@
+{
+  "description": "Bug visto live 2026-08-17: domanda FAQ in SPAGNOLO ('hola que cobre el seguro del robot?') contro FAQ salvate in inglese — il giudice di rilevanza bocciava la FAQ giusta (index 3, warranty) perché 'el seguro' non combaciava con 'warranty', e la meccanica correttamente instradava verso l'escalation regola 8: cliente perso per un falso negativo cross-lingua. Dopo la ricalibrazione il giudice valuta il significato come farebbe un operatore (sinonimi colloquiali = stessa richiesta). In più lo spagnolo NON è in enabledLanguages ([it,en]) → la risposta intera deve uscire in defaultLanguage (en), mai in spagnolo — il transcript live usciva interamente in es, violando la regola 21.",
+  "contractRule": "Regola 6 (FAQ trovata → risposta dalla FAQ, check strutturale faqAnswered — il giudice di rilevanza non deve bocciare per differenza di lingua o sinonimo colloquiale) + regola 21 (lingua non abilitata → defaultLanguage) + regola 8 come contro-prova: nessuna escalation quando la FAQ esiste.",
+  "phone": "+391110000306",
+  "newSession": true,
+  "turns": [
+    { "message": "hola que cobre el seguro del robot?" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": false,
+    "language": "en",
+    "replyExcludes": ["nombre", "serial"]
+  }
+}

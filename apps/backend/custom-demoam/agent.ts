@@ -1461,11 +1461,15 @@ async function faqAnswersQuestion(
           {
             role: 'system',
             content:
-              'You judge whether a stored FAQ answers a customer message. The two may be in ' +
-              'different languages — judge the meaning, not the wording. Answer YES only if the ' +
-              'FAQ gives the customer what they actually asked for; answer NO if it is merely on ' +
-              'a related topic, or answers a different question about the same subject. ' +
-              'Output exactly one word: YES or NO.',
+              'You judge whether a stored FAQ answers a customer message, the way a competent ' +
+              'customer-support agent would. The two may be in different languages — judge ' +
+              'meaning across languages, never wording. Customers phrase things loosely: ' +
+              "colloquial near-synonyms count as the same request (a customer asking about a product's " +
+              '"insurance" whose FAQ covers its warranty IS asking for that FAQ, unless the context ' +
+              'clearly means an actual insurance policy). Answer YES if a support agent would reply ' +
+              'with this FAQ. Answer NO only if the message asks for genuinely different ' +
+              'information — or asks for nothing at all: a greeting or a thank-you is never ' +
+              'answered by any FAQ. Output exactly one word: YES or NO.',
           },
           {
             role: 'user',
