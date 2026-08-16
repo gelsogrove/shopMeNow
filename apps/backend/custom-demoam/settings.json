@@ -29,7 +29,7 @@
     "serialNumber": "To look into this properly, can you give me the device's serial number?",
     "problemDescription": "Thanks — can you briefly describe what's happening with the robot?",
     "problemStartedWhen": "And when did you first notice this — today, yesterday, or longer ago?",
-    "name": "Last thing before I bring in a colleague — what's your name?"
+    "name": "Perfect, I'll bring in a colleague who can look into this further. What's your name?"
   },
   "similarityThreshold": 0.7,
   "topK": 3,

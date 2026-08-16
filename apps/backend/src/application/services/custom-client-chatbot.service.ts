@@ -694,7 +694,7 @@ export class CustomClientChatbotService {
   private async listFlows(p: { workspaceId: string }): Promise<FlowSummary[]> {
     try {
       const flows = await defaultPrisma.flow.findMany({
-        where: { workspaceId: p.workspaceId },
+        where: { workspaceId: p.workspaceId, isActive: true },
         select: {
           id: true,
           title: true,
@@ -741,7 +741,7 @@ export class CustomClientChatbotService {
   private async loadFlow(p: { workspaceId: string; flowId: string }): Promise<LoadedFlow | null> {
     try {
       const flow = await defaultPrisma.flow.findFirst({
-        where: { id: p.flowId, workspaceId: p.workspaceId },
+        where: { id: p.flowId, workspaceId: p.workspaceId, isActive: true },
         select: {
           compiledPrompt: true,
           hash: true,

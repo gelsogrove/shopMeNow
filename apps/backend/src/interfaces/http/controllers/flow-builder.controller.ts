@@ -13,6 +13,7 @@ import {
   getFlowGraph,
   listAllFlows,
   listFlows,
+  setFlowActive,
   saveFlowGraph,
 } from '../../../application/flow-builder/flow-graph.service'
 import { generateFlowDescription } from '../../../application/flow-builder/flow-description-generator.service'
@@ -146,6 +147,27 @@ export class FlowBuilderController {
     } catch (error) {
       logger.error('[flow-builder] deleteFlow error:', error)
       res.status(500).json({ error: 'Failed to delete flow' })
+    }
+  }
+
+  async setFlowActive(req: Request, res: Response): Promise<void> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { flowId } = req.params
+      const { isActive } = req.body
+      if (typeof isActive !== 'boolean') {
+        res.status(400).json({ error: 'isActive must be a boolean' })
+        return
+      }
+      const flow = await setFlowActive(workspaceId, flowId, isActive)
+      if (!flow) {
+        res.status(404).json({ error: 'Flow not found' })
+        return
+      }
+      res.json(flow)
+    } catch (error) {
+      logger.error('[flow-builder] setFlowActive error:', error)
+      res.status(500).json({ error: 'Failed to update flow' })
     }
   }
 

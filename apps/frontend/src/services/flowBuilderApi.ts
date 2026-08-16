@@ -27,6 +27,9 @@ export interface Flow {
   // Seeded system flows (e.g. the human-operator fallback) that the backend
   // refuses to delete (409) — the UI disables their delete action up front.
   isProtected?: boolean
+  // Only active flows are offered to the chatbot at runtime. Inactive ones stay
+  // in the builder, editable, simply out of the catalogue the model can match.
+  isActive?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -131,6 +134,10 @@ export const flowApi = {
   },
   delete: async (workspaceId: string, flowId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/demorobot/flows/${flowId}`)
+  },
+  setActive: async (workspaceId: string, flowId: string, isActive: boolean): Promise<{ id: string; isActive: boolean }> => {
+    const response = await api.patch(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/active`, { isActive })
+    return response.data
   },
   duplicate: async (workspaceId: string, flowId: string, title: string): Promise<Flow> => {
     const response = await api.post(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/duplicate`, { title })

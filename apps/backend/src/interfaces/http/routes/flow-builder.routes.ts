@@ -208,6 +208,7 @@ export function createFlowBuilderRoutes(): Router {
    *         description: Not found
    */
   router.delete('/workspaces/:workspaceId/demorobot/flows/:flowId', ...middlewares, controller.deleteFlow.bind(controller))
+  router.patch('/workspaces/:workspaceId/demorobot/flows/:flowId/active', ...middlewares, controller.setFlowActive.bind(controller))
 
   /**
    * @openapi

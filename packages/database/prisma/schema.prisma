@@ -2306,6 +2306,10 @@ model Flow {
   // escalation path converges on. deleteFlow must refuse when this is true.
   isProtected Boolean @default(false)
 
+  // Only active flows are listed to the chatbot at runtime, mirroring FAQ.isActive.
+  // Editing this never deletes the flow: an inactive flow stays in the builder.
+  isActive Boolean @default(true)
+
   retrievalDocument String    @db.Text // dense text used only to compute the embedding
   embedding         Float[]   @default([]) // cosine similarity computed in Node, not in Postgres (see design.md)
   compiledPrompt    String    @db.Text // verbose markdown injected into the LLM prompt at runtime

@@ -185,6 +185,16 @@ export async function deleteFlow(workspaceId: string, flowId: string): Promise<D
   return 'deleted'
 }
 
+export async function setFlowActive(workspaceId: string, flowId: string, isActive: boolean) {
+  const existing = await prisma.flow.findFirst({ where: { id: flowId, workspaceId }, select: { id: true } })
+  if (!existing) return null
+  return prisma.flow.update({
+    where: { id: flowId },
+    data: { isActive },
+    select: { id: true, isActive: true },
+  })
+}
+
 export async function getFlowGraph(workspaceId: string, flowId: string) {
   const flow = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
   if (!flow) return null

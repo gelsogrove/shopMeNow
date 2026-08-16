@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { GitBranch, Plus, ArrowLeft, Copy } from "lucide-react"
+import { GitBranch, Plus, ArrowLeft, Copy, ToggleLeft, ToggleRight } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
@@ -116,6 +116,17 @@ export function FlowsPage() {
     }
   }
 
+  const handleToggleActive = async (flow: Flow) => {
+    const nextActive = !(flow.isActive ?? true)
+    try {
+      await flowApi.setActive(workspaceId, flow.id, nextActive)
+      setFlows((prev) => prev.map((f) => (f.id === flow.id ? { ...f, isActive: nextActive } : f)))
+      toast.success(nextActive ? "Flow activated" : "Flow deactivated")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update flow")
+    }
+  }
+
   // Titles are short codes ("ERROR 001"), descriptions are full sentences —
   // sizing both keeps the auto-width actions column from eating the row.
   const columns: ColumnDef<Flow>[] = [
@@ -125,6 +136,25 @@ export function FlowsPage() {
       accessorKey: "description",
       size: 900,
       cell: ({ getValue }) => (getValue() as string) || "—",
+    },
+    {
+      header: "Status",
+      accessorKey: "isActive",
+      size: 110,
+      cell: ({ row }) => {
+        const active = row.original.isActive ?? true
+        return (
+          <span
+            className={
+              active
+                ? "inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800"
+                : "inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+            }
+          >
+            {active ? "Active" : "Inactive"}
+          </span>
+        )
+      },
     },
   ]
 
@@ -168,6 +198,27 @@ export function FlowsPage() {
         canDelete={(flow) => !flow.isProtected}
         actionButtons={(flow) => (
           <>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 p-0"
+                    onClick={() => handleToggleActive(flow)}
+                  >
+                    {(flow.isActive ?? true) ? (
+                      <ToggleRight className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <ToggleLeft className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{(flow.isActive ?? true) ? "Deactivate — hide from the chatbot" : "Activate — offer to the chatbot"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
