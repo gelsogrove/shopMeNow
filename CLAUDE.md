@@ -220,6 +220,22 @@ got in — each looked harmless on its own.
   stays probabilistic: `apps/backend/custom-demorobot/docs/flow-runtime.md`
   — keep it updated as the mechanism changes, do not let it drift from the code
 
+### 16A. custom-demoam — THE CONTRACT IS LAW (🚨 Andrea, 2026-08-17)
+
+- **`apps/backend/custom-demoam/CONTRACT.md` is the binding spec for the demoam
+  chatbot. Read it BEFORE any work on that module, and check every change
+  against its rules** — its own rule 33 mandates this reference, and rule 34
+  makes the file Andrea-only: NEVER edit CONTRACT.md, for any reason.
+- Every CLI scenario in `custom-demoam/cli/scenarios/` names the contract rule
+  it verifies (`contractRule`) — the runner is the contract's test suite.
+- **LLM run cost approval (🚨 learned at €15, 2026-08-16)**: every demoam
+  scenario/run-one launch calls the real LLM + production Supabase and costs
+  real money (~$0.015/message, full suite ≈ $3). ALWAYS declare call count +
+  estimated cost and WAIT for Andrea's explicit OK before launching, however
+  small. Verify fixes with single targeted scenarios, never the full suite;
+  the full suite runs ONCE, at the end, with approval. If the previous log
+  shows HTTP 402 / insufficient credits: STOP and say so, never relaunch.
+
 ### 17. F50 — Visual Flow Builder DEPRECATED (2026-05-13)
 
 - ❌ `FlowAgentLLM`, `FlowWorkspaceStrategy`, `AgentConfigRepository`, `agent-config.controller` — marked `@deprecated`, do NOT extend
