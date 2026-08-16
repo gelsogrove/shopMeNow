@@ -170,7 +170,13 @@ export class WhatsAppQueueRepository {
     try {
       const message = await this.prisma.whatsAppQueue.findUnique({
         where: { id },
-        select: { retryCount: true, maxRetries: true },
+        select: {
+          retryCount: true,
+          maxRetries: true,
+          workspaceId: true,
+          customerId: true,
+          pushCampaignId: true,
+        },
       })
       if (!message) return
 
@@ -187,6 +193,19 @@ export class WhatsAppQueueRepository {
           nextRetryAt: exhausted ? null : new Date(Date.now() + Math.pow(2, nextRetryCount - 1) * 60_000),
         },
       })
+
+      if (exhausted) {
+        // Same convention as BILLING_RECONCILE in the direct-send service:
+        // error-level with every identifier needed to find and re-send it.
+        logger.error("QUEUE_DEAD_LETTER: message permanently failed after exhausting retries", {
+          messageId: id,
+          workspaceId: message.workspaceId,
+          customerId: message.customerId,
+          pushCampaignId: message.pushCampaignId,
+          attempts: nextRetryCount,
+          lastError: errorMessage,
+        })
+      }
     } catch (error) {
       logger.error(`[WhatsAppQueueRepository] Error in recordFailure:`, error)
       throw error
