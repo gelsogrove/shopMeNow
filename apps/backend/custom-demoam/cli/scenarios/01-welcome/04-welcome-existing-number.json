@@ -1,12 +1,12 @@
 {
-  "description": "Numero di telefono già esistente — prima conversazione lascia il nome salvato in stato (mirrorato sul Customer via patch 'name'), poi una seconda sessione (>1h dopo, forceStaleSeconds) sullo stesso numero deve aprire con welcome-BACK e il nome, non il welcome da nuovo cliente.",
-  "contractRule": "Utente non nuovo → welcome-back message col nome; se passa un'ora dall'ultimo messaggio, la sessione successiva riapre col welcome-back.",
+  "description": "Numero di telefono già esistente — prima conversazione lascia il nome salvato in stato (mirrorato sul Customer via patch 'name'), poi una seconda sessione (>2h dopo, forceStaleSeconds) sullo stesso numero deve aprire con welcome-BACK e il nome, non il welcome da nuovo cliente.",
+  "contractRule": "CONTRACT.md riga 32: utente non nuovo → welcome-back message col nome; se passano 2 ore dall'ultimo messaggio, la sessione successiva riapre col welcome-back (WELCOME_BACK_STALE_MS in agent.ts).",
   "phone": "+391110000002",
   "newSession": true,
   "turns": [
     { "message": "ciao, sono Mario Rossi" }
   ],
-  "thenForceStaleSecondsAndContinue": 3700,
+  "thenForceStaleSecondsAndContinue": 7500,
   "secondSessionTurns": [
     { "message": "ciao sono di nuovo io, il robot fa ancora rumore" }
   ],

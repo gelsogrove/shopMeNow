@@ -117,8 +117,9 @@ const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 // greeted with welcomeBackMessage instead of falling straight into normal
 // chat. Hardcoded per Andrea's explicit decision (2026-08-03, exception to
 // CLAUDE.md §1A — see custom-demoam/steps.md Step 1): a timing constant, not
-// customer-facing copy, and not expected to vary per tenant.
-const WELCOME_BACK_STALE_MS = 60 * 60 * 1000
+// customer-facing copy, and not expected to vary per tenant. Two hours per
+// CONTRACT.md rule 32.
+const WELCOME_BACK_STALE_MS = 2 * 60 * 60 * 1000
 
 // How many turns a corrective LOOP node may hold the conversation before the
 // flow gives up and escalates. The count is 1 on the turn the customer first

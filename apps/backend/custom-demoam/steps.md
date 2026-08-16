@@ -34,11 +34,12 @@
 1. Il canale è disattivo → rispondere con `wipMessage` (da settings), stop.
 2. Cliente nuovo (numero di telefono non visto prima) → `welcomeMessage`.
 3. Cliente noto:
-   - ultimo messaggio nello storico più vecchio di 1 ora → `welcomeBackMessage`
-     (welcome-back). Soglia di 1 ora **hardcoded nel codice** (decisione
+   - ultimo messaggio nello storico più vecchio di 2 ore → `welcomeBackMessage`
+     (welcome-back). Soglia di 2 ore **hardcoded nel codice** (decisione
      esplicita di Andrea, 2026-08-03 — eccezione a Rule 1A registrata qui;
      nel codice, commentare la costante con riferimento a questo file).
-   - ultimo messaggio entro 1 ora → non è uno di questi due casi, si passa
+     Portata da 1 ora a 2 ore il 2026-08-16, CONTRACT.md riga 32.
+   - ultimo messaggio entro 2 ore → non è uno di questi due casi, si passa
      alla chat normale gestita dall'LLM (step successivo, fuori da questo
      step 1).
 4. Lingua di risposta: quella rilevata dal messaggio del cliente, **solo se**
@@ -136,8 +137,9 @@ Va dritto al gate pre-operatore sopra, poi escalation.
 ## Decisioni prese con Andrea (2026-08-03)
 
 - ✅ Gate pre-operatore condiviso: 7 campi e ordine confermati come sopra.
-- ✅ Timeout welcome-back: hardcoded 1 ora nel codice (eccezione a Rule 1A,
-  vedi nota nello Step 1).
+- ✅ Timeout welcome-back: hardcoded nel codice (eccezione a Rule 1A, vedi
+  nota nello Step 1). 1 ora inizialmente, portato a 2 ore il 2026-08-16
+  (CONTRACT.md riga 32).
 - ✅ Contatore "3 tentativi" sul seriale: per-sessione, non persistito.
 
 ## Domande aperte / da decidere con Andrea prima di implementare

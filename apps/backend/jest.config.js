@@ -9,9 +9,10 @@ module.exports = {
     }]
   },
   // custom-* chatbot modules are ESM and import siblings with an explicit
-  // .js extension; under ts-jest those resolve to the .ts source.
+  // .js extension; under ts-jest those resolve to the .ts source. Scoped to
+  // those modules so the rest of the CJS codebase keeps its own resolution.
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^\\./(state|flow-machine|gate|content-guards|agent|index)\\.js$': './$1',
   },
   testPathIgnorePatterns: [
     '/node_modules/',
