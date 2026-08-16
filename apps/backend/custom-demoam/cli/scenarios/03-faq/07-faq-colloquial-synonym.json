@@ -1,0 +1,15 @@
+{
+  "description": "Gemello italiano di 03-faq/06 (2026-08-17): 'cosa copre l'assicurazione del robot?' — sinonimo colloquiale nella STESSA lingua abilitata. Il giudice di rilevanza bocciava 'assicurazione' contro la FAQ 'What does the warranty cover?' anche dopo la prima ricalibrazione (accettava 'el seguro' ma non 'assicurazione' — whack-a-mole sugli esempi). Il fix definitivo inverte l'onere della prova: il default del giudice è SÌ (la FAQ è contenuto approvato, servirla quasi-giusta batte rifiutarla), NO solo se il messaggio non chiede nulla o la FAQ copre un bisogno chiaramente diverso. Qui l'italiano È abilitato → risposta in italiano.",
+  "contractRule": "Regola 6 (FAQ trovata → risposta dalla FAQ; il giudice non boccia mai un sinonimo colloquiale) + regola 3 (il guard resta: un messaggio che non chiede nulla o una FAQ su tutt'altro tema si boccia ancora) + contro-prova regola 8: nessuna escalation quando la FAQ esiste.",
+  "phone": "+391110000307",
+  "newSession": true,
+  "turns": [
+    { "message": "cosa copre l'assicurazione del robot?" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": false,
+    "language": "it",
+    "replyExcludes": ["nome", "serial"]
+  }
+}
