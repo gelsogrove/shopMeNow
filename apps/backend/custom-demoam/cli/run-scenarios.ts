@@ -84,6 +84,16 @@ interface Scenario {
      */
     faqAnswered?: boolean
     /**
+     * true: the FINAL turn's reply may not ask the customer a question.
+     * Structural (a "?" in the customer-visible text), so it catches an
+     * invented clarifying question whatever words it is phrased in — Andrea
+     * 2026-08-16: the bot asked "which part would you like to clean?" and
+     * then answered it itself in the same message. Final turn only: the
+     * configured welcome message legitimately ends in a question, and flow /
+     * gate turns ask questions by design.
+     */
+    noQuestionAsked?: boolean
+    /**
      * true: at least one turn must have really escalated to an operator
      * (output.shouldEscalate — the same flag that triggers the operator
      * email and chatbot shutdown host-side). false: no turn may have.
@@ -237,6 +247,29 @@ function checkFaqAnswered(faqAnswers: boolean[], expected: boolean): { name: str
   }
 }
 
+/**
+ * The greeting is delivered as its own paragraph before the substance (see
+ * agentTurnInternal's dedicated greeting hop) and the configured welcome
+ * legitimately ends in a question ("how can I help you today?"). Only the
+ * SUBSTANCE is checked here — everything after the first blank line — so the
+ * check catches a question the model invented, not the one Andrea configured.
+ */
+function substanceOf(reply: string): string {
+  const visible = customerVisiblePart(reply)
+  const parts = visible.split(/\n\s*\n/)
+  return (parts.length > 1 ? parts.slice(1).join("\n\n") : visible).trim()
+}
+
+function checkNoQuestionAsked(finalReply: string): { name: string; ok: boolean; detail?: string } {
+  const substance = substanceOf(finalReply)
+  const asks = substance.includes("?")
+  return {
+    name: "final reply puts no question to the customer",
+    ok: !asks,
+    detail: asks ? `asks: "${substance.split("\n").find((l) => l.includes("?"))?.trim().slice(0, 90)}"` : undefined,
+  }
+}
+
 function checkEscalated(escalations: boolean[], expected: boolean): { name: string; ok: boolean; detail?: string } {
   const happened = escalations.some(Boolean)
   return {
@@ -343,6 +376,9 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     }
     if (typeof scenario.expect.escalated === "boolean") {
       checks.push(checkEscalated(escalations, scenario.expect.escalated))
+    }
+    if (scenario.expect.noQuestionAsked === true) {
+      checks.push(checkNoQuestionAsked(finalReply))
     }
   }
 

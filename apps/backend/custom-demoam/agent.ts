@@ -1247,6 +1247,54 @@ function declaredLanguageNotEnabled(lang: string | null, settings: Settings): bo
   return !!lang && !settings.enabledLanguages.includes(lang.toLowerCase())
 }
 
+/**
+ * Deterministic guard for the FAQ answer, Andrea 2026-08-16 (seen twice live
+ * on the widget): answer_from_faq's result dictates "send this as your whole
+ * reply, nothing before it, nothing after it" — and the model wrote its own
+ * opening anyway, twice ending it with an INVENTED question ("which part
+ * would you like to clean — blades, sensors, chassis?") immediately followed
+ * by the FAQ text that answers it. Asking something and answering it in the
+ * same breath is nonsense to the customer.
+ *
+ * The rule Andrea stated: tone is free, CONTENT is not. So the reply is
+ * REBUILT here rather than trusted: whatever the model wrote before the FAQ
+ * text is kept only up to its first sentence-ending punctuation and only if
+ * it asks nothing — a greeting or a "great question!" survives, a question or
+ * an invented fact does not. The FAQ text itself always comes from the DB
+ * value, translated by the same isolated translation call used elsewhere (no
+ * history, no tools, no room to add).
+ */
+const OPENER_MAX_CHARS = 120
+
+async function composeFaqReply(
+  modelReply: string,
+  faqAnswer: string,
+  settings: Settings,
+  language: string | undefined,
+): Promise<string> {
+  const targetLanguage = language || settings.defaultLanguage
+  const faqText = (await forceReplyIntoLanguage(faqAnswer, targetLanguage, settings)).trim()
+
+  const written = modelReply.trim()
+  if (!written) return faqText
+
+  // Everything the model wrote BEFORE it started reproducing the FAQ.
+  const faqStart = written.length - faqText.length
+  const opener = (faqStart > 0 ? written.slice(0, faqStart) : '').trim()
+  if (!opener) return faqText
+
+  const firstSentenceEnd = opener.search(/[.!]/)
+  const kept = firstSentenceEnd === -1 ? opener : opener.slice(0, firstSentenceEnd + 1)
+  const isCourtesyOnly = kept.length <= OPENER_MAX_CHARS && !kept.includes('?')
+  if (!isCourtesyOnly) {
+    // eslint-disable-next-line no-console
+    console.error(`[demoam][faq-compose] dropped opener: ${opener.slice(0, 120)}`)
+    return faqText
+  }
+
+  return `${kept}\n\n${faqText}`
+}
+
 async function forceReplyIntoLanguage(text: string, languageCode: string, settings: Settings): Promise<string> {
   if (!text.trim() || !API_KEY) return text
   try {
@@ -1588,6 +1636,7 @@ async function agentTurnInternal(
 
   let awaitingDictatedReply = false
   let answeredFromFaq = false
+  let servedFaqAnswer: string | null = null
   let faqVerifyHopNext = false
   let faqVerifyAttempted = false
   let faqVerifyDraft: string | null = null
@@ -1729,6 +1778,9 @@ async function agentTurnInternal(
         tokensUsedSoFar += hopTokens
         continue
       }
+      if (servedFaqAnswer) {
+        replyBody = await composeFaqReply(replyBody, servedFaqAnswer, settings, getState(ctx.sessionId).language)
+      }
       const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
       history.push({ role: 'assistant', content: reply })
       if (LLM_DEBUG) {
@@ -1773,6 +1825,13 @@ async function agentTurnInternal(
 
       if (call.function.name === 'answer_from_faq' && result.ok) {
         answeredFromFaq = true
+        const idx = typeof args.faqIndex === 'number' ? args.faqIndex : Number(args.faqIndex)
+        // Only when the FAQ answer is the WHOLE reply. Mid-flow the tool
+        // deliberately appends the pending node's question, and that composed
+        // text is dictated by the code already.
+        if (!getState(ctx.sessionId).currentNodeId) {
+          servedFaqAnswer = ctx.availableFaqs?.[idx]?.answer ?? null
+        }
       }
 
       if (call.function.name === 'escalate_to_operator' && result.ok) {

@@ -9,6 +9,7 @@
   "expect": {
     "faqAnswered": true,
     "escalated": false,
+    "noQuestionAsked": true,
     "replyExcludes": ["numero di serie", "serial number"]
   }
 }

@@ -103,6 +103,18 @@ remember). Ora la porta è UNA:
   nodo e l'altro, check mai chiesti, e all'hand-off la domanda "il robot è
   acceso?" rimossa da ogni flow il 2026-08-07).
 
+Sul CONTENUTO della risposta FAQ (Andrea 2026-08-16, visto due volte sul
+widget): il tono è libero, il contenuto no. `answer_from_faq` DETTAVA "mandalo
+come tua intera risposta, nulla prima nulla dopo" e il modello ci aggiungeva
+davanti roba sua — due volte una DOMANDA inventata ("quale parte vuoi pulire:
+lame, sensori, chassis?") seguita subito dalla risposta che la rispondeva.
+Un'istruzione è una preghiera: ora la risposta viene RICOSTRUITA dal codice
+(`composeFaqReply`) — testo FAQ dal DB tradotto dalla call isolata, più
+l'apertura del modello SOLO se è cortesia (prima frase, niente "?"), altrimenti
+scartata con log. Il test che lo presidia è strutturale (`noQuestionAsked`: la
+sostanza della risposta finale non può contenere "?"), non un match di parole:
+la prima versione cercava "Let me check" e il modello scriveva "Let me find".
+
 Applicazioni di quel principio, per caso:
 - FAQ-verify: un turno che sta per chiudersi a testo libero (zero tool) con
   FAQ in contesto e nessun flow attivo NON esce — hop di verifica con

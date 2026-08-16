@@ -1,0 +1,16 @@
+{
+  "description": "Stessa domanda FAQ della 03-faq/01 ma IN INGLESE e preceduta da un saluto ('Hello, How can I clean my robot?') — visto live sul widget 2026-08-16: il bot ha improvvisato 'Let me check if I have guidance' + una domanda di chiarimento inventata ('manutenzione generale o problema specifico?') invece di rispondere dalla FAQ. Il saluto nel messaggio non rende la domanda smalltalk: la FAQ va servita dal tool, senza domande di chiarimento aggiunte.",
+  "contractRule": "REGOLA CONGELATA: se c'è la FAQ si risponde con la FAQ (tool answer_from_faq, mai testo libero) — GUARDS: 'le risposte alle FAQ passano da un tool che verifica che la FAQ citata esista davvero, mai testo libero' + 'il modello non può rispondere a una domanda con testo libero'.",
+  "phone": "+391110000304",
+  "newSession": true,
+  "turns": [
+    { "message": "Hello, How can I clean my robot?" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": false,
+    "language": "en",
+    "noQuestionAsked": true,
+    "replyExcludes": ["serial number"]
+  }
+}
