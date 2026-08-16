@@ -73,6 +73,36 @@ il check, poi il gate chiede il nome e si escala. (Robot acceso: rimosso
 2026-08-07 su indicazione di Andrea — se il wifi è attivo il robot è
 necessariamente acceso, non si chiede da nessuna parte.)
 
+[2026-08-16 — REGOLA CONGELATA (Andrea): la struttura non si cambia]
+
+FAQ c'è → si risponde con la FAQ (tool, mai testo libero). Flow c'è → si
+segue il flow fino in fondo. FAQ non c'è → operatore (faq_not_found, solo
+nome). Flow non c'è → operatore col percorso tecnico (serial → descrizione →
+quando → Human Support flow). FAQ nel mezzo di un flow → si risponde con la
+FAQ e si rientra nel flow riproponendo la domanda del nodo. Crescono solo i
+contenuti (più FAQ, più flow); il pattern resta questo.
+
+Guard che la implementano (in codice, 2026-08-16):
+- FAQ-verify (agent.ts): un turno che sta per chiudersi a testo libero (zero
+  tool) con FAQ in contesto e nessun flow attivo NON esce — passa da un hop
+  di verifica con tool_choice required e SOLO tre uscite: answer_from_faq,
+  escalate_to_operator, keep_draft_reply(reason dichiarata:
+  technical_problem_intake | greeting_or_smalltalk). Il silenzio non è una
+  scelta possibile; keep_draft_reply viene loggato con la sua reason.
+- Deviazione FAQ mid-flow (agent.ts): il pin mid-flow non è più il solo
+  answer_step ma una rosa chiusa con tool_choice required — answer_step,
+  answer_from_faq, abandon_flow, escalate_to_operator. remember ESCLUSO da
+  quel hop: era la via di fuga del bug 2026-08-06. Se viene scelta
+  answer_from_faq, il CODICE compone il ritorno: testo FAQ + domanda del
+  nodo corrente ridettata nello stesso messaggio.
+- Output strutturale: chatbotFn dichiara answeredFromFaq accanto a
+  shouldEscalate; il runner li asserisce con expect.faqAnswered /
+  expect.escalated — mai string-match su testo tradotto.
+- Scenari: 03-faq/01 (FAQ → tool), 03-faq/02 (no FAQ → operatore),
+  03-faq/03 (grazie → nessuna escalation), 05-flow/03 (no flow → percorso
+  tecnico → operatore), 05-flow/09 (FAQ mid-flow → risponde e rientra),
+  01-welcome/06 e 07-human-support/03 (escalation verificata davvero).
+
 Garanzie in codice, non nel prompt (CLAUDE.md §16):
 - `escalate_to_operator` RIFIUTA con `human_support_flow_required` +
   `force_tool: 'start_flow'` finché il flow non è stato percorso
@@ -172,6 +202,14 @@ GUARDS
 PROSSIMO — da pianificare, non ancora iniziato
 
 - trova un metodo per non inventare nulla sia lato faq che flow che di main prompt e conferma che e' attivo ! se gia' c'e' verifica se e' attivo e che non ha bug e che sia nel posto giusto
+  [FATTO 2026-08-16 lato FAQ: guard FAQ-verify + keep_draft_reply con reason
+  obbligatoria + assertion strutturali faqAnswered/escalated — vedi REGOLA
+  CONGELATA sopra. Lato flow le domande erano già dettate nodo per nodo.]
+- [2026-08-16, Andrea] flag attivo/disattivo anche per i FLOW, come già per
+  le FAQ (che il host filtra con isActive: true in getFaqs): oggi il modello
+  dati dei flow non ha il flag. Serve: colonna isActive sui flow, filtro in
+  listFlows lato host, toggle nel flow builder (FE), API, e i guard che
+  considerano solo flow attivi. Solo ciò che è active entra in contesto.
 - ricordati il fatto che nondebba invenatare non signigica che non deve applicare fantasia...sonon i concetti che non dev inventare !
 - [2026-08-05] ORCHESTRATOR non riusa risposte già date fuori sequenza: test
   custom-demoam/cli/scenarios/05-flow/05-orchestrator.json — il cliente dice

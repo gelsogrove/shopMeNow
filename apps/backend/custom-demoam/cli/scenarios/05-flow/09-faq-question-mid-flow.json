@@ -1,0 +1,23 @@
+{
+  "description": "Domanda FAQ NEL MEZZO di un flow attivo (ERROR 001) — la deviazione è controllata: il bot risponde con la FAQ (tool answer_from_faq, check strutturale faqAnswered) e NELLO STESSO messaggio ripropone la domanda del nodo pendente (composta dal codice, non dal modello), poi il flow prosegue fino al terminale ESCALATE e all'escalation vera (check strutturale escalated). La deviazione non fa perdere il filo: mai avanzare il nodo con la domanda FAQ come se fosse una risposta.",
+  "contractRule": "REGOLA CONGELATA: se c'è la FAQ si risponde con la FAQ, se sei nel flow devi seguire il flow — la deviazione FAQ mid-flow risponde e rientra: answer_from_faq detta testo FAQ + domanda del nodo corrente ridettata; rosa chiusa di tool mid-flow (answer_step, answer_from_faq, abandon_flow, escalate_to_operator).",
+  "phone": "+391110000409",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mi da errore 001" },
+    { "message": "HKA4OB100LQ26050409" },
+    { "message": "il display mostra ERROR 001 e una luce rossa lampeggia" },
+    { "message": "è successo stamattina" },
+    { "message": "sì, la luce rossa è accesa" },
+    { "message": "aspetta, prima dimmi una cosa: come pulisco il robot?" },
+    { "message": "sì, lampeggia continuamente" },
+    { "message": "no, la luce è ancora accesa dopo 10 minuti" },
+    { "message": "sì, il wifi è attivo, la programmazione del taglio è abilitata e la batteria è carica" },
+    { "message": "Anna Ferrari" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": true,
+    "replyContains": ["Anna"]
+  }
+}

@@ -302,6 +302,23 @@ function answerFromFaqTool(faqCount: number) {
   } as const
 }
 
+const KEEP_DRAFT_REPLY_TOOL = {
+  type: 'function',
+  function: {
+    name: 'keep_draft_reply',
+    description:
+      'Let the drafted free-text reply go out unchanged. Only valid when no FAQ answers the customer and no escalation is due — you must state which case applies.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: { type: 'string', enum: ['technical_problem_intake', 'greeting_or_smalltalk'] },
+      },
+      required: ['reason'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
 function answerStepTool(labels: string[]) {
   return {
     type: 'function',
@@ -487,16 +504,28 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       }
     }
 
+    const faqState = getState(ctx.sessionId)
+    let pendingNodeQuestion: string | null = null
+    if (faqState.currentNodeId && faqState.activeFlowGraphSnapshot) {
+      const pendingNode = currentNode(buildFlowGraph(faqState.activeFlowGraphSnapshot), faqState.currentNodeId)
+      pendingNodeQuestion = pendingNode?.question ?? null
+    }
+
+    const faqDictation =
+      `Translate this exact answer into the customer's language and send it, word for ` +
+      `word in meaning:\n\n${faq.answer}\n\n` +
+      'Do NOT add anything this text does not already say: no recommendation of your own ("I suggest X", ' +
+      '"X is right for you"), no comparison you computed yourself, no offer to connect them with a colleague.'
+
     return {
       ok: true,
       dictates_text: true,
-      instruction:
-        `Translate this exact answer into the customer's language and send it as your whole reply, word for ` +
-        `word in meaning — nothing before it, nothing after it:\n\n${faq.answer}\n\n` +
-        'Do NOT add anything this text does not already say: no recommendation of your own ("I suggest X", ' +
-        '"X is right for you"), no comparison you computed yourself, no offer to connect them with a ' +
-        'colleague, no follow-up question. If the customer needs more than this answer gives them, that is ' +
-        'a new turn, not something to improvise now.',
+      instruction: pendingNodeQuestion
+        ? `${faqDictation}\n\nThen, in the SAME message, return to the guided procedure by re-asking the ` +
+          `pending question, verbatim, translated into the customer's language:\n\n${pendingNodeQuestion}`
+        : `${faqDictation} No follow-up question — if the customer needs more than this answer gives them, ` +
+          'that is a new turn, not something to improvise now. Send the answer as your whole reply — ' +
+          'nothing before it, nothing after it.',
     }
   }
 
@@ -962,10 +991,10 @@ interface CallLLMParams {
 const FAQ_VERIFY_BLOCK = [
   '',
   '═══ FAQ VERIFICATION (this hop only) ═══',
-  'Your drafted reply was free text with no tool call. Re-check before anything is sent:',
-  "- If an entry in the FAQ block answers the customer's last message, call answer_from_faq with its index.",
-  "- If the customer asked for information that no FAQ covers, call escalate_to_operator with reason 'faq_not_found': an unanswered question must reach a human operator, never end at \"I don't have this information\".",
-  '- If they are reporting a technical problem with their device, or their message asks for no information at all (a greeting, thanks, small talk), call NO tool: the drafted reply already handles it.',
+  'Your drafted reply was free text with no tool call. You MUST pick exactly one of these three:',
+  "- An entry in the FAQ block answers the customer's last message → call answer_from_faq with its index.",
+  "- The customer asked for information that no FAQ covers → call escalate_to_operator with reason 'faq_not_found': an unanswered question must reach a human operator, never end at \"I don't have this information\" or at a suggestion to contact someone themselves.",
+  '- Neither applies → call keep_draft_reply, declaring why the draft may go out: they are reporting a technical problem the intake questions are handling (technical_problem_intake), or their message asks for no information at all — a greeting, thanks, small talk (greeting_or_smalltalk).',
 ].join('\n')
 
 async function callLLM({
@@ -1045,19 +1074,29 @@ async function callLLM({
     body.tools = buildToolsForTurn(state, currentStepLabels, faqCount)
     body.tool_choice = forceToolChoice ? 'required' : 'auto'
 
-    // With a flow question pending, 'required' is not enough: it only says
-    // "call SOME tool", and remember() satisfies it perfectly while leaving
-    // the node exactly where it was.
+    // With a flow question pending, 'required' over the FULL toolset is not
+    // enough: it only says "call SOME tool", and remember() satisfies it
+    // perfectly while leaving the node exactly where it was.
     //
     // Andrea 2026-08-06, seen in the CLI runner: the customer answered "no,
     // the wifi is not active"; the model called remember and then wrote free
     // text, never answer_step. currentNodeId sat on hf_wifi for four turns
-    // while the model invented a diagnosis of its own ("that's probably why
-    // it won't restart", "the robot is working again now") and the customer
-    // never reached an operator. Naming the function makes the escape route
-    // structurally unavailable rather than merely discouraged (§16).
+    // while the model invented a diagnosis of its own and the customer never
+    // reached an operator. The escape route is closed structurally by
+    // EXCLUDING remember from this hop's toolset, not by naming a single
+    // function: the curated set below keeps every legitimate mid-flow move
+    // (answer the node, answer a FAQ question asked mid-flow — Andrea
+    // 2026-08-16, the answer_from_faq result then re-dictates the pending
+    // node question so the flow resumes in the same message — change of
+    // subject, emergency) and nothing else (§16).
     if (forceToolChoice && state.currentNodeId && currentStepLabels.length > 0) {
-      body.tool_choice = { type: 'function', function: { name: 'answer_step' } }
+      body.tools = [
+        answerStepTool(currentStepLabels),
+        ...(faqCount > 0 ? [answerFromFaqTool(faqCount)] : []),
+        ABANDON_FLOW_TOOL,
+        ESCALATE_TOOL,
+      ]
+      body.tool_choice = 'required'
     }
 
     // Same reasoning one step earlier, for intake. With the problem already
@@ -1074,8 +1113,8 @@ async function callLLM({
     }
 
     if (faqVerifyHop) {
-      body.tools = [answerFromFaqTool(faqCount), ESCALATE_TOOL]
-      body.tool_choice = 'auto'
+      body.tools = [answerFromFaqTool(faqCount), ESCALATE_TOOL, KEEP_DRAFT_REPLY_TOOL]
+      body.tool_choice = 'required'
     }
   }
 
@@ -1519,13 +1558,17 @@ async function agentTurnInternal(
     const wasFaqVerifyHop = faqVerifyHopNext
     faqVerifyHopNext = false
 
+    if (wasFaqVerifyHop && (toolCalls.length === 0 || toolCalls.some((c) => c.function.name === 'keep_draft_reply'))) {
+      const keepCall = toolCalls.find((c) => c.function.name === 'keep_draft_reply')
+      // eslint-disable-next-line no-console
+      console.error('[demoam][faq-verify]', keepCall ? `keep_draft_reply ${keepCall.function.arguments}` : 'no tool returned despite required — draft kept (fail-safe)')
+      const draftBody = faqVerifyDraft ?? ''
+      const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
+      history.push({ role: 'assistant', content: reply })
+      return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+    }
+
     if (toolCalls.length === 0) {
-      if (wasFaqVerifyHop) {
-        const draftBody = faqVerifyDraft ?? ''
-        const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
-        history.push({ role: 'assistant', content: reply })
-        return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
-      }
       if (mustForceToolChoice) {
         // tool_choice=required was sent but the API returned no tool_calls —
         // a provider contract violation, logged so it surfaces instead of
