@@ -223,6 +223,34 @@ function checkReplyExcludes(reply: string, needle: string): { name: string; ok: 
   }
 }
 
+function checkFaqAnswered(faqAnswers: boolean[], expected: boolean): { name: string; ok: boolean; detail?: string } {
+  const happened = faqAnswers.some(Boolean)
+  return {
+    name: expected ? "a reply came from answer_from_faq" : "no reply came from answer_from_faq",
+    ok: happened === expected,
+    detail:
+      happened === expected
+        ? undefined
+        : expected
+          ? "no turn used the FAQ tool (free-text answer or escalation instead)"
+          : `FAQ tool used on turn ${faqAnswers.findIndex(Boolean) + 1}`,
+  }
+}
+
+function checkEscalated(escalations: boolean[], expected: boolean): { name: string; ok: boolean; detail?: string } {
+  const happened = escalations.some(Boolean)
+  return {
+    name: expected ? "escalation to operator happened" : "no escalation to operator",
+    ok: happened === expected,
+    detail:
+      happened === expected
+        ? undefined
+        : expected
+          ? "shouldEscalate was never true on any turn"
+          : `escalated on turn ${escalations.findIndex(Boolean) + 1}`,
+  }
+}
+
 async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOutcome> {
   const group = path.dirname(file) !== "." ? path.dirname(file) : undefined
   if (scenario.skip) {
