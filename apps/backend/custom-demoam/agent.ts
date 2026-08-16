@@ -1664,6 +1664,7 @@ async function agentTurnInternal(
         reply: `${customerReply}\n\n${briefing}`,
         tokensUsed: tokensUsedSoFar + hopTokens + finalHop.tokensUsed,
         escalated: true,
+        answeredFromFaq,
         escalationSummary,
       }
     }
@@ -1698,6 +1699,7 @@ async function agentTurnInternal(
     reply: [greetingReply, handoffFallback(messages, settings, finalState.name), briefing].filter(Boolean).join('\n\n'),
     tokensUsed: tokensUsedSoFar,
     escalated: true,
+    answeredFromFaq,
     escalationSummary: summary,
   }
 }
