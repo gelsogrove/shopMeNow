@@ -1,8 +1,0 @@
-{
-  "description": "Caso chatbot disattivato — il gate channelActive → wipMessage vive UPSTREAM in CustomClientChatbotService.invoke(), a monte di chatbotFn. Questo runner (run-scenarios.ts) chiama chatbotFn direttamente e non può esercitarlo — testato invece da cli/run-wip-message-test.ts, un harness dedicato che chiama invoke() e flippa/ripristina workspace.channelStatus sul DB reale.",
-  "contractRule": "Se il canale è disattivo, il chatbot risponde col wip message invece di chiamare l'LLM.",
-  "phone": "+391110000010",
-  "skip": true,
-  "skipReason": "Non eseguibile da run-scenarios.ts (bypassa invoke() per design — vedi header del file). Esegui invece: npx tsx custom-demoam/cli/run-wip-message-test.ts",
-  "turns": []
-}

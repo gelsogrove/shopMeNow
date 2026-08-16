@@ -82,19 +82,37 @@ quando → Human Support flow). FAQ nel mezzo di un flow → si risponde con la
 FAQ e si rientra nel flow riproponendo la domanda del nodo. Crescono solo i
 contenuti (più FAQ, più flow); il pattern resta questo.
 
-Guard che la implementano (in codice, 2026-08-16):
-- FAQ-verify (agent.ts): un turno che sta per chiudersi a testo libero (zero
-  tool) con FAQ in contesto e nessun flow attivo NON esce — passa da un hop
-  di verifica con tool_choice required e SOLO tre uscite: answer_from_faq,
+IL PRINCIPIO UNICO (2026-08-16) — IL MENÙ DEI TOOL È LEGGE, E LA APPLICA IL
+CODICE
+
+Ogni hop dichiara quali tool offre. La `tools` dell'API è solo consultiva: il
+modello PUÒ emettere un nome mai offerto, e fino al 2026-08-16 lo eseguivamo
+lo stesso. Tre guard separati chiudevano tre vie di fuga e ognuno lasciava la
+propria finestra scoperta (verify hop, pin mid-flow, campi flow via
+remember). Ora la porta è UNA:
+
+  `executeTool(ctx, name, args, offeredTools)` RIFIUTA con ok:false +
+  istruzione correttiva qualunque chiamata non presente nel menù di quell'hop
+  (regola di ferro 2: il tool rifiuta, l'LLM corregge). Le vie di fuga future
+  sbattono qui, senza bisogno di un guard nuovo.
+
+  Corollario sui DATI: un fieldKey che appartiene al grafo di un flow ha UNA
+  sola porta d'ingresso, `answer_step` — sempre, indipendentemente da flow
+  attivo o nodo pendente. La vecchia condizione `currentNodeId &&` era la
+  finestra del bug 04-serial-number/02 (tre remember tecnici scritti tra un
+  nodo e l'altro, check mai chiesti, e all'hand-off la domanda "il robot è
+  acceso?" rimossa da ogni flow il 2026-08-07).
+
+Applicazioni di quel principio, per caso:
+- FAQ-verify: un turno che sta per chiudersi a testo libero (zero tool) con
+  FAQ in contesto e nessun flow attivo NON esce — hop di verifica con
+  tool_choice required e SOLO tre uscite: answer_from_faq,
   escalate_to_operator, keep_draft_reply(reason dichiarata:
-  technical_problem_intake | greeting_or_smalltalk). Il silenzio non è una
-  scelta possibile; keep_draft_reply viene loggato con la sua reason.
-- Deviazione FAQ mid-flow (agent.ts): il pin mid-flow non è più il solo
-  answer_step ma una rosa chiusa con tool_choice required — answer_step,
-  answer_from_faq, abandon_flow, escalate_to_operator. remember ESCLUSO da
-  quel hop: era la via di fuga del bug 2026-08-06. Se viene scelta
-  answer_from_faq, il CODICE compone il ritorno: testo FAQ + domanda del
-  nodo corrente ridettata nello stesso messaggio.
+  technical_problem_intake | greeting_or_smalltalk).
+- Deviazione FAQ mid-flow: rosa chiusa — answer_step, answer_from_faq,
+  abandon_flow, escalate_to_operator (remember ESCLUSO: via di fuga del bug
+  2026-08-06). Scelta answer_from_faq, il CODICE compone il ritorno: testo
+  FAQ + domanda del nodo corrente ridettata nello stesso messaggio.
 - Output strutturale: chatbotFn dichiara answeredFromFaq accanto a
   shouldEscalate; il runner li asserisce con expect.faqAnswered /
   expect.escalated — mai string-match su testo tradotto.
@@ -205,6 +223,11 @@ PROSSIMO — da pianificare, non ancora iniziato
   [FATTO 2026-08-16 lato FAQ: guard FAQ-verify + keep_draft_reply con reason
   obbligatoria + assertion strutturali faqAnswered/escalated — vedi REGOLA
   CONGELATA sopra. Lato flow le domande erano già dettate nodo per nodo.]
+- [FATTO 2026-08-16] il menù dei tool è consultivo al confine API: il modello
+  può emettere un function name FUORI dal set offerto (visto live: remember()
+  sull'hop di verifica FAQ, e i tre remember tecnici di 04-serial-number/02).
+  Risolto col PRINCIPIO UNICO sopra: executeTool riceve offeredTools e
+  rifiuta ogni chiamata non offerta nell'hop corrente, per TUTTI i casi.
 - [2026-08-16, Andrea] flag attivo/disattivo anche per i FLOW, come già per
   le FAQ (che il host filtra con isActive: true in getFaqs): oggi il modello
   dati dei flow non ha il flag. Serve: colonna isActive sui flow, filtro in

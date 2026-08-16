@@ -486,7 +486,39 @@ function terminalFlowNodeResult(
   }
 }
 
-async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<ToolResult> {
+/**
+ * THE MENU IS LAW, AND THE CODE IS WHAT ENFORCES IT.
+ *
+ * Every hop declares which tools it offers (buildToolsForTurn, or the
+ * narrowed sets used by the mid-flow pin and the FAQ verify hop). The API
+ * treats that list as advisory: the model can emit a function name that was
+ * never offered, and before 2026-08-16 we executed it anyway — three separate
+ * guards each closed one such escape route (verify hop, mid-flow pin, flow
+ * fields via remember) and each left its own uncovered window.
+ *
+ * One door instead of three patches: a call whose name is not in this hop's
+ * menu is REFUSED here, with an instruction naming what to call instead
+ * (CLAUDE.md §16 iron rule 2 — the tool refuses, the LLM corrects). Future
+ * escape routes hit the same door without needing a new guard.
+ */
+async function executeTool(
+  ctx: ToolContext,
+  name: string,
+  args: Record<string, unknown>,
+  offeredTools?: string[],
+): Promise<ToolResult> {
+  if (offeredTools && !offeredTools.includes(name)) {
+    // eslint-disable-next-line no-console
+    console.error(`[demoam][off-menu] ${name} called but this hop offers: ${offeredTools.join(', ') || '(none)'}`)
+    return {
+      ok: false,
+      error: 'tool_not_available_this_turn',
+      instruction:
+        `"${name}" is not available right now. The only tools you may call this turn are: ` +
+        `${offeredTools.join(', ') || 'none — write your reply as text'}. Call one of those instead.`,
+    }
+  }
+
   if (name === 'start_flow') {
     return startFlow(ctx, args)
   }
@@ -671,22 +703,37 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     // anywhere in the attached flow's graph is off-limits to remember while
     // that flow is active: the only door in is answer_step, one node at a
     // time, in the order the flow actually presents them.
+    // A field that belongs to a flow graph has exactly ONE door in:
+    // answer_step, one node at a time, in the order the flow presents them.
+    //
+    // This used to be conditional on `currentNodeId` — i.e. only while a node
+    // was actually pending — which left the door open in exactly the state
+    // that produced the 2026-08-16 bug (04-serial-number/02): the Human
+    // Support flow was attached but between nodes, and the model wrote
+    // wifiActive / cutSchedulingActive / batterySufficient straight in with
+    // three remember() calls. The technical checks were then "answered"
+    // without the flow ever asking them, and the hand-off improvised a
+    // question ("is the robot on?") that was deliberately removed from every
+    // flow on 2026-08-07. The guard must not depend on WHEN it is called.
     {
       const liveState = getState(ctx.sessionId)
-      if (liveState.currentNodeId && liveState.activeFlowGraphSnapshot) {
-        const graph = buildFlowGraph(liveState.activeFlowGraphSnapshot)
-        const flowOwnsField = liveState.activeFlowGraphSnapshot.some((n) => n.fieldKey === key)
-        if (flowOwnsField) {
-          const labels = allowedLabels(graph, liveState.currentNodeId)
-          return {
-            ok: false,
-            error: 'field_owned_by_active_flow',
-            dictates_text: true,
-            instruction:
-              `"${key}" belongs to the active flow — it can only be set by answering the flow's questions ` +
-              `with answer_step, one at a time, never by remember. The question pending right now is the ` +
-              `current one (answer with one of: ${labels.join(', ')}) — do not skip ahead to a later field.`,
-          }
+      const snapshot = liveState.activeFlowGraphSnapshot
+      const flowOwnsField = snapshot?.some((n) => n.fieldKey === key) ?? false
+      if (flowOwnsField) {
+        const pendingLabels =
+          liveState.currentNodeId && snapshot
+            ? allowedLabels(buildFlowGraph(snapshot), liveState.currentNodeId)
+            : []
+        return {
+          ok: false,
+          error: 'field_owned_by_flow',
+          dictates_text: true,
+          instruction:
+            `"${key}" is a guided-procedure field: it can only be set by answering that procedure's ` +
+            `questions with answer_step, one at a time, never by remember. ` +
+            (pendingLabels.length > 0
+              ? `Answer the question pending right now with one of: ${pendingLabels.join(', ')} — do not skip ahead to a later field.`
+              : 'Do not fill it in ahead of the procedure — ask nothing of your own and let the flow present its next question.'),
         }
       }
     }
@@ -840,6 +887,29 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         !state.humanSupportFlowDone &&
         !state.currentNodeId
       if (technicalFlowStillDue) {
+        // Never order a move the receiving tool will refuse. startFlow's own
+        // precondition is that intake is complete (it is what the flow is
+        // chosen from), so ordering start_flow with intake still pending was
+        // two tools commanding incompatible things: escalate said "attach the
+        // flow NOW", startFlow answered 'intake_incomplete', nothing retried,
+        // and the conversation walked to the name question with the technical
+        // checks never asked — then improvised a question of its own at
+        // hand-off (Andrea 2026-08-16, 04-serial-number/02, intermittent).
+        //
+        // The sequence lives in ONE place: whatever nextIntakeStep still
+        // wants comes first, and the flow is ordered only once that is empty.
+        // Adding flows or FAQs cannot reintroduce the contradiction, because
+        // there is no second copy of the rule to fall out of sync.
+        const intakeStillPending = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+        if (intakeStillPending) {
+          return {
+            ok: false,
+            error: 'intake_incomplete',
+            dictates_text: true,
+            instruction: formatIntakeBlock(intakeStillPending) ?? '',
+          }
+        }
+
         return {
           ok: false,
           error: 'human_support_flow_required',
@@ -917,6 +987,14 @@ interface CallLLMResult {
   text: string
   toolCalls: ToolCall[]
   tokensUsed: number
+  /**
+   * The function names this hop actually offered. The API treats `tools` as
+   * advisory — the model can and does emit names outside it (seen 2026-08-16:
+   * remember() on a verify hop that offered three other tools) — so the menu
+   * is enforced in executeTool, which refuses anything not listed here.
+   * undefined means "no tools offered" (forceTextOnly hops).
+   */
+  offeredTools?: string[]
 }
 
 interface CallLLMParams {
@@ -1147,7 +1225,11 @@ async function callLLM({
     console.error('[hop]', JSON.stringify({ node: state.currentNodeId ?? null, called: toolCalls.map((c) => `${c.function.name}(${c.function.arguments.slice(0, 60)})`), text: text.slice(0, 60) }))
   }
 
-  return { text, toolCalls, tokensUsed }
+  const offeredTools = Array.isArray(body.tools)
+    ? (body.tools as Array<{ function?: { name?: string } }>).map((t) => t.function?.name).filter((n): n is string => !!n)
+    : undefined
+
+  return { text, toolCalls, tokensUsed, offeredTools }
 }
 
 /**
@@ -1538,7 +1620,7 @@ async function agentTurnInternal(
     // 2026-08-05, right after start_flow attached ERROR 001: the model
     // called answer_step with a guessed label instead of asking the root
     // node's question, silently skipping it.
-    const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
+    const { text, toolCalls, tokensUsed: hopTokens, offeredTools } = await callLLM({
       commonPrompt,
       state,
       history,
@@ -1558,14 +1640,29 @@ async function agentTurnInternal(
     const wasFaqVerifyHop = faqVerifyHopNext
     faqVerifyHopNext = false
 
-    if (wasFaqVerifyHop && (toolCalls.length === 0 || toolCalls.some((c) => c.function.name === 'keep_draft_reply'))) {
-      const keepCall = toolCalls.find((c) => c.function.name === 'keep_draft_reply')
-      // eslint-disable-next-line no-console
-      console.error('[demoam][faq-verify]', keepCall ? `keep_draft_reply ${keepCall.function.arguments}` : 'no tool returned despite required — draft kept (fail-safe)')
-      const draftBody = faqVerifyDraft ?? ''
-      const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
-      history.push({ role: 'assistant', content: reply })
-      return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+    // On the verify hop the outcome set is closed by construction: the menu
+    // (enforced in executeTool) offers only answer_from_faq, escalate_to_
+    // operator and keep_draft_reply, so anything that is not one of the first
+    // two — an explicit keep_draft_reply, an off-menu attempt, or no call at
+    // all — means the drafted reply stands.
+    let effectiveToolCalls = toolCalls
+    if (wasFaqVerifyHop) {
+      effectiveToolCalls = toolCalls.filter(
+        (c) => c.function.name === 'answer_from_faq' || c.function.name === 'escalate_to_operator',
+      )
+      if (effectiveToolCalls.length === 0) {
+        // eslint-disable-next-line no-console
+        console.error(
+          '[demoam][faq-verify]',
+          toolCalls.length === 0
+            ? 'no tool returned despite required — draft kept (fail-safe)'
+            : `draft kept (model called: ${toolCalls.map((c) => `${c.function.name}(${c.function.arguments.slice(0, 80)})`).join(', ')})`,
+        )
+        const draftBody = faqVerifyDraft ?? ''
+        const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
+        history.push({ role: 'assistant', content: reply })
+        return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+      }
     }
 
     if (toolCalls.length === 0) {
@@ -1641,13 +1738,13 @@ async function agentTurnInternal(
       return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
     }
 
-    history.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
+    history.push({ role: 'assistant', content: text || null, tool_calls: effectiveToolCalls })
 
     let escalated = false
     let escalationSummary: string | undefined
     let escalationReason = 'diagnostic_exhausted'
 
-    for (const call of toolCalls) {
+    for (const call of effectiveToolCalls) {
       let args: Record<string, unknown> = {}
       try {
         args = JSON.parse(call.function.arguments || '{}')
@@ -1661,7 +1758,7 @@ async function agentTurnInternal(
 
       const answeringNodeId = call.function.name === 'answer_step' ? getState(ctx.sessionId).currentNodeId : undefined
 
-      const result = await executeTool(ctx, call.function.name, args)
+      const result = await executeTool(ctx, call.function.name, args, offeredTools)
 
       if (result.dictates_text === true) {
         awaitingDictatedReply = true
