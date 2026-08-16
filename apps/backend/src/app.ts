@@ -711,7 +711,7 @@ logger.info("✅ Registered PUBLIC PayPal subscription callback at /api/paypal/s
 // 🔓 PUBLIC PayPal webhook - MUST be BEFORE /api/v1 to bypass auth middlewares
 app.post("/api/paypal/webhook", async (req, res) => {
   try {
-    const { loadPayPalConfigForEnv } = await import("./utils/paypal-config")
+    const { loadPayPalConfigForEnv, getWebhookId } = await import("./utils/paypal-config")
     const configs = [
       loadPayPalConfigForEnv("live"),
       loadPayPalConfigForEnv("sandbox"),
@@ -724,9 +724,11 @@ app.post("/api/paypal/webhook", async (req, res) => {
       })
     }
 
+    const activeConfig = configs[0]
+
     // 🔐 SECURITY: Verify PayPal webhook signature via PayPal API
     // PayPal provides no shared secret — official approach is to call their verify API
-    const webhookId = process.env.PAYPAL_WEBHOOK_ID
+    const webhookId = getWebhookId(activeConfig.environment)
     if (webhookId) {
       try {
         const transmissionId = req.headers["paypal-transmission-id"] as string
@@ -745,7 +747,6 @@ app.post("/api/paypal/webhook", async (req, res) => {
           return res.status(401).json({ success: false, error: "Invalid cert URL" })
         }
 
-        const activeConfig = configs[0]
         const authResponse = await fetch(
           activeConfig.apiBaseUrl === "https://api-m.sandbox.paypal.com"
             ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"

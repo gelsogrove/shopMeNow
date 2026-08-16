@@ -120,11 +120,16 @@ describe('demoam pre-operator gate — persisted per session, per-field counters
   })
 
   it('confirms serial-attempt counting is per-session (not persisted) per the steps.md decision', () => {
-    // dehydrateState only persists {state, patches} — askedCounts (which
-    // carries both the gate counters and serialNumber_invalid) is
-    // deliberately excluded, same as turnCount/rate-limit timestamps.
+    // dehydrateState persists {state, patches, escalatedReasons} — the latter
+    // was added 2026-08-16 to survive multi-dyno webhook retries (see the
+    // PERSISTED comment on SessionEntry.escalatedReasons in state.ts).
+    // askedCounts (which carries both the gate counters and
+    // serialNumber_invalid) is still deliberately excluded, same as
+    // turnCount/rate-limit timestamps.
     const dehydrateFn = stateSource.slice(stateSource.indexOf('export function dehydrateState'))
-    expect(dehydrateFn).toContain('return { state: e.state, patches: e.patches }')
+    expect(dehydrateFn).toContain(
+      'return { state: e.state, patches: e.patches, escalatedReasons: Array.from(e.escalatedReasons) }'
+    )
     expect(dehydrateFn).not.toContain('askedCounts')
   })
 })

@@ -102,6 +102,11 @@ interface SessionEntry {
   patches: CustomerPatch[]
   turnCount: number
   recentMessageTimestamps: number[]
+  // PERSISTED (see dehydrateState below): the host runs more than one dyno,
+  // so an in-process-only set lets a retried/duplicate webhook delivery land
+  // on a different process, find escalatedReasons empty, and re-run the full
+  // escalate_to_operator path — sending the handoff apology + operator
+  // briefing a second time (Andrea, 2026-08-16).
   escalatedReasons: Set<string>
   /**
    * How many times escalation has been held back to ask for each field, keyed
@@ -218,8 +223,9 @@ export function resetState(sessionId: string): void {
 // ── Persistence ───────────────────────────────────────────────────────────
 // Same rationale as custom-demorobot/state.ts: Heroku restarts dynos daily and
 // runs more than one, so durable facts (collectedData, name, serialNumber,
-// language, the attached flow) are mirrored into ChatSession.context. Ask
-// counters, turnCount and rate-limit timestamps stay per-process on purpose —
+// language, the attached flow, escalatedReasons) are mirrored into
+// ChatSession.context. Ask counters, turnCount and rate-limit timestamps stay
+// per-process on purpose —
 // re-hydrating them across dynos would give a false sense of enforcement
 // (steps.md's confirmed decision: the 3-attempt serial counter is
 // per-session, i.e. also per-process, not persisted).
@@ -227,6 +233,7 @@ export function resetState(sessionId: string): void {
 interface PersistedState {
   state: SessionState
   patches: CustomerPatch[]
+  escalatedReasons?: string[]
 }
 
 export function hydrateState(sessionId: string, persisted: unknown): void {
@@ -244,13 +251,16 @@ export function hydrateState(sessionId: string, persisted: unknown): void {
   if (Array.isArray(p.patches) && e.patches.length === 0) {
     e.patches = p.patches
   }
+  if (Array.isArray(p.escalatedReasons)) {
+    for (const reason of p.escalatedReasons) e.escalatedReasons.add(reason)
+  }
 }
 
 export function dehydrateState(sessionId: string): PersistedState | null {
   const e = sessions.get(sessionId)
   if (!e) return null
-  if (Object.keys(e.state).length === 0 && e.patches.length === 0) return null
-  return { state: e.state, patches: e.patches }
+  if (Object.keys(e.state).length === 0 && e.patches.length === 0 && e.escalatedReasons.size === 0) return null
+  return { state: e.state, patches: e.patches, escalatedReasons: Array.from(e.escalatedReasons) }
 }
 
 export function markEscalationOnce(sessionId: string, reason: string): boolean {

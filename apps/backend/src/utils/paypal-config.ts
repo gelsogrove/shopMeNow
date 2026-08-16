@@ -17,14 +17,28 @@ export const resolvePayPalEnvironment = (
   return "live"
 }
 
+// ⚠️ LIVE credentials are intentionally hardcoded (not read from process.env).
+// This is Andrea's own platform PayPal account for subscription billing —
+// NOT a per-customer/workspace setting. Customers receiving the Docker
+// deploy package must NOT be able to override these via their own
+// deploy/<client>/.env: docker-compose's env_file: always wins over a
+// Dockerfile ENV, so hardcoding in source is the only lever that actually
+// works. Sandbox credentials remain env-configurable since they're only
+// used by Andrea himself (isPlatformAdmin/isDeveloperUser) for testing.
+const PAYPAL_LIVE_CLIENT_ID =
+  "Ad51HRvFl5ipoUW_3GaRH7G0sTH402kSsc6pj8e2nQgKATIRWRYTyI2dA72QDi9iJXRIwARU3eIIXJSg"
+const PAYPAL_LIVE_CLIENT_SECRET =
+  "EFkGMmnyjoNfBe0V3KEAPxjOUUMr0OYEAw_8E4Ot7pGAkH8Ie3Rf7nGXCo3hEd_IzEFfGd6ZVB_PKy_9"
+const PAYPAL_LIVE_WEBHOOK_ID = "9R1354557F605890C"
+
 export const loadPayPalConfigForEnv = (environment: PayPalEnvironment) => {
   const clientId =
     environment === "live"
-      ? process.env.PAYPAL_CLIENT_ID_LIVE
+      ? PAYPAL_LIVE_CLIENT_ID
       : process.env.PAYPAL_CLIENT_ID_SANDBOX
   const clientSecret =
     environment === "live"
-      ? process.env.PAYPAL_CLIENT_SECRET_LIVE
+      ? PAYPAL_LIVE_CLIENT_SECRET
       : process.env.PAYPAL_CLIENT_SECRET_SANDBOX
   const connectBaseUrl =
     environment === "live"
@@ -36,7 +50,7 @@ export const loadPayPalConfigForEnv = (environment: PayPalEnvironment) => {
       : "https://api-m.sandbox.paypal.com"
   const planId =
     environment === "live"
-      ? process.env.PAYPAL_PLAN_ID_LIVE
+      ? undefined // live plan is auto-created on first subscription (see ensurePlanId)
       : process.env.PAYPAL_PLAN_ID_SANDBOX
 
   return {
@@ -48,6 +62,12 @@ export const loadPayPalConfigForEnv = (environment: PayPalEnvironment) => {
     apiBaseUrl,
     planId,
   }
+}
+
+export const getWebhookId = (environment: PayPalEnvironment) => {
+  return environment === "live"
+    ? PAYPAL_LIVE_WEBHOOK_ID
+    : process.env.PAYPAL_WEBHOOK_ID_SANDBOX
 }
 
 /**

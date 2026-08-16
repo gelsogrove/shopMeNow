@@ -81,7 +81,7 @@ describe("E0b - EcommerceWorkspaceStrategy.checkAndResetExpiredSession", () => {
       context: { step: "cart" },
     })
 
-    const strategy = new EcommerceWorkspaceStrategy(prisma as any, {} as any)
+    const strategy = new EcommerceWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(3600))
 
     expect(prisma.$transaction).not.toHaveBeenCalled()
@@ -94,7 +94,7 @@ describe("E0b - EcommerceWorkspaceStrategy.checkAndResetExpiredSession", () => {
     const prisma = makePrisma()
     const contextWithoutSession = { ...makeContext(), sessionId: undefined }
 
-    const strategy = new EcommerceWorkspaceStrategy(prisma as any, {} as any)
+    const strategy = new EcommerceWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(contextWithoutSession, makeWorkspace(3600))
 
     expect(prisma.chatSession.findUnique).not.toHaveBeenCalled()
@@ -112,7 +112,7 @@ describe("E0b - EcommerceWorkspaceStrategy.checkAndResetExpiredSession", () => {
       context: { step: "waiting" },
     })
 
-    const strategy = new EcommerceWorkspaceStrategy(prisma as any, {} as any)
+    const strategy = new EcommerceWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(3600))
 
     expect(prisma.$transaction).not.toHaveBeenCalled()
@@ -130,7 +130,7 @@ describe("E0b - EcommerceWorkspaceStrategy.checkAndResetExpiredSession", () => {
       context: { step: "waiting", cart: ["item1"] },
     })
 
-    const strategy = new EcommerceWorkspaceStrategy(prisma as any, {} as any)
+    const strategy = new EcommerceWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(3600))
 
     // Verify transaction was used (atomic reset)
@@ -168,7 +168,7 @@ describe("E0b - EcommerceWorkspaceStrategy.checkAndResetExpiredSession", () => {
       context: {},
     })
 
-    const strategy = new EcommerceWorkspaceStrategy(prisma as any, {} as any)
+    const strategy = new EcommerceWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(0))
 
     expect(prisma.$transaction).toHaveBeenCalled()
@@ -189,7 +189,7 @@ describe("E0b - InformationalWorkspaceStrategy.checkAndResetExpiredSession", () 
       context: {},
     })
 
-    const strategy = new InformationalWorkspaceStrategy(prisma as any, {} as any, {} as any, {} as any, {} as any)
+    const strategy = new InformationalWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(3600))
 
     expect(prisma.chatSession.update).not.toHaveBeenCalled()
@@ -205,7 +205,7 @@ describe("E0b - InformationalWorkspaceStrategy.checkAndResetExpiredSession", () 
       context: {},
     })
 
-    const strategy = new InformationalWorkspaceStrategy(prisma as any, {} as any, {} as any, {} as any, {} as any)
+    const strategy = new InformationalWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(3600))
 
     expect(prisma.chatSession.update).not.toHaveBeenCalled()
@@ -222,7 +222,7 @@ describe("E0b - InformationalWorkspaceStrategy.checkAndResetExpiredSession", () 
       context: { agent: "support" },
     })
 
-    const strategy = new InformationalWorkspaceStrategy(prisma as any, {} as any, {} as any, {} as any, {} as any)
+    const strategy = new InformationalWorkspaceStrategy(prisma as any)
     await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(3600))
 
     // No transaction needed (informational uses direct update, no cart)
@@ -238,18 +238,29 @@ describe("E0b - InformationalWorkspaceStrategy.checkAndResetExpiredSession", () 
   it("respects a 2-hour timeout boundary exactly", async () => {
     // SCENARIO: 7200s elapsed, timeout is 7200s → NOT yet exceeded (≤ boundary)
     // RULE: timeSinceEscalation <= sessionResetTimeout → no reset
-    const prisma = makePrisma()
-    prisma.chatSession.findUnique.mockResolvedValue({
-      id: "sess-1",
-      customerId: "cust-1",
-      escalatedAt: SECONDS_AGO(7200),
-      context: {},
-    })
+    // Clock is frozen so the fixture's `escalatedAt` and the implementation's
+    // internal `now = new Date()` read the exact same instant — otherwise real
+    // wall-clock drift between the two pushes timeSinceEscalation past 7200s.
+    jest.useFakeTimers()
+    const fixedNow = new Date("2026-01-01T12:00:00.000Z")
+    jest.setSystemTime(fixedNow)
 
-    const strategy = new InformationalWorkspaceStrategy(prisma as any, {} as any, {} as any, {} as any, {} as any)
-    await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(7200))
+    try {
+      const prisma = makePrisma()
+      prisma.chatSession.findUnique.mockResolvedValue({
+        id: "sess-1",
+        customerId: "cust-1",
+        escalatedAt: new Date(fixedNow.getTime() - 7200 * 1000),
+        context: {},
+      })
 
-    // At exact boundary: condition is timeSinceEscalation > timeout, so no reset
-    expect(prisma.chatSession.update).not.toHaveBeenCalled()
+      const strategy = new InformationalWorkspaceStrategy(prisma as any)
+      await (strategy as any).checkAndResetExpiredSession(makeContext(), makeWorkspace(7200))
+
+      // At exact boundary: condition is timeSinceEscalation > timeout, so no reset
+      expect(prisma.chatSession.update).not.toHaveBeenCalled()
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })

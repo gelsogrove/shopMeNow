@@ -7,6 +7,7 @@ import {
   loadPayPalConfigForEnv,
   resolvePayPalEnvironment,
   getPayPalAccessToken,
+  getWebhookId,
   PayPalEnvironment,
 } from "../../../utils/paypal-config"
 import { paypalAnchorService } from "../../../services/paypal-anchor.service"
@@ -46,12 +47,6 @@ const ensureOwner = async (userId: string, res: Response): Promise<boolean> => {
   }
 
   return true
-}
-
-const getWebhookId = (environment: PayPalEnvironment) => {
-  return environment === "live"
-    ? process.env.PAYPAL_WEBHOOK_ID_LIVE
-    : process.env.PAYPAL_WEBHOOK_ID_SANDBOX
 }
 
 const inMemoryPlanCache = new Map<PayPalEnvironment, string>()

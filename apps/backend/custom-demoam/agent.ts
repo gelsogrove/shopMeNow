@@ -259,7 +259,11 @@ const ESCALATE_TOOL = {
           type: 'string',
           enum: ['complaint', 'diagnostic_exhausted', 'no_matching_flow', 'faq_not_found', 'requested_operator', 'emergency'],
         },
-        summary: { type: 'string', description: 'Operator briefing: facts gathered along the path, in the configured operator briefing language.' },
+        summary: {
+          type: 'string',
+          description:
+            'Operator briefing: ONLY the facts gathered along the path (what happened, what was collected), in the configured operator briefing language. Do NOT include recommendations, next steps, instructions, or advice for the operator or the customer — the operator decides what to do, you only report the facts.',
+        },
       },
       required: ['reason', 'summary'],
       additionalProperties: false,

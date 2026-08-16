@@ -70,7 +70,8 @@ Open `.env` with any editor and fill in the values. The essential ones:
 | `SMTP_*` | Outgoing e-mail |
 | `VITE_BACKOFFICE_URL` | This app's own origin **+ `/backoffice`** (e.g. `https://shop.example.com/backoffice`, or `https://localhost/backoffice` for a local test). Without it, the "Go to backoffice" link falls back to a dev-only URL and breaks |
 | `VITE_API_URL` | This app's own origin **+ `/api/v1`** (e.g. `https://shop.example.com/api/v1`, or `https://localhost/api/v1` for a local test). **Required** — the backoffice has no same-origin fallback and breaks without it |
-| PayPal / Cloudinary / WhatsApp provider keys | Fill the ones you use |
+| `PAYPAL_CLIENT_ID_SANDBOX`, `PAYPAL_CLIENT_SECRET_SANDBOX` | Optional — sandbox only, for platform-admin testing. **LIVE PayPal payment collection is platform-managed by echatbot.ai and is not customer-configurable.** |
+| Cloudinary / WhatsApp provider keys | Fill the ones you use |
 
 Notes:
 
