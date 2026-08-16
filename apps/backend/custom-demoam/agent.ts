@@ -930,20 +930,21 @@ interface CallLLMParams {
    * return free text, so the model has no way to call a tool instead of
    * writing the dictated text it was just told to send.
    *
-   * Andrea 2026-08-05, seen live twice: (1) the customer's first message
-   * asked a question the model could answer directly, so it skipped the
-   * mandatory welcome entirely — forceToolChoice is OFF on turn 1 (an
-   * empty history has no prior dictation to force), so the model was free
-   * to answer_from_faq or just write text, and picked text, silently
-   * dropping the greeting. (2) right after start_flow attached a flow,
+   * Andrea 2026-08-05, seen live: right after start_flow attached a flow,
    * awaitingDictatedReply relaxed tool_choice to 'auto' rather than
    * requiring one — 'auto' still means "call a tool if you want to", and
    * the model called answer_step with a guessed label instead of asking
-   * the root node's question, silently skipping it. Both were "mandatory"
-   * prose the model could route around by calling ANY tool that fit tool
-   * schema. forceTextOnly removes that option structurally: dictated text
-   * (greeting, flow-step question, FAQ answer, flow-terminal message) is
-   * the only thing the model is capable of producing this hop.
+   * the root node's question, silently skipping it. "Mandatory" prose the
+   * model could route around by calling ANY tool that fit the tool schema.
+   * forceTextOnly removes that option structurally: dictated text (greeting,
+   * flow-step question, FAQ answer, flow-terminal message) is the only thing
+   * the model is capable of producing this hop.
+   *
+   * (The original comment here also described a first-turn variant — the
+   * greeting being skipped because forceToolChoice was OFF on turn 1. That
+   * gap is closed now: the greeting has its own forced-text-only hop above,
+   * and mustForceToolChoice no longer exempts isFirstTurn — see the comment
+   * at that assignment.)
    */
   forceTextOnly?: boolean
 }
@@ -1444,7 +1445,19 @@ async function agentTurnInternal(
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
-    const mustForceToolChoice = !isFirstTurn && !awaitingDictatedReply
+    // isFirstTurn no longer exempts this hop: that exemption was needed only
+    // while the greeting and the substance shared one hop (tool_choice:'auto'
+    // let answer_from_faq win over writing the greeting — see the
+    // forceTextOnly doc comment above). The greeting now has its own forced-
+    // text-only hop above, so by the time this loop runs the greeting is
+    // already delivered and the only risk left is the model writing free
+    // prose here instead of calling answer_from_faq/answer_step/etc. Seen
+    // live 2026-08-16: first-turn warranty question got an invented "I don't
+    // have this information, let me connect you with a colleague" apology
+    // followed by the correct FAQ answer pasted verbatim from context —
+    // tool_choice:'auto' let the model skip answer_from_faq entirely instead
+    // of being routed through its forceTextOnly, verbatim-only next hop.
+    const mustForceToolChoice = !awaitingDictatedReply
     // forceTextOnly, not just tool_choice:'auto': a tool result with
     // dictates_text:true (a flow-step question, a FAQ answer, a flow
     // terminal message, the pre-operator gate's next question) means the
