@@ -78,6 +78,18 @@ interface Scenario {
      */
     anyReplyContains?: string[]
     /**
+     * true: at least one turn's reply must have come through the
+     * answer_from_faq tool (output.answeredFromFaq — structural, never a
+     * string match on translated FAQ copy). false: no turn may have.
+     */
+    faqAnswered?: boolean
+    /**
+     * true: at least one turn must have really escalated to an operator
+     * (output.shouldEscalate — the same flag that triggers the operator
+     * email and chatbot shutdown host-side). false: no turn may have.
+     */
+    escalated?: boolean
+    /**
      * None of these substrings may appear in ANY reply of the scenario.
      * The mirror of anyReplyContains, for a question that must never be put
      * to the customer on any turn — a final-turn-only check misses it when
