@@ -110,25 +110,39 @@ export interface TurnResult {
 }
 
 /**
- * The same per-turn settings resolution the real host does
- * (custom-client-chatbot.service loadChatbotSettings → buildChatbotSettingsJson):
- * without it the CLI silently tested the module's LOCAL settings.json defaults
- * while production ran the DB values — the {{chatbotName}} placeholder leak
- * (Andrea 2026-08-17) lived exactly in that gap. Whole row on purpose: the
- * builder picks the fields it knows, and no second copy of the host's field
- * list exists here to drift out of sync.
+ * The customer-copy fields, resolved from the workspace row through the SAME
+ * renderWorkspaceCopy the host applies per turn (buildChatbotSettingsJson).
+ * Without this the CLI silently tested the module's LOCAL settings.json —
+ * with its {{chatbotName}}/{{companyName}} placeholders raw — while
+ * production ran the DB values: the placeholder leak (Andrea 2026-08-17)
+ * lived exactly in that gap. Copy fields only: full settings parity with the
+ * host (model, mainPrompt, …) would mean importing the whole settings
+ * builder, whose dependency graph does not compile under this module's
+ * stricter tsconfig — a known, accepted divergence, since the committed
+ * settings.json is itself the regenerated artifact of the same DB row.
  */
-async function loadSettingsLikeTheHost(): Promise<Record<string, unknown> | null> {
+async function loadWorkspaceCopyOverrides(): Promise<Record<string, string> | null> {
   const workspace = await prisma.workspace.findUnique({
     where: { id: AMROBOTS_WORKSPACE_ID },
-    include: { whatsappSettings: { select: { adminEmail: true } } },
+    select: {
+      name: true,
+      chatbotName: true,
+      termsAndConditions: true,
+      welcomeMessage: true,
+      welcomeBackMessage: true,
+      humanSupportMessage: true,
+    },
   })
   if (!workspace) return null
-  const settings = await buildChatbotSettingsJson({
-    ...workspace,
-    customChatbotId: workspace.customChatbotId ?? "demoam",
-  })
-  return settings as unknown as Record<string, unknown> | null
+  const rendered = (text: string | null): Record<string, string> | Record<string, never> => ({})
+  const out: Record<string, string> = {}
+  const welcome = renderWorkspaceCopy(workspace.welcomeMessage ?? undefined, workspace)
+  const welcomeBack = renderWorkspaceCopy(workspace.welcomeBackMessage ?? undefined, workspace)
+  const humanSupport = renderWorkspaceCopy(workspace.humanSupportMessage ?? undefined, workspace)
+  if (welcome?.trim()) out.welcomeMessage = welcome
+  if (welcomeBack?.trim()) out.welcomeBackMessage = welcomeBack
+  if (humanSupport?.trim()) out.humanSupportMessage = humanSupport
+  return out
 }
 
 /** Runs exactly one turn against the REAL AmRobots data, round-tripping session state through the on-disk store. */
