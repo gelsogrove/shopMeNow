@@ -19,9 +19,11 @@
  */
 
 import cron from "node-cron"
+import { prisma } from "@echatbot/database"
 import { SearchConversationRepository } from "./repositories/searchConversation.repository"
 import { WorkspaceRepository } from "./repositories/workspace.repository"
 import { runMonthEndBilling } from "./services/month-end-billing.service"
+import { WhatsAppRetentionService } from "./services/whatsapp-retention.service"
 import logger from "./utils/logger"
 
 const searchConversationRepo = new SearchConversationRepository()
