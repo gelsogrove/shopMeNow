@@ -40,6 +40,7 @@ model Workspace {
   enableWelcomeMessage      Boolean   @default(true) // Toggle to enable/disable welcome message (E0a - cross-cutting feature)
   sessionResetTimeout       Int       @default(3600) // Seconds after escalation before auto-reset (E0b - cross-cutting feature)
   wipMessage                String?   @default("Work in progress. Please contact us later.") @db.Text
+  securityBlockedMessage    String?   @db.Text // Courtesy reply sent when the final security check blocks a response; null = stay silent (previous behavior)
   afterRegistrationMessages String?   @default("Thank you for registering, {{customerName}}! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?") @db.Text
   debugMode                 Boolean   @default(false)
   apiKey                    String?

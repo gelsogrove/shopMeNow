@@ -103,6 +103,7 @@ export class WhatsAppDirectSendService {
             customerId,
             reason: securityResult.blockedReason,
           })
+          await this.sendSecurityBlockedCourtesy(params)
           return { success: false, blocked: true, error: securityResult.blockedReason }
         }
       } catch (error) {
@@ -418,6 +419,40 @@ export class WhatsAppDirectSendService {
       // Non-critical — must never block the reply.
       logger.debug("[DirectSend] ⌨️ Typing indicator failed (non-critical)", {
         workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  /**
+   * When the security check blocks a reply, send the workspace-configured
+   * courtesy message instead of leaving the customer in total silence.
+   * Content comes from workspace.securityBlockedMessage (DB, rule 1A);
+   * null = silence (previous behavior). Recursion is safe: the courtesy
+   * send runs with skipSecurityCheck, so it cannot be blocked again.
+   * Fail-safe: any error here must never mask the blocked result.
+   */
+  private async sendSecurityBlockedCourtesy(params: DirectSendParams): Promise<void> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: params.workspaceId },
+        select: { securityBlockedMessage: true },
+      })
+      const courtesy = workspace?.securityBlockedMessage?.trim()
+      if (!courtesy) return
+
+      await this.send({
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
+        phoneNumber: params.phoneNumber,
+        messageContent: courtesy,
+        skipSecurityCheck: true,
+        isPlayground: params.isPlayground,
+      })
+    } catch (error) {
+      logger.warn("[DirectSend] ⚠️ Failed to send security-blocked courtesy message", {
+        workspaceId: params.workspaceId,
+        customerId: params.customerId,
         error: error instanceof Error ? error.message : String(error),
       })
     }

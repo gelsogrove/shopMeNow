@@ -176,6 +176,7 @@ export function stopScheduler(): void {
   markExpiredConversationsJob.stop()
   deleteOldConversationsJob.stop()
   monthEndBillingJob.stop()
+  whatsappRetentionJob.stop()
 
   logger.info("✅ Scheduler stopped successfully")
 }
@@ -188,6 +189,7 @@ export function getSchedulerStatus(): {
   markExpiredJob: { running: boolean; schedule: string }
   deleteOldJob: { running: boolean; schedule: string }
   monthEndBillingJob: { running: boolean; schedule: string }
+  whatsappRetentionJob: { running: boolean; schedule: string }
 } {
   return {
     markExpiredJob: {
@@ -201,6 +203,10 @@ export function getSchedulerStatus(): {
     monthEndBillingJob: {
       running: monthEndBillingJob.getStatus() === "scheduled",
       schedule: "30 23 1 * * (Europe/Rome)",
+    },
+    whatsappRetentionJob: {
+      running: whatsappRetentionJob.getStatus() === "scheduled",
+      schedule: "0 4 * * *",
     },
   }
 }
