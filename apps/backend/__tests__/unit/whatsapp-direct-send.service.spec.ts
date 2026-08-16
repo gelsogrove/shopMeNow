@@ -132,6 +132,74 @@ describe("WhatsAppDirectSendService - Unit Tests", () => {
     expect(mockDeductMessageCredit).not.toHaveBeenCalled()
   })
 
+  it("should send the workspace-configured courtesy message when security blocks", async () => {
+    // WHY: with securityBlockedMessage set (DB, rule 1A), the customer gets a
+    // polite reply instead of total silence. The courtesy goes out with
+    // skipSecurityCheck (it is tenant-configured system content), so the
+    // security agent must run exactly ONCE — for the blocked reply only.
+    mockSecurityProcess.mockResolvedValue({
+      safe: false,
+      blockedReason: "unauthorized_link",
+    })
+    mockPrisma.workspace.findUnique.mockResolvedValue({
+      id: "ws1",
+      whatsappProvider: "meta",
+      metaPhoneNumberId: "p1",
+      metaAccessToken: "t1",
+      securityBlockedMessage: "Sorry, I cannot help with that request.",
+    })
+
+    const result = await service.send(baseParams)
+
+    // Caller still sees the block — the courtesy does not mask it
+    expect(result.success).toBe(false)
+    expect(result.blocked).toBe(true)
+    // The ONLY provider send is the courtesy text, not the blocked reply
+    expect(mockSendTextMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendTextMessage).toHaveBeenCalledWith(
+      "+393331234567",
+      "Sorry, I cannot help with that request."
+    )
+    expect(mockSecurityProcess).toHaveBeenCalledTimes(1)
+  })
+
+  it("should stay silent when security blocks and no courtesy message is configured", async () => {
+    // WHY: null securityBlockedMessage = previous behavior (silence) — the
+    // courtesy is strictly opt-in per workspace.
+    mockSecurityProcess.mockResolvedValue({
+      safe: false,
+      blockedReason: "offensive_language",
+    })
+    mockPrisma.workspace.findUnique.mockResolvedValue({
+      id: "ws1",
+      whatsappProvider: "meta",
+      metaPhoneNumberId: "p1",
+      metaAccessToken: "t1",
+      securityBlockedMessage: null,
+    })
+
+    const result = await service.send(baseParams)
+
+    expect(result.blocked).toBe(true)
+    expect(mockSendTextMessage).not.toHaveBeenCalled()
+  })
+
+  it("should pass the OUTBOUND reply content to the security agent", async () => {
+    // WHY: this gate validates what the BOT is about to say (the generated
+    // reply), not what the customer wrote — that check runs earlier in the
+    // inbound pipeline. Sending the wrong content here would make the final
+    // safety layer inspect the wrong message.
+    await service.send({ ...baseParams, messageContent: "Generated LLM reply" })
+
+    expect(mockSecurityProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "ws1",
+        customerId: "cust1",
+        message: "Generated LLM reply",
+      })
+    )
+  })
+
   it("should fail-open and still send when the security check throws", async () => {
     // WHY: documented fail-open policy — an OpenRouter outage must not mute
     // the whole chatbot; a technical failure of the checker is not a verdict.

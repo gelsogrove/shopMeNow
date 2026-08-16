@@ -1305,7 +1305,7 @@ For privacy inquiries, please contact our support team.`
   }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { wasenderSessionId: true },
+      select: { wasenderSessionId: true, wasenderWebhookSecret: true },
     })
 
     if (!workspace?.wasenderSessionId) {
@@ -1320,6 +1320,7 @@ For privacy inquiries, please contact our support team.`
             whatsappProvider: 'wasender',
             wasenderSessionId: adopted.sessionId,
             wasenderApiKey: adopted.apiKey,
+            wasenderWebhookSecret: adopted.webhookSecret,
           },
         })
         logger.info('[Workspace] Adopted existing Wasender session during sync:', {
@@ -1352,6 +1353,20 @@ For privacy inquiries, please contact our support team.`
       if (isConnected) {
         const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
         await this.wasenderClient.updateSessionWebhook(workspace.wasenderSessionId, webhookUrl)
+
+        // Backfill webhook secret for sessions saved before signature
+        // verification existed — sync runs regularly, so legacy sessions
+        // get upgraded to signed webhooks without a manual re-init.
+        if (!workspace.wasenderWebhookSecret) {
+          const details = await this.wasenderClient.getSessionDetails(workspace.wasenderSessionId).catch(() => null)
+          if (details?.webhookSecret) {
+            await this.prisma.workspace.update({
+              where: { id: workspaceId },
+              data: { wasenderWebhookSecret: details.webhookSecret },
+            })
+            logger.info('[Workspace] Wasender webhook secret backfilled during sync:', { workspaceId })
+          }
+        }
       }
 
       const updated = await this.prisma.workspace.update({
