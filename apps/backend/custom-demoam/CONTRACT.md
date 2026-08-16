@@ -10,7 +10,7 @@
 10. Se un utente vuole parlare con un operatore lo fa, punto e basta: senza chiedere il service number, senza passare dal flusso di handle support message; chiediamo solo il nome.
 11. Prima di passare al supporto chiediamo sempre il nome, perché poi ci serve per rispondere con il nome: "Ciao [nomeutente], disabilitiamo la chat e ti mettiamo in comunicazione con ...".
 12. Il flow devi seguirlo sempre.
-13. Lo human operator flow è un flow vero nel flow builder (non un oggetto di domande nel codice), protetto e non cancellabile: ogni percorso tecnico verso l'operatore ci passa.
+13. Lo human operator flow è un flow vero nel flow builder.
 14. Il service number deve essere sempre validato: deve essere di 19 caratteri; dopo 3 tentativi falliti si contatta l'operatore.
 15. Se l'utente è registrato gli diamo il welcome.
 16. Se l'utente è già presente gli diciamo "welcome back [nomeutente]".
@@ -30,3 +30,5 @@
 30. Nel mezzzo di un flow posso far domande fuori contesto magari una faq e il chabot deve rispondere in modo naturale
 31. il chabot deveavere uno storico
 32. dopo 2 ore siamo nel welcome back message
+33. Claude.md deve sempre far riferiemtno a qeusto file !
+34. questo file non lo tocca nessuno solo io il programmtore umano!
