@@ -1,0 +1,16 @@
+{
+  "description": "Domanda coperta dalla FAQ 'What does the warranty cover?' — visto live sul widget 2026-08-16: il bot rispondeva 'non ho i termini di garanzia nel sistema' e chiedeva il nome per passare a un collega, MENTRE la FAQ esiste ed è attiva. Deve rispondere dalla FAQ, senza dichiarare di non avere l'informazione, senza chiedere il nome e senza escalation.",
+  "contractRule": "REGOLA CONGELATA: se c'è la FAQ si risponde con la FAQ — mai 'non ho questa informazione' quando la FAQ esiste, mai un'escalation al suo posto.",
+  "phone": "+391110000305",
+  "newSession": true,
+  "turns": [
+    { "message": "What does the warranty cover?" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": false,
+    "language": "en",
+    "noQuestionAsked": true,
+    "replyExcludes": ["serial number"]
+  }
+}

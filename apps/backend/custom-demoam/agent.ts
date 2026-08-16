@@ -151,6 +151,7 @@ export interface WorkspaceMessages {
 export interface FaqEntry {
   question: string
   answer: string
+  keywords?: string[]
 }
 export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEntry[]>
 
@@ -398,6 +399,8 @@ interface ToolContext {
   serialNumberPattern?: string
   serialNumberFormatHint?: string
   currentMessage?: string
+  /** Needed by answer_from_faq's relevance check (model name for the isolated call). */
+  settings?: Settings
   humanSupportFlowId?: string
   /**
    * The hand-off text, already resolved from workspace messages / settings
@@ -533,6 +536,30 @@ async function executeTool(
         ok: false,
         error: 'unknown_faq_index',
         instruction: `faqIndex ${String(args.faqIndex)} is not in the FAQ block. Use one of the indices shown there, or escalate if none fits.`,
+      }
+    }
+
+    // The index being in range only means the model picked a number that
+    // exists. Whether that FAQ answers THIS customer is a separate question,
+    // and nothing upstream has asked it: the block is injected whole, never
+    // searched. A tool that refuses is the mechanism; an instruction telling
+    // the model to choose carefully is not (iron rule 2).
+    if (ctx.settings && ctx.currentMessage) {
+      const relevant = await faqAnswersQuestion(ctx.currentMessage, faq, ctx.settings)
+      if (!relevant) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[demoam][faq-reject] index=${faqIndex} q="${faq.question.slice(0, 80)}" for message="${ctx.currentMessage.slice(0, 80)}"`,
+        )
+        return {
+          ok: false,
+          error: 'faq_does_not_answer',
+          instruction:
+            `FAQ ${faqIndex} does not answer what the customer asked — it is about something else. ` +
+            'Do NOT send it, and do NOT answer from your own knowledge. If another entry in the FAQ ' +
+            'block genuinely answers them, call answer_from_faq with that index instead. If none does, ' +
+            "call escalate_to_operator with reason 'faq_not_found'.",
+        }
       }
     }
 
@@ -1257,42 +1284,93 @@ function declaredLanguageNotEnabled(lang: string | null, settings: Settings): bo
  * same breath is nonsense to the customer.
  *
  * The rule Andrea stated: tone is free, CONTENT is not. So the reply is
- * REBUILT here rather than trusted: whatever the model wrote before the FAQ
- * text is kept only up to its first sentence-ending punctuation and only if
- * it asks nothing — a greeting or a "great question!" survives, a question or
- * an invented fact does not. The FAQ text itself always comes from the DB
- * value, translated by the same isolated translation call used elsewhere (no
- * history, no tools, no room to add).
+ * REBUILT here rather than trusted — the model's text is dropped entirely and
+ * the FAQ value from the DB is what goes out, translated by the same isolated
+ * translation call used elsewhere (no history, no tools, no room to add).
+ *
+ * Mid-flow the pending node's question is appended by the CALLER, from the
+ * graph, for the same reason: that sentence is dictated by code as well, so
+ * returning to the guided procedure cannot be improvised either.
  */
-const OPENER_MAX_CHARS = 120
-
 async function composeFaqReply(
   modelReply: string,
   faqAnswer: string,
   settings: Settings,
   language: string | undefined,
+  pendingNodeQuestion: string | null,
 ): Promise<string> {
   const targetLanguage = language || settings.defaultLanguage
   const faqText = (await forceReplyIntoLanguage(faqAnswer, targetLanguage, settings)).trim()
 
   const written = modelReply.trim()
-  if (!written) return faqText
-
-  // Everything the model wrote BEFORE it started reproducing the FAQ.
-  const faqStart = written.length - faqText.length
-  const opener = (faqStart > 0 ? written.slice(0, faqStart) : '').trim()
-  if (!opener) return faqText
-
-  const firstSentenceEnd = opener.search(/[.!]/)
-  const kept = firstSentenceEnd === -1 ? opener : opener.slice(0, firstSentenceEnd + 1)
-  const isCourtesyOnly = kept.length <= OPENER_MAX_CHARS && !kept.includes('?')
-  if (!isCourtesyOnly) {
+  if (written && written !== faqText) {
     // eslint-disable-next-line no-console
-    console.error(`[demoam][faq-compose] dropped opener: ${opener.slice(0, 120)}`)
-    return faqText
+    console.error(`[demoam][faq-compose] model text replaced by FAQ answer: ${written.slice(0, 140)}`)
   }
 
-  return `${kept}\n\n${faqText}`
+  if (!pendingNodeQuestion?.trim()) return faqText
+
+  const questionText = (await forceReplyIntoLanguage(pendingNodeQuestion, targetLanguage, settings)).trim()
+  return questionText ? `${faqText}\n\n${questionText}` : faqText
+}
+
+/**
+ * Does the FAQ the model picked actually answer what the customer asked?
+ *
+ * The FAQ block is injected whole — the host never searches it (see getFaqs in
+ * custom-client-chatbot.service.ts: "never searched semantically"), so nothing
+ * upstream has ever compared the customer's words to a FAQ. Until now the only
+ * check was that the index existed in the array, which means "the model chose
+ * a number in range", not "the number is right". Picking a nearby-but-wrong
+ * entry produced a confident answer to a question nobody asked.
+ *
+ * Isolated call, same shape as forceReplyIntoLanguage: no history, no tools,
+ * no room to negotiate — one yes/no about one pair. It cannot invent a better
+ * FAQ, only accept or reject the one already chosen.
+ *
+ * On any failure (no API key, network, unparseable answer) this returns true:
+ * a verification that cannot run must not silently suppress an answer the
+ * company approved. The pre-existing behaviour is the fallback.
+ */
+async function faqAnswersQuestion(
+  customerMessage: string,
+  faq: FaqEntry,
+  settings: Settings,
+): Promise<boolean> {
+  if (!API_KEY || !customerMessage.trim()) return true
+  try {
+    const res = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+      body: JSON.stringify({
+        model: process.env.LLM_MODEL || settings.model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You judge whether a stored FAQ answers a customer message. The two may be in ' +
+              'different languages — judge the meaning, not the wording. Answer YES only if the ' +
+              'FAQ gives the customer what they actually asked for; answer NO if it is merely on ' +
+              'a related topic, or answers a different question about the same subject. ' +
+              'Output exactly one word: YES or NO.',
+          },
+          {
+            role: 'user',
+            content: `Customer message:\n${customerMessage}\n\nStored FAQ:\nQ: ${faq.question}\nA: ${faq.answer}`,
+          },
+        ],
+        temperature: 0,
+        max_tokens: 5,
+      }),
+    })
+    if (!res.ok) return true
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> }
+    const verdict = data.choices?.[0]?.message?.content?.trim().toUpperCase()
+    if (!verdict) return true
+    return !verdict.startsWith('NO')
+  } catch {
+    return true
+  }
 }
 
 async function forceReplyIntoLanguage(text: string, languageCode: string, settings: Settings): Promise<string> {
@@ -1346,7 +1424,12 @@ function resolveGreetingText(state: SessionState, settings: Settings, messages: 
 
 function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
   if (!faqs.length) return undefined
-  const entries = faqs.map((f, i) => `[${i}] Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
+  const entries = faqs
+    .map((f, i) => {
+      const keywords = f.keywords?.length ? `\nKeywords: ${f.keywords.join(', ')}` : ''
+      return `[${i}] Q: ${f.question}${keywords}\nA: ${f.answer}`
+    })
+    .join('\n\n')
   return [
     '',
     '═══ FAQ ═══',
@@ -1549,6 +1632,7 @@ async function agentTurnInternal(
   const isFirstTurn = history.length === 0
   history.push({ role: 'user', content: sanitizedMessage })
   ctx.currentMessage = sanitizedMessage
+  ctx.settings = settings
 
   let state = getState(ctx.sessionId)
   let tokensUsedSoFar = 0
@@ -1637,6 +1721,7 @@ async function agentTurnInternal(
   let awaitingDictatedReply = false
   let answeredFromFaq = false
   let servedFaqAnswer: string | null = null
+  let servedFaqPendingQuestion: string | null = null
   let faqVerifyHopNext = false
   let faqVerifyAttempted = false
   let faqVerifyDraft: string | null = null
@@ -1779,7 +1864,13 @@ async function agentTurnInternal(
         continue
       }
       if (servedFaqAnswer) {
-        replyBody = await composeFaqReply(replyBody, servedFaqAnswer, settings, getState(ctx.sessionId).language)
+        replyBody = await composeFaqReply(
+          replyBody,
+          servedFaqAnswer,
+          settings,
+          getState(ctx.sessionId).language,
+          servedFaqPendingQuestion,
+        )
       }
       const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
       history.push({ role: 'assistant', content: reply })
@@ -1826,11 +1917,15 @@ async function agentTurnInternal(
       if (call.function.name === 'answer_from_faq' && result.ok) {
         answeredFromFaq = true
         const idx = typeof args.faqIndex === 'number' ? args.faqIndex : Number(args.faqIndex)
-        // Only when the FAQ answer is the WHOLE reply. Mid-flow the tool
-        // deliberately appends the pending node's question, and that composed
-        // text is dictated by the code already.
-        if (!getState(ctx.sessionId).currentNodeId) {
-          servedFaqAnswer = ctx.availableFaqs?.[idx]?.answer ?? null
+        servedFaqAnswer = ctx.availableFaqs?.[idx]?.answer ?? null
+        // Mid-flow the reply is FAQ answer + the pending node's question. The
+        // tool asks the model to reproduce that question verbatim, but asking
+        // is what let invented text in everywhere else — so the question is
+        // read from the graph here and appended by composeFaqReply instead.
+        const faqTurnState = getState(ctx.sessionId)
+        if (faqTurnState.currentNodeId && faqTurnState.activeFlowGraphSnapshot) {
+          servedFaqPendingQuestion =
+            currentNode(buildFlowGraph(faqTurnState.activeFlowGraphSnapshot), faqTurnState.currentNodeId)?.question ?? null
         }
       }
 

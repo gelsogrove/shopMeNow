@@ -134,7 +134,9 @@ type RetrieveFlowResult = {
 // semantically (unlike Flows). Mirrors GetFaqsHandler/FaqEntry in
 // custom-demorobot/agent.ts.
 type GetFaqsParams = { workspaceId: string }
-type FaqEntry = { question: string; answer: string }
+// `keywords` is curated by the customer in the backoffice (FAQ.keywords in the
+// schema) and is optional: modules that ignore it keep their current prompt.
+type FaqEntry = { question: string; answer: string; keywords?: string[] }
 
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
 // Single-iteration offset computation via Intl — accurate except at the rare
@@ -943,7 +945,7 @@ export class CustomClientChatbotService {
       const faqs = await defaultPrisma.fAQ.findMany({
         where: { workspaceId: p.workspaceId, isActive: true },
         orderBy: { order: "asc" },
-        select: { question: true, answer: true },
+        select: { question: true, answer: true, keywords: true },
       })
       return faqs
     } catch (error) {
