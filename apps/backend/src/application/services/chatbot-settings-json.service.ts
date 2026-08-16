@@ -24,6 +24,7 @@ import logger from "../../utils/logger"
 import { prisma } from "@echatbot/database"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables.types"
+import { renderWorkspaceCopy } from "./workspace-copy.render"
 
 const promptProcessor = new PromptProcessorService()
 
@@ -260,34 +261,12 @@ async function buildMainPrompt(
   return promptProcessor.processWithVariables(workspace.customChatbotSystemPrompt, variables)
 }
 
-/**
- * Substitutes workspace-level {{variables}} in workspace-owned customer copy
- * (welcome / welcome-back / human-support): the workspace's identity
- * ({{chatbotName}}, {{companyName}}) plus {{termsAndConditions}}.
- * Per-customer variables (e.g. {{customerName}}) are deliberately left
- * untouched for the module to resolve at runtime — which is also why
- * promptProcessor.processWithVariables is NOT reused here: it fills a
- * missing customerName with 'Cliente', destroying that contract.
- *
- * Andrea 2026-08-17, seen live: the demoam greeting used to be rendered by a
- * context-bearing LLM hop that filled {{chatbotName}}/{{companyName}} from
- * the system prompt as a side effect. When the greeting moved to the
- * isolated translation call (which correctly translates and adds nothing),
- * the raw placeholders reached a customer verbatim — no code had ever
- * substituted them. This runs inside buildChatbotSettingsJson, which the
- * host resolves per turn, so it covers both the serve path and the
- * settings.json regeneration with one implementation.
- */
-function renderWorkspaceCopy(
-  text: string | undefined,
-  workspace: WorkspaceChatbotSource
-): string | undefined {
-  if (!text) return text
-  return text
-    .replace(/\{\{\s*chatbotName\s*\}\}/gi, workspace.chatbotName?.trim() || VARIABLE_DEFAULTS.chatbotName)
-    .replace(/\{\{\s*companyName\s*\}\}/gi, workspace.name?.trim() || VARIABLE_DEFAULTS.companyName)
-    .replace(/\{\{\s*termsAndConditions\s*\}\}/gi, workspace.termsAndConditions?.trim() || "")
-}
+// Workspace-level {{variables}} in customer copy are resolved by the shared
+// renderWorkspaceCopy (see workspace-copy.render.ts for the full story —
+// Andrea 2026-08-17, the {{chatbotName}} that reached a customer verbatim).
+// This service applies it inside buildChatbotSettingsJson, which the host
+// resolves per turn, so it covers both the serve path and the settings.json
+// regeneration with one implementation.
 
 /**
  * Builds the runtime config: the module's current settings.json, with every
