@@ -947,7 +947,26 @@ interface CallLLMParams {
    * the only thing the model is capable of producing this hop.
    */
   forceTextOnly?: boolean
+  /**
+   * Re-check hop fired by agentTurnInternal when a turn is about to end in
+   * free text with FAQs in context and no active flow (CONTRACT.md GUARDS:
+   * "il modello non può rispondere a una domanda con testo libero" / "le
+   * risposte alle FAQ passano da un tool"). Restricts the toolset to
+   * answer_from_faq + escalate_to_operator, tool_choice 'auto': calling no
+   * tool means the drafted reply stands (a greeting, thanks, an intake
+   * question), so this hop can only improve the outcome, never worsen it.
+   */
+  faqVerifyHop?: boolean
 }
+
+const FAQ_VERIFY_BLOCK = [
+  '',
+  '═══ FAQ VERIFICATION (this hop only) ═══',
+  'Your drafted reply was free text with no tool call. Re-check before anything is sent:',
+  "- If an entry in the FAQ block answers the customer's last message, call answer_from_faq with its index.",
+  "- If the customer asked for information that no FAQ covers, call escalate_to_operator with reason 'faq_not_found': an unanswered question must reach a human operator, never end at \"I don't have this information\".",
+  '- If they are reporting a technical problem with their device, or their message asks for no information at all (a greeting, thanks, small talk), call NO tool: the drafted reply already handles it.',
+].join('\n')
 
 async function callLLM({
   commonPrompt,
