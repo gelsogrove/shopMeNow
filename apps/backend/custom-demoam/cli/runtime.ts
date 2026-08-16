@@ -134,7 +134,6 @@ async function loadWorkspaceCopyOverrides(): Promise<Record<string, string> | nu
     },
   })
   if (!workspace) return null
-  const rendered = (text: string | null): Record<string, string> | Record<string, never> => ({})
   const out: Record<string, string> = {}
   const welcome = renderWorkspaceCopy(workspace.welcomeMessage ?? undefined, workspace)
   const welcomeBack = renderWorkspaceCopy(workspace.welcomeBackMessage ?? undefined, workspace)
@@ -149,7 +148,7 @@ async function loadWorkspaceCopyOverrides(): Promise<Record<string, string> | nu
 export async function runTurn({ phone, message, userName, language, group }: RunTurnParams): Promise<TurnResult> {
   const session = loadSession(phone, group)
   const resolvedUserName = userName ?? `Visitor ${phone.replace(/[^a-zA-Z0-9]/g, "").slice(-6)}`
-  const settings = await loadSettingsLikeTheHost()
+  const settings = await loadWorkspaceCopyOverrides()
 
   const input: ChatbotInput = {
     userMessage: message,
