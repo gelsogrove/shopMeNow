@@ -192,6 +192,7 @@ export interface ChatbotOutput {
   reply: string | null
   language?: string
   shouldEscalate: boolean
+  answeredFromFaq?: boolean
   escalationSummary?: string
   notificationEmails?: string
   closeChat: boolean
@@ -1319,6 +1320,7 @@ interface TurnResult {
   reply: string
   tokensUsed: number
   escalated: boolean
+  answeredFromFaq?: boolean
   escalationSummary?: string
 }
 
