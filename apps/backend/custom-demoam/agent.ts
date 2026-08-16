@@ -984,6 +984,7 @@ async function callLLM({
   greetingOnlyHop,
   forceToolChoice,
   forceTextOnly,
+  faqVerifyHop,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -1009,12 +1010,13 @@ async function callLLM({
 
   if (stateBlock) systemContent.push({ type: 'text', text: stateBlock })
   systemContent.push({ type: 'text', text: runtimeBlock })
+  if (faqVerifyHop) systemContent.push({ type: 'text', text: FAQ_VERIFY_BLOCK })
 
   // Intake gate: while no flow is running and the case details are still
   // missing, the code dictates the exact question (see formatIntakeBlock in
   // gate.ts) — the model translates it, it does not compose its own.
   let intakeWantsRemember = false
-  if (!greetingOnlyHop && !state.currentNodeId) {
+  if (!greetingOnlyHop && !faqVerifyHop && !state.currentNodeId) {
     const intakeStep = nextIntakeStep(state, settings.gateQuestions)
     // Only the customer's own words count as "already told us" — assistant
     // turns are what we are trying to avoid repeating, not evidence.
@@ -1069,6 +1071,11 @@ async function callLLM({
     // description, so this forces the ATTEMPT, never a bad save.
     if (intakeWantsRemember) {
       body.tool_choice = { type: 'function', function: { name: 'remember' } }
+    }
+
+    if (faqVerifyHop) {
+      body.tools = [answerFromFaqTool(faqCount), ESCALATE_TOOL]
+      body.tool_choice = 'auto'
     }
   }
 
