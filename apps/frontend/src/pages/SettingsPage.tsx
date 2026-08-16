@@ -128,7 +128,6 @@ interface FormData {
   humanSupportMessage: string
   frustrationTriggers: string
   escalationTrigger: string
-  translateOperatorMessages: boolean
   address: string
   registrationPage: string
   requireManualApproval: boolean
@@ -288,7 +287,6 @@ export function SettingsPage() {
     humanSupportMessage: "",
     frustrationTriggers: "",
     escalationTrigger: "",
-    translateOperatorMessages: true,
     address: "",
     registrationPage: "",
     requireManualApproval: false,
@@ -414,7 +412,6 @@ export function SettingsPage() {
         humanSupportMessage: (currentWorkspace as any).humanSupportMessage || "",
         frustrationTriggers: currentWorkspace.frustrationTriggers || "",
         escalationTrigger: (currentWorkspace as any).escalationTrigger || "",
-        translateOperatorMessages: currentWorkspace.translateOperatorMessages ?? true,
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
         requireManualApproval: currentWorkspace.requireManualApproval || false,
@@ -653,11 +650,6 @@ export function SettingsPage() {
         // hasSalesAgents
         if (updateData.hasSalesAgents === currentWorkspace.hasSalesAgents) {
           delete updateData.hasSalesAgents
-        }
-
-        // translateOperatorMessages
-        if (updateData.translateOperatorMessages === currentWorkspace.translateOperatorMessages) {
-          delete updateData.translateOperatorMessages
         }
 
         // requireManualApproval
@@ -919,7 +911,6 @@ export function SettingsPage() {
               humanSupportMessage: formData.humanSupportMessage,
               frustrationTriggers: formData.frustrationTriggers,
               escalationTrigger: formData.escalationTrigger,
-              translateOperatorMessages: formData.translateOperatorMessages,
             }}
             errors={errors}
             canEdit={canEdit}

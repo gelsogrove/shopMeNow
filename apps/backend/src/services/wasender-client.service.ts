@@ -150,7 +150,7 @@ export class WasenderClientService {
     workspaceId: string,
     phoneNumber: string,
     webhookUrl: string
-  ): Promise<{ sessionId: string; apiKey: string }> {
+  ): Promise<{ sessionId: string; apiKey: string; webhookSecret: string | null }> {
     try {
       // WasenderAPI expects E.164 format with + prefix (e.g. "+34602119358")
       // Strip spaces/dashes but keep the leading +
@@ -185,14 +185,16 @@ export class WasenderClientService {
 
       const sessionId = String(data.data.id)
       const apiKey = data.data.api_key
+      const webhookSecret = data.data.webhook_secret || null
 
       logger.info('[Wasender] Session created:', {
         sessionId,
         workspaceId,
         phoneNumber: this.maskPhoneNumber(phoneNumber),
+        hasWebhookSecret: !!webhookSecret,
       })
 
-      return { sessionId, apiKey }
+      return { sessionId, apiKey, webhookSecret }
     } catch (error: any) {
       const status = error.response?.status
       logger.error('[Wasender] Failed to create session:', { status, data: error.response?.data })
@@ -387,6 +389,7 @@ export class WasenderClientService {
     status: string
     apiKey: string
     webhookUrl: string | null
+    webhookSecret: string | null
   } | null> {
     try {
       const { data } = await this.managementClient.get<WasenderSessionDetailsResponse>(
@@ -400,6 +403,7 @@ export class WasenderClientService {
         status: data.data.status?.toLowerCase() || 'unknown',
         apiKey: data.data.api_key,
         webhookUrl: data.data.webhook_url,
+        webhookSecret: data.data.webhook_secret || null,
       }
     } catch (error: any) {
       if (error.response?.status === 404) {

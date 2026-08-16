@@ -410,8 +410,8 @@ export class WhatsAppQueueService {
           message.messageContent
         )
       } else {
-        // Error: update status to 'error' with error message
-        await this.repository.updateStatus(message.id, "error", result.error)
+        // Error: retry with exponential backoff, up to maxRetries, then dead-letter as 'error'
+        await this.repository.recordFailure(message.id, result.error || "Unknown error")
         logger.error(
           `[WhatsAppQueueService] Message ${message.id} failed: ${result.error}`
         )

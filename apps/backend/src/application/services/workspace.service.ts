@@ -12,6 +12,7 @@ import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
 import { WasenderClientService } from "../../services/wasender-client.service"
+import { WhatsAppQueueService } from "../../services/whatsapp-queue.service"
 import { writeChatbotSettingsJson } from "./chatbot-settings-json.service"
 import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
 import {
@@ -25,11 +26,27 @@ export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
   private prisma: PrismaClient
   private wasenderClient: WasenderClientService
+  private whatsappQueueService: WhatsAppQueueService
 
   constructor(prismaInstance?: PrismaClient) {
     this.prisma = prismaInstance || prisma
     this.repository = new WorkspaceRepository(this.prisma)
     this.wasenderClient = new WasenderClientService()
+    this.whatsappQueueService = new WhatsAppQueueService(this.prisma)
+  }
+
+  /**
+   * Clear pending/error WhatsApp queue messages left behind when a channel
+   * is disconnected or deleted — otherwise they linger and can be resent
+   * out of context if the channel is later reconnected.
+   * @private
+   */
+  private async clearChannelQueue(workspaceId: string): Promise<void> {
+    try {
+      await this.whatsappQueueService.clearQueue(workspaceId, ["pending", "error"])
+    } catch (err) {
+      logger.warn('[Workspace] Failed to clear WhatsApp queue on channel change (continuing):', err)
+    }
   }
 
   /**
@@ -268,7 +285,6 @@ For privacy inquiries, please contact our support team.`
       hasSalesAgents: w.hasSalesAgents,
       hasHumanSupport: w.hasHumanSupport,
       humanSupportInstructions: w.humanSupportInstructions ?? undefined,
-      translateOperatorMessages: w.translateOperatorMessages ?? true,
       operatorContactMethod: w.operatorContactMethod ?? undefined,
       operatorEmail: (w as any).operatorEmail ?? undefined,
       operatorWhatsappNumber: w.operatorWhatsappNumber ?? undefined,
@@ -431,8 +447,11 @@ For privacy inquiries, please contact our support team.`
             apiKey: "default-api-key",
             appName: data.whatsappAppName || undefined,
             appSecret: data.whatsappAppSecret || undefined,
-            webhookId: `webhook-${createdWorkspace.id}`,
-            webhookToken: data.whatsappVerifyToken || `token-${Date.now()}`,
+            // Random values: the webhookId is a capability URL segment and the
+            // verify token must be unguessable — never derive them from
+            // workspace id or timestamps
+            webhookId: randomUUID(),
+            webhookToken: data.whatsappVerifyToken || randomUUID(),
             gdpr: defaultGdprContent,
             adminEmail: adminEmail || null, // 🆕 Use adminEmail from creator
           },
@@ -762,11 +781,14 @@ For privacy inquiries, please contact our support team.`
       const d = data as any
       d.wasenderSessionId = null
       d.wasenderApiKey = null
+      d.wasenderWebhookSecret = null
       d.wasenderSessionStatus = null
       d.wasenderPhoneNumber = null
       d.wasenderQrString = null
       d.wasenderQrGeneratedAt = null
       d.wasenderIsActive = false
+
+      await this.clearChannelQueue(id)
     }
 
     if (!currentWorkspace) {
@@ -979,6 +1001,8 @@ For privacy inquiries, please contact our support team.`
       }
     }
 
+    await this.clearChannelQueue(id)
+
     return this.repository.delete(id)
   }
 
@@ -1046,6 +1070,7 @@ For privacy inquiries, please contact our support team.`
         wasenderApiKey: true,
         wasenderSessionStatus: true,
         wasenderPhoneNumber: true,
+        wasenderWebhookSecret: true,
         whatsappPhoneNumber: true,
       },
     })
@@ -1065,6 +1090,7 @@ For privacy inquiries, please contact our support team.`
 
     let sessionId: string
     let apiKey: string
+    let webhookSecret: string | null = null
 
     const createNewSession = async () => {
       const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
@@ -1080,6 +1106,7 @@ For privacy inquiries, please contact our support team.`
       // Session already exists → reuse it, just reconnect for fresh QR
       sessionId = existingWorkspace.wasenderSessionId
       apiKey = existingWorkspace.wasenderApiKey || ''
+      webhookSecret = existingWorkspace.wasenderWebhookSecret
 
       logger.info('[Workspace] Reusing existing Wasender session:', {
         workspaceId,
@@ -1091,6 +1118,12 @@ For privacy inquiries, please contact our support team.`
       // (e.g. session created manually, or APP_WEBHOOK_BASE_URL changed)
       const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
       await this.wasenderClient.updateSessionWebhook(sessionId, webhookUrl)
+
+      // Backfill webhook secret for sessions saved before signature verification existed
+      if (!webhookSecret) {
+        const details = await this.wasenderClient.getSessionDetails(sessionId).catch(() => null)
+        webhookSecret = details?.webhookSecret ?? null
+      }
     } else {
       // No session in DB → check WasenderAPI for existing sessions that our DB
       // lost track of (created via dashboard, DB reset, previous init failed after
@@ -1100,6 +1133,7 @@ For privacy inquiries, please contact our support team.`
       if (adopted) {
         sessionId = adopted.sessionId
         apiKey = adopted.apiKey
+        webhookSecret = adopted.webhookSecret
         logger.info('[Workspace] Adopted existing Wasender session:', {
           workspaceId,
           sessionId,
@@ -1109,6 +1143,7 @@ For privacy inquiries, please contact our support team.`
         const result = await createNewSession()
         sessionId = result.sessionId
         apiKey = result.apiKey
+        webhookSecret = result.webhookSecret
       }
     }
 
@@ -1125,6 +1160,7 @@ For privacy inquiries, please contact our support team.`
         const result = await createNewSession()
         sessionId = result.sessionId
         apiKey = result.apiKey
+        webhookSecret = result.webhookSecret
 
         // Connect the newly created session
         qrString = await this.wasenderClient.connectSession(sessionId)
@@ -1144,6 +1180,7 @@ For privacy inquiries, please contact our support team.`
         whatsappProvider: 'wasender',
         wasenderSessionId: sessionId,
         wasenderApiKey: apiKey,
+        wasenderWebhookSecret: webhookSecret,
         wasenderPhoneNumber: effectivePhone || undefined,
         wasenderSessionStatus: sessionStatus,
         wasenderIsActive: isActive,
@@ -1215,6 +1252,7 @@ For privacy inquiries, please contact our support team.`
       data: {
         wasenderSessionId: null,
         wasenderApiKey: null,
+        wasenderWebhookSecret: null,
         wasenderPhoneNumber: null,
         wasenderSessionStatus: null,
         wasenderIsActive: false,
@@ -1223,6 +1261,8 @@ For privacy inquiries, please contact our support team.`
         channelStatus: false,
       },
     })
+
+    await this.clearChannelQueue(workspaceId)
 
     logger.info('[Workspace] Wasender session deleted:', { workspaceId })
   }
@@ -1392,7 +1432,7 @@ For privacy inquiries, please contact our support team.`
    */
   private async adoptExistingWasenderSession(
     workspaceId: string
-  ): Promise<{ sessionId: string; apiKey: string } | null> {
+  ): Promise<{ sessionId: string; apiKey: string; webhookSecret: string | null } | null> {
     try {
       const sessions = await this.wasenderClient.listSessions()
       if (!sessions.length) {
@@ -1427,7 +1467,7 @@ For privacy inquiries, please contact our support team.`
       const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
       await this.wasenderClient.updateSessionWebhook(target.id, webhookUrl)
 
-      return { sessionId: details.id, apiKey: details.apiKey }
+      return { sessionId: details.id, apiKey: details.apiKey, webhookSecret: details.webhookSecret }
     } catch (err: any) {
       // Non-fatal: if discovery fails, caller can fall back to creating new session
       logger.warn('[Workspace] adoptExistingWasenderSession failed:', {

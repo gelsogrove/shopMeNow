@@ -188,6 +188,15 @@ export class DeletionSchedulerService {
     await this.prisma.$transaction(async (tx) => {
       // Delete by type (order matters due to foreign keys)
       // CRITICAL: Always check deletedAt is not null to prevent accidental deletion
+
+      // whatsapp_settings has a RESTRICT FK to Workspace (1:1, no cascade) —
+      // must be removed before workspace.deleteMany or the transaction fails
+      if (expiredRecords.workspaces.length > 0) {
+        await tx.whatsappSettings.deleteMany({
+          where: { workspaceId: { in: expiredRecords.workspaces } },
+        })
+      }
+
       if (expiredRecords.messages.length > 0) {
         totalDeleted += await tx.message.deleteMany({
           where: { deletedAt: { not: null, lt: expiryDate } },

@@ -14,11 +14,11 @@
   ],
   "finishWith": {
     "message": "sì, confermo che ora è tutto attivo — procedi pure con l'operatore",
-    "untilReplyContains": "Ticket",
+    "untilReplyContains": "Human Support message",
     "maxTurns": 3
   },
   "expect": {
-    "anyReplyContains": ["Chiara", "Ticket"],
+    "anyReplyContains": ["Chiara", "Human Support message"],
     "replyExcludes": ["tornato a funzionare", "funziona correttamente"]
   }
 }

@@ -12,11 +12,11 @@
   ],
   "finishWith": {
     "message": "sì, confermo: wifi attivo, programmazione abilitata e batteria carica — procedi pure con l'operatore",
-    "untilReplyContains": "Ticket",
+    "untilReplyContains": "Human Support message",
     "maxTurns": 3
   },
   "expect": {
-    "anyReplyContains": ["Marco", "Ticket"],
+    "anyReplyContains": ["Marco", "Human Support message"],
     "replyExcludes": ["robot è acceso"]
   }
 }

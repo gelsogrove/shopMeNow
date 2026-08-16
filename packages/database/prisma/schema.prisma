@@ -92,7 +92,6 @@ model Workspace {
   operatorWhatsappNumbers           String[]  @default([]) // Escalation recipients (WhatsApp)
   operatorDeliveryMode              String?   @default("all") // 'all' = notify everyone | 'random' = one at random (load sharing) | 'custom' = the custom chatbot module decides
   toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
-  translateOperatorMessages         Boolean     @default(true) // Auto-translate operator messages to customer's language
   translateCustomerMessages         Boolean     @default(true) // 🆕 Auto-translate customer messages to operator's language (reverse direction)
   
   // 🆕 WhatsApp Provider Configuration (Multi-provider support)
@@ -110,6 +109,7 @@ model Workspace {
   wasenderApiKey          String?   // Per-session API key used for messaging (Bearer auth)
   wasenderSessionStatus   String?   // 'pending' | 'need_scan' | 'connected' | 'disconnected' | 'failed'
   wasenderPhoneNumber     String?   // WhatsApp phone number used in session
+  wasenderWebhookSecret   String?   // Secret WasenderAPI echoes in X-Webhook-Signature — verified on every webhook
   wasenderQrString        String?   @db.Text // Raw QR string returned by WasenderAPI (use qrcode lib to render)
   wasenderQrGeneratedAt   DateTime? // When QR string was last received
   wasenderIsActive        Boolean   @default(false) // Whether Wasender session is active
@@ -421,6 +421,9 @@ model WhatsAppQueue {
   messageContent        String    @db.Text
   status                String    @default("pending") // pending, sent, error, delivered, failed
   errorMessage          String?   @db.Text
+  retryCount            Int       @default(0) // Number of failed send attempts so far
+  maxRetries            Int       @default(3) // Retries before status is permanently "failed" (dead-letter)
+  nextRetryAt           DateTime? // Exponential backoff gate — findPending skips rows until this time
   createdAt             DateTime  @default(now())
   deliveredAt           DateTime?
   conversationMessageId String? // FK to ConversationMessage for timeline tracking

@@ -47,3 +47,27 @@ export function verifyWhatsAppSignature(
     Buffer.from(expectedSignature)
   )
 }
+
+/**
+ * Verify WasenderAPI webhook signature.
+ *
+ * WasenderAPI sends the per-session webhook secret verbatim in the
+ * X-Webhook-Signature header (shared-secret scheme, not HMAC).
+ *
+ * @param signature - Value of the 'x-webhook-signature' header
+ * @param webhookSecret - Secret stored for the workspace's Wasender session
+ * @returns true if the header matches the stored secret
+ */
+export function verifyWasenderSignature(
+  signature: string | undefined,
+  webhookSecret: string
+): boolean {
+  if (!signature || !webhookSecret) {
+    return false
+  }
+
+  // Hash both sides so timingSafeEqual gets equal-length buffers
+  const a = crypto.createHash("sha256").update(signature).digest()
+  const b = crypto.createHash("sha256").update(webhookSecret).digest()
+  return crypto.timingSafeEqual(a, b)
+}

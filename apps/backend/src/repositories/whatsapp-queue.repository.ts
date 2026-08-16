@@ -77,6 +77,7 @@ export class WhatsAppQueueRepository {
         where: {
           workspaceId,
           status: "pending",
+          OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }],
         },
         include: {
           customer: {
@@ -154,6 +155,40 @@ export class WhatsAppQueueRepository {
       })
     } catch (error) {
       logger.error(`[WhatsAppQueueRepository] Error in updateStatus:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Record a failed send attempt. Re-queues as "pending" with an exponential
+   * backoff gate (nextRetryAt) until maxRetries is exhausted, then marks the
+   * message "error" permanently (dead-letter — excluded from findPending).
+   * @param id Message ID
+   * @param errorMessage Failure reason to persist
+   */
+  async recordFailure(id: string, errorMessage: string): Promise<void> {
+    try {
+      const message = await this.prisma.whatsAppQueue.findUnique({
+        where: { id },
+        select: { retryCount: true, maxRetries: true },
+      })
+      if (!message) return
+
+      const nextRetryCount = message.retryCount + 1
+      const exhausted = nextRetryCount >= message.maxRetries
+
+      await this.prisma.whatsAppQueue.update({
+        where: { id },
+        data: {
+          status: exhausted ? "error" : "pending",
+          errorMessage,
+          retryCount: nextRetryCount,
+          // Exponential backoff: 1m, 2m, 4m, ... capped implicitly by maxRetries
+          nextRetryAt: exhausted ? null : new Date(Date.now() + Math.pow(2, nextRetryCount - 1) * 60_000),
+        },
+      })
+    } catch (error) {
+      logger.error(`[WhatsAppQueueRepository] Error in recordFailure:`, error)
       throw error
     }
   }

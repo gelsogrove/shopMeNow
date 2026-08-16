@@ -66,6 +66,7 @@ const mockPrisma = {
   whatsAppQueue: {
     findMany: jest.fn(),
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
@@ -432,6 +433,11 @@ describe("WhatsAppQueueService - Unit Tests", () => {
     })
 
     it("should update status to error on validation failure", async () => {
+      // WHAT: a failing message on its LAST retry attempt goes to terminal
+      // "error" status (dead-letter) instead of being re-queued.
+      // WHY: send failures now retry with exponential backoff (retryCount /
+      // maxRetries added 2026-08-16); "error" is only reached once retries
+      // are exhausted, so the mock represents the final attempt (2 of 3).
       const mockMessage = {
         id: "msg1",
         workspaceId: "ws1",
@@ -451,6 +457,12 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         channelStatus: true,
       })
       mockPrisma.whatsAppQueue.findMany = (jest.fn() as any).mockResolvedValue([mockMessage])
+      // recordFailure re-reads retry counters: 2 failures already recorded,
+      // so this attempt is the 3rd and final one → dead-letter
+      mockPrisma.whatsAppQueue.findUnique = (jest.fn() as any).mockResolvedValue({
+        retryCount: 2,
+        maxRetries: 3,
+      })
       mockPrisma.whatsAppQueue.update = (jest.fn() as any).mockResolvedValue({
         ...mockMessage,
         status: "error",
@@ -465,6 +477,51 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         data: expect.objectContaining({
           status: "error",
           errorMessage: expect.stringContaining("Invalid phone"),
+        }),
+      })
+    })
+
+    it("should re-queue as pending with backoff on first validation failure", async () => {
+      // WHAT: a send failure with retries remaining goes back to "pending"
+      // with retryCount incremented and a future nextRetryAt gate.
+      // WHY: transient provider errors (timeouts, provider rate limits) must
+      // not permanently kill a push-campaign message on the first attempt;
+      // findPending skips rows until nextRetryAt has passed.
+      const mockMessage = {
+        id: "msg1",
+        workspaceId: "ws1",
+        customerId: "cust1",
+        phoneNumber: "invalid", // Invalid phone → validateAndSend fails
+        messageContent: "Test message",
+        status: "pending" as const,
+        errorMessage: null,
+        createdAt: new Date(),
+        deliveredAt: null,
+      }
+
+      mockPrisma.workspace.findUnique = (jest.fn() as any).mockResolvedValue({
+        debugMode: false,
+        name: "Test",
+        ownerId: "owner-1",
+        channelStatus: true,
+      })
+      mockPrisma.whatsAppQueue.findMany = (jest.fn() as any).mockResolvedValue([mockMessage])
+      // First failure: no retries recorded yet (0 of 3)
+      mockPrisma.whatsAppQueue.findUnique = (jest.fn() as any).mockResolvedValue({
+        retryCount: 0,
+        maxRetries: 3,
+      })
+      mockPrisma.whatsAppQueue.update = (jest.fn() as any).mockResolvedValue(mockMessage)
+      mockPrisma.chatSession.findFirst = (jest.fn() as any).mockResolvedValue(null)
+
+      await service.processPendingMessages("ws1")
+
+      expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledWith({
+        where: { id: "msg1" },
+        data: expect.objectContaining({
+          status: "pending",
+          retryCount: 1,
+          nextRetryAt: expect.any(Date),
         }),
       })
     })
@@ -609,8 +666,16 @@ describe("WhatsAppQueueService - Unit Tests", () => {
 
       await service.processPendingMessages("ws1")
 
+      // The where clause also gates on nextRetryAt (retry/backoff feature,
+      // 2026-08-16): rows in a backoff window are skipped until it elapses.
+      // The isolation guarantee under test is unchanged: workspaceId is
+      // always present in the filter.
       expect(mockPrisma.whatsAppQueue.findMany).toHaveBeenCalledWith({
-        where: { workspaceId: "ws1", status: "pending" },
+        where: {
+          workspaceId: "ws1",
+          status: "pending",
+          OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: expect.any(Date) } }],
+        },
         include: {
           customer: {
             select: {

@@ -7,7 +7,9 @@
  *   - messages.received → route to LLM chat engine (same pipeline as UltraMsg)
  *
  * WEBHOOK URL:  POST /api/wasender/webhook/:workspaceId
- * SECURITY:     Verify payload.sessionId matches workspace.wasenderApiKey
+ * SECURITY:     Step 0 verifies X-Webhook-Signature against the stored
+ *               wasenderWebhookSecret (constant-time); payload.sessionId
+ *               match kept as defense-in-depth / legacy fallback
  *
  * MESSAGE PROCESSING FLOW (identical to UltraMsg):
  * 1. 🔒 Customer-level lock (race condition prevention)
@@ -45,6 +47,7 @@ import {
 import { platformConfigService } from '../../../services/platform-config.service'
 import { websocketService } from '../../../services/websocket.service'
 import logger from '../../../utils/logger'
+import { verifyWasenderSignature } from '../../../utils/whatsapp-signature'
 import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
@@ -157,6 +160,34 @@ export class WasenderWebhookController {
       workspaceId,
       event: payload.event,
     })
+
+    // 🔒 SECURITY STEP 0: Verify X-Webhook-Signature BEFORE any side effect.
+    // WasenderAPI echoes the per-session webhook secret in this header.
+    // Legacy sessions saved before the secret was stored fall through to the
+    // body-based sessionId check downstream (backfilled on next session init).
+    const secretRow = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { wasenderWebhookSecret: true },
+    })
+    if (!secretRow) {
+      logger.warn('[WASENDER-Webhook] ❌ Unknown workspace:', { workspaceId })
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+    if (secretRow.wasenderWebhookSecret) {
+      const signature = req.headers['x-webhook-signature'] as string | undefined
+      if (!verifyWasenderSignature(signature, secretRow.wasenderWebhookSecret)) {
+        logger.error('[WASENDER-Webhook] 🔒 Invalid webhook signature - rejecting', {
+          workspaceId,
+          hasHeader: !!signature,
+          event: payload.event,
+        })
+        return res.status(403).json({ error: 'Invalid signature' })
+      }
+    } else {
+      logger.warn('[WASENDER-Webhook] ⚠️ No webhook secret stored - relying on sessionId check only', {
+        workspaceId,
+      })
+    }
 
     // ── Route by event type ────────────────────────────────────────────────
     switch (payload.event) {

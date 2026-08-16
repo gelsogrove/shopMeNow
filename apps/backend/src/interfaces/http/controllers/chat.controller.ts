@@ -649,16 +649,10 @@ export class ChatController {
       )
 
       // Find the chat session and check if chatbot is active
-      const [chatSession, workspace] = await Promise.all([
-        this.prisma.chatSession.findFirst({
-          where: { id: sessionId, workspaceId: workspaceId },
-          include: { customer: true },
-        }),
-        this.prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { translateOperatorMessages: true },
-        }),
-      ])
+      const chatSession = await this.prisma.chatSession.findFirst({
+        where: { id: sessionId, workspaceId: workspaceId },
+        include: { customer: true },
+      })
 
       if (!chatSession) {
         res.status(404).json({
@@ -738,10 +732,8 @@ export class ChatController {
 
       debugSteps.push(operatorDebugStep)
 
-      // 🌍 Translate operator message to customer's language when they differ
-      // Translation is OPT-IN: only when translateOperatorMessages=true (never by default).
+      // 🌍 Translate operator message to customer's language when they differ.
       // Short messages (<= 5 words) are translated silently — no "(traduzione IA)" suffix.
-      const translationEnabled = workspace?.translateOperatorMessages === true
       let finalMessage = content
       const customerLanguage = chatSession.customer.language || "en"
       let operatorLanguage = customerLanguage // detected lang of the operator message
@@ -759,7 +751,6 @@ export class ChatController {
         de: "*(KI-Übersetzung)*",
       }
       try {
-        if (!translationEnabled) throw new Error("translation_disabled")
         // Skip translation for pure-emoji messages (reactions, stickers, emoji-only)
         if (!/\p{L}/u.test(content)) throw new Error("translation_disabled")
         const llmConfig = getLLMConfig("openai/gpt-4o-mini")
