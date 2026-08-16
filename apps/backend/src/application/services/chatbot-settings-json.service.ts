@@ -261,17 +261,32 @@ async function buildMainPrompt(
 }
 
 /**
- * Substitutes {{termsAndConditions}} in workspace-owned customer copy
- * (welcome/welcome-back). Workspace-level like the buildMainPrompt set, so
- * save-time substitution is correct; per-customer variables (e.g.
- * {{customerName}}) are left untouched for the module to resolve at runtime.
+ * Substitutes workspace-level {{variables}} in workspace-owned customer copy
+ * (welcome / welcome-back / human-support): the workspace's identity
+ * ({{chatbotName}}, {{companyName}}) plus {{termsAndConditions}}.
+ * Per-customer variables (e.g. {{customerName}}) are deliberately left
+ * untouched for the module to resolve at runtime — which is also why
+ * promptProcessor.processWithVariables is NOT reused here: it fills a
+ * missing customerName with 'Cliente', destroying that contract.
+ *
+ * Andrea 2026-08-17, seen live: the demoam greeting used to be rendered by a
+ * context-bearing LLM hop that filled {{chatbotName}}/{{companyName}} from
+ * the system prompt as a side effect. When the greeting moved to the
+ * isolated translation call (which correctly translates and adds nothing),
+ * the raw placeholders reached a customer verbatim — no code had ever
+ * substituted them. This runs inside buildChatbotSettingsJson, which the
+ * host resolves per turn, so it covers both the serve path and the
+ * settings.json regeneration with one implementation.
  */
-function renderTermsAndConditions(
+function renderWorkspaceCopy(
   text: string | undefined,
-  termsAndConditions: string | null | undefined
+  workspace: WorkspaceChatbotSource
 ): string | undefined {
   if (!text) return text
-  return text.replace(/\{\{\s*termsAndConditions\s*\}\}/gi, termsAndConditions?.trim() || "")
+  return text
+    .replace(/\{\{\s*chatbotName\s*\}\}/gi, workspace.chatbotName?.trim() || VARIABLE_DEFAULTS.chatbotName)
+    .replace(/\{\{\s*companyName\s*\}\}/gi, workspace.name?.trim() || VARIABLE_DEFAULTS.companyName)
+    .replace(/\{\{\s*termsAndConditions\s*\}\}/gi, workspace.termsAndConditions?.trim() || "")
 }
 
 /**
@@ -344,16 +359,18 @@ export async function buildChatbotSettingsJson(
         }
       : {}),
     audioVoices: audioVoices ?? current.audioVoices,
-    welcomeMessage: renderTermsAndConditions(
+    welcomeMessage: renderWorkspaceCopy(
       workspace.welcomeMessage?.trim() || current.welcomeMessage,
-      workspace.termsAndConditions
+      workspace
     ),
-    welcomeBackMessage: renderTermsAndConditions(
+    welcomeBackMessage: renderWorkspaceCopy(
       workspace.welcomeBackMessage?.trim() || current.welcomeBackMessage,
-      workspace.termsAndConditions
+      workspace
     ),
-    humanSupportMessage:
+    humanSupportMessage: renderWorkspaceCopy(
       workspace.humanSupportMessage?.trim() || current.humanSupportMessage,
+      workspace
+    ),
   }
 }
 

@@ -13,6 +13,7 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import { chatbotFn, type ChatbotInput, type ChatbotOutput, type HistoryEntry } from "../agent.js"
+import { buildChatbotSettingsJson } from "../../src/application/services/chatbot-settings-json.service.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const SESSIONS_DIR = path.join(__dirname, ".demoam-sessions")
@@ -108,10 +109,33 @@ export interface TurnResult {
   elapsedMs: number
 }
 
+/**
+ * The same per-turn settings resolution the real host does
+ * (custom-client-chatbot.service loadChatbotSettings → buildChatbotSettingsJson):
+ * without it the CLI silently tested the module's LOCAL settings.json defaults
+ * while production ran the DB values — the {{chatbotName}} placeholder leak
+ * (Andrea 2026-08-17) lived exactly in that gap. Whole row on purpose: the
+ * builder picks the fields it knows, and no second copy of the host's field
+ * list exists here to drift out of sync.
+ */
+async function loadSettingsLikeTheHost(): Promise<Record<string, unknown> | null> {
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: AMROBOTS_WORKSPACE_ID },
+    include: { whatsappSettings: { select: { adminEmail: true } } },
+  })
+  if (!workspace) return null
+  const settings = await buildChatbotSettingsJson({
+    ...workspace,
+    customChatbotId: workspace.customChatbotId ?? "demoam",
+  })
+  return settings as unknown as Record<string, unknown> | null
+}
+
 /** Runs exactly one turn against the REAL AmRobots data, round-tripping session state through the on-disk store. */
 export async function runTurn({ phone, message, userName, language, group }: RunTurnParams): Promise<TurnResult> {
   const session = loadSession(phone, group)
   const resolvedUserName = userName ?? `Visitor ${phone.replace(/[^a-zA-Z0-9]/g, "").slice(-6)}`
+  const settings = await loadSettingsLikeTheHost()
 
   const input: ChatbotInput = {
     userMessage: message,
@@ -122,6 +146,7 @@ export async function runTurn({ phone, message, userName, language, group }: Run
       debugChannel: true,
       isPlayground: false,
       language,
+      settings: settings as ChatbotInput["config"]["settings"],
       handlers: { getFaqs, listFlows, loadFlow },
     },
     context: {
