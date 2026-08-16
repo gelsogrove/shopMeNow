@@ -82,6 +82,10 @@ async function startServer() {
     const { startWhatsAppQueueProcessor } = require("./services/whatsapp-queue-processor")
     startWhatsAppQueueProcessor(prisma)
 
+    // Upgrade legacy Wasender sessions to signed webhooks (one-shot, fail-safe)
+    const { backfillWasenderWebhookSecrets } = require("./services/wasender-secret-backfill")
+    void backfillWasenderWebhookSecrets(prisma)
+
     // Background cron jobs (conversation cleanup + month-end billing).
     // Was never started before 2026-08-11 — the jobs existed but never ran.
     const { startScheduler, stopScheduler } = require("./scheduler")
