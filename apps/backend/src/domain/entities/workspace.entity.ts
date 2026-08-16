@@ -53,6 +53,7 @@ export interface WorkspaceProps {
   enableWelcomeMessage?: boolean // E0a
   sessionResetTimeout?: number // E0b
   wipMessage?: any
+  securityBlockedMessage?: string | null // Courtesy reply when the final security check blocks a response
   termsAndConditions?: string | null
   afterRegistrationMessages?: any
   debugMode: boolean
