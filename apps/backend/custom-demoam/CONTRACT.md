@@ -109,11 +109,38 @@ come tua intera risposta, nulla prima nulla dopo" e il modello ci aggiungeva
 davanti roba sua — due volte una DOMANDA inventata ("quale parte vuoi pulire:
 lame, sensori, chassis?") seguita subito dalla risposta che la rispondeva.
 Un'istruzione è una preghiera: ora la risposta viene RICOSTRUITA dal codice
-(`composeFaqReply`) — testo FAQ dal DB tradotto dalla call isolata, più
-l'apertura del modello SOLO se è cortesia (prima frase, niente "?"), altrimenti
-scartata con log. Il test che lo presidia è strutturale (`noQuestionAsked`: la
-sostanza della risposta finale non può contenere "?"), non un match di parole:
-la prima versione cercava "Let me check" e il modello scriveva "Let me find".
+(`composeFaqReply`) — testo FAQ dal DB tradotto dalla call isolata, e il testo
+del modello scartato con log. Il test che lo presidia è strutturale
+(`noQuestionAsked`: la sostanza della risposta finale non può contenere "?"),
+non un match di parole: la prima versione cercava "Let me check" e il modello
+scriveva "Let me find".
+
+La ricostruzione vale ANCHE a flow attivo (2026-08-16): lì la risposta è testo
+FAQ + domanda del nodo pendente, e quella domanda viene ora letta dal grafo e
+appesa dal codice. Prima il tool CHIEDEVA al modello di ripeterla verbatim —
+stessa preghiera, stesso buco.
+
+Se la FAQ TROVATA è quella sbagliata (Andrea 2026-08-16): il blocco FAQ è
+iniettato INTERO e non viene mai cercato (host: "never searched semantically",
+le FAQ sono poche e stanno tutte nel prompt), quindi `similarityThreshold` e
+`topK` in settings.json sono config MORTA — appartengono a un retrieval che è
+stato deliberatamente scartato, non fingere che siano attivi. L'unico controllo
+era che l'indice esistesse nell'array: "il modello ha scelto un numero valido",
+non "il numero è giusto". Ora `answer_from_faq` RIFIUTA (`faq_does_not_answer`)
+quando una call isolata giudica che quella FAQ non risponde al messaggio del
+cliente, e il modello deve scegliere un'altra voce o escalare — iron rule 2,
+il tool rifiuta e l'LLM corregge. Le `keywords` curate nel backoffice (colonna
+`FAQ.keywords`, prima mai letta) entrano nel blocco come segnale di
+disambiguazione: è configurazione scritta dal cliente, non keyword-detection in
+codice (CLAUDE.md §14). Se la verifica non può girare (niente API key, rete,
+risposta illeggibile) si accetta: una verifica rotta non deve sopprimere una
+risposta approvata dall'azienda.
+
+FAQ ASSENTE → OPERATORE (Andrea 2026-08-16, decisione esplicita): reason
+`faq_not_found`, gate `no_device`, solo il nome, poi hand-off. Fino a oggi il
+`mainPrompt` sezione B diceva l'OPPOSTO ("do NOT call escalate_to_operator for
+this alone") mentre CONTRACT e agent.ts dicevano di escalare — la sezione B è
+stata riscritta per allinearsi.
 
 Applicazioni di quel principio, per caso:
 - FAQ-verify: un turno che sta per chiudersi a testo libero (zero tool) con

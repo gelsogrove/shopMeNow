@@ -53,7 +53,7 @@ export function wipeSession(phone: string, group?: string): void {
 async function getFaqs({ workspaceId }: { workspaceId: string }) {
   return prisma.fAQ.findMany({
     where: { workspaceId, isActive: true },
-    select: { question: true, answer: true },
+    select: { question: true, answer: true, keywords: true },
   })
 }
 
