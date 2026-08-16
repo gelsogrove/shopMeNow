@@ -311,6 +311,8 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
       lastOutput = output
       replies.push(output.reply ?? "")
       errors.push(output.error)
+      faqAnswers.push(output.answeredFromFaq === true)
+      escalations.push(output.shouldEscalate === true)
       console.log(`  [${scenario.phone}] (finishWith ${extra + 1}/${maxTurns}) "${message}"`)
       console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
       if (output.error) console.log(`    !! error: ${output.error}`)
@@ -335,6 +337,12 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     }
     for (const needle of scenario.expect.anyReplyExcludes ?? []) {
       checks.push(checkAnyReplyExcludes(replies, needle))
+    }
+    if (typeof scenario.expect.faqAnswered === "boolean") {
+      checks.push(checkFaqAnswered(faqAnswers, scenario.expect.faqAnswered))
+    }
+    if (typeof scenario.expect.escalated === "boolean") {
+      checks.push(checkEscalated(escalations, scenario.expect.escalated))
     }
   }
 
