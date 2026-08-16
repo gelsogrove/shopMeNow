@@ -13,7 +13,7 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import { chatbotFn, type ChatbotInput, type ChatbotOutput, type HistoryEntry } from "../agent.js"
-import { buildChatbotSettingsJson } from "../../src/application/services/chatbot-settings-json.service.js"
+import { renderWorkspaceCopy } from "../../src/application/services/workspace-copy.render.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const SESSIONS_DIR = path.join(__dirname, ".demoam-sessions")
