@@ -119,6 +119,23 @@ const monthEndBillingJob = cron.schedule(
 )
 
 /**
+ * Job 4: WhatsApp retention cleanup
+ * Runs daily at 4:00 AM.
+ * Purges webhook dedup events >30 days and terminal-status queue rows
+ * >30 days (plus expired anonymous widget sessions) — see
+ * WhatsAppRetentionService for the exact rules.
+ */
+const whatsappRetentionService = new WhatsAppRetentionService(prisma)
+const whatsappRetentionJob = cron.schedule("0 4 * * *", async () => {
+  try {
+    logger.info("⏰ Running job: WhatsApp retention cleanup")
+    await whatsappRetentionService.cleanup()
+  } catch (error) {
+    logger.error("❌ Error in whatsappRetentionJob:", error)
+  }
+})
+
+/**
  * Start all scheduled jobs
  * Call this function in index.ts after server startup
  */
@@ -140,11 +157,13 @@ export function startScheduler(): void {
   markExpiredConversationsJob.start()
   deleteOldConversationsJob.start()
   monthEndBillingJob.start()
+  whatsappRetentionJob.start()
 
   logger.info("✅ Scheduler started successfully")
   logger.info("  - Mark expired conversations: Every 5 minutes")
   logger.info("  - Delete old conversations: Every Sunday at 3:00 AM")
   logger.info("  - Month-end billing: 1st of month at 23:30 (Europe/Rome)")
+  logger.info("  - WhatsApp retention cleanup: Every day at 4:00 AM")
 }
 
 /**
