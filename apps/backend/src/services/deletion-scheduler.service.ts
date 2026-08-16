@@ -176,86 +176,209 @@ export class DeletionSchedulerService {
   }
 
   /**
-   * Hard-delete all expired records in transaction
-   * SAFETY: Explicitly checks deletedAt is NOT null before deleting
+   * Hard-delete all expired records.
+   *
+   * Runs as INDEPENDENT per-scope transactions (workspaces, customers,
+   * orders, chat data, users) so one failing scope cannot silently block
+   * the others — before this split, a single FK violation aborted the whole
+   * job and "deleted" data was retained forever.
+   *
+   * SAFETY: every scope re-verifies deletedAt inside its own transaction,
+   * so a record restored between discovery and deletion is never touched.
    */
   private async performHardDelete(
     expiredRecords: Record<string, string[]>,
     expiryDate: Date
   ): Promise<number> {
     let totalDeleted = 0
+    totalDeleted += await this.runScope("workspaces", () => this.hardDeleteWorkspaces(expiryDate))
+    totalDeleted += await this.runScope("customers", () => this.hardDeleteCustomers(expiryDate))
+    totalDeleted += await this.runScope("orders", () => this.hardDeleteOrders(expiryDate))
+    totalDeleted += await this.runScope("chatData", () => this.hardDeleteChatData(expiryDate))
+    totalDeleted += await this.runScope("users", () => this.hardDeleteUsers(expiryDate))
+    return totalDeleted
+  }
 
-    await this.prisma.$transaction(async (tx) => {
-      // Delete by type (order matters due to foreign keys)
-      // CRITICAL: Always check deletedAt is not null to prevent accidental deletion
+  /**
+   * Run one deletion scope, converting failures into loud error logs
+   * instead of aborting the whole job.
+   */
+  private async runScope(name: string, fn: () => Promise<number>): Promise<number> {
+    try {
+      return await fn()
+    } catch (error) {
+      logger.error(`HARD_DELETE_SCOPE_FAILED: scope "${name}" was NOT deleted — data is being retained past its expiry`, {
+        scope: name,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return 0
+    }
+  }
 
-      // whatsapp_settings has a RESTRICT FK to Workspace (1:1, no cascade) —
-      // must be removed before workspace.deleteMany or the transaction fails
-      if (expiredRecords.workspaces.length > 0) {
-        await tx.whatsappSettings.deleteMany({
-          where: { workspaceId: { in: expiredRecords.workspaces } },
-        })
-      }
+  /**
+   * Expired workspaces: full cascade of everything the workspace owns.
+   * Children with RESTRICT FKs must go before their parents:
+   * messages → chat_sessions, cart_items → carts, payment_details → orders,
+   * appointments/late_cancellations → services & customers, usage → customers,
+   * then all workspace-scoped tables, then the workspace row itself.
+   */
+  private async hardDeleteWorkspaces(expiryDate: Date): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const expired = await tx.workspace.findMany({
+        where: { deletedAt: { not: null, lt: expiryDate } },
+        select: { id: true },
+      })
+      if (expired.length === 0) return 0
+      const W = { in: expired.map((w) => w.id) }
 
-      if (expiredRecords.messages.length > 0) {
-        totalDeleted += await tx.message.deleteMany({
-          where: { deletedAt: { not: null, lt: expiryDate } },
-        }).then((r) => r.count)
-      }
+      await tx.message.deleteMany({ where: { chatSession: { workspaceId: W } } })
+      await tx.cartItems.deleteMany({ where: { cart: { workspaceId: W } } })
+      await tx.paymentDetails.deleteMany({ where: { order: { workspaceId: W } } })
+      await tx.appointment.deleteMany({ where: { workspaceId: W } })
+      await tx.lateCancellationAttempt.deleteMany({ where: { workspaceId: W } })
+      await tx.usage.deleteMany({ where: { workspaceId: W } })
+      await tx.chatSession.deleteMany({ where: { workspaceId: W } })
+      await tx.carts.deleteMany({ where: { workspaceId: W } })
+      await tx.orders.deleteMany({ where: { workspaceId: W } })
+      await tx.customers.deleteMany({ where: { workspaceId: W } })
+      await tx.products.deleteMany({ where: { workspaceId: W } })
+      await tx.offers.deleteMany({ where: { workspaceId: W } })
+      await tx.categories.deleteMany({ where: { workspaceId: W } })
+      await tx.sales.deleteMany({ where: { workspaceId: W } })
+      await tx.languages.deleteMany({ where: { workspaceId: W } })
+      await tx.services.deleteMany({ where: { workspaceId: W } })
+      await tx.secureToken.deleteMany({ where: { workspaceId: W } })
+      await tx.billing.deleteMany({ where: { workspaceId: W } })
+      await tx.searchConversations.deleteMany({ where: { workspaceId: W } })
+      await tx.userWorkspace.deleteMany({ where: { workspaceId: W } })
+      await tx.whatsappSettings.deleteMany({ where: { workspaceId: W } })
 
-      if (expiredRecords.chatSessions.length > 0) {
-        totalDeleted += await tx.chatSession.deleteMany({
-          where: { deletedAt: { not: null, lt: expiryDate } },
-        }).then((r) => r.count)
-      }
+      const result = await tx.workspace.deleteMany({
+        where: { id: W, deletedAt: { not: null, lt: expiryDate } },
+      })
 
-      if (expiredRecords.orders.length > 0) {
-        totalDeleted += await tx.orders.deleteMany({
-          where: { deletedAt: { not: null, lt: expiryDate } },
-        }).then((r) => r.count)
-      }
-
-      if (expiredRecords.customers.length > 0) {
-        totalDeleted += await tx.customers.deleteMany({
-          where: { deletedAt: { not: null, lt: expiryDate } },
-        }).then((r) => r.count)
-      }
-
-      if (expiredRecords.workspaces.length > 0) {
-        totalDeleted += await tx.workspace.deleteMany({
-          where: { deletedAt: { not: null, lt: expiryDate } },
-        }).then((r) => r.count)
-      }
-
-      if (expiredRecords.users.length > 0) {
-        totalDeleted += await tx.user.deleteMany({
-          where: { deletedAt: { not: null, lt: expiryDate } },
-        }).then((r) => r.count)
-      }
-
-      // Log audit trail with all deleted IDs
-      for (const workspace of expiredRecords.workspaces) {
+      for (const workspace of expired) {
         await tx.softDeleteAuditLog.create({
           data: {
-            workspaceId: workspace,
+            workspaceId: workspace.id,
             entityType: "SCHEDULER_HARD_DELETE",
-            deletedIds: [
-              ...expiredRecords.users,
-              ...expiredRecords.workspaces,
-              ...expiredRecords.customers,
-              ...expiredRecords.orders,
-              ...expiredRecords.messages,
-              ...expiredRecords.chatSessions,
-            ],
-            deletedIdCount: totalDeleted,
+            deletedIds: [workspace.id],
+            deletedIdCount: result.count,
             reason: "SCHEDULED_CLEANUP",
             deletedByUserId: null, // Scheduler-initiated
           },
         })
       }
-    })
 
-    return totalDeleted
+      return result.count
+    })
+  }
+
+  /**
+   * Individually soft-deleted customers whose workspace is still alive.
+   * A hard-deleted customer takes their orders, carts, sessions, usage and
+   * appointments with them (GDPR erasure semantics).
+   */
+  private async hardDeleteCustomers(expiryDate: Date): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const expired = await tx.customers.findMany({
+        where: { deletedAt: { not: null, lt: expiryDate } },
+        select: { id: true },
+      })
+      if (expired.length === 0) return 0
+      const C = { in: expired.map((c) => c.id) }
+
+      await tx.message.deleteMany({ where: { chatSession: { customerId: C } } })
+      await tx.cartItems.deleteMany({ where: { cart: { customerId: C } } })
+      await tx.paymentDetails.deleteMany({ where: { order: { customerId: C } } })
+      await tx.appointment.deleteMany({ where: { customerId: C } })
+      await tx.usage.deleteMany({ where: { clientId: C } })
+      await tx.chatSession.deleteMany({ where: { customerId: C } })
+      await tx.carts.deleteMany({ where: { customerId: C } })
+      await tx.orders.deleteMany({ where: { customerId: C } })
+
+      const result = await tx.customers.deleteMany({
+        where: { id: C, deletedAt: { not: null, lt: expiryDate } },
+      })
+      return result.count
+    })
+  }
+
+  /**
+   * Individually soft-deleted orders (payment_details FK is RESTRICT).
+   */
+  private async hardDeleteOrders(expiryDate: Date): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const expired = await tx.orders.findMany({
+        where: { deletedAt: { not: null, lt: expiryDate } },
+        select: { id: true },
+      })
+      if (expired.length === 0) return 0
+      const O = { in: expired.map((o) => o.id) }
+
+      await tx.paymentDetails.deleteMany({ where: { orderId: O } })
+      const result = await tx.orders.deleteMany({
+        where: { id: O, deletedAt: { not: null, lt: expiryDate } },
+      })
+      return result.count
+    })
+  }
+
+  /**
+   * Individually soft-deleted messages and chat sessions
+   * (messages FK to chat_sessions is RESTRICT — messages first).
+   */
+  private async hardDeleteChatData(expiryDate: Date): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      let count = 0
+
+      const messages = await tx.message.deleteMany({
+        where: { deletedAt: { not: null, lt: expiryDate } },
+      })
+      count += messages.count
+
+      const expiredSessions = await tx.chatSession.findMany({
+        where: { deletedAt: { not: null, lt: expiryDate } },
+        select: { id: true },
+      })
+      if (expiredSessions.length > 0) {
+        const S = { in: expiredSessions.map((s) => s.id) }
+        await tx.message.deleteMany({ where: { chatSessionId: S } })
+        const sessions = await tx.chatSession.deleteMany({
+          where: { id: S, deletedAt: { not: null, lt: expiryDate } },
+        })
+        count += sessions.count
+      }
+
+      return count
+    })
+  }
+
+  /**
+   * Individually soft-deleted users. Their memberships, password resets and
+   * sent invitations go with them. Users still referenced by business
+   * records with RESTRICT FKs (support tickets, 2FA admin trail) make this
+   * scope fail loudly via runScope — that is intentional: unlinking those
+   * records is a business decision, not something this job may improvise.
+   */
+  private async hardDeleteUsers(expiryDate: Date): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const expired = await tx.user.findMany({
+        where: { deletedAt: { not: null, lt: expiryDate } },
+        select: { id: true },
+      })
+      if (expired.length === 0) return 0
+      const U = { in: expired.map((u) => u.id) }
+
+      await tx.userWorkspace.deleteMany({ where: { userId: U } })
+      await tx.passwordReset.deleteMany({ where: { userId: U } })
+      await tx.workspaceInvitation.deleteMany({ where: { invitedById: U } })
+
+      const result = await tx.user.deleteMany({
+        where: { id: U, deletedAt: { not: null, lt: expiryDate } },
+      })
+      return result.count
+    })
   }
 
   /**
