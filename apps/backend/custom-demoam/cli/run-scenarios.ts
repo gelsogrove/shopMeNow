@@ -271,6 +271,8 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
 
   const replies: string[] = []
   const errors: Array<string | undefined> = []
+  const faqAnswers: boolean[] = []
+  const escalations: boolean[] = []
   let lastOutput: Awaited<ReturnType<typeof runTurn>>["output"] | undefined
 
   for (const turn of scenario.turns) {
@@ -278,6 +280,8 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     lastOutput = output
     replies.push(output.reply ?? "")
     errors.push(output.error)
+    faqAnswers.push(output.answeredFromFaq === true)
+    escalations.push(output.shouldEscalate === true)
     console.log(`  [${scenario.phone}] "${turn.message}"`)
     console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
     if (output.error) console.log(`    !! error: ${output.error}`)
@@ -291,6 +295,8 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
       lastOutput = output
       replies.push(output.reply ?? "")
       errors.push(output.error)
+      faqAnswers.push(output.answeredFromFaq === true)
+      escalations.push(output.shouldEscalate === true)
       console.log(`  [${scenario.phone}] "${turn.message}"`)
       console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
       if (output.error) console.log(`    !! error: ${output.error}`)
