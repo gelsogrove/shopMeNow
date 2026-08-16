@@ -1440,6 +1440,10 @@ async function agentTurnInternal(
   }
 
   let awaitingDictatedReply = false
+  let answeredFromFaq = false
+  let faqVerifyHopNext = false
+  let faqVerifyAttempted = false
+  let faqVerifyDraft: string | null = null
 
   const EMPTY_REPLY_RETRY_INSTRUCTION =
     "[SYSTEM: Your previous turn produced no visible text. Write your reply to the customer now — ask the pending question or acknowledge their last message — in the customer's language, ending with the ⟦LANG:xx⟧ tag.]"
@@ -1482,11 +1486,20 @@ async function agentTurnInternal(
       messages,
       greetingToTranslate: undefined,
       greetingAlreadyDelivered: !!greetingToTranslate,
-      forceToolChoice: mustForceToolChoice,
+      forceToolChoice: mustForceToolChoice && !faqVerifyHopNext,
       forceTextOnly: awaitingDictatedReply,
+      faqVerifyHop: faqVerifyHopNext,
     })
+    const wasFaqVerifyHop = faqVerifyHopNext
+    faqVerifyHopNext = false
 
     if (toolCalls.length === 0) {
+      if (wasFaqVerifyHop) {
+        const draftBody = faqVerifyDraft ?? ''
+        const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
+        history.push({ role: 'assistant', content: reply })
+        return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+      }
       if (mustForceToolChoice) {
         // tool_choice=required was sent but the API returned no tool_calls —
         // a provider contract violation, logged so it surfaces instead of
@@ -1538,13 +1551,25 @@ async function agentTurnInternal(
           replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings)
         }
       }
+      const faqVerifyEligible =
+        !awaitingDictatedReply &&
+        !faqVerifyAttempted &&
+        (ctx.availableFaqs?.length ?? 0) > 0 &&
+        !getState(ctx.sessionId).currentNodeId
+      if (faqVerifyEligible) {
+        faqVerifyAttempted = true
+        faqVerifyHopNext = true
+        faqVerifyDraft = replyBody
+        tokensUsedSoFar += hopTokens
+        continue
+      }
       const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
       history.push({ role: 'assistant', content: reply })
       if (LLM_DEBUG) {
         // eslint-disable-next-line no-console
         console.error('[state]', formatStateOneLine(getState(ctx.sessionId)))
       }
-      return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false }
+      return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
     }
 
     history.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
@@ -1578,6 +1603,10 @@ async function agentTurnInternal(
         if (attempts >= 2) {
           detachFlow(ctx.sessionId)
         }
+      }
+
+      if (call.function.name === 'answer_from_faq' && result.ok) {
+        answeredFromFaq = true
       }
 
       if (call.function.name === 'escalate_to_operator' && result.ok) {
@@ -1859,6 +1888,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       language: getState(sessionId).language,
       persistedState: dehydrateState(sessionId),
       shouldEscalate: result.escalated,
+      answeredFromFaq: result.answeredFromFaq ?? false,
       escalationSummary: result.escalated ? result.escalationSummary || `Session ${sessionId} escalated (no briefing captured)` : undefined,
       notificationEmails: result.escalated ? process.env.OPERATOR_EMAIL || settings.operatorEmail || undefined : undefined,
       closeChat: result.escalated,
