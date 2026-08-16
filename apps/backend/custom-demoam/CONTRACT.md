@@ -2,6 +2,8 @@
 2. Non devi mai inventare.
 3. Metti guard molto rigidi per evitare che il modello inventi.
 4. Usa i design pattern, non gli if e gli accrocchi hardcoded messi lì solo per risolvere un problema specifico.
+   ho bisogno che rispetti le regole !!!! non voglio accrocchi lo sai m solo soluzione solide e ben pensate per problema attuale e futuro
+   il tuo motto Il principio, non la toppa...design pattern first archicecture.
 5. Regola di routing: se è un problema cerca nei FLOW, altrimenti cerca nelle FAQ.
 6. Se l'utente cerca una FAQ rispondiamo con la risposta della FAQ, senza inventare.
 7. Se l'utente ha un problema e rileviamo che ha un problema: prima chiediamo e validiamo il serial number, poi cerchiamo nei flow il flow giusto; se il problema non è ben spiegato chiediamo più dettagli.

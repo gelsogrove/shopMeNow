@@ -316,6 +316,28 @@ export function nextIntakeStep(
 }
 
 /**
+ * The question the CODE knows is outstanding right now — the active flow's
+ * current node, or the next intake step, or nothing.
+ *
+ * Used when the model produced no usable reply (tool-hop limit) and the turn
+ * still has to say something: re-asking what is genuinely pending is the only
+ * answer that is true by construction. Null means nothing is outstanding, and
+ * the caller must stay silent rather than compose a closing line of its own.
+ */
+export function pendingQuestionText(
+  state: SessionState,
+  settings: { gateQuestions?: GateQuestions | null },
+): string | null {
+  if (state.currentNodeId && state.activeFlowGraphSnapshot) {
+    const node = currentNode(buildFlowGraph(state.activeFlowGraphSnapshot), state.currentNodeId)
+    const question = node?.question?.trim()
+    if (question) return question
+  }
+
+  return nextIntakeStep(state, settings.gateQuestions)?.question ?? null
+}
+
+/**
  * True when the missing intake field may ALREADY be answered somewhere in what
  * the customer has written, so the right move is to save it, not to ask for it.
  *
@@ -558,7 +580,16 @@ export function nextPreOperatorAction(
   const askable = (field: PreOperatorField): boolean => {
     if (preOperatorAnswered(state, field)) return false
     if (!questions?.[field]?.trim()) return false
-    if ((askedCounts?.[field] ?? 0) >= maxAsks) return false
+    // The ask cap exists so an unanswered technical checkbox cannot block a
+    // customer out of a human — a thinner briefing beats a dead end. `name`
+    // is the one field that reasoning does not cover: CONTRACT.md rule 11
+    // makes it the last thing asked before handing over, and the configured
+    // hand-off message is written around it ("Thank you, {{customerName}}").
+    // Capping it produced exactly that failure live (Andrea 2026-08-16): the
+    // question was put as free text during a FAQ detour, counted as asked,
+    // never answered, and the escalation went through with "Thank you, ."
+    // and a briefing reading "Name: —".
+    if (field !== 'name' && (askedCounts?.[field] ?? 0) >= maxAsks) return false
     return true
   }
 

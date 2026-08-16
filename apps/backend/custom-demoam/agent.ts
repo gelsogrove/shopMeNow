@@ -37,6 +37,7 @@ import {
   intakeFieldMayAlreadyBeAnswered,
   nextIntakeStep,
   nextPreOperatorAction,
+  pendingQuestionText,
   startFlow,
 } from './gate.js'
 import type { FlowSummary, GateQuestions, ListFlowsHandler, LoadFlowHandler } from './gate.js'
@@ -1633,6 +1634,15 @@ function handoffFallback(messages: WorkspaceMessages | undefined, settings: Sett
   return substituteCustomerName(messages?.humanSupport ?? settings.humanSupportMessage, customerName)
 }
 
+/** Tool arguments are model-written JSON: malformed input is a bad call, never a crash. */
+function safeParseArgs(raw: string | undefined): Record<string, unknown> {
+  try {
+    return JSON.parse(raw || '{}')
+  } catch {
+    return {}
+  }
+}
+
 async function agentTurnInternal(
   ctx: ToolContext,
   commonPrompt: string,
@@ -1793,25 +1803,62 @@ async function agentTurnInternal(
     forcedToolNext = null
 
     // On the verify hop the outcome set is closed by construction: the menu
-    // offers only answer_from_faq and keep_draft_reply, so anything that is
-    // not answer_from_faq — an explicit keep_draft_reply, an off-menu
-    // attempt, or no call at all — means the drafted reply stands. Escalation
-    // is NOT reachable from here: a turn that already drafted free text has
-    // not been asked an unanswered question, and offering the tool anyway is
-    // what handed a thank-you ("bene grazie") to a human operator.
+    // offers only answer_from_faq and keep_draft_reply. Escalation is NOT
+    // reachable from here — a turn that already drafted free text has not
+    // been asked an unanswered question, and offering the tool anyway is what
+    // handed a thank-you ("bene grazie") to a human operator.
+    //
+    // What the draft is allowed to BE depends on why no FAQ was used, and
+    // that reason is the model's own declaration:
+    //
+    //   greeting_or_smalltalk    — it says the message asks for no
+    //                              information. A reply carrying no facts is
+    //                              free text by definition, so it stands.
+    //   technical_problem_intake — it says the intake questions are handling
+    //                              this. Then the ANSWER is the question the
+    //                              gate already decided, not the prose the
+    //                              model wrote around it.
+    //
+    // Keeping the draft in the second case is what let a wholly invented
+    // four-step app procedure reach a customer (Andrea 2026-08-16: "how can I
+    // manage my robot from my app?" — no FAQ covered it, the model declared
+    // technical_problem_intake, and its own instructions went out as fact).
+    // A guard whose failure mode is "send what the model wrote" is not a
+    // guard (CONTRACT.md rule 3); the fix is that the fact-bearing branch has
+    // no path to free text at all.
     let effectiveToolCalls = toolCalls
     if (wasFaqVerifyHop) {
       effectiveToolCalls = toolCalls.filter((c) => c.function.name === 'answer_from_faq')
       if (effectiveToolCalls.length === 0) {
+        const keepCall = toolCalls.find((c) => c.function.name === 'keep_draft_reply')
+        const declaredReason = keepCall ? safeParseArgs(keepCall.function.arguments).reason : undefined
+        const draftCarriesNoFacts = declaredReason === 'greeting_or_smalltalk'
+
         // eslint-disable-next-line no-console
         console.error(
           '[demoam][faq-verify]',
-          toolCalls.length === 0
-            ? 'no tool returned despite required — draft kept (fail-safe)'
-            : `draft kept (model called: ${toolCalls.map((c) => `${c.function.name}(${c.function.arguments.slice(0, 80)})`).join(', ')})`,
+          draftCarriesNoFacts
+            ? 'draft kept (declared greeting_or_smalltalk — carries no facts)'
+            : `draft REJECTED (reason=${String(declaredReason ?? 'none')}) — falling back to the pending question`,
         )
-        const draftBody = faqVerifyDraft ?? ''
-        const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
+
+        if (draftCarriesNoFacts) {
+          const draftBody = faqVerifyDraft ?? ''
+          const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
+          history.push({ role: 'assistant', content: reply })
+          return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+        }
+
+        // The draft claimed to be handling a problem, so it may contain
+        // facts nothing in the system backs. Replace it with what the code
+        // knows is outstanding; with nothing outstanding there is nothing
+        // truthful left to say, so the turn stays silent (CLAUDE.md §1A).
+        const verifyState = getState(ctx.sessionId)
+        const pending = pendingQuestionText(verifyState, settings)
+        const replyBody = pending
+          ? await forceReplyIntoLanguage(pending, verifyState.language || settings.defaultLanguage, settings)
+          : ''
+        const reply = greetingReply ? `${greetingReply}\n\n${replyBody}`.trim() : replyBody
         history.push({ role: 'assistant', content: reply })
         return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
       }
@@ -1906,12 +1953,7 @@ async function agentTurnInternal(
     let escalationReason = 'diagnostic_exhausted'
 
     for (const call of effectiveToolCalls) {
-      let args: Record<string, unknown> = {}
-      try {
-        args = JSON.parse(call.function.arguments || '{}')
-      } catch {
-        args = {}
-      }
+      const args = safeParseArgs(call.function.arguments)
       if (LLM_DEBUG) {
         // eslint-disable-next-line no-console
         console.error('[tool_call]', call.function.name, JSON.stringify(args))
@@ -2012,37 +2054,39 @@ async function agentTurnInternal(
     }
   }
 
+  // Running out of tool hops means the MODEL got stuck, not that the customer
+  // needs a human: Andrea 2026-08-16 saw "grazie mille, gentilissima!" retry
+  // the same rejected FAQ six times and then hand a thank-you to an operator,
+  // chat disabled, briefing with an empty name. Escalation is a deliberate
+  // act — an explicit request, an emergency, a flow's ESCALATE terminal, a
+  // completed gate — never the error path of an exhausted loop.
+  //
+  // The recovery is the question the CODE already knows is pending: the
+  // current flow node, or the next intake step. With neither, nothing is
+  // outstanding (the stuck turn was smalltalk), so the turn ends silently
+  // rather than inventing a closing line — CLAUDE.md §1A, fail toward
+  // silence.
   // eslint-disable-next-line no-console
-  console.error('[warn] max tool hops exhausted without a final reply — escalating')
+  console.error('[warn] max tool hops exhausted without a final reply — re-asking the pending question')
 
   const finalState = getState(ctx.sessionId)
-  const summary = [
-    'The assistant could not resolve this conversation automatically (tool-hop limit reached).',
-    `Customer message: ${sanitizedMessage}`,
-    finalState.serialNumber ? `Serial number: ${finalState.serialNumber}` : 'Serial number: not provided',
-    finalState.activeFlowId ? `Active flow: ${finalState.activeFlowId}` : 'Active flow: none matched',
-    finalState.collectedData && Object.keys(finalState.collectedData).length > 0
-      ? `Collected data: ${JSON.stringify(finalState.collectedData)}`
-      : 'Collected data: none',
-  ].join('\n')
+  const pendingQuestion = pendingQuestionText(finalState, settings)
 
-  markEscalationOnce(ctx.sessionId, 'diagnostic_exhausted')
+  if (!pendingQuestion) {
+    return { reply: greetingReply ?? '', tokensUsed: tokensUsedSoFar, escalated: false, answeredFromFaq }
+  }
 
-  const briefing = await formatOperatorBriefing({
-    state: finalState,
-    reason: 'diagnostic_exhausted',
-    summary,
+  const askedInLanguage = await forceReplyIntoLanguage(
+    pendingQuestion,
+    finalState.language || settings.defaultLanguage,
     settings,
-  })
-
-  detachFlow(ctx.sessionId)
+  )
 
   return {
-    reply: [greetingReply, handoffFallback(messages, settings, finalState.name), briefing].filter(Boolean).join('\n\n'),
+    reply: [greetingReply, askedInLanguage].filter(Boolean).join('\n\n'),
     tokensUsed: tokensUsedSoFar,
-    escalated: true,
+    escalated: false,
     answeredFromFaq,
-    escalationSummary: summary,
   }
 }
 
