@@ -1462,7 +1462,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     channelLimitReached ||
                     (requiresPaymentForChannels && (!isPayPalStatusReady || !isPaymentConnected))
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'text-green-600 border-green-600 hover:bg-green-50'
+                      : 'text-green-800 border-green-800 hover:bg-green-50'
                   }`}
                   onClick={openWizardDialog}
                   disabled={
