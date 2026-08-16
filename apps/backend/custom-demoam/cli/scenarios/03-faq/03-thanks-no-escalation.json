@@ -1,0 +1,15 @@
+{
+  "description": "Dopo una risposta da FAQ il cliente ringrazia e basta — il ricontrollo FAQ (guard) NON deve mordere chi non chiede nulla: nessuna escalation, nessuna richiesta del nome, una risposta cortese normale. Protegge la naturalezza della conversazione dal guard stesso.",
+  "contractRule": "Il guard chiude i turni-domanda a testo libero, non la cortesia: un ringraziamento non è 'una domanda che non abbiamo nelle faq' — 'non inventare riguarda i FATTI, non il tono: il modello resta libero di essere caloroso e naturale'.",
+  "phone": "+391110000303",
+  "newSession": true,
+  "turns": [
+    { "message": "ciao, come pulisco il robot?" },
+    { "message": "grazie mille, gentilissima!" }
+  ],
+  "expect": {
+    "faqAnswered": true,
+    "escalated": false,
+    "replyExcludes": ["numero di serie", "serial number", "nome"]
+  }
+}

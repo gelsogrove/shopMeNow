@@ -1,12 +1,14 @@
 {
-  "description": "Utente fa una domanda coperta da una FAQ reale in DB ('How can I clean my robot?') — deve rispondere SOLO col contenuto della FAQ, mai inventare, mai aggiungere raccomandazioni proprie, mai chiedere il numero di serie.",
-  "contractRule": "FAQ trovata → risponde col contenuto della FAQ, non serve il numero di serie; la risposta passa da un tool che verifica che la FAQ citata esista davvero.",
+  "description": "Utente fa una domanda coperta da una FAQ reale in DB ('How can I clean my robot?') — la risposta DEVE passare dal tool answer_from_faq (check strutturale faqAnswered, mai un match sul testo tradotto): niente testo libero, niente 'non ho questa informazione', niente numero di serie, nessuna escalation.",
+  "contractRule": "'se riconosciamo che è una faq rispondiamo con la risposta' + GUARDS: 'le risposte alle FAQ passano da un tool che verifica che la FAQ citata esista davvero, mai testo libero' + 'se è una faq non c'è bisogno del numero di serie'.",
   "phone": "+391110000301",
   "newSession": true,
   "turns": [
     { "message": "ciao come pulisco il robot?" }
   ],
   "expect": {
+    "faqAnswered": true,
+    "escalated": false,
     "replyExcludes": ["numero di serie", "serial number"]
   }
 }

@@ -8,6 +8,7 @@
     { "message": "Mario Rossi" }
   ],
   "expect": {
+    "escalated": true,
     "replyContains": ["Mario"],
     "replyExcludes": ["numero di serie", "serial number", "wifi", "batteria", "battery"]
   }

@@ -1,12 +1,16 @@
 {
-  "description": "Utente fa una domanda NON coperta da nessuna delle 3 FAQ in DB (batteria sostitutiva — le FAQ parlano solo di scelta modello, pulizia, uso sotto pioggia) — deve dire onestamente che non ha questa informazione, mai inventare una risposta. Una domanda generica senza risposta NON è di per sé motivo di escalation: nessuna richiesta del nome, nessun contatto con l'operatore.",
-  "contractRule": "FAQ non trovata → dice onestamente che non ha l'informazione, mai inventa, resta disponibile — non chiede il nome e non chiama escalate_to_operator solo per questo.",
+  "description": "Domanda NON coperta da nessuna FAQ in DB (batteria sostitutiva) — il bot dice onestamente che non ha l'informazione e NON lascia il cliente nel vuoto: caso NO_DEVICE, chiede SOLO il nome (mai il seriale, mai i check tecnici) e nel turno del nome escala davvero con reason faq_not_found (check strutturale escalated), chiudendo con l'handing-off message.",
+  "contractRule": "'se non trova né faq né flow parte con Human operator flow spiegando che non abbiamo la info ma non inventi' + 'se e' una domanda che non abbiamo nelle faq non serve chidere i dati del robot' (caso NO_DEVICE: gate → nome → escalate → handoff).",
   "phone": "+391110000302",
   "newSession": true,
   "turns": [
-    { "message": "posso mettere un'altra batteria sul robot?" }
+    { "message": "posso mettere un'altra batteria sul robot?" },
+    { "message": "Mario Rossi" }
   ],
   "expect": {
-    "replyExcludes": ["numero di serie", "serial number", "operatore", "operator", "collega", "colleague"]
+    "faqAnswered": false,
+    "escalated": true,
+    "replyContains": ["Mario"],
+    "replyExcludes": ["numero di serie", "serial number", "wifi"]
   }
 }
