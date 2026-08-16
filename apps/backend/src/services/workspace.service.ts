@@ -175,6 +175,7 @@ export const workspaceService = {
         messageLimit: true,
         channelStatus: true,
         wipMessage: true,
+        securityBlockedMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         webhookUrl: true,
@@ -275,6 +276,7 @@ export const workspaceService = {
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
+        securityBlockedMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         webhookUrl: true,
@@ -469,6 +471,7 @@ export const workspaceService = {
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
+        securityBlockedMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
@@ -687,6 +690,7 @@ export const workspaceService = {
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
+        securityBlockedMessage: true,
         url: true,
         welcomeMessage: true,
         enableWelcomeMessage: true, // E0a

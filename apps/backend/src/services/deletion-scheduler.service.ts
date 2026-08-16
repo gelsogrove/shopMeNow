@@ -257,18 +257,16 @@ export class DeletionSchedulerService {
         where: { id: W, deletedAt: { not: null, lt: expiryDate } },
       })
 
-      for (const workspace of expired) {
-        await tx.softDeleteAuditLog.create({
-          data: {
-            workspaceId: workspace.id,
-            entityType: "SCHEDULER_HARD_DELETE",
-            deletedIds: [workspace.id],
-            deletedIdCount: result.count,
-            reason: "SCHEDULED_CLEANUP",
-            deletedByUserId: null, // Scheduler-initiated
-          },
-        })
-      }
+      // Audit trail: soft_delete_audit_logs has a required CASCADE FK to
+      // Workspace, so a DB audit row for a hard-deleted workspace cannot
+      // exist (it would be cascade-deleted with it). The application log is
+      // the audit record for this scope.
+      logger.info("HARD_DELETE_AUDIT: workspaces permanently deleted", {
+        entityType: "SCHEDULER_HARD_DELETE",
+        reason: "SCHEDULED_CLEANUP",
+        deletedWorkspaceIds: expired.map((w) => w.id),
+        deletedCount: result.count,
+      })
 
       return result.count
     })

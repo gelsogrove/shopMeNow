@@ -16,6 +16,7 @@ interface OtherSectionProps {
   formData: {
     customChatbotId: string
     allowedExternalLinks: string
+    securityBlockedMessage: string
     termsAndConditions: string
     wipMessage: string
   }
@@ -97,7 +98,27 @@ export function OtherSection({
             />
             <p className="text-xs text-gray-500">
               One domain per line or comma-separated. Links to any other site are blocked
-              before the message reaches the customer. Leave empty to allow all links.
+              before the message reaches the customer. Leave empty to block ALL external
+              links (internal echatbot.ai links always work).
+            </p>
+          </div>
+          <div
+            className="space-y-2 mt-6"
+            onFocus={() => onFieldFocus?.("securityBlockedMessage")}
+            data-focus-key="securityBlockedMessage"
+          >
+            <Label htmlFor="securityBlockedMessage">Blocked-Reply Courtesy Message</Label>
+            <Textarea
+              id="securityBlockedMessage"
+              value={formData.securityBlockedMessage}
+              onChange={(e) => onFieldChange("securityBlockedMessage", e.target.value)}
+              placeholder="Sorry, I can't help with that request. Please contact our support team."
+              disabled={!canEdit}
+              className="min-h-[90px]"
+            />
+            <p className="text-xs text-gray-500">
+              Sent to the customer when the security check blocks a reply. Leave empty to
+              send nothing (the customer sees no response for that message).
             </p>
           </div>
         </CardContent>

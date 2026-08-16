@@ -111,6 +111,7 @@ interface FormData {
   termsAndConditions: string
   // Security
   allowedExternalLinks: string
+  securityBlockedMessage: string
   hasHumanSupport: boolean
   speechToTextEnabled: boolean
   hasSalesAgents: boolean
@@ -273,6 +274,7 @@ export function SettingsPage() {
     wipMessage: defaultWipMessage,
     termsAndConditions: "",
     allowedExternalLinks: "",
+    securityBlockedMessage: "",
     hasHumanSupport: true,
     speechToTextEnabled: false,
     hasSalesAgents: false,
@@ -384,6 +386,7 @@ export function SettingsPage() {
         allowedExternalLinks: Array.isArray(currentWorkspace.allowedExternalLinks)
           ? currentWorkspace.allowedExternalLinks.join(", ")
           : currentWorkspace.allowedExternalLinks || "",
+        securityBlockedMessage: (currentWorkspace as any).securityBlockedMessage || "",
         hasHumanSupport: currentWorkspace.hasHumanSupport ?? true,
         speechToTextEnabled: currentWorkspace.speechToTextEnabled ?? false,
         hasSalesAgents: currentWorkspace.hasSalesAgents ?? false,
@@ -958,6 +961,7 @@ export function SettingsPage() {
             formData={{
               customChatbotId: formData.customChatbotId,
               allowedExternalLinks: formData.allowedExternalLinks,
+              securityBlockedMessage: formData.securityBlockedMessage,
               termsAndConditions: formData.termsAndConditions,
               wipMessage: formData.wipMessage,
             }}

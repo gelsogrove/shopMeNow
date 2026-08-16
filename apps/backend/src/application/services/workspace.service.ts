@@ -267,6 +267,7 @@ For privacy inquiries, please contact our support team.`
       messageLimit: w.messageLimit ?? 1000,
       welcomeMessage: w.welcomeMessage ?? undefined,
       wipMessage: w.wipMessage ?? undefined,
+      securityBlockedMessage: (w as any).securityBlockedMessage ?? undefined,
       termsAndConditions: (w as any).termsAndConditions ?? undefined,
       channelStatus: w.channelStatus,
       deletedAt: w.deletedAt ?? null,

@@ -82,6 +82,7 @@ export class WorkspaceController {
         welcomeBackMessage: workspace.welcomeBackMessage ?? null,
         humanSupportMessage: workspace.humanSupportMessage ?? null,
         wipMessage: workspace.wipMessage,
+        securityBlockedMessage: (workspace as any).securityBlockedMessage ?? null,
         termsAndConditions: workspace.termsAndConditions,
         channelStatus: workspace.channelStatus,
         url: workspace.url,
@@ -217,6 +218,7 @@ export class WorkspaceController {
           enableWelcomeMessage: workspace.enableWelcomeMessage ?? true, // E0a
           sessionResetTimeout: workspace.sessionResetTimeout ?? 3600, // E0b
           wipMessage: workspace.wipMessage,
+          securityBlockedMessage: (workspace as any).securityBlockedMessage ?? null,
           termsAndConditions: workspace.termsAndConditions,
           channelStatus: workspace.channelStatus,
           url: workspace.url,
@@ -507,6 +509,7 @@ export class WorkspaceController {
         welcomeBackMessage: workspace.welcomeBackMessage ?? null,
         humanSupportMessage: workspace.humanSupportMessage ?? null,
         wipMessage: workspace.wipMessage,
+        securityBlockedMessage: (workspace as any).securityBlockedMessage ?? null,
         termsAndConditions: workspace.termsAndConditions,
         channelStatus: workspace.channelStatus,
         url: workspace.url,
@@ -664,6 +667,7 @@ export class WorkspaceController {
         enableWelcomeMessage: workspace.enableWelcomeMessage ?? true, // E0a
         sessionResetTimeout: workspace.sessionResetTimeout ?? 3600, // E0b
         wipMessage: workspace.wipMessage,
+        securityBlockedMessage: (workspace as any).securityBlockedMessage ?? null,
         termsAndConditions: workspace.termsAndConditions,
         channelStatus: workspace.channelStatus,
         websiteUrl: workspace.websiteUrl ?? null,
