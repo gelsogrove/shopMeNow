@@ -396,6 +396,8 @@ interface ToolContext {
   operatorBriefingLanguageOverride?: string | null
   availableFlows?: FlowSummary[]
   availableFaqs?: FaqEntry[]
+  /** FAQ indices the relevance check rejected for the CURRENT message — reset each turn, see agentTurnInternal. */
+  rejectedFaqIndices?: Set<number>
   loadFlow?: LoadFlowHandler
   gateQuestions?: GateQuestions | null
   serialNumberPattern?: string
@@ -546,9 +548,28 @@ async function executeTool(
     // and nothing upstream has asked it: the block is injected whole, never
     // searched. A tool that refuses is the mechanism; an instruction telling
     // the model to choose carefully is not (iron rule 2).
+    // An index already rejected this turn is refused without asking again.
+    // The relevance check is itself an LLM call, and the refusal above only
+    // ASKS the model not to repeat itself — which it ignored, re-proposing
+    // the same entry six times until the hop limit ran out (Andrea
+    // 2026-08-16, on a plain "grazie mille"). Remembering the verdict makes
+    // the retry structurally impossible and stops paying for it twice.
+    if (ctx.rejectedFaqIndices?.has(faqIndex)) {
+      return {
+        ok: false,
+        error: 'faq_already_rejected',
+        instruction:
+          `FAQ ${faqIndex} was already checked this turn and does not answer the customer. Do NOT ask ` +
+          'for it again and do NOT answer from your own knowledge: pick a genuinely different entry, ' +
+          "or call escalate_to_operator with reason 'faq_not_found'.",
+      }
+    }
+
     if (ctx.settings && ctx.currentMessage) {
       const relevant = await faqAnswersQuestion(ctx.currentMessage, faq, ctx.settings)
       if (!relevant) {
+        ctx.rejectedFaqIndices ??= new Set()
+        ctx.rejectedFaqIndices.add(faqIndex)
         // eslint-disable-next-line no-console
         console.error(
           `[demoam][faq-reject] index=${faqIndex} q="${faq.question.slice(0, 80)}" for message="${ctx.currentMessage.slice(0, 80)}"`,
@@ -1134,13 +1155,42 @@ async function callLLM({
   const stateBlock = formatStateForPrompt(state)
   const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages, greetingToTranslate, greetingAlreadyDelivered)
 
+  // No breakpoint here: mainPrompt alone is ~2.5k tokens, under Haiku 4.5's
+  // 4096-token minimum, so marking it cached nothing — and a 5m block before
+  // the 1h one below is rejected outright ("a ttl='1h' cache_control block
+  // must not come after a ttl='5m' block"). The single breakpoint after the
+  // static blocks covers this text too: the cached region is a prefix.
   const systemContent: Array<Record<string, unknown>> = [
-    { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: commonPrompt },
   ]
   // Block order: least-specific -> most-specific -> hard rules. Later blocks
   // win over earlier ones.
+  //
+  // The FAQ and flow catalogues are fetched once per turn and are byte-identical
+  // across every hop of that turn — and across turns, until the workspace edits
+  // one. Only commonPrompt used to carry cache_control, so these two were re-sent
+  // and re-charged at full price on all 6 hops. They are the largest blocks in
+  // the payload after the prompt itself, which is what made a single customer
+  // message cost ~7.5k tokens (Andrea, 2026-08-16 — €15 of credit in one day).
+  // Marking the last of the three static blocks extends the cached prefix over
+  // all of them: the boundary is a prefix, so one breakpoint covers everything
+  // before it.
   if (faqBlock) systemContent.push({ type: 'text', text: faqBlock })
   if (flowsBlock) systemContent.push({ type: 'text', text: flowsBlock })
+
+  // One breakpoint AFTER the last static block, not on the prompt alone:
+  // Haiku 4.5 only caches a prefix of 4096+ tokens, and mainPrompt is ~2.5k —
+  // under the threshold, so the original single breakpoint could never cache
+  // anything at all (measured 2026-08-16: cached_tokens 0 on every hop).
+  // Prompt + FAQ + flows together clear it.
+  //
+  // Default 5m TTL, not 1h: a 1h write is billed at a higher rate, and
+  // measured on a real turn (2026-08-16) it raised the write hop from
+  // $0.0074 to $0.0103 while still being read back only once. The prefix
+  // only has to survive the hops of a turn and a customer typing their next
+  // message — minutes, not an hour.
+  const lastStaticBlock = systemContent[systemContent.length - 1]
+  if (lastStaticBlock) lastStaticBlock.cache_control = { type: 'ephemeral' }
 
   let currentStepLabels: string[] = []
   if (!greetingOnlyHop && state.currentNodeId && state.activeFlowGraphSnapshot) {
@@ -1316,17 +1366,26 @@ async function composeFaqReply(
   pendingNodeQuestion: string | null,
 ): Promise<string> {
   const targetLanguage = language || settings.defaultLanguage
-  const faqText = (await forceReplyIntoLanguage(faqAnswer, targetLanguage, settings)).trim()
 
+  // Both pieces are translated by the same isolated call, so they run
+  // concurrently instead of one waiting on the other — two sequential
+  // round-trips for one reply was pure latency, and on the FAQ path it fires
+  // on every answer served.
+  const [faqTranslated, questionTranslated] = await Promise.all([
+    forceReplyIntoLanguage(faqAnswer, targetLanguage, settings),
+    pendingNodeQuestion?.trim()
+      ? forceReplyIntoLanguage(pendingNodeQuestion, targetLanguage, settings)
+      : Promise.resolve(''),
+  ])
+
+  const faqText = faqTranslated.trim()
   const written = modelReply.trim()
   if (written && written !== faqText) {
     // eslint-disable-next-line no-console
     console.error(`[demoam][faq-compose] model text replaced by FAQ answer: ${written.slice(0, 140)}`)
   }
 
-  if (!pendingNodeQuestion?.trim()) return faqText
-
-  const questionText = (await forceReplyIntoLanguage(pendingNodeQuestion, targetLanguage, settings)).trim()
+  const questionText = questionTranslated.trim()
   return questionText ? `${faqText}\n\n${questionText}` : faqText
 }
 
@@ -1658,6 +1717,9 @@ async function agentTurnInternal(
   history.push({ role: 'user', content: sanitizedMessage })
   ctx.currentMessage = sanitizedMessage
   ctx.settings = settings
+  // Verdicts are about THIS message: a FAQ that did not answer the last one
+  // may well answer the next.
+  ctx.rejectedFaqIndices = new Set()
 
   let state = getState(ctx.sessionId)
   let tokensUsedSoFar = 0
@@ -1832,17 +1894,23 @@ async function agentTurnInternal(
       if (effectiveToolCalls.length === 0) {
         const keepCall = toolCalls.find((c) => c.function.name === 'keep_draft_reply')
         const declaredReason = keepCall ? safeParseArgs(keepCall.function.arguments).reason : undefined
-        const draftCarriesNoFacts = declaredReason === 'greeting_or_smalltalk'
+        // Only an EXPLICIT technical_problem_intake rejects the draft. A
+        // missing declaration (no tool call at all) is the guard failing to
+        // answer, not evidence against the draft — treating the two the same
+        // replaced ordinary intake replies with the pending question and
+        // desynchronised the whole conversation, asking a customer their name
+        // one turn after they gave it.
+        const draftClaimsToHandleProblem = declaredReason === 'technical_problem_intake'
 
         // eslint-disable-next-line no-console
         console.error(
           '[demoam][faq-verify]',
-          draftCarriesNoFacts
-            ? 'draft kept (declared greeting_or_smalltalk — carries no facts)'
-            : `draft REJECTED (reason=${String(declaredReason ?? 'none')}) — falling back to the pending question`,
+          draftClaimsToHandleProblem
+            ? 'draft REJECTED (declared technical_problem_intake) — the gate question is the answer'
+            : `draft kept (reason=${String(declaredReason ?? 'none')})`,
         )
 
-        if (draftCarriesNoFacts) {
+        if (!draftClaimsToHandleProblem) {
           const draftBody = faqVerifyDraft ?? ''
           const reply = greetingReply ? `${greetingReply}\n\n${draftBody}`.trim() : draftBody
           history.push({ role: 'assistant', content: reply })
