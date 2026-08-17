@@ -30,7 +30,7 @@ import {
 } from './state.js'
 import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-machine.js'
 import { conversationVerbatim, type VerbatimExchange } from './briefing.js'
-import { WELCOME_BACK_STALE_MS, MAX_LOOP_TURNS } from './bounds.js'
+import { WELCOME_BACK_STALE_MS, MAX_LOOP_TURNS, INTAKE_MAX_DICTATED_ASKS } from './bounds.js'
 import {
   formatFlowsBlock,
   formatFlowStepBlock,
@@ -2015,6 +2015,8 @@ async function agentTurnInternal(
   let postIntakeForced = false
   let intakeSaveForced = false
   let curatedToolsNext: ReadonlyArray<Record<string, unknown>> | null = null
+  /** Intake fields whose dictated ask was already counted THIS turn — the give-up counter must tick once per turn, not once per hop. */
+  const countedIntakeAsks = new Set<string>()
 
   const EMPTY_REPLY_RETRY_INSTRUCTION =
     "[SYSTEM: Your previous turn produced no visible text. Write your reply to the customer now — ask the pending question or acknowledge their last message — in the customer's language, ending with the ⟦LANG:xx⟧ tag.]"
@@ -2208,7 +2210,36 @@ async function agentTurnInternal(
         }
       }
 
-      const midIntakeQ = midIntakePendingQuestion(getState(ctx.sessionId), ctx.gateQuestions)
+      let midIntakeQ = midIntakePendingQuestion(getState(ctx.sessionId), ctx.gateQuestions)
+      if (midIntakeQ) {
+        // Give-up bookkeeping (INTAKE_MAX_DICTATED_ASKS, bounds.ts): one ask
+        // counted per field per TURN, whichever channel put the question to
+        // the customer (invariant dictation, guard refusal, FAQ re-ask). A
+        // field past the cap is abandoned — serial via serialNumberExhausted
+        // (rule 14's wording in the briefing), the rest via
+        // intakeGivenUpFields — because a customer who cannot answer must
+        // still reach an operator: "non lo trovo il numero di serie" never
+        // increments the invalid-attempt counter (nothing to validate), and
+        // the invariant re-asked the serial forever (2026-08-17,
+        // certification, 04-serial-number/02).
+        let pendingStep = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+        while (pendingStep) {
+          const askKey = `intake_dictated:${pendingStep.field}`
+          const asks = countedIntakeAsks.has(askKey)
+            ? (getAskedCounts(ctx.sessionId)?.[askKey] ?? 0)
+            : registerFieldRequest(ctx.sessionId, askKey)
+          countedIntakeAsks.add(askKey)
+          if (asks <= INTAKE_MAX_DICTATED_ASKS) break
+          if (pendingStep.field === 'serialNumber') {
+            updateState(ctx.sessionId, { serialNumberExhausted: true }, { mirror: false })
+          } else {
+            const given = getState(ctx.sessionId).intakeGivenUpFields ?? []
+            updateState(ctx.sessionId, { intakeGivenUpFields: [...given, pendingStep.field] }, { mirror: false })
+          }
+          pendingStep = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+        }
+        midIntakeQ = pendingStep?.question?.trim() || null
+      }
       if (midIntakeQ && !(awaitingDictatedReply && dictatedByRefusal)) {
         // Dictating the question would RE-ASK something the customer already
         // said when the missing field is plausibly sitting in their own words
