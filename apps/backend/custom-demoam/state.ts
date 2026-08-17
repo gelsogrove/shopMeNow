@@ -70,6 +70,14 @@ export interface SessionState {
   // lame" invented instead of the hand-off; escalation never re-called).
   pendingEscalationReason?: string
 
+  // Intake fields the invariant gave up on after INTAKE_MAX_DICTATED_ASKS
+  // dictated asks without progress — nextIntakeStep skips them so a customer
+  // who cannot answer (e.g. "non lo trovo il numero di serie") still reaches
+  // an operator instead of looping on the same question (2026-08-17,
+  // 04-serial-number/02). The serial has its own flag (serialNumberExhausted)
+  // for the briefing wording; this list covers every other field.
+  intakeGivenUpFields?: string[]
+
   // How many turns the conversation has spent sitting on each corrective
   // LOOP node, keyed by node id. PERSISTED on purpose, unlike askedCounts:
   // the host runs more than one dyno and the CLI runner starts a fresh

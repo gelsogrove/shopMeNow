@@ -41,6 +41,18 @@ export const PRE_OPERATOR_MAX_ASKS = 2
  */
 export const MAX_LOOP_TURNS = 2
 
+/**
+ * CONTRACT.md rule 14's spirit, applied to the intake invariant's dictated
+ * asks: a field DICTATED this many times without progress is given up (the
+ * serial becomes serialNumberExhausted, other fields land in
+ * intakeGivenUpFields) so the conversation can still reach an operator.
+ * Without this, "non lo trovo il numero di serie" — which never increments
+ * the invalid-attempt counter, because there is nothing to validate — left
+ * the invariant re-asking the serial question forever (certification
+ * 2026-08-17, 04-serial-number/02).
+ */
+export const INTAKE_MAX_DICTATED_ASKS = 3
+
 /** Operator briefing: how much verbatim dialogue the summarizer sees / the fallback prints. */
 export const BRIEFING_MAX_EXCHANGES = 5
 export const BRIEFING_MAX_PROMPT_CHARS = 160
