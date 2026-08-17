@@ -228,6 +228,10 @@ got in — each looked harmless on its own.
   makes the file Andrea-only: NEVER edit CONTRACT.md, for any reason.
 - Every CLI scenario in `custom-demoam/cli/scenarios/` names the contract rule
   it verifies (`contractRule`) — the runner is the contract's test suite.
+- **`custom-demoam/docs/architecture.md`** maps every contract rule to the
+  mechanism that guarantees it, the test that locks it, and the live bug that
+  motivated it. Read it before touching the module; keep it in sync with the
+  code (same duty as demorobot's flow-runtime.md).
 - **LLM run cost approval (🚨 learned at €15, 2026-08-16)**: every demoam
   scenario/run-one launch calls the real LLM + production Supabase and costs
   real money (~$0.015/message, full suite ≈ $3). ALWAYS declare call count +

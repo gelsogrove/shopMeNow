@@ -29,6 +29,7 @@ import {
   updateState,
 } from './state.js'
 import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-machine.js'
+import { customerVerbatim } from './briefing.js'
 import {
   formatFlowsBlock,
   formatFlowStepBlock,
@@ -1532,12 +1533,10 @@ async function forceReplyIntoLanguage(text: string, languageCode: string, settin
 function resolveGreetingText(state: SessionState, settings: Settings, messages: WorkspaceMessages | undefined): string | undefined {
   if (state.greeting !== 'new' && state.greeting !== 'returning') return undefined
   const raw = state.greeting === 'new' ? settings.welcomeMessage : (messages?.welcomeBack ?? settings.welcomeBackMessage)
-  const knownName = state.name?.trim()
-  const resolved = raw
-    ?.replace(/\{\{\s*customerName\s*\}\}/gi, knownName || '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-  return resolved || undefined
+  // ONE copy of the substitution rule (substituteCustomerName) — this used to
+  // duplicate it inline without the orphaned-punctuation cleanup, which is
+  // where "Bentornato !" came from (2026-08-17).
+  return substituteCustomerName(raw, state.name) ?? undefined
 }
 
 function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
@@ -1637,10 +1636,10 @@ const HUMAN_SUPPORT_MARKER = '**👤 Human Support message**'
 async function formatOperatorBriefing(params: {
   state: SessionState
   reason: string
-  summary?: string
+  customerSaid: string[]
   settings: Settings
 }): Promise<string> {
-  const { state, reason, summary, settings } = params
+  const { state, reason, customerSaid, settings } = params
   const toOperatorLanguage = (text: string): Promise<string> =>
     forceReplyIntoLanguage(text, settings.defaultLanguage, settings)
 
@@ -1688,10 +1687,13 @@ async function formatOperatorBriefing(params: {
     }
   }
 
-  if (summary?.trim()) {
+  // Verbatim and untranslated on purpose: a translation is one more model
+  // pass over the customer's words, and the whole point of this section is
+  // that nothing generated stands between the customer and the operator.
+  if (customerSaid.length > 0) {
     lines.push('')
-    lines.push('**Summary**')
-    lines.push(await toOperatorLanguage(summary.trim()))
+    lines.push('**Customer said (verbatim)**')
+    for (const msg of customerSaid) lines.push(`• «${msg}»`)
   }
 
   return lines.join('\n')
@@ -1714,7 +1716,16 @@ interface TurnResult {
 function substituteCustomerName(raw: string | undefined, customerName: string | undefined): string | null {
   const text = raw?.trim()
   if (!text) return null
-  return text.replace(/\{\{\s*customerName\s*\}\}/gi, customerName?.trim() || '').replace(/\s{2,}/g, ' ').trim() || null
+  return (
+    text
+      .replace(/\{\{\s*customerName\s*\}\}/gi, customerName?.trim() || '')
+      .replace(/\s{2,}/g, ' ')
+      // An empty name leaves the template's punctuation orphaned —
+      // "Bentornato !" (seen live 2026-08-17). Snapping the space out gives
+      // "Bentornato!" without inventing any copy.
+      .replace(/\s+([!?.,;:])/g, '$1')
+      .trim() || null
+  )
 }
 
 function handoffFallback(messages: WorkspaceMessages | undefined, settings: Settings, customerName: string | undefined): string | null {
@@ -1833,6 +1844,7 @@ async function agentTurnInternal(
   let faqVerifyDraft: string | null = null
   let forcedToolNext: string | null = null
   let postIntakeForced = false
+  let intakeSaveForced = false
   let curatedToolsNext: ReadonlyArray<Record<string, unknown>> | null = null
 
   const EMPTY_REPLY_RETRY_INSTRUCTION =
@@ -1997,6 +2009,24 @@ async function agentTurnInternal(
       // free-text replies are untouched.
       const midIntakeQ = midIntakePendingQuestion(getState(ctx.sessionId), ctx.gateQuestions)
       if (midIntakeQ) {
+        // Dictating the question would RE-ASK something the customer already
+        // said when the missing field is plausibly sitting in their own words
+        // (certification 2026-08-17, 07-hs/05: description in the opening
+        // message, re-asked at turn 2 — the exact 2026-08-08 bug that
+        // scenario exists to prevent). One forced remember attempt instead:
+        // the existing intake block renders in save-what-they-said mode, and
+        // the field's own guard still rejects a value too thin to count.
+        if (!intakeSaveForced && !servedFaqAnswer) {
+          const pendingStep = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+          const customerMessages = history.filter((m) => m.role === 'user').map((m) => m.content ?? '')
+          if (intakeFieldMayAlreadyBeAnswered(pendingStep, customerMessages)) {
+            intakeSaveForced = true
+            forcedToolNext = 'remember'
+            awaitingDictatedReply = false
+            tokensUsedSoFar += hopTokens
+            continue
+          }
+        }
         const intakeLang = getState(ctx.sessionId).language || settings.defaultLanguage
         let composedBody: string
         if (servedFaqAnswer) {
@@ -2111,7 +2141,6 @@ async function agentTurnInternal(
     history.push({ role: 'assistant', content: text || null, tool_calls: effectiveToolCalls })
 
     let escalated = false
-    let escalationSummary: string | undefined
     let escalationReason = 'diagnostic_exhausted'
 
     for (const call of effectiveToolCalls) {
@@ -2157,7 +2186,6 @@ async function agentTurnInternal(
 
       if (call.function.name === 'escalate_to_operator' && result.ok) {
         escalated = true
-        escalationSummary = typeof args.summary === 'string' ? args.summary : escalationSummary
         escalationReason = typeof args.reason === 'string' ? args.reason : escalationReason
       }
 
@@ -2194,10 +2222,15 @@ async function agentTurnInternal(
       }
       history.push({ role: 'assistant', content: reply })
 
+      // The model's `summary` argument stays a required part of the tool call
+      // (making it articulate the case is useful) but it is never shown to a
+      // human: briefing and host e-mail both carry the customer's verbatim
+      // words instead — see customerVerbatim.
+      const verbatim = customerVerbatim(history)
       const briefing = await formatOperatorBriefing({
         state: getState(ctx.sessionId),
         reason: escalationReason,
-        summary: escalationSummary,
+        customerSaid: verbatim,
         settings,
       })
 
@@ -2210,7 +2243,7 @@ async function agentTurnInternal(
         tokensUsed: tokensUsedSoFar + hopTokens + finalHop.tokensUsed,
         escalated: true,
         answeredFromFaq,
-        escalationSummary,
+        escalationSummary: verbatim.map((m) => `«${m}»`).join('\n'),
       }
     }
   }

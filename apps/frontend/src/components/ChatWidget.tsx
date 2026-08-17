@@ -185,6 +185,45 @@ export interface PushDemoCase {
   cta?: string // optional localized CTA label for the link button
 }
 
+/** Shape of a message fetched from the operator-messages endpoint. */
+interface FetchedServerMessage {
+  id: string
+  content: string
+  createdAt: string
+  attachments?: ChatAttachment[]
+}
+
+/** The one mapper from server rows to widget messages — every polling path uses it. */
+const toBotMessage = (m: FetchedServerMessage) => ({
+  role: "bot" as const,
+  content: m.content,
+  timestamp: m.createdAt,
+  attachments: m.attachments, // 📎 keep operator-sent image/PDF/audio
+  serverId: m.id, // 😀 lets the visitor react to this message server-side
+})
+
+/**
+ * Merges server-fetched messages into the shown list without ever rendering
+ * the same message twice — the SINGLE dedup rule for every polling path.
+ *
+ * Identity: the server id when the shown copy has one; otherwise the content.
+ * Never the timestamp: a bot reply appended locally from the HTTP response
+ * carries a client-side timestamp while the same message re-fetched by a poll
+ * (since=1970 on operator takeover) carries the server's createdAt, so any
+ * key involving timestamps splits the two copies — which is exactly how whole
+ * conversations rendered twice on escalation turns (Andrea 2026-08-17, seen
+ * live). Before this helper the three polling paths had three different
+ * dedup rules (newer-than-timestamp, content|timestamp, none at all).
+ */
+const mergeServerMessages = (prev: Message[], incoming: Message[]): Message[] => {
+  const shownIds = new Set(prev.map((m) => m.serverId).filter(Boolean))
+  const shownLocalContents = new Set(prev.filter((m) => !m.serverId).map((m) => m.content))
+  const unique = incoming.filter(
+    (m) => !(m.serverId && shownIds.has(m.serverId)) && !shownLocalContents.has(m.content),
+  )
+  return unique.length === 0 ? prev : [...prev, ...unique]
+}
+
 interface Message {
   role: "user" | "bot"
   content: string
@@ -774,28 +813,10 @@ export function ChatWidget({
             // call already has them (since=1970) but only used them to set the
             // banner flag. Append the ones newer than the last locally stored
             // message, and move the polling cursor past them.
-            const fetched = data.messages as {
-              id: string
-              content: string
-              createdAt: string
-              attachments?: ChatAttachment[]
-            }[]
+            const fetched = data.messages as FetchedServerMessage[]
             setMessages((prev) => {
-              const lastLocalTs = prev.length
-                ? Date.parse(prev[prev.length - 1].timestamp || "") || 0
-                : 0
-              const missed = fetched
-                .filter((m) => Date.parse(m.createdAt) > lastLocalTs)
-                .map((m) => ({
-                  role: "bot" as const,
-                  content: m.content,
-                  timestamp: m.createdAt,
-                  attachments: m.attachments,
-                  serverId: m.id,
-                }))
-              if (missed.length === 0) return prev
-              const updated = [...prev, ...missed]
-              if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+              const updated = mergeServerMessages(prev, fetched.map(toBotMessage))
+              if (updated !== prev && resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
               return updated
             })
             lastOperatorMsgAt.current = fetched[fetched.length - 1].createdAt
@@ -911,33 +932,13 @@ export function ChatWidget({
 
           if (Array.isArray(data.messages) && data.messages.length > 0) {
             setOperatorHasReplied(true)
-            const newMsgs = (
-              data.messages as {
-                id: string
-                content: string
-                createdAt: string
-                attachments?: ChatAttachment[]
-              }[]
-            ).map((m) => ({
-              role: "bot" as const,
-              content: m.content,
-              timestamp: m.createdAt,
-              attachments: m.attachments, // 📎 keep operator-sent image/PDF/audio
-              serverId: m.id, // 😀 lets the visitor react to this operator message
-            }))
+            const fetched = data.messages as FetchedServerMessage[]
             setMessages((prev) => {
-              // Deduplicate: skip messages already shown (by content + timestamp)
-              const existingKeys = new Set(prev.map(m => `${m.content}|${m.timestamp}`))
-              const uniqueNew = newMsgs.filter((m: { content: string; timestamp: string }) =>
-                !existingKeys.has(`${m.content}|${m.timestamp}`)
-              )
-              if (uniqueNew.length === 0) return prev
-              const updated = [...prev, ...uniqueNew]
-              if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+              const updated = mergeServerMessages(prev, fetched.map(toBotMessage))
+              if (updated !== prev && resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
               return updated
             })
-            const latest = data.messages[data.messages.length - 1].createdAt
-            lastOperatorMsgAt.current = latest
+            lastOperatorMsgAt.current = fetched[fetched.length - 1].createdAt
           }
         }
       } catch {
@@ -974,28 +975,14 @@ export function ChatWidget({
         // Append new operator messages — also unlock input so customer can reply
         if (Array.isArray(data.messages) && data.messages.length > 0) {
           setOperatorHasReplied(true)
-          const newMsgs = (
-            data.messages as {
-              id: string
-              content: string
-              createdAt: string
-              attachments?: ChatAttachment[]
-            }[]
-          ).map((m) => ({
-            role: "bot" as const,
-            content: m.content,
-            timestamp: m.createdAt,
-            attachments: m.attachments,
-            serverId: m.id, // 😀 lets the visitor react to this operator message
-          }))
+          const fetched = data.messages as FetchedServerMessage[]
           setMessages((prev) => {
-            const updated = [...prev, ...newMsgs]
-            if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+            const updated = mergeServerMessages(prev, fetched.map(toBotMessage))
+            if (updated !== prev && resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
             return updated
           })
           // Update since timestamp to the latest message
-          const latest = data.messages[data.messages.length - 1].createdAt
-          lastOperatorMsgAt.current = latest
+          lastOperatorMsgAt.current = fetched[fetched.length - 1].createdAt
         }
       } catch {
         // Silently ignore network errors during polling
