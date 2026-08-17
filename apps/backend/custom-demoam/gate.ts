@@ -303,6 +303,9 @@ export function nextIntakeStep(
     // "done asking", the same as answered — never re-requested here either,
     // same reasoning as preOperatorAnswered below.
     if (field === 'serialNumber' && state.serialNumberExhausted) continue
+    // A field the invariant gave up on (INTAKE_MAX_DICTATED_ASKS dictated
+    // asks without progress) is done asking too — see intakeGivenUpFields.
+    if (state.intakeGivenUpFields?.includes(field)) continue
 
     const answered =
       field === 'serialNumber'
