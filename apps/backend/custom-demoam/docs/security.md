@@ -73,7 +73,10 @@ notifications — admin/system-configured content, not LLM output.
 ⚠️ Every LLM security check is **fail-open** — missing API key, HTTP error,
 or unparseable JSON all return safe (`SecurityAgent.ts`). Deliberate
 availability trade-off; documented so nobody mistakes it for a guarantee.
-Note the cost: one extra LLM call (gpt-4o-mini) per screened reply.
+Note the cost: one extra LLM call per screened reply. The SECURITY agent for
+AmRobot runs on `anthropic/claude-haiku-4.5` — same model as the chatbot
+itself (aligned 2026-08-17; the row previously carried the unused
+`openai/gpt-4o-mini` schema default).
 
 ## 4. Sender validates all IDs before sending — ⚠️ (improved, not unified)
 
@@ -126,9 +129,9 @@ Boundaries to know:
 - *Inbound* customer profanity is not blocked deterministically (inbound
   content-safety covers XSS/SQLi/prompt-injection only) — by design: no word
   lists in code, the bot's tone rules handle it.
-- Workspaces without a SECURITY agent row get no screening (fail-open). As of
-  the audit: DemoWash and DemoRealEstate have **no** SECURITY agent;
-  eChatbot HQ has an **empty** prompt. Decision pending from Andrea.
+- Workspaces without a SECURITY agent row get no screening (fail-open).
+  DemoWash and DemoRealEstate have none and eChatbot HQ has an empty prompt —
+  Andrea confirmed (2026-08-17) only demoam matters; deliberately left as-is.
 
 ## 7. WhatsApp best practices — ✅ (with the §1 legacy caveat)
 
@@ -175,7 +178,5 @@ Rule 25 demands **total silence**: no reply, no history save, no LLM call.
 
 1. **Shared sender gate** (§4) — one deterministic pre-send validator for
    queue + direct send; also closes the §Blacklist queue residual.
-2. **SECURITY agent missing/empty on other workspaces** (§6) — DemoWash,
-   DemoRealEstate (none), eChatbot HQ (empty prompt).
-3. **Legacy wasender sessions without webhook secret** (§1) — re-pair to
+2. **Legacy wasender sessions without webhook secret** (§1) — re-pair to
    enforce signatures everywhere.

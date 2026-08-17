@@ -35,6 +35,8 @@ describe("WhatsAppQueueService", () => {
       workspace: {
         findUnique: jest.fn(),
       },
+      // Outbound gate lookup: customer belongs to workspace + not blacklisted.
+      customers: { findFirst: jest.fn(async () => ({ isBlacklisted: false })) },
       conversationMessage: {
         findUnique: jest.fn(),
         update: jest.fn(),

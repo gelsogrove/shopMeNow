@@ -65,6 +65,8 @@ import { WhatsAppDirectSendService } from "../../src/services/whatsapp-direct-se
 
 const mockPrisma = {
   workspace: { findUnique: jest.fn() as any },
+  // Outbound gate lookup: customer belongs to workspace + not blacklisted.
+  customers: { findFirst: jest.fn(async () => ({ isBlacklisted: false })) as any },
   conversationMessage: {
     findUnique: jest.fn() as any,
     update: jest.fn() as any,

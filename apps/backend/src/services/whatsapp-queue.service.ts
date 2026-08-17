@@ -13,6 +13,7 @@ import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.reposito
 // Services
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
+import { checkOutboundSendGate } from "./whatsapp/outbound-send-gate"
 import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 
 export interface EnqueueMessageDto {
@@ -642,6 +643,18 @@ export class WhatsAppQueueService {
           success: false,
           error: "Workspace not found",
         }
+      }
+
+      // 🚪 OUTBOUND GATE: deterministic identity/state validation (workspace
+      // not deleted, channel active, customer belongs to workspace, not
+      // blacklisted) at SEND time — catches customers blacklisted after the
+      // message was enqueued. Last stop before the provider call.
+      const gate = await checkOutboundSendGate(this.prisma, {
+        workspaceId: message.workspaceId,
+        customerId: message.customerId,
+      })
+      if (!gate.allowed) {
+        return { success: false, error: `Outbound gate: ${gate.reason}` }
       }
 
       // Create WhatsApp provider (UltraMsg or Meta)

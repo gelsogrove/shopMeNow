@@ -3,6 +3,7 @@ import logger from "../utils/logger"
 import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 import { SecurityAgent } from "../application/agents/SecurityAgent"
+import { checkOutboundSendGate } from "./whatsapp/outbound-send-gate"
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import { generateSpeech, TTSResult } from "./tts-elevenlabs.service"
 import { messageAttachmentRepository } from "../repositories/message-attachment.repository"
@@ -121,6 +122,15 @@ export class WhatsAppDirectSendService {
 
     if (!workspace) {
       return { success: false, error: "Workspace not found" }
+    }
+
+    // 🚪 OUTBOUND GATE: deterministic identity/state validation (workspace not
+    // deleted, channel active, customer belongs to workspace, not blacklisted).
+    // Runs on EVERY send — skipSecurityCheck only exempts the LLM content
+    // check, never this gate. Last stop before the provider call.
+    const gate = await checkOutboundSendGate(this.prisma, { workspaceId, customerId })
+    if (!gate.allowed) {
+      return { success: false, blocked: true, error: `Outbound gate: ${gate.reason}` }
     }
 
     if (!WhatsAppProviderFactory.isConfigured(workspace)) {
@@ -296,6 +306,12 @@ export class WhatsAppDirectSendService {
     if (!phoneNumber) {
       logger.error("[DirectSend] ❌ Missing phone number (media)", { workspaceId, customerId })
       return { success: false, error: "Missing destination phone number" }
+    }
+
+    // 🚪 OUTBOUND GATE: same identity/state validation as send().
+    const gate = await checkOutboundSendGate(this.prisma, { workspaceId, customerId })
+    if (!gate.allowed) {
+      return { success: false, blocked: true, error: `Outbound gate: ${gate.reason}` }
     }
 
     // 🔒 SECURITY CHECK on the caption (skip for bot-generated content).

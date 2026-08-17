@@ -90,6 +90,8 @@ const mockPrisma = {
     findMany: jest.fn(),
     findUnique: jest.fn(),
   },
+  // Outbound gate lookup: customer belongs to workspace + not blacklisted.
+  customers: { findFirst: jest.fn(async () => ({ isBlacklisted: false })) },
   user: {
     findUnique: jest.fn(),
   },
@@ -319,7 +321,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
           ownerId: "owner-1",
           channelStatus: true,
         })
-        .mockResolvedValueOnce({
+        .mockResolvedValue({
           id: "ws1",
           whatsappProvider: "meta",
           whatsappApiKey: "test_key",
@@ -558,7 +560,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
           ownerId: "owner-1",
           channelStatus: true,
         })
-        .mockResolvedValueOnce({
+        .mockResolvedValue({
           id: "ws1",
           whatsappProvider: "meta",
           whatsappApiKey: "test_key",

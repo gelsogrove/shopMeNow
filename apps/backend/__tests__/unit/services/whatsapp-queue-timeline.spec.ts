@@ -26,7 +26,8 @@ const mockPrisma = {
     updateMany: jest.fn(async () => ({ count: 1 })),
   },
   customers: {
-    findFirst: jest.fn(),
+    // Outbound gate lookup: customer belongs to workspace + not blacklisted.
+    findFirst: jest.fn(async () => ({ isBlacklisted: false })),
   },
   workspaceSubscription: {
     findFirst: jest.fn(),
