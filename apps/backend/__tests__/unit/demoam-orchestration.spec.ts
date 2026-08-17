@@ -90,9 +90,12 @@ describe('demoam carries no hardcoded customer-facing copy', () => {
 
 describe('demoam serial number — 3-attempt gate fallback (steps.md 2-C.1)', () => {
   const guardSource = fs.readFileSync(path.join(MODULE_DIR, 'content-guards.ts'), 'utf8')
+  // The bound itself moved to bounds.ts (2026-08-17, mechanism bounds
+  // centralized) — same value, same rule 14, one home for every limit.
+  const boundsSource = fs.readFileSync(path.join(MODULE_DIR, 'bounds.ts'), 'utf8')
 
   it('caps invalid serial attempts at 3, confirmed with Andrea (not hardcoded to any other number)', () => {
-    expect(guardSource).toMatch(/MAX_SERIAL_ATTEMPTS\s*=\s*3/)
+    expect(boundsSource).toMatch(/MAX_SERIAL_ATTEMPTS\s*=\s*3/)
   })
 
   it('routes to the pre-operator gate instead of looping forever once exhausted', () => {
