@@ -22,7 +22,7 @@ import {
 } from "../../custom-demoam/gate.js"
 import { resolveGreeting } from "../../custom-demoam/state.js"
 import type { SessionState } from "../../custom-demoam/state.js"
-import { customerVerbatim } from "../../custom-demoam/briefing.js"
+import { conversationVerbatim } from "../../custom-demoam/briefing.js"
 import { renderWorkspaceCopy } from "../../src/application/services/workspace-copy.render"
 
 const AGENT_SOURCE = fs.readFileSync(
@@ -171,42 +171,56 @@ describe("welcome-back threshold — resolveGreeting (CONTRACT.md 16/32)", () =>
     expect(resolveGreeting({ ...base, historyLength: 0, lastMessageAtMs: undefined })).toBe("returning")
   })
 
-  it("agent.ts pins the threshold at exactly two hours (rule 32)", () => {
-    expect(AGENT_SOURCE).toContain("2 * 60 * 60 * 1000")
+  it("bounds.ts pins the threshold at exactly two hours (rule 32)", () => {
+    const BOUNDS_SOURCE = fs.readFileSync(
+      path.join(__dirname, "../../custom-demoam/bounds.ts"),
+      "utf8",
+    )
+    expect(BOUNDS_SOURCE).toContain("WELCOME_BACK_STALE_MS = 2 * 60 * 60 * 1000")
   })
 })
 
-describe("operator briefing — the customer's words, never the model's (CONTRACT.md 2)", () => {
-  // WHY: 2026-08-17, seen live — for a customer asking how to change the
-  // BLADES, the model-authored Summary in the operator briefing contained a
-  // fully invented nine-step guide to replacing the WHEELS. Verbatim quotes
-  // cannot invent, by construction.
+describe("operator briefing — data + sealed-room summary (CONTRACT.md 2)", () => {
+  // WHY: 2026-08-17, seen live — the in-conversation model's Summary once
+  // contained a fully invented nine-step WHEELS guide for a BLADES question.
+  // The summary now comes from an ISOLATED call whose only input is the
+  // verbatim Q/A pairs picked by code (no product knowledge, explicit ban on
+  // advice/procedures), with the pairs themselves as the fail-open fallback.
+  // Bare answers are paired with the bot line they answered — a briefing
+  // reading «yes» «yes» «yes» told the operator nothing (Andrea, same day).
   const history = [
-    { role: "assistant", content: "Ciao! Come posso aiutarti?" },
-    { role: "user", content: "  ho una domanda\n come cambio   le lame? " },
+    { role: "assistant", content: "C'è una luce rossa   accesa?" },
+    { role: "user", content: "  yes " },
+    { role: "assistant", content: null, tool_calls: [{}] }, // internal hop — never customer-visible
     { role: "tool", content: '{"ok":true}' },
-    { role: "user", content: "Pino" },
+    { role: "assistant", content: "Lampeggia continuamente?" },
+    { role: "user", content: "yes" },
   ]
 
-  it("picks only the customer's messages, whitespace-collapsed, in order", () => {
-    expect(customerVerbatim(history)).toEqual(["ho una domanda come cambio le lame?", "Pino"])
+  it("pairs each customer answer with the bot line it answered, skipping internal hop entries", () => {
+    expect(conversationVerbatim(history)).toEqual([
+      { prompt: "C'è una luce rossa accesa?", customer: "yes" },
+      { prompt: "Lampeggia continuamente?", customer: "yes" },
+    ])
   })
 
   it("clips a rambling message at the cap with an ellipsis instead of dropping it", () => {
     const long = "x".repeat(400)
-    const [clipped] = customerVerbatim([{ role: "user", content: long }])
-    expect(clipped).toHaveLength(301) // 300 + ellipsis
-    expect(clipped.endsWith("…")).toBe(true)
+    const [exchange] = conversationVerbatim([{ role: "user", content: long }])
+    expect(exchange.customer).toHaveLength(301) // 300 + ellipsis
+    expect(exchange.customer.endsWith("…")).toBe(true)
+    expect(exchange.prompt).toBeUndefined()
   })
 
-  it("keeps only the last N messages so the briefing stays readable", () => {
+  it("keeps only the last N exchanges so the briefing stays readable", () => {
     const many = Array.from({ length: 9 }, (_, i) => ({ role: "user", content: `msg ${i}` }))
-    expect(customerVerbatim(many, 5)).toEqual(["msg 4", "msg 5", "msg 6", "msg 7", "msg 8"])
+    expect(conversationVerbatim(many, 5).map((e) => e.customer)).toEqual(["msg 4", "msg 5", "msg 6", "msg 7", "msg 8"])
   })
 
-  it("the briefing renders the verbatim section and the model-authored Summary section is gone", () => {
-    expect(AGENT_SOURCE).toContain("**Customer said (verbatim)**")
-    expect(AGENT_SOURCE).not.toContain("'**Summary**'")
+  it("the summary is sealed-room: only the dialogue as input, advice and procedures banned, verbatim fallback", () => {
+    expect(AGENT_SOURCE).toContain("summarizeConversationForOperator")
+    expect(AGENT_SOURCE).toContain("no advice, no instructions, no procedures, no diagnosis")
+    expect(AGENT_SOURCE).toContain("**Conversation (verbatim)**")
   })
 })
 

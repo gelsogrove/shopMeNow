@@ -29,7 +29,8 @@ import {
   updateState,
 } from './state.js'
 import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-machine.js'
-import { customerVerbatim } from './briefing.js'
+import { conversationVerbatim, type VerbatimExchange } from './briefing.js'
+import { WELCOME_BACK_STALE_MS, MAX_LOOP_TURNS } from './bounds.js'
 import {
   formatFlowsBlock,
   formatFlowStepBlock,
@@ -124,14 +125,12 @@ const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 // CLAUDE.md §1A — see custom-demoam/steps.md Step 1): a timing constant, not
 // customer-facing copy, and not expected to vary per tenant. Two hours per
 // CONTRACT.md rule 32.
-const WELCOME_BACK_STALE_MS = 2 * 60 * 60 * 1000
 
 // How many turns a corrective LOOP node may hold the conversation before the
 // flow gives up and escalates. The count is 1 on the turn the customer first
 // answers "no" (the turn the node dictates its instruction), so 2 means: ask
 // once, allow one more turn to report it done, then move on. Same reasoning
 // as the gate's maxAsks — a mechanism bound, not tenant copy.
-const MAX_LOOP_TURNS = 2
 
 export interface HistoryEntry {
   role: 'user' | 'assistant'
@@ -426,6 +425,8 @@ function sanitizeUserMessage(raw: string, maxMessageChars: number): string {
 interface ToolContext {
   sessionId: string
   workspaceId: string
+  /** Per-turn meter for the sealed-room LLM calls (see isolatedCall) — reset in chatbotFn, added to the turn's tokensUsed. */
+  isolatedTokensUsed: number
   customerName?: string
   operatorBriefingLanguageOverride?: string | null
   availableFlows?: FlowSummary[]
@@ -600,7 +601,7 @@ async function executeTool(
     }
 
     if (ctx.settings && ctx.currentMessage) {
-      const relevant = await faqAnswersQuestion(ctx.currentMessage, faq, ctx.settings)
+      const relevant = await faqAnswersQuestion(ctx.currentMessage, faq, ctx.settings, ctx)
       if (!relevant) {
         ctx.rejectedFaqIndices ??= new Set()
         ctx.rejectedFaqIndices.add(faqIndex)
@@ -771,7 +772,7 @@ async function executeTool(
       const guardResult = await validateProblemDescription(
         ctx.sessionId,
         String(value).trim(),
-        ctx.settings ? (text) => descriptionDescribesSymptom(text, ctx.settings!) : undefined,
+        ctx.settings ? (text) => descriptionDescribesSymptom(text, ctx.settings!, ctx) : undefined,
       )
       if (guardResult) return guardResult
     }
@@ -1479,6 +1480,7 @@ async function composeFaqReply(
   settings: Settings,
   language: string | undefined,
   pendingNodeQuestion: string | null,
+  meter?: LlmUsageMeter,
 ): Promise<string> {
   const targetLanguage = language || settings.defaultLanguage
 
@@ -1487,9 +1489,9 @@ async function composeFaqReply(
   // round-trips for one reply was pure latency, and on the FAQ path it fires
   // on every answer served.
   const [faqTranslated, questionTranslated] = await Promise.all([
-    forceReplyIntoLanguage(faqAnswer, targetLanguage, settings),
+    forceReplyIntoLanguage(faqAnswer, targetLanguage, settings, meter),
     pendingNodeQuestion?.trim()
-      ? forceReplyIntoLanguage(pendingNodeQuestion, targetLanguage, settings)
+      ? forceReplyIntoLanguage(pendingNodeQuestion, targetLanguage, settings, meter)
       : Promise.resolve(''),
   ])
 
@@ -1535,46 +1537,107 @@ async function composeFaqReply(
  * shape as faqAnswersQuestion: one yes/no, temperature 0, fail-open — a
  * judge that cannot run must not block an intake that used to work.
  */
-async function descriptionDescribesSymptom(text: string, settings: Settings): Promise<boolean> {
-  if (!API_KEY || !text.trim()) return true
-  try {
-    const res = await fetch(`${BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-      body: JSON.stringify({
-        model: process.env.LLM_MODEL || settings.model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You judge whether a customer message actually DESCRIBES what is wrong with their ' +
-              'device: a symptom, an error code, a sound, a light, a behavior, a broken part — ' +
-              'any observable detail. Saying only that it does not work / has a problem / is ' +
-              'broken, with no observable detail at all, does not count. The message may be in ' +
-              'any language. Output exactly one word: YES or NO.',
-          },
-          { role: 'user', content: text },
-        ],
-        temperature: 0,
-        max_tokens: 5,
-      }),
-    })
-    if (!res.ok) return true
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> }
-    const verdict = data.choices?.[0]?.message?.content?.trim().toUpperCase()
-    if (!verdict) return true
-    return !verdict.startsWith('NO')
-  } catch {
-    return true
-  }
+async function descriptionDescribesSymptom(text: string, settings: Settings, meter?: LlmUsageMeter): Promise<boolean> {
+  const verdict = await isolatedCall({
+    system:
+      'You judge whether a customer message actually DESCRIBES what is wrong with their ' +
+      'device: a symptom, an error code, a sound, a light, a behavior, a broken part — ' +
+      'any observable detail. Saying only that it does not work / has a problem / is ' +
+      'broken, with no observable detail at all, does not count. The message may be in ' +
+      'any language. Output exactly one word: YES or NO.',
+    user: text,
+    settings,
+    maxTokens: 5,
+    meter,
+  })
+  // Fail-open: a judge that cannot run must not block an intake that used to work.
+  return verdict === null || !verdict.toUpperCase().startsWith('NO')
+}
+
+/**
+ * Operator summary, from a SEALED room (Andrea 2026-08-17: "ho solo bisogno
+ * dei dati e del summary"). The old summary was the in-conversation model's
+ * free text and once contained a fully invented nine-step wheels guide; this
+ * one is an isolated call whose ONLY input is the real dialogue (verbatim
+ * Q/A pairs picked by code) — no product knowledge, no conversation prompt,
+ * and an explicit ban on advice/procedures/diagnosis. Fail-open to null: the
+ * caller then falls back to the verbatim pairs, which cannot lie.
+ */
+async function summarizeConversationForOperator(
+  exchanges: ReadonlyArray<VerbatimExchange>,
+  settings: Settings,
+  meter?: LlmUsageMeter,
+): Promise<string | null> {
+  if (exchanges.length === 0) return null
+  const transcript = exchanges
+    .map((e) => (e.prompt ? `Bot: ${e.prompt}\nCustomer: ${e.customer}` : `Customer: ${e.customer}`))
+    .join('\n')
+  return isolatedCall({
+    system:
+      'You write a short factual summary for a human support operator, based ONLY on the ' +
+      'conversation excerpt given. State what the customer reported and how they answered ' +
+      `the checks — nothing else: no advice, no instructions, no procedures, no diagnosis, ` +
+      `no guesses beyond what was said. 3 to 5 sentences, in ${settings.defaultLanguage}.`,
+    user: transcript,
+    settings,
+    maxTokens: 300,
+    meter,
+  })
 }
 
 async function faqAnswersQuestion(
   customerMessage: string,
   faq: FaqEntry,
   settings: Settings,
+  meter?: LlmUsageMeter,
 ): Promise<boolean> {
-  if (!API_KEY || !customerMessage.trim()) return true
+  if (!customerMessage.trim()) return true
+  const verdict = await isolatedCall({
+    system:
+      'You judge whether a stored, company-approved FAQ may be served as the reply to a ' +
+      'customer message. The two may be in different languages — judge meaning, never ' +
+      'wording, and treat colloquial near-synonyms in any language as the same request ' +
+      '(a customer asking about the "insurance" / "seguro" / "assicurazione" of a product ' +
+      'whose FAQ covers its warranty is asking for that FAQ). Default to YES: the FAQ is ' +
+      'approved content, and serving a close answer beats refusing one the company already ' +
+      'wrote. Answer NO only in two cases: the message asks for no information at all (a ' +
+      'greeting, a thank-you, small talk), or the FAQ addresses a clearly different need ' +
+      'than the message — different subject matter, not just different phrasing. ' +
+      'Output exactly one word: YES or NO.',
+    user: `Customer message:\n${customerMessage}\n\nStored FAQ:\nQ: ${faq.question}\nA: ${faq.answer}`,
+    settings,
+    maxTokens: 5,
+    meter,
+  })
+  // Fail-open: a verification that cannot run must not suppress an approved answer.
+  return verdict === null || !verdict.toUpperCase().startsWith('NO')
+}
+
+/** Anything carrying the per-turn isolated-token meter — ToolContext qualifies structurally. */
+interface LlmUsageMeter {
+  isolatedTokensUsed: number
+}
+
+/**
+ * The ONE transport for every isolated, sealed-room LLM call (translator,
+ * FAQ judge, description judge, operator summarizer): no history, no tools,
+ * temperature 0, one narrow task. Fail-open by contract — null on ANY
+ * failure, and each wrapper decides its own safe fallback. Usage is metered
+ * into `meter` (the turn's ToolContext) so isolated calls stop being
+ * invisible in the token count: before this, forceReplyIntoLanguage and the
+ * judges reported zero tokens while being a real share of the bill (the €15
+ * lesson, 2026-08-16). Four hand-rolled fetch copies collapsed into one —
+ * one error policy, one meter, one place to change.
+ */
+async function isolatedCall(params: {
+  system: string
+  user: string
+  settings: Settings
+  maxTokens: number
+  meter?: LlmUsageMeter
+}): Promise<string | null> {
+  const { system, user, settings, maxTokens, meter } = params
+  if (!API_KEY || !user.trim()) return null
   try {
     const res = await fetch(`${BASE_URL}/chat/completions`, {
       method: 'POST',
@@ -1582,67 +1645,39 @@ async function faqAnswersQuestion(
       body: JSON.stringify({
         model: process.env.LLM_MODEL || settings.model,
         messages: [
-          {
-            role: 'system',
-            content:
-              'You judge whether a stored, company-approved FAQ may be served as the reply to a ' +
-              'customer message. The two may be in different languages — judge meaning, never ' +
-              'wording, and treat colloquial near-synonyms in any language as the same request ' +
-              '(a customer asking about the "insurance" / "seguro" / "assicurazione" of a product ' +
-              'whose FAQ covers its warranty is asking for that FAQ). Default to YES: the FAQ is ' +
-              'approved content, and serving a close answer beats refusing one the company already ' +
-              'wrote. Answer NO only in two cases: the message asks for no information at all (a ' +
-              'greeting, a thank-you, small talk), or the FAQ addresses a clearly different need ' +
-              'than the message — different subject matter, not just different phrasing. ' +
-              'Output exactly one word: YES or NO.',
-          },
-          {
-            role: 'user',
-            content: `Customer message:\n${customerMessage}\n\nStored FAQ:\nQ: ${faq.question}\nA: ${faq.answer}`,
-          },
+          { role: 'system', content: system },
+          { role: 'user', content: user },
         ],
         temperature: 0,
-        max_tokens: 5,
+        max_tokens: maxTokens,
       }),
     })
-    if (!res.ok) return true
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> }
-    const verdict = data.choices?.[0]?.message?.content?.trim().toUpperCase()
-    if (!verdict) return true
-    return !verdict.startsWith('NO')
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string | null } }>
+      usage?: { prompt_tokens?: number; completion_tokens?: number }
+    }
+    if (meter) meter.isolatedTokensUsed += (data.usage?.prompt_tokens ?? 0) + (data.usage?.completion_tokens ?? 0)
+    return data.choices?.[0]?.message?.content?.trim() || null
   } catch {
-    return true
+    return null
   }
 }
 
-async function forceReplyIntoLanguage(text: string, languageCode: string, settings: Settings): Promise<string> {
-  if (!text.trim() || !API_KEY) return text
-  try {
-    const res = await fetch(`${BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-      body: JSON.stringify({
-        model: process.env.LLM_MODEL || settings.model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              `Translate the user message into the language with ISO 639-1 code "${languageCode}". ` +
-              'If it is already entirely in that language, return it unchanged. ' +
-              'Output ONLY the translated text — no preamble, no quotes, no added sentences.',
-          },
-          { role: 'user', content: text },
-        ],
-        temperature: 0,
-        max_tokens: 1000,
-      }),
-    })
-    if (!res.ok) return text
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> }
-    return data.choices?.[0]?.message?.content?.trim() || text
-  } catch {
-    return text
-  }
+async function forceReplyIntoLanguage(text: string, languageCode: string, settings: Settings, meter?: LlmUsageMeter): Promise<string> {
+  if (!text.trim()) return text
+  const translated = await isolatedCall({
+    system:
+      `Translate the user message into the language with ISO 639-1 code "${languageCode}". ` +
+      'If it is already entirely in that language, return it unchanged. ' +
+      'Output ONLY the translated text — no preamble, no quotes, no added sentences.',
+    user: text,
+    settings,
+    maxTokens: 1000,
+    meter,
+  })
+  // A reply in the wrong language beats no reply.
+  return translated || text
 }
 
 /**
@@ -1759,12 +1794,16 @@ const HUMAN_SUPPORT_MARKER = '**👤 Human Support message**'
 async function formatOperatorBriefing(params: {
   state: SessionState
   reason: string
-  customerSaid: string[]
+  /** Sealed-room summary (summarizeConversationForOperator), or null when it could not run. */
+  summary: string | null
+  /** Verbatim Q/A fallback when the summary is unavailable — pairs cannot lie. */
+  exchanges: ReadonlyArray<VerbatimExchange>
   settings: Settings
+  meter?: LlmUsageMeter
 }): Promise<string> {
-  const { state, reason, customerSaid, settings } = params
+  const { state, reason, summary, exchanges, settings, meter } = params
   const toOperatorLanguage = (text: string): Promise<string> =>
-    forceReplyIntoLanguage(text, settings.defaultLanguage, settings)
+    forceReplyIntoLanguage(text, settings.defaultLanguage, settings, meter)
 
   const lines: string[] = [HUMAN_SUPPORT_MARKER, '']
 
@@ -1810,13 +1849,19 @@ async function formatOperatorBriefing(params: {
     }
   }
 
-  // Verbatim and untranslated on purpose: a translation is one more model
-  // pass over the customer's words, and the whole point of this section is
-  // that nothing generated stands between the customer and the operator.
-  if (customerSaid.length > 0) {
+  if (summary) {
     lines.push('')
-    lines.push('**Customer said (verbatim)**')
-    for (const msg of customerSaid) lines.push(`• «${msg}»`)
+    lines.push('**Summary**')
+    lines.push(summary)
+  } else if (exchanges.length > 0) {
+    // Sealed-room summary unavailable — verbatim Q/A pairs instead, which
+    // cannot lie. Untranslated on purpose: nothing generated stands between
+    // the customer and the operator on this path.
+    lines.push('')
+    lines.push('**Conversation (verbatim)**')
+    for (const e of exchanges) {
+      lines.push(e.prompt ? `• Bot: «${e.prompt}» — Customer: «${e.customer}»` : `• Customer: «${e.customer}»`)
+    }
   }
 
   return lines.join('\n')
@@ -1953,7 +1998,7 @@ async function agentTurnInternal(
     if (!greetingToTranslate) return body
     if (greetingRendered === null) {
       const greetingLang = getState(ctx.sessionId).language || settings.defaultLanguage
-      greetingRendered = (await forceReplyIntoLanguage(greetingToTranslate, greetingLang, settings)).trim()
+      greetingRendered = (await forceReplyIntoLanguage(greetingToTranslate, greetingLang, settings, ctx)).trim()
     }
     return greetingRendered && body ? `${greetingRendered}\n\n${body}` : greetingRendered || body
   }
@@ -2080,7 +2125,7 @@ async function agentTurnInternal(
             // eslint-disable-next-line no-console
             console.error('[demoam][faq-verify] fault report — draft dropped, intake question dictated')
             const verifyLang = getState(ctx.sessionId).language || settings.defaultLanguage
-            const asked = (await forceReplyIntoLanguage(step.question, verifyLang, settings)).trim()
+            const asked = (await forceReplyIntoLanguage(step.question, verifyLang, settings, ctx)).trim()
             const reply = await withGreeting(asked)
             history.push({ role: 'assistant', content: reply })
             return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
@@ -2114,7 +2159,7 @@ async function agentTurnInternal(
       }
       let replyBody = rawReply.trim()
       if (declaredLanguageNotEnabled(lang, settings)) {
-        replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings)
+        replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings, ctx)
       }
       // ── THE INTAKE INVARIANT ────────────────────────────────────────────
       // Once the customer's own answers put the case on the technical track
@@ -2156,7 +2201,7 @@ async function agentTurnInternal(
             console.error(`[demoam][node-dictated] model prose dropped: ${replyBody.slice(0, 140)}`)
           }
           const nodeLang = nodeState.language || settings.defaultLanguage
-          const asked = (await forceReplyIntoLanguage(nodeQuestion, nodeLang, settings)).trim()
+          const asked = (await forceReplyIntoLanguage(nodeQuestion, nodeLang, settings, ctx)).trim()
           const reply = await withGreeting(asked)
           history.push({ role: 'assistant', content: reply })
           return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
@@ -2186,13 +2231,13 @@ async function agentTurnInternal(
         const intakeLang = getState(ctx.sessionId).language || settings.defaultLanguage
         let composedBody: string
         if (servedFaqAnswer) {
-          composedBody = await composeFaqReply(replyBody, servedFaqAnswer, settings, intakeLang, midIntakeQ)
+          composedBody = await composeFaqReply(replyBody, servedFaqAnswer, settings, intakeLang, midIntakeQ, ctx)
         } else {
           if (replyBody) {
             // eslint-disable-next-line no-console
             console.error(`[demoam][intake-dictated] model prose dropped: ${replyBody.slice(0, 140)}`)
           }
-          composedBody = (await forceReplyIntoLanguage(midIntakeQ, intakeLang, settings)).trim()
+          composedBody = (await forceReplyIntoLanguage(midIntakeQ, intakeLang, settings, ctx)).trim()
         }
         const reply = await withGreeting(composedBody)
         history.push({ role: 'assistant', content: reply })
@@ -2259,7 +2304,7 @@ async function agentTurnInternal(
         }
         replyBody = retryExtracted.reply.trim()
         if (declaredLanguageNotEnabled(retryExtracted.lang, settings)) {
-          replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings)
+          replyBody = await forceReplyIntoLanguage(replyBody, settings.defaultLanguage, settings, ctx)
         }
       }
       const faqVerifyEligible =
@@ -2281,6 +2326,7 @@ async function agentTurnInternal(
           settings,
           getState(ctx.sessionId).language,
           servedFaqPendingQuestion,
+          ctx,
         )
       }
       const reply = await withGreeting(replyBody)
@@ -2380,20 +2426,23 @@ async function agentTurnInternal(
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
       }
       if (declaredLanguageNotEnabled(lang, settings)) {
-        reply = await forceReplyIntoLanguage(reply, settings.defaultLanguage, settings)
+        reply = await forceReplyIntoLanguage(reply, settings.defaultLanguage, settings, ctx)
       }
       history.push({ role: 'assistant', content: reply })
 
       // The model's `summary` argument stays a required part of the tool call
       // (making it articulate the case is useful) but it is never shown to a
-      // human: briefing and host e-mail both carry the customer's verbatim
-      // words instead — see customerVerbatim.
-      const verbatim = customerVerbatim(history)
+      // human: the operator gets the sealed-room summary built from the
+      // verbatim exchanges — see summarizeConversationForOperator.
+      const exchanges = conversationVerbatim(history)
+      const operatorSummary = await summarizeConversationForOperator(exchanges, settings, ctx)
       const briefing = await formatOperatorBriefing({
         state: getState(ctx.sessionId),
         reason: escalationReason,
-        customerSaid: verbatim,
+        summary: operatorSummary,
+        exchanges,
         settings,
+        meter: ctx,
       })
 
       detachFlow(ctx.sessionId)
@@ -2405,7 +2454,9 @@ async function agentTurnInternal(
         tokensUsed: tokensUsedSoFar + hopTokens + finalHop.tokensUsed,
         escalated: true,
         answeredFromFaq,
-        escalationSummary: verbatim.map((m) => `«${m}»`).join('\n'),
+        escalationSummary:
+          operatorSummary ??
+          exchanges.map((e) => (e.prompt ? `Bot: «${e.prompt}» — Customer: «${e.customer}»` : `Customer: «${e.customer}»`)).join('\n'),
       }
     }
   }
@@ -2436,6 +2487,7 @@ async function agentTurnInternal(
     pendingQuestion,
     finalState.language || settings.defaultLanguage,
     settings,
+    ctx,
   )
 
   return {
@@ -2511,6 +2563,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const ctx: ToolContext = {
       sessionId,
       workspaceId: input.config.workspaceId,
+      isolatedTokensUsed: 0,
       customerName: input.userName,
       operatorBriefingLanguageOverride: input.config.operatorBriefingLanguageOverride,
       loadFlow: input.config.handlers?.loadFlow,
@@ -2639,7 +2692,10 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       patches: patches.length > 0 ? patches : undefined,
       audioOutput: settings.audioOutput,
       audioVoices: settings.audioVoices,
-      meta: { tokensUsed: result.tokensUsed, agentChain: ['custom-demoam'] },
+      // The hop loop's own usage PLUS every sealed-room call of the turn
+      // (translator, judges, summarizer) — the isolated calls used to report
+      // zero and the real bill was systematically understated.
+      meta: { tokensUsed: result.tokensUsed + ctx.isolatedTokensUsed, agentChain: ['custom-demoam'] },
     }
   } catch (err) {
     // eslint-disable-next-line no-console

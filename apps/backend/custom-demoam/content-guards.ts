@@ -1,11 +1,11 @@
 import { registerFieldRequest, updateState } from './state.js'
+import { MAX_SERIAL_ATTEMPTS, MIN_PROBLEM_DESCRIPTION_CHARS, MAX_PROBLEM_DESCRIPTION_ATTEMPTS } from './bounds.js'
 
 export interface GuardResult {
   ok: boolean
   [k: string]: unknown
 }
 
-const MAX_SERIAL_ATTEMPTS = 3
 const SERIAL_ATTEMPTS_KEY = 'serialNumber_invalid'
 
 export function validateSerialNumber(
@@ -69,8 +69,6 @@ export function validateCustomerName(candidate: string): GuardResult | null {
   }
 }
 
-const MIN_PROBLEM_DESCRIPTION_CHARS = 8
-const MAX_PROBLEM_DESCRIPTION_ATTEMPTS = 2
 const PROBLEM_DESCRIPTION_ATTEMPTS_KEY = 'problemDescription_vague'
 
 export async function validateProblemDescription(

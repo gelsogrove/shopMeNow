@@ -4,6 +4,7 @@
 
 import { attachFlow, getState, hasVisitedFlow, SessionState } from './state.js'
 import { allowedLabels, buildFlowGraph, currentNode, rootNodeId } from './flow-machine.js'
+import { PRE_OPERATOR_MAX_ASKS } from './bounds.js'
 
 export interface FlowSummary {
   flowId: string
@@ -614,7 +615,7 @@ export function nextPreOperatorAction(
   shape: CaseShape,
   opts: { maxAsks?: number } = {},
 ): PreOperatorAction {
-  const { maxAsks = 2 } = opts
+  const { maxAsks = PRE_OPERATOR_MAX_ASKS } = opts
   const checklist = CHECKLIST[shape]
 
   const askable = (field: PreOperatorField): boolean => {
