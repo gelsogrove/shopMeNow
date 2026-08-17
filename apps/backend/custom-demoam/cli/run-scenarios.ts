@@ -43,6 +43,8 @@ interface Scenario {
   phone: string
   /** Host-provided customer name (e.g. WhatsApp profile name), as a real host would pass it — distinct from a name the customer states in chat. Omit to simulate an anonymous/unknown customer. */
   userName?: string
+  /** Host-provided profile/browser language (the widget always sends one — config.language seeds the session). Omit to simulate a host that passes none. */
+  language?: string
   turns: ScenarioTurn[]
   newSession?: boolean
   reuseSessionFrom?: string
@@ -309,7 +311,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
   let lastOutput: Awaited<ReturnType<typeof runTurn>>["output"] | undefined
 
   for (const turn of scenario.turns) {
-    const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName, group })
+    const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName, language: scenario.language, group })
     lastOutput = output
     replies.push(output.reply ?? "")
     errors.push(output.error)
@@ -324,7 +326,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     forceSessionStale(scenario.phone, scenario.thenForceStaleSecondsAndContinue, group)
     console.log(`  [${scenario.phone}] — session backdated ${scenario.thenForceStaleSecondsAndContinue}s, continuing as a later conversation —`)
     for (const turn of scenario.secondSessionTurns) {
-      const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName, group })
+      const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName, language: scenario.language, group })
       lastOutput = output
       replies.push(output.reply ?? "")
       errors.push(output.error)
@@ -340,7 +342,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     const { message, untilReplyContains, maxTurns } = scenario.finishWith
     for (let extra = 0; extra < maxTurns; extra++) {
       if (replies.some((r) => r.includes(untilReplyContains))) break
-      const { output } = await runTurn({ phone: scenario.phone, message, userName: scenario.userName, group })
+      const { output } = await runTurn({ phone: scenario.phone, message, userName: scenario.userName, language: scenario.language, group })
       lastOutput = output
       replies.push(output.reply ?? "")
       errors.push(output.error)

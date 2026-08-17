@@ -36,6 +36,7 @@ import {
   formatIntakeBlock,
   formatPreOperatorInstruction,
   caseShapeFor,
+  intakeEvidenceOnRecord,
   intakeFieldMayAlreadyBeAnswered,
   midIntakePendingQuestion,
   nextIntakeStep,
@@ -737,7 +738,11 @@ async function executeTool(
     }
 
     if (key === 'problemDescription') {
-      const guardResult = validateProblemDescription(ctx.sessionId, String(value).trim())
+      const guardResult = await validateProblemDescription(
+        ctx.sessionId,
+        String(value).trim(),
+        ctx.settings ? (text) => descriptionDescribesSymptom(text, ctx.settings!) : undefined,
+      )
       if (guardResult) return guardResult
     }
 
@@ -919,7 +924,16 @@ async function executeTool(
       // every guard added to fix one symptom shifted the balance and exposed
       // the next (Andrea, 2026-08-05: thirteen fixes in one evening, each
       // revealing another). Decide first, mutate after.
-      const shape = caseShapeFor(reason)
+      //
+      // EVIDENCE BEATS DECLARATION: the model picks `reason` fresh on every
+      // call, and on a technical case it flip-flopped between calls — the
+      // first escalate declared a no_device reason (gate asked ONLY the
+      // name), the second a technical one (flow forced after) — so the
+      // customer's name landed BEFORE the technical checks, violating rule
+      // 11's "name last" (Andrea 2026-08-17, seen live, es conversation).
+      // With intake facts on record there IS a device being diagnosed: the
+      // shape is technical no matter what reason the model declares.
+      const shape = intakeEvidenceOnRecord(state) ? 'technical' : caseShapeFor(reason)
 
       // A flow with a question pending can only be advanced by answer_step
       // or abandoned by abandon_flow — never short-circuited into the gate.
@@ -1446,6 +1460,53 @@ async function composeFaqReply(
  * a verification that cannot run must not silently suppress an answer the
  * company approved. The pre-existing behaviour is the fallback.
  */
+/**
+ * Does this text DESCRIBE what is wrong — a symptom, an error code, a sound,
+ * a light, a broken part — or does it only say that something doesn't work?
+ *
+ * The informativeness criterion behind CONTRACT.md rule 7 ("se il problema
+ * non è ben spiegato chiediamo più dettagli"): length alone let "no me
+ * funciona el Robot" through as a problem description, intake completed on
+ * zero information, and the post-intake obligation forced a flow choice the
+ * model could only guess — it attached the strange-noise flow and asserted a
+ * noise nobody reported (Andrea 2026-08-17, seen live). Same isolated-judge
+ * shape as faqAnswersQuestion: one yes/no, temperature 0, fail-open — a
+ * judge that cannot run must not block an intake that used to work.
+ */
+async function descriptionDescribesSymptom(text: string, settings: Settings): Promise<boolean> {
+  if (!API_KEY || !text.trim()) return true
+  try {
+    const res = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+      body: JSON.stringify({
+        model: process.env.LLM_MODEL || settings.model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You judge whether a customer message actually DESCRIBES what is wrong with their ' +
+              'device: a symptom, an error code, a sound, a light, a behavior, a broken part — ' +
+              'any observable detail. Saying only that it does not work / has a problem / is ' +
+              'broken, with no observable detail at all, does not count. The message may be in ' +
+              'any language. Output exactly one word: YES or NO.',
+          },
+          { role: 'user', content: text },
+        ],
+        temperature: 0,
+        max_tokens: 5,
+      }),
+    })
+    if (!res.ok) return true
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> }
+    const verdict = data.choices?.[0]?.message?.content?.trim().toUpperCase()
+    if (!verdict) return true
+    return !verdict.startsWith('NO')
+  } catch {
+    return true
+  }
+}
+
 async function faqAnswersQuestion(
   customerMessage: string,
   faq: FaqEntry,
@@ -1836,6 +1897,7 @@ async function agentTurnInternal(
   }
 
   let awaitingDictatedReply = false
+  let dictatedByRefusal = false
   let answeredFromFaq = false
   let servedFaqAnswer: string | null = null
   let servedFaqPendingQuestion: string | null = null
@@ -2008,7 +2070,7 @@ async function agentTurnInternal(
       // with no intake fact on record the predicate stays null, so their
       // free-text replies are untouched.
       const midIntakeQ = midIntakePendingQuestion(getState(ctx.sessionId), ctx.gateQuestions)
-      if (midIntakeQ) {
+      if (midIntakeQ && !(awaitingDictatedReply && dictatedByRefusal)) {
         // Dictating the question would RE-ASK something the customer already
         // said when the missing field is plausibly sitting in their own words
         // (certification 2026-08-17, 07-hs/05: description in the opening
@@ -2060,9 +2122,7 @@ async function agentTurnInternal(
         !postState.currentNodeId &&
         !(postState.visitedFlowIds && postState.visitedFlowIds.length > 0) &&
         !postState.pendingEscalationReason &&
-        (!!postState.serialNumber?.trim() ||
-          !!postState.serialNumberExhausted ||
-          postState.collectedData?.problemDescription !== undefined) &&
+        intakeEvidenceOnRecord(postState) &&
         !nextIntakeStep(postState, ctx.gateQuestions)
       if (postIntakeDue) {
         postIntakeForced = true
@@ -2156,6 +2216,14 @@ async function agentTurnInternal(
 
       if (result.dictates_text === true) {
         awaitingDictatedReply = true
+        // A REFUSAL's dictation (ok:false — a guard composing its own
+        // corrective ask, e.g. the vague-description follow-up or the
+        // invalid-serial hint) is already sourced text: the intake invariant
+        // must let its rendering through, or the tailored ask gets bulldozed
+        // into the generic gate question (seen 2026-08-17, first turn of the
+        // es scenario). A SAVE's dictation (ok:true acks) stays subject to
+        // the invariant — those are the bare-ack stalls of 2026-08-16.
+        dictatedByRefusal = result.ok === false
       }
 
       if (typeof result.force_tool === 'string') {

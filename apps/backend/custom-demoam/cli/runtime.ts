@@ -20,6 +20,8 @@ import { createRequire } from "node:module"
 const requireCjs = createRequire(import.meta.url)
 const { renderWorkspaceCopy } =
   requireCjs("../../src/application/services/workspace-copy.render.js") as typeof import("../../src/application/services/workspace-copy.render.js")
+const { resolveHumanSupportFlowId } =
+  requireCjs("../../src/application/services/human-support-flow.resolve.js") as typeof import("../../src/application/services/human-support-flow.resolve.js")
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const SESSIONS_DIR = path.join(__dirname, ".demoam-sessions")
@@ -137,13 +139,37 @@ async function loadWorkspaceCopyOverrides(): Promise<Record<string, string> | nu
       welcomeMessage: true,
       welcomeBackMessage: true,
       humanSupportMessage: true,
+      enabledLanguages: true,
+      defaultLanguage: true,
     },
   })
   if (!workspace) return null
   const out: Record<string, string> = {}
-  const welcome = renderWorkspaceCopy(workspace.welcomeMessage ?? undefined, workspace)
-  const welcomeBack = renderWorkspaceCopy(workspace.welcomeBackMessage ?? undefined, workspace)
-  const humanSupport = renderWorkspaceCopy(workspace.humanSupportMessage ?? undefined, workspace)
+  // Same property-based resolution the host builder uses — the local
+  // settings.json's pinned id is exactly the config drift this closes.
+  const humanSupportFlowId = await resolveHumanSupportFlowId(prisma, AMROBOTS_WORKSPACE_ID)
+  if (humanSupportFlowId) out.humanSupportFlowId = humanSupportFlowId
+  // Language policy comes from the DB row like production — the local file's
+  // enabledLanguages went stale the day Andrea enabled da/es, and the CLI
+  // silently filtered a legitimate seed back to English (2026-08-17).
+  const langOut = out as Record<string, unknown>
+  if (Array.isArray(workspace.enabledLanguages) && workspace.enabledLanguages.length > 0) {
+    langOut.enabledLanguages = workspace.enabledLanguages
+  }
+  if (workspace.defaultLanguage?.trim()) langOut.defaultLanguage = workspace.defaultLanguage.trim()
+  // Mirror of the host builder's fallback chain: DB value first, else the
+  // module's local settings.json copy — and BOTH pass renderWorkspaceCopy,
+  // exactly like production. Rendering only the DB value let a NULL DB
+  // column fall back to the raw local template, and "{{chatbotName}}"
+  // resurfaced in a scenario greeting (2026-08-17).
+  const localSettings = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "settings.json"), "utf8"),
+  ) as Record<string, string | undefined>
+  const copyField = (dbValue: string | null | undefined, localKey: string): string | undefined =>
+    renderWorkspaceCopy(dbValue?.trim() || localSettings[localKey], workspace)
+  const welcome = copyField(workspace.welcomeMessage, "welcomeMessage")
+  const welcomeBack = copyField(workspace.welcomeBackMessage, "welcomeBackMessage")
+  const humanSupport = copyField(workspace.humanSupportMessage, "humanSupportMessage")
   if (welcome?.trim()) out.welcomeMessage = welcome
   if (welcomeBack?.trim()) out.welcomeBackMessage = welcomeBack
   if (humanSupport?.trim()) out.humanSupportMessage = humanSupport

@@ -73,8 +73,23 @@ const MIN_PROBLEM_DESCRIPTION_CHARS = 8
 const MAX_PROBLEM_DESCRIPTION_ATTEMPTS = 2
 const PROBLEM_DESCRIPTION_ATTEMPTS_KEY = 'problemDescription_vague'
 
-export function validateProblemDescription(sessionId: string, candidate: string): GuardResult | null {
-  if (candidate.length >= MIN_PROBLEM_DESCRIPTION_CHARS) return null
+export async function validateProblemDescription(
+  sessionId: string,
+  candidate: string,
+  isInformative?: (text: string) => Promise<boolean>,
+): Promise<GuardResult | null> {
+  // Length is only the fast path: "no me funciona el Robot" is long enough
+  // and says nothing (Andrea 2026-08-17, seen live — a flow got attached by
+  // guesswork off a contentless description, and the bot asserted a noise
+  // nobody reported). CONTRACT.md rule 7: "se il problema non è ben spiegato
+  // chiediamo più dettagli" — whether a sentence DESCRIBES a symptom is a
+  // semantic call, so it belongs to the isolated judge the caller injects
+  // (CLAUDE.md §14: the LLM judges meaning, the code owns the consequence).
+  // Fail-open: no judge, or a judge that cannot run, accepts — the
+  // pre-existing behaviour. The 2-attempt cap below applies unchanged.
+  const tooShort = candidate.length < MIN_PROBLEM_DESCRIPTION_CHARS
+  const uninformative = !tooShort && isInformative ? !(await isInformative(candidate)) : false
+  if (!tooShort && !uninformative) return null
 
   const attempts = registerFieldRequest(sessionId, PROBLEM_DESCRIPTION_ATTEMPTS_KEY)
   if (attempts >= MAX_PROBLEM_DESCRIPTION_ATTEMPTS) {

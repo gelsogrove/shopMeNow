@@ -16,6 +16,7 @@ import fs from "fs"
 import path from "path"
 
 import {
+  intakeEvidenceOnRecord,
   midIntakePendingQuestion,
   nextPreOperatorAction,
 } from "../../custom-demoam/gate.js"
@@ -206,6 +207,42 @@ describe("operator briefing — the customer's words, never the model's (CONTRAC
   it("the briefing renders the verbatim section and the model-authored Summary section is gone", () => {
     expect(AGENT_SOURCE).toContain("**Customer said (verbatim)**")
     expect(AGENT_SOURCE).not.toContain("'**Summary**'")
+  })
+})
+
+describe("escalate shape — evidence beats declaration (CONTRACT.md 11)", () => {
+  // WHY: 2026-08-17, seen live (es conversation) — the model declares
+  // `reason` fresh on every escalate call and flip-flopped mid-case: the
+  // first call's no_device reason made the gate ask ONLY the name, the
+  // second call's technical reason forced the flow after — so the name
+  // landed BEFORE the technical checks. With intake facts on record there
+  // IS a device being diagnosed: the shape must be technical regardless of
+  // the declared reason.
+  it("intakeEvidenceOnRecord is true for serial, exhausted serial, or a saved description — false otherwise", () => {
+    expect(intakeEvidenceOnRecord({} as never)).toBe(false)
+    expect(intakeEvidenceOnRecord({ serialNumber: "HKA4OB100LQ26050199" } as never)).toBe(true)
+    expect(intakeEvidenceOnRecord({ serialNumberExhausted: true } as never)).toBe(true)
+    expect(intakeEvidenceOnRecord({ collectedData: { problemDescription: "ERROR 001" } } as never)).toBe(true)
+  })
+
+  it("the escalate handler derives the shape from evidence, not from the model's reason alone", () => {
+    expect(AGENT_SOURCE).toContain("intakeEvidenceOnRecord(state) ? 'technical' : caseShapeFor(reason)")
+  })
+})
+
+describe("problem description — informativeness is judged, not measured (CONTRACT.md 7)", () => {
+  // WHY: 2026-08-17, seen live — "no me funciona el Robot" is 24 characters
+  // of nothing: it passed the length-only guard, intake completed on zero
+  // information, and a flow got attached by guesswork (the bot asserted a
+  // noise nobody reported). The guard now consults an isolated yes/no judge
+  // (fail-open) on top of the length fast-path.
+  it("the guard accepts an injected judge and awaits its verdict", () => {
+    const GUARDS_SOURCE = fs.readFileSync(
+      path.join(__dirname, "../../custom-demoam/content-guards.ts"),
+      "utf8",
+    )
+    expect(GUARDS_SOURCE).toContain("isInformative?: (text: string) => Promise<boolean>")
+    expect(AGENT_SOURCE).toContain("descriptionDescribesSymptom")
   })
 })
 

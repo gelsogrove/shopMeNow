@@ -1,0 +1,21 @@
+{
+  "description": "Caso live 2026-08-17 (conversazione es, su gpt-4o-mini): 'no me funciona el Robot' — vago — veniva auto-salvato come descrizione (guard solo-lunghezza), l'intake si completava su zero informazioni, un flow veniva agganciato per congettura E il nome veniva chiesto PRIMA del check combinato (la reason dell'escalate cambiava tra una chiamata e l'altra: no_device alla prima → solo nome; technical alla seconda → flow dopo). Dopo i fix: (1) il giudice di informatività boccia la descrizione vuota → si chiedono i dettagli (regola 7); (2) con fatti d'intake in stato la shape è SEMPRE technical → check combinato prima, nome ultimo (regola 11). Lo spagnolo è abilitato → conversazione in es.",
+  "contractRule": "Regola 7 ('se il problema non è ben spiegato chiediamo più dettagli' — giudizio semantico, non conteggio caratteri) + regola 11 (il nome è SEMPRE l'ultima domanda prima dell'handing-off) + regola 20 (lingua del cliente quando abilitata).",
+  "phone": "+391110000708",
+  "language": "es",
+  "newSession": true,
+  "turns": [
+    { "message": "Hola que tal? no me funciona el Robot" },
+    { "message": "HKA4OB100LQ26050197" },
+    { "message": "la tapa del robot esta agrietada en un lado y la grieta se esta agrandando" },
+    { "message": "hoy" },
+    { "message": "si, el wifi esta activo, la programacion de corte esta habilitada y la bateria esta cargada" },
+    { "message": "Andrea" }
+  ],
+  "expect": {
+    "escalated": true,
+    "language": "es",
+    "replyContains": ["Andrea"],
+    "anyReplyExcludes": ["ruido", "rumore"]
+  }
+}

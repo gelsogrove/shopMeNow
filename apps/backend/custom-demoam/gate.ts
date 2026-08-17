@@ -331,16 +331,27 @@ export function nextIntakeStep(
  * prose on these turns is dropped, not sent — asking the next question is
  * dictated by code, not hoped from the model (CONTRACT.md rules 2, 3, 7).
  */
+/**
+ * Technical evidence the customer's own answers put on record: a serial
+ * (or its 3-failures exhaustion) or a problem description. Read from STATE,
+ * never from classifying text (CLAUDE.md §14). Shared by the intake
+ * invariant, the post-intake obligation, and the escalate shape guard —
+ * one predicate, three consumers.
+ */
+export function intakeEvidenceOnRecord(state: SessionState): boolean {
+  return (
+    !!state.serialNumber?.trim() ||
+    !!state.serialNumberExhausted ||
+    state.collectedData?.problemDescription !== undefined
+  )
+}
+
 export function midIntakePendingQuestion(
   state: SessionState,
   questions: GateQuestions | null | undefined,
 ): string | null {
   if (state.currentNodeId) return null
-  const intakeStarted =
-    !!state.serialNumber?.trim() ||
-    !!state.serialNumberExhausted ||
-    state.collectedData?.problemDescription !== undefined
-  if (!intakeStarted) return null
+  if (!intakeEvidenceOnRecord(state)) return null
   return nextIntakeStep(state, questions)?.question?.trim() || null
 }
 

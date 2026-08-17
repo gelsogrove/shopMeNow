@@ -25,6 +25,7 @@ import { prisma } from "@echatbot/database"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables.types"
 import { renderWorkspaceCopy } from "./workspace-copy.render"
+import { resolveHumanSupportFlowId } from "./human-support-flow.resolve"
 
 const promptProcessor = new PromptProcessorService()
 
@@ -286,9 +287,19 @@ export async function buildChatbotSettingsJson(
   const audioVoices = normaliseAudioVoices(workspace.audioVoices)
   const advancedSettings = normaliseAdvancedSettings(workspace.customChatbotAdvancedSettings)
   const mainPrompt = await buildMainPrompt(workspace, current.mainPrompt)
+  // Resolved BY PROPERTY from the DB (Flow.isProtected — CONTRACT.md rule 13
+  // defines the Human Support flow as the protected one), never trusted to a
+  // pinned id in a committed file: the id in settings.json goes stale the
+  // moment the flow is recreated, and the whole technical hand-over order
+  // silently degrades when it is missing (see human-support-flow.resolve.ts).
+  // An explicit advancedSettings override still wins via the spread below.
+  const humanSupportFlowId = workspace.id
+    ? await resolveHumanSupportFlowId(prisma, workspace.id)
+    : null
 
   return {
     ...current,
+    ...(humanSupportFlowId ? { humanSupportFlowId } : {}),
     ...advancedSettings,
     mainPrompt,
     model: workspace.customChatbotModel?.trim() || current.model,
