@@ -101,9 +101,9 @@ export function FaqCategoryFolders({
         canDelete={(row) => !row.isSynthetic}
         actionButtons={(row) => (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800"
+            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
             onClick={(e) => {
               e.stopPropagation()
               onOpen(row)
@@ -111,7 +111,6 @@ export function FaqCategoryFolders({
             title="Open the FAQs inside this category"
           >
             <FolderOpen className="h-4 w-4" />
-            Open FAQs
           </Button>
         )}
       />

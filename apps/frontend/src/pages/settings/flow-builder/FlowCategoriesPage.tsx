@@ -171,8 +171,6 @@ export function FlowCategoriesPage() {
     },
   ]
 
-  const filtered = categories
-
   return (
     <div className="p-6 space-y-6">
       {/* Same "Settings" title + section dropdown as SettingsPage, so
@@ -180,7 +178,7 @@ export function FlowCategoriesPage() {
       <SettingsPageHeader currentSection="demorobot" />
 
       {/* Master switch — same card pattern as FAQ and the Settings sections.
-          Everything the section owns (search, New Category, the list) lives
+          Everything the section owns (New Category, the list) lives
           under it and disappears when it is off, so a disabled section offers
           no actions. Nothing is deleted: switching back on restores it all. */}
       <Card>
@@ -190,7 +188,7 @@ export function FlowCategoriesPage() {
               <Bot className="h-5 w-5 text-violet-600" />
               Flows
               <span className="text-sm font-normal text-gray-500">
-                ({filtered.length} categories)
+                ({categories.length} categories)
               </span>
             </CardTitle>
             <Switch
@@ -207,7 +205,7 @@ export function FlowCategoriesPage() {
         </CardHeader>
         {flowsEnabled && (
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-end">
               <Button onClick={() => setShowAddDialog(true)} className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-1.5" />
                 New Category
@@ -219,7 +217,7 @@ export function FlowCategoriesPage() {
 
       {flowsEnabled && (
       <DataTable
-        data={[...filtered, uncategorizedRow]}
+        data={[...categories, uncategorizedRow]}
         columns={columns}
         isLoading={isLoading}
         disablePagination
@@ -237,9 +235,9 @@ export function FlowCategoriesPage() {
         canDelete={(category) => category.id !== UNCATEGORIZED_ID}
         actionButtons={(category) => (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800"
+            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
             onClick={(e) => {
               e.stopPropagation()
               navigate(`/settings/demorobot/${category.id}/flows`)
@@ -247,7 +245,6 @@ export function FlowCategoriesPage() {
             title="Open the flows inside this category"
           >
             <FolderOpen className="h-4 w-4" />
-            Open flows
           </Button>
         )}
       />

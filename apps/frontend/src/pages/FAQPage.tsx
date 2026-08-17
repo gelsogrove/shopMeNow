@@ -2,7 +2,6 @@ import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { FormSheet } from "@/components/shared/FormSheet"
-import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +32,6 @@ export function FAQPage() {
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchValue, setSearchValue] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
@@ -89,19 +87,13 @@ export function FAQPage() {
     }
   }, [workspace?.id, isLoadingWorkspace])
 
-  // FAQs inside the currently open folder; search only applies within it.
-  const faqsInOpenCategory =
+  // FAQs inside the currently open folder.
+  const filteredFAQs =
     openCategory === null
       ? faqs
       : openCategory === UNCATEGORIZED_ID
         ? faqs.filter((faq) => !faq.category?.trim())
         : faqs.filter((faq) => faq.category?.trim() === openCategory)
-
-  const filteredFAQs = faqsInOpenCategory.filter((faq) =>
-    faq.question.toLowerCase().includes(searchValue.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchValue.toLowerCase()) ||
-    (faq.category ?? "").toLowerCase().includes(searchValue.toLowerCase())
-  )
 
   // Category folders derived from the FAQs themselves (categories are free
   // text on the FAQ row, not a table): one row per distinct name plus the
@@ -124,10 +116,6 @@ export function FAQPage() {
     },
   ]
 
-  const filteredCategoryRows = categoryRows.filter((row) =>
-    row.name.toLowerCase().includes(searchValue.toLowerCase())
-  )
-
   // Distinct categories already in use, offered as suggestions in the form
   // so the same category is spelled consistently across FAQs.
   const existingCategories = Array.from(
@@ -143,12 +131,6 @@ export function FAQPage() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const endIndex = startIndex + ITEMS_PER_PAGE
   const paginatedFAQs = filteredFAQs.slice(startIndex, endIndex)
-
-  // Reset to page 1 when searching
-  const handleSearch = (value: string) => {
-    setSearchValue(value)
-    setCurrentPage(1)
-  }
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -230,16 +212,14 @@ export function FAQPage() {
     }
   }
 
-  // Folder navigation resets search + pagination so each view starts clean.
+  // Folder navigation resets pagination so each view starts clean.
   const handleOpenCategory = (row: FaqCategoryRow) => {
     setOpenCategory(row.id)
-    setSearchValue("")
     setCurrentPage(1)
   }
 
   const handleBackToCategories = () => {
     setOpenCategory(null)
-    setSearchValue("")
     setCurrentPage(1)
   }
 
@@ -318,7 +298,7 @@ export function FAQPage() {
                 FAQ Answers
                 <span className="text-sm font-normal text-gray-500">
                   {openCategory === null
-                    ? `(${filteredCategoryRows.length} categories)`
+                    ? `(${categoryRows.length} categories)`
                     : `(${filteredFAQs.length} items)`}
                 </span>
               </CardTitle>
@@ -336,20 +316,9 @@ export function FAQPage() {
           </CardHeader>
           {faqsEnabled && (
             <CardContent className="pt-6">
-              {/* Same card layout as the Flow categories page: search next to
-                  the primary action. The search scopes to the current view —
-                  category folders at the top level, FAQs inside a folder. */}
-              <div className="flex items-center gap-3">
-                <Input
-                  placeholder={
-                    openCategory === null
-                      ? "Search categories..."
-                      : "Search FAQs..."
-                  }
-                  value={searchValue}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="max-w-md"
-                />
+              {/* Same card layout as the Flow categories page: the primary
+                  action alone, right-aligned. */}
+              <div className="flex items-center justify-end">
                 <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Add FAQ
@@ -366,7 +335,7 @@ export function FAQPage() {
           /* Top level: category folders, same representation as Flow. A new
              category is created by typing a new name in the Add FAQ form. */
           <FaqCategoryFolders
-            rows={filteredCategoryRows}
+            rows={categoryRows}
             isLoading={isLoading}
             onOpen={handleOpenCategory}
             onRename={handleRenameCategory}
