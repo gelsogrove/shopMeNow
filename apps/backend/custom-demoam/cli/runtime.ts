@@ -25,7 +25,10 @@ const { resolveHumanSupportFlowId } =
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const SESSIONS_DIR = path.join(__dirname, ".demoam-sessions")
-export const AMROBOTS_WORKSPACE_ID = "5870e678-e610-46d1-b85c-36f76f2de95a"
+// Overridable so a second tenant can reuse the whole scenario harness
+// without editing code (the "second customer" test, CLAUDE.md §1A) — the
+// AmRobots id stays as the default for Andrea's daily runs.
+export const AMROBOTS_WORKSPACE_ID = process.env.DEMOAM_WORKSPACE_ID || "5870e678-e610-46d1-b85c-36f76f2de95a"
 
 export interface SavedSession {
   sessionId: string
