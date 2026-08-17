@@ -14,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { GitBranch, Plus, ArrowLeft, Copy, ToggleLeft, ToggleRight } from "lucide-react"
+import { GitBranch, Plus, ArrowLeft, Copy } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import {
   Tooltip,
   TooltipContent,
@@ -41,7 +42,6 @@ export function FlowsPage() {
 
   const [flows, setFlows] = useState<Flow[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchValue, setSearchValue] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Flow | null>(null)
@@ -143,24 +143,24 @@ export function FlowsPage() {
       size: 110,
       cell: ({ row }) => {
         const active = row.original.isActive ?? true
+        // Same Switch component the FAQ page and the channel card use — one
+        // toggle style everywhere, no more tiny icon lost among the actions.
         return (
-          <span
-            className={
-              active
-                ? "inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800"
-                : "inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
-            }
-          >
-            {active ? "Active" : "Inactive"}
-          </span>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={active}
+              onCheckedChange={() => handleToggleActive(row.original)}
+            />
+            <span className={active ? "text-xs font-medium text-green-700" : "text-xs font-medium text-gray-500"}>
+              {active ? "Active" : "Inactive"}
+            </span>
+          </div>
         )
       },
     },
   ]
 
-  const filtered = flows
-    .filter((f) => `${f.title} ${f.description ?? ""}`.toLowerCase().includes(searchValue.toLowerCase()))
-    .sort((a, b) => a.title.localeCompare(b.title))
+  const filtered = flows.slice().sort((a, b) => a.title.localeCompare(b.title))
 
   return (
     <div className="p-6 space-y-6">
@@ -181,8 +181,6 @@ export function FlowsPage() {
             ? "These flows apply when no specific category matches — they are the retrieval fallback."
             : "Flows for this category. Each flow is a question/answer tree compiled into the assistant's prompt."
         }
-        searchValue={searchValue}
-        onSearch={setSearchValue}
         onAdd={() => setShowAddDialog(true)}
         addButtonText="New Flow"
         addButtonIcon={<Plus className="h-4 w-4 mr-1.5 text-white" />}
@@ -198,27 +196,6 @@ export function FlowsPage() {
         canDelete={(flow) => !flow.isProtected}
         actionButtons={(flow) => (
           <>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleToggleActive(flow)}
-                  >
-                    {(flow.isActive ?? true) ? (
-                      <ToggleRight className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <ToggleLeft className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{(flow.isActive ?? true) ? "Deactivate — hide from the chatbot" : "Activate — offer to the chatbot"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

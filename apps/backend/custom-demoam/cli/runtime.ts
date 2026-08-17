@@ -68,7 +68,10 @@ async function getFaqs({ workspaceId }: { workspaceId: string }) {
 
 async function listFlows({ workspaceId }: { workspaceId: string }) {
   const rows = await prisma.flow.findMany({
-    where: { workspaceId },
+    // isActive like the host (CONTRACT.md rule 22): the CLI used to list
+    // deactivated flows too, so a flow Andrea switched off in the builder
+    // kept matching in the scenarios while production ignored it.
+    where: { workspaceId, isActive: true },
     include: { flowCategory: true },
   })
   return rows.map((f) => ({

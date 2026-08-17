@@ -343,12 +343,42 @@ function answerStepTool(labels: string[]) {
   } as const
 }
 
-function buildToolsForTurn(state: SessionState, labels: string[], faqCount: number): ReadonlyArray<Record<string, unknown>> {
+/**
+ * Explicit language switch (CONTRACT.md rules 17/20, Andrea 2026-08-17:
+ * "se l'utente chiede di cambiare lingua lo facciamo e settiamo il valore
+ * nel DB"). The boundary lives in the SCHEMA: the enum is the workspace's
+ * enabledLanguages, so a language outside the list is not even invocable —
+ * freedom only inside closed options, no guard needed afterwards.
+ */
+function setLanguageTool(enabledLanguages: readonly string[]) {
+  return {
+    type: 'function',
+    function: {
+      name: 'set_language',
+      description:
+        'Switch the conversation language — call ONLY when the customer explicitly asks to change language. The choice is saved to their profile.',
+      parameters: {
+        type: 'object',
+        properties: { language: { type: 'string', enum: [...enabledLanguages] } },
+        required: ['language'],
+        additionalProperties: false,
+      },
+    },
+  } as const
+}
+
+function buildToolsForTurn(
+  state: SessionState,
+  labels: string[],
+  faqCount: number,
+  enabledLanguages: readonly string[],
+): ReadonlyArray<Record<string, unknown>> {
   const faqTool = faqCount > 0 ? [answerFromFaqTool(faqCount)] : []
+  const langTool = enabledLanguages.length > 1 ? [setLanguageTool(enabledLanguages)] : []
   if (state.currentNodeId) {
-    return [answerStepTool(labels), REMEMBER_TOOL, ABANDON_FLOW_TOOL, ESCALATE_TOOL, ...faqTool]
+    return [answerStepTool(labels), REMEMBER_TOOL, ABANDON_FLOW_TOOL, ESCALATE_TOOL, ...faqTool, ...langTool]
   }
-  return [START_FLOW_TOOL, REMEMBER_TOOL, ESCALATE_TOOL, ...faqTool]
+  return [START_FLOW_TOOL, REMEMBER_TOOL, ESCALATE_TOOL, ...faqTool, ...langTool]
 }
 
 // ── Operating rules (always injected, never editable per tenant) ───────────
@@ -1079,6 +1109,34 @@ async function executeTool(
     }
   }
 
+  if (name === 'set_language') {
+    const requested = typeof args.language === 'string' ? args.language.trim().toLowerCase() : ''
+    const enabled = ctx.settings?.enabledLanguages ?? []
+    // The enum already constrains the call; this re-check is the tool
+    // refusing (iron rule 2) if a provider ever lets an off-enum value
+    // through.
+    if (!requested || !enabled.includes(requested)) {
+      return {
+        ok: false,
+        error: 'language_not_enabled',
+        instruction:
+          `Only these languages are available: ${enabled.join(', ')}. Tell the customer which ones ` +
+          'are available, in the current conversation language, and continue unchanged.',
+      }
+    }
+    // Same commit path as the ⟦LANG⟧ tag — mirrors to the customer profile
+    // via the patch queue, so the choice persists across sessions (rule 17).
+    commitLanguageFromReply(ctx.sessionId, requested)
+    return {
+      ok: true,
+      language: requested,
+      instruction:
+        `Language switched to "${requested}" and saved to the customer profile. From NOW ON reply ` +
+        'ONLY in that language: briefly confirm the switch and, if a question was pending, re-ask ' +
+        'it in the new language.',
+    }
+  }
+
   return { ok: false, error: `unknown tool: ${name}` }
 }
 
@@ -1283,7 +1341,7 @@ async function callLLM({
     max_tokens: settings.maxTokens,
   }
   if (!forceTextOnly) {
-    body.tools = buildToolsForTurn(state, currentStepLabels, faqCount)
+    body.tools = buildToolsForTurn(state, currentStepLabels, faqCount, settings.enabledLanguages)
     body.tool_choice = forceToolChoice ? 'required' : 'auto'
 
     // With a flow question pending, 'required' over the FULL toolset is not
@@ -1307,6 +1365,10 @@ async function callLLM({
         ...(faqCount > 0 ? [answerFromFaqTool(faqCount)] : []),
         ABANDON_FLOW_TOOL,
         ESCALATE_TOOL,
+        // A mid-flow language switch is a legitimate customer move (same
+        // reasoning as the FAQ detour): the enum keeps it inside the
+        // enabled languages by construction.
+        ...(settings.enabledLanguages.length > 1 ? [setLanguageTool(settings.enabledLanguages)] : []),
       ]
       body.tool_choice = 'required'
     }

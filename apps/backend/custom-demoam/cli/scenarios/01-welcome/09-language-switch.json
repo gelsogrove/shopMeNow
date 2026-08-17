@@ -1,0 +1,15 @@
+{
+  "description": "Richiesta esplicita di cambio lingua (Andrea 2026-08-17: 'se l'utente chiede di cambiare lingua lo facciamo e settiamo il valore nel DB'): conversazione aperta in italiano, il cliente chiede di passare all'inglese → il tool set_language (enum chiuso sulle enabledLanguages) committa la lingua, la patcha sul profilo cliente, e ogni domanda dettata successiva esce in inglese via la composizione code-side esistente. Il turno finale deve essere in inglese e la conversazione non deve deragliare (niente escalation, il caso tecnico prosegue).",
+  "contractRule": "Regola 17 (calling function quando arrivano info — la lingua scelta va sul profilo) + regola 20 (gestione lingue): lo switch esplicito è un tool con enum chiuso sulle lingue abilitate — il confine sta nello schema, mai una lingua fuori lista.",
+  "phone": "+391110000109",
+  "language": "it",
+  "newSession": true,
+  "turns": [
+    { "message": "ciao, il mio robot non parte" },
+    { "message": "can we continue in english please?" }
+  ],
+  "expect": {
+    "language": "en",
+    "escalated": false
+  }
+}

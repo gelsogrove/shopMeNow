@@ -263,6 +263,15 @@ describe("architectural locks — source greps (CLAUDE.md 1B pattern)", () => {
     expect(AGENT_SOURCE).not.toContain("without a final reply — escalating")
   })
 
+  it("explicit language switches go through set_language, whose enum IS the enabled-languages boundary", () => {
+    // WHY: Andrea 2026-08-17 — the customer may ask to switch language, the
+    // value must land on the customer profile (patch queue), and a language
+    // outside enabledLanguages must not even be invocable: the boundary
+    // lives in the tool schema, not in a guard added afterwards.
+    expect(AGENT_SOURCE).toContain("'set_language'")
+    expect(AGENT_SOURCE).toContain("enum: [...enabledLanguages]")
+  })
+
   it("flow node questions are composed by code, never rendered by the model", () => {
     // WHY: 2026-08-17 — the model, asked to render a dictated node question,
     // said "I'm Claude, an AI assistant made by Anthropic" to a customer.

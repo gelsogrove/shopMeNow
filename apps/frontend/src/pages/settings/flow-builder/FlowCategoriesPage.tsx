@@ -49,7 +49,6 @@ export function FlowCategoriesPage() {
 
   const [categories, setCategories] = useState<FlowCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchValue, setSearchValue] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newName, setNewName] = useState("")
   const [newDescription, setNewDescription] = useState("")
@@ -172,9 +171,7 @@ export function FlowCategoriesPage() {
     },
   ]
 
-  const filtered = categories.filter((c) =>
-    `${c.name} ${c.slug}`.toLowerCase().includes(searchValue.toLowerCase()),
-  )
+  const filtered = categories
 
   return (
     <div className="p-6 space-y-6">
@@ -211,12 +208,6 @@ export function FlowCategoriesPage() {
         {flowsEnabled && (
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Input
-                placeholder="Search categories..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="max-w-md"
-              />
               <Button onClick={() => setShowAddDialog(true)} className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-1.5" />
                 New Category

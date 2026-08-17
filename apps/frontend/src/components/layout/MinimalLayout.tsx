@@ -17,7 +17,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import { storage } from "@/lib/storage"
-import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, ListTodo, ClipboardList, Mail } from "lucide-react"
+import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, ListTodo, ClipboardList, Mail, Settings as SettingsIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { WidgetLoader } from "@/components/WidgetLoader"
@@ -169,6 +169,25 @@ export function MinimalLayout() {
 
             {/* Right: Support + Settings + Plan Badge + User Menu */}
             <div className="flex items-center gap-3">
+              {/* Channel Settings shortcut */}
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate("/settings")}
+                      className="p-2 text-gray-600 hover:text-gray-900"
+                    >
+                      <SettingsIcon className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Channel settings</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Support Inbox Icon with Badge */}
               <TooltipProvider delayDuration={100}>
                 <Tooltip>

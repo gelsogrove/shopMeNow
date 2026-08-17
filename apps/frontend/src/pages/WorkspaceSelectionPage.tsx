@@ -1643,16 +1643,24 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                               </Tooltip>
                             )}
                             
-                            {/* Needs Intervention */}
+                            {/* Needs Intervention — click-through to the channel's conversations */}
                             {badgeStats[workspace.id].needsIntervention > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium animate-pulse cursor-help">
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium animate-pulse cursor-pointer hover:bg-orange-200 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      storage.setWorkspace(workspace)
+                                      window.location.href = `/chat?workspaceId=${workspace.id}`
+                                    }}
+                                  >
                                     <AlertTriangle className="h-4 w-4" />
                                     <span>{badgeStats[workspace.id].needsIntervention}</span>
-                                  </div>
+                                  </button>
                                 </TooltipTrigger>
-                                <TooltipContent><p>Needs human assistance</p></TooltipContent>
+                                <TooltipContent><p>Needs human assistance — open conversations</p></TooltipContent>
                               </Tooltip>
                             )}
                             
@@ -1669,16 +1677,24 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                               </Tooltip>
                             )}
                             
-                            {/* New Customers */}
+                            {/* New Customers — click-through to the channel's clients */}
                             {badgeStats[workspace.id].newCustomers > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-help">
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-sm font-medium cursor-pointer hover:bg-blue-200 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      storage.setWorkspace(workspace)
+                                      window.location.href = `/clients?workspaceId=${workspace.id}`
+                                    }}
+                                  >
                                     <UserPlus className="h-4 w-4" />
                                     <span>{badgeStats[workspace.id].newCustomers}</span>
-                                  </div>
+                                  </button>
                                 </TooltipTrigger>
-                                <TooltipContent><p>New customers (24h)</p></TooltipContent>
+                                <TooltipContent><p>New customers (24h) — open clients</p></TooltipContent>
                               </Tooltip>
                             )}
                           </TooltipProvider>
