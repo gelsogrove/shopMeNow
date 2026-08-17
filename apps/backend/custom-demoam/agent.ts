@@ -2069,6 +2069,38 @@ async function agentTurnInternal(
       // flows already use. Complaints and pure FAQ chats never trip this:
       // with no intake fact on record the predicate stays null, so their
       // free-text replies are untouched.
+      // ── FLOW NODE COMPOSITION ───────────────────────────────────────────
+      // A pending node's question is authored in the flow builder: the reply
+      // IS that question, rendered by the isolated translation call. The
+      // model's rendering freedom here produced editorial color ("il
+      // problema è critico", 2026-08-16), empty replies, and finally
+      // "I'm Claude, an AI assistant made by Anthropic" said to a customer
+      // (2026-08-17) — the last free-text door on the technical track. FAQ
+      // detours keep their own composition (composeFaqReply appends the
+      // node question already); a refusal's tailored clarify-ask still
+      // passes (dictatedByRefusal): it explains what was wrong with the
+      // answer, which the bare node question would drop.
+      const nodeState = getState(ctx.sessionId)
+      if (
+        nodeState.currentNodeId &&
+        nodeState.activeFlowGraphSnapshot &&
+        !servedFaqAnswer &&
+        !(awaitingDictatedReply && dictatedByRefusal)
+      ) {
+        const nodeQuestion = currentNode(buildFlowGraph(nodeState.activeFlowGraphSnapshot), nodeState.currentNodeId)?.question?.trim()
+        if (nodeQuestion) {
+          if (replyBody) {
+            // eslint-disable-next-line no-console
+            console.error(`[demoam][node-dictated] model prose dropped: ${replyBody.slice(0, 140)}`)
+          }
+          const nodeLang = nodeState.language || settings.defaultLanguage
+          const asked = (await forceReplyIntoLanguage(nodeQuestion, nodeLang, settings)).trim()
+          const reply = await withGreeting(asked)
+          history.push({ role: 'assistant', content: reply })
+          return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+        }
+      }
+
       const midIntakeQ = midIntakePendingQuestion(getState(ctx.sessionId), ctx.gateQuestions)
       if (midIntakeQ && !(awaitingDictatedReply && dictatedByRefusal)) {
         // Dictating the question would RE-ASK something the customer already

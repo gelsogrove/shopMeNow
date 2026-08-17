@@ -263,6 +263,14 @@ describe("architectural locks — source greps (CLAUDE.md 1B pattern)", () => {
     expect(AGENT_SOURCE).not.toContain("without a final reply — escalating")
   })
 
+  it("flow node questions are composed by code, never rendered by the model", () => {
+    // WHY: 2026-08-17 — the model, asked to render a dictated node question,
+    // said "I'm Claude, an AI assistant made by Anthropic" to a customer.
+    // The node question comes from the flow builder; the code translates it
+    // through the isolated call and drops the model's prose.
+    expect(AGENT_SOURCE).toContain("[demoam][node-dictated]")
+  })
+
   it("the FAQ-verify hop has all three declared outcomes, each with a mechanical consequence", () => {
     // WHY: 2026-08-17 — with only two classes, "a question no FAQ covers"
     // was inexpressible: it got squeezed into technical_problem_intake and a
