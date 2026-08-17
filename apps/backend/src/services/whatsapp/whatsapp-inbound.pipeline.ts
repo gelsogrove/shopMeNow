@@ -761,7 +761,10 @@ export class WhatsAppInboundPipeline {
               messageContent:
                 welcome?.type === "inline" ? welcome.text : customerReply,
               conversationMessageId: savedAssistantMessageId,
-              skipSecurityCheck: true, // bot-generated content, not user input
+              // Welcome (turn 1) is admin-configured content → trusted. Every
+              // LLM-generated reply runs through the final Security Agent
+              // (profanity/content firewall) before leaving the platform.
+              skipSecurityCheck: welcome !== null,
               // Audio reply only when the customer sent audio AND the tenant's
               // settings.json enables audioOutput (settings are law — iron rule 7).
               // Never on turn 1: the welcome (text/video) always goes out as

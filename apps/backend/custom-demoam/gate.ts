@@ -13,11 +13,19 @@ export interface FlowSummary {
   category?: string
 }
 
+/** Node media from the flow builder (Asset): url/type/title only — the snapshot is persisted per session and must stay light. */
+export interface FlowNodeMedia {
+  url: string
+  type: string
+  title: string
+}
+
 export interface FlowGraphNode {
   id: string
   question: string
   fieldKey?: string | null
   terminalType?: string | null
+  attachments?: FlowNodeMedia[]
 }
 
 export interface FlowGraphEdge {

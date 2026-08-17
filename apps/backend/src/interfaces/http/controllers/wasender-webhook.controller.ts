@@ -646,6 +646,19 @@ export class WasenderWebhookController {
       return res.status(200).json({ status: 'processed', source: 'operator_relay' })
     }
 
+    // 6.6. 🚫 Blacklist Guard (contract rule 25): total silence — no history
+    // save, no LLM call, no reply, no operator relay. Mirrors UltraMsg (410).
+    if (customer.isBlacklisted) {
+      logger.warn('[WASENDER] 🚫 Blocked customer - discarding message', {
+        customerId: customer.id,
+        workspaceId,
+      })
+      return res.status(410).json({
+        status: 'blocked',
+        message: 'Customer is blocked',
+      })
+    }
+
     // 6.7. 👤 Human Support Guard: If customer is in human support mode (chatbot disabled), relay to operator
     if (customer.activeChatbot === false) {
       logger.info('[WASENDER] 👤 Customer in human support mode - relaying to operator', {

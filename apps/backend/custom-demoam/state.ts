@@ -10,6 +10,8 @@ export interface FlowGraphNodeSnapshot {
   question: string
   fieldKey?: string | null
   terminalType?: string | null
+  /** Node media (url/type/title) attached in the flow builder — served with the step's question, never shown to the LLM. */
+  attachments?: Array<{ url: string; type: string; title: string }>
   outgoingEdges: Array<{ label: string; targetNodeId: string | null; targetFlowId?: string | null; triggersEscalation?: boolean }>
 }
 

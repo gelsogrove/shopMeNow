@@ -22,6 +22,8 @@ const mockPrisma = {
   whatsAppQueue: {
     findMany: jest.fn(),
     update: jest.fn(),
+    // Atomic claim (pending → sending) always succeeds in unit tests.
+    updateMany: jest.fn(async () => ({ count: 1 })),
   },
   customers: {
     findFirst: jest.fn(),

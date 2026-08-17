@@ -196,6 +196,22 @@ export class WhatsAppQueueService {
    */
   static readonly MAX_MESSAGES_PER_CYCLE = 25
 
+  /**
+   * 🔒 Atomic claim (at-most-once delivery): flip pending → sending in one
+   * conditional update. If another worker (second dyno, overlapping cycle)
+   * already took the message, count is 0 and the caller skips it. A crash
+   * mid-send leaves the row in 'sending' — it is deliberately NEVER retried
+   * automatically, so the same message can never be delivered twice (Andrea
+   * 2026-08-17); stuck 'sending' rows surface in queue stats for manual review.
+   */
+  private async claimMessage(messageId: string): Promise<boolean> {
+    const claimed = await this.prisma.whatsAppQueue.updateMany({
+      where: { id: messageId, status: "pending" },
+      data: { status: "sending" },
+    })
+    return claimed.count === 1
+  }
+
   async processAllPendingWorkspaces(): Promise<void> {
     try {
       const pendingGroups = await this.prisma.whatsAppQueue.groupBy({
@@ -257,6 +273,15 @@ export class WhatsAppQueueService {
         select: { debugMode: true, name: true, wipMessage: true, ownerId: true, channelStatus: true },
       })
 
+      // 🚫 Channel disabled (contract rule 26): nothing goes out — not even WIP.
+      // Messages stay 'pending' and are delivered when the channel is re-enabled.
+      if (workspace?.channelStatus === false) {
+        logger.info(
+          `[WhatsAppQueueService] ⏭️ Channel disabled for workspace "${workspace.name}" (${workspaceId}) - leaving messages pending`
+        )
+        return
+      }
+
       if (workspace?.debugMode === true) {
         logger.info(
           `[WhatsAppQueueService] 🔧 DEBUG MODE ENABLED for workspace "${workspace.name}" (${workspaceId}) - sending WIP message`
@@ -267,6 +292,10 @@ export class WhatsAppQueueService {
 
         if (!message) {
           return // No messages to process
+        }
+
+        if (!(await this.claimMessage(message.id))) {
+          return // Another worker already claimed it
         }
 
         // Send WIP message automatically (no LLM, no extra cost)
@@ -312,6 +341,10 @@ export class WhatsAppQueueService {
       if (!message) {
         // No pending messages
         return
+      }
+
+      if (!(await this.claimMessage(message.id))) {
+        return // Another worker already claimed it
       }
 
       logger.info(

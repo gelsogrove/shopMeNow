@@ -88,7 +88,16 @@ async function listFlows({ workspaceId }: { workspaceId: string }) {
 async function loadFlow({ workspaceId, flowId }: { workspaceId: string; flowId: string }) {
   const flow = await prisma.flow.findFirst({
     where: { id: flowId, workspaceId },
-    include: { nodes: { include: { outgoingEdges: true } } },
+    include: {
+      nodes: {
+        include: {
+          outgoingEdges: true,
+          // Parity with the host loadFlow: node media (url/type/title only)
+          // travel with the step so scenarios exercise the same payload.
+          attachments: { include: { asset: { select: { url: true, type: true, title: true } } } },
+        },
+      },
+    },
   })
   if (!flow) return null
   return {
@@ -99,6 +108,7 @@ async function loadFlow({ workspaceId, flowId }: { workspaceId: string; flowId: 
       fieldKey: n.fieldKey,
       fieldType: n.fieldType,
       terminalType: n.terminalType,
+      attachments: n.attachments.map((a) => a.asset),
       outgoingEdges: n.outgoingEdges.map((e) => ({
         label: e.label,
         targetNodeId: e.targetNodeId,

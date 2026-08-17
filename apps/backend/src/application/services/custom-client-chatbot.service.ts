@@ -264,6 +264,8 @@ type ChatbotOutput = {
   smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
   error?: string
   patches?: CustomerPatch[]
+  /** Flow-step media (flow builder Assets, url/type/title) served with this reply — channel rendering is the host's job. */
+  attachments?: Array<{ url: string; type: string; title: string }>
   /**
    * Durable per-session state the module wants carried to its next turn.
    * Persisted by this service into ChatSession.context[customChatbotId].
@@ -751,6 +753,14 @@ export class CustomClientChatbotService {
               question: true,
               fieldKey: true,
               terminalType: true,
+              // Node media (flow builder → FlowNodeAttachment → Asset):
+              // only url/type/title travel — the flow snapshot is persisted
+              // per session, so it must stay light (never inline content).
+              // The step then answers with text AND media, deterministically:
+              // the attachment is node data, the LLM never sees it.
+              attachments: {
+                select: { asset: { select: { url: true, type: true, title: true } } },
+              },
               outgoingEdges: {
                 select: { label: true, targetNodeId: true, targetFlowId: true, triggersEscalation: true },
               },
@@ -759,7 +769,14 @@ export class CustomClientChatbotService {
         },
       })
       if (!flow?.compiledPrompt) return null
-      return { compiledPrompt: flow.compiledPrompt, hash: flow.hash, nodes: flow.nodes }
+      return {
+        compiledPrompt: flow.compiledPrompt,
+        hash: flow.hash,
+        nodes: flow.nodes.map((n) => ({
+          ...n,
+          attachments: n.attachments.map((a) => a.asset),
+        })),
+      }
     } catch (error) {
       logger.error("[CustomClientChatbotService] loadFlow failed", {
         workspaceId: p.workspaceId,

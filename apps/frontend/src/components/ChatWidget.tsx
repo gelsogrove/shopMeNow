@@ -215,6 +215,25 @@ const toBotMessage = (m: FetchedServerMessage) => ({
  * live). Before this helper the three polling paths had three different
  * dedup rules (newer-than-timestamp, content|timestamp, none at all).
  */
+/**
+ * Flow-step media from the chat API ({url,type,title} — flow builder Assets)
+ * mapped onto the widget's attachment shape. Deterministic node data: the
+ * step answers with text AND media (Andrea 2026-08-17), reusing the exact
+ * rendering built for operator attachments.
+ */
+const flowMediaToAttachments = (
+  media: Array<{ url: string; type: string; title: string }> | undefined,
+): ChatAttachment[] | undefined => {
+  if (!media?.length) return undefined
+  return media.map((m, i) => ({
+    id: `flow-${Date.now()}-${i}`,
+    url: m.url,
+    kind: m.type === "document" ? ("DOCUMENT" as const) : ("IMAGE" as const),
+    mimeType: m.type === "document" ? "application/pdf" : "image/jpeg",
+    filename: m.title,
+  }))
+}
+
 const mergeServerMessages = (prev: Message[], incoming: Message[]): Message[] => {
   const shownIds = new Set(prev.map((m) => m.serverId).filter(Boolean))
   const shownLocalContents = new Set(prev.filter((m) => !m.serverId).map((m) => m.content))
@@ -1171,17 +1190,24 @@ export function ChatWidget({
         serverId: data.assistantMessageId, // 😀 lets the visitor react to this reply
         // 🔊 audioOutput tenants (demos): backend speaks every reply. Keep the text
         // readable AND attach a voice-note player so visitors see the bot sends audio.
-        attachments: data.audioUrl
-          ? [
-              {
-                id: `tts-${Date.now()}`,
-                url: data.audioUrl,
-                kind: "AUDIO",
-                mimeType: "audio/mpeg",
-                filename: "Voice reply",
-              },
-            ]
-          : undefined,
+        // 📎 Plus any flow-step media the node carries (images/PDF from the builder).
+        attachments: (() => {
+          const combined = [
+            ...(flowMediaToAttachments((data as { attachments?: Array<{ url: string; type: string; title: string }> }).attachments) ?? []),
+            ...(data.audioUrl
+              ? [
+                  {
+                    id: `tts-${Date.now()}`,
+                    url: data.audioUrl,
+                    kind: "AUDIO" as const,
+                    mimeType: "audio/mpeg",
+                    filename: "Voice reply",
+                  },
+                ]
+              : []),
+          ]
+          return combined.length > 0 ? combined : undefined
+        })(),
       }
       const finalMessages = [...updatedMessages, botMessage]
       setMessages(finalMessages)

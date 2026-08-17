@@ -45,7 +45,7 @@ import {
   pendingQuestionText,
   startFlow,
 } from './gate.js'
-import type { FlowSummary, GateQuestions, ListFlowsHandler, LoadFlowHandler } from './gate.js'
+import type { FlowNodeMedia, FlowSummary, GateQuestions, ListFlowsHandler, LoadFlowHandler } from './gate.js'
 import { validateCustomerName, validateProblemDescription, validateSerialNumber } from './content-guards.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -204,6 +204,8 @@ export interface ChatbotOutput {
   closeChat: boolean
   patches?: import('./state.js').CustomerPatch[]
   persistedState?: unknown
+  /** Media attached to the flow step being served (url/type/title) — channel rendering is the HOST's job. */
+  attachments?: Array<{ url: string; type: string; title: string }>
   audioOutput: boolean
   audioVoices: Record<string, string>
   meta: {
@@ -1873,6 +1875,8 @@ interface TurnResult {
   escalated: boolean
   answeredFromFaq?: boolean
   escalationSummary?: string
+  /** Node media served with this step (flow builder Assets) — the host renders them per channel (widget inline, WhatsApp media queue). */
+  attachments?: FlowNodeMedia[]
 }
 
 // Andrea 2026-08-05, seen live: the maxToolHops-exhausted fallback sent
@@ -2196,7 +2200,8 @@ async function agentTurnInternal(
         !servedFaqAnswer &&
         !(awaitingDictatedReply && dictatedByRefusal)
       ) {
-        const nodeQuestion = currentNode(buildFlowGraph(nodeState.activeFlowGraphSnapshot), nodeState.currentNodeId)?.question?.trim()
+        const servedNode = currentNode(buildFlowGraph(nodeState.activeFlowGraphSnapshot), nodeState.currentNodeId)
+        const nodeQuestion = servedNode?.question?.trim()
         if (nodeQuestion) {
           if (replyBody) {
             // eslint-disable-next-line no-console
@@ -2206,7 +2211,17 @@ async function agentTurnInternal(
           const asked = (await forceReplyIntoLanguage(nodeQuestion, nodeLang, settings, ctx)).trim()
           const reply = await withGreeting(asked)
           history.push({ role: 'assistant', content: reply })
-          return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false, answeredFromFaq }
+          // The step's media travel with the step, deterministically: node
+          // data from the flow builder, never seen by the LLM (goal, Andrea
+          // 2026-08-17: "se il flow vuole mostrare un passo con un'immagine
+          // risponde con testo e immagine").
+          return {
+            reply,
+            tokensUsed: tokensUsedSoFar + hopTokens,
+            escalated: false,
+            answeredFromFaq,
+            ...(servedNode?.attachments?.length ? { attachments: servedNode.attachments } : {}),
+          }
         }
       }
 
@@ -2720,6 +2735,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       escalationSummary: result.escalated ? result.escalationSummary || `Session ${sessionId} escalated (no briefing captured)` : undefined,
       notificationEmails: result.escalated ? process.env.OPERATOR_EMAIL || settings.operatorEmail || undefined : undefined,
       closeChat: result.escalated,
+      attachments: result.attachments?.length ? result.attachments : undefined,
       patches: patches.length > 0 ? patches : undefined,
       audioOutput: settings.audioOutput,
       audioVoices: settings.audioVoices,

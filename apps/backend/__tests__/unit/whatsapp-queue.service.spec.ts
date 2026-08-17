@@ -69,6 +69,10 @@ const mockPrisma = {
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    // Atomic claim (pending → sending) always succeeds in unit tests: the
+    // single-worker happy path. count:0 (lost race) is exercised implicitly
+    // by claimMessage returning false.
+    updateMany: jest.fn(async () => ({ count: 1 })),
     delete: jest.fn(),
     deleteMany: jest.fn(),
     count: jest.fn(),

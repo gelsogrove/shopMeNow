@@ -38,6 +38,7 @@ import {
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
 import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from "../../../application/services/custom-client-chatbot.service"
+import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 
 const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
@@ -404,6 +405,46 @@ function demoRateLimitExceeded(workspaceId: string): boolean {
 
 export class WidgetChatController {
   private readonly customClientChatbotService = new CustomClientChatbotService()
+  private readonly securityAgent = new SecurityAgent(prisma)
+
+  /**
+   * 🔒 Final outbound firewall (parity with WhatsApp direct-send): every
+   * LLM-generated reply is screened by the workspace SECURITY agent (prompt
+   * from DB — profanity, data leaks, unauthorized links) before reaching the
+   * browser. Fail-open on errors, like every security-LLM call sitewide.
+   * Returns null when the reply may go out, or the blocked reason.
+   */
+  private async screenOutboundReply(
+    workspaceId: string,
+    customerId: string,
+    reply: string
+  ): Promise<string | null> {
+    if (!reply) return null
+    try {
+      const result = await this.securityAgent.process({
+        workspaceId,
+        message: reply,
+        customerId,
+        customerName: undefined,
+      })
+      if (!result.safe) {
+        logger.warn("[WIDGET] 🚫 Outbound reply blocked by security agent", {
+          workspaceId,
+          customerId,
+          reason: result.blockedReason,
+        })
+        return result.blockedReason || "SECURITY_BLOCKED"
+      }
+      return null
+    } catch (error) {
+      logger.error("[WIDGET] ⚠️ Outbound security check failed - allowing reply", {
+        workspaceId,
+        customerId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
 
   private normalizeLanguage(raw?: string | null): string | null {
     if (!raw) return null
@@ -1215,6 +1256,25 @@ export class WidgetChatController {
         },
       })
 
+      // 🔒 Final outbound firewall: greeting/reply saved above for admin review,
+      // but NOT delivered nor billed if the security agent blocks it.
+      const regOutboundBlock = await this.screenOutboundReply(
+        resolvedWorkspaceId,
+        customer.id,
+        splitCustomChatbotReply(llmResponse).customerReply
+      )
+      if (regOutboundBlock) {
+        return res.status(200).json({
+          success: false,
+          blocked: true,
+          reason: "SECURITY_BLOCKED",
+          customerId: customer.id,
+          sessionId: chatSession.id,
+          isNewCustomer,
+          language: normalizedLanguage,
+        })
+      }
+
       // 12. Billing: deduct widget message credit — skip for playground and debug mode
       if (workspace.ownerId && !isPlayground && !workspace.debugMode) {
         try {
@@ -1998,6 +2058,19 @@ export class WidgetChatController {
 
       logger.info("✅ Customer ready", { customerId: customer.id, visitorId })
 
+      // 🚫 BLACKLIST GUARD (contract rule 25): total silence — no history save,
+      // no LLM call, no reply. Same behaviour as the WhatsApp controllers (410).
+      if (customer.isBlacklisted) {
+        logger.warn("[WIDGET] 🚫 Blocked customer - discarding message", {
+          customerId: customer.id,
+          workspaceId,
+        })
+        return res.status(410).json({
+          status: "blocked",
+          message: "Customer is blocked",
+        })
+      }
+
       // 🚫 OPERATOR HANDOFF GUARD: If activeChatbot=false an operator is handling the chat.
       // NEVER call LLM — but DO save the user message so the operator can read it in backoffice.
       // RULE: operator takes over → LLM is completely disabled until operator re-enables it.
@@ -2341,6 +2414,23 @@ export class WidgetChatController {
           // 👤 Strip the internal operator briefing — the customer must NEVER see it.
           const { customerReply } = splitCustomChatbotReply(customOutput.reply || "")
 
+          // 🔒 Final outbound firewall: reply is already saved to history (admin
+          // can review it in backoffice) but is NOT delivered nor billed if the
+          // security agent blocks it.
+          const outboundBlock = await this.screenOutboundReply(
+            resolvedWorkspaceId,
+            customer.id,
+            customerReply
+          )
+          if (outboundBlock) {
+            return res.status(200).json({
+              success: false,
+              blocked: true,
+              reason: "SECURITY_BLOCKED",
+              sessionId: chatSession.id,
+            })
+          }
+
           // Billing: deduct widget message credit — only when a reply was actually generated.
           // If reply is null (e.g. channel inactive guard), skip billing.
           if (!workspace.debugMode && !isPlayground && workspace.ownerId && customOutput.reply) {
@@ -2424,6 +2514,10 @@ export class WidgetChatController {
             messageId: `widget-${visitorId}-${Date.now()}`,
             sessionId: chatSession.id,
             response: customerReply,
+            // 📎 Flow-step media (flow builder Assets, url/type/title): the
+            // widget renders them inline with the step's text — same rail as
+            // operator attachments, deterministic node data, never the LLM.
+            ...(customOutput.attachments?.length ? { attachments: customOutput.attachments } : {}),
             status: "ready",
             suggestions: customSuggestions,
             // 🌍 Surface the language the bot ACTUALLY replied in (⟦LANG:xx⟧),
@@ -2475,6 +2569,24 @@ export class WidgetChatController {
         isBlocked: llmResult.isBlocked,
         responseLength: llmResult.response?.length,
       })
+
+      // 🔒 Final outbound firewall: messages already saved by ChatEngine, but
+      // the reply is NOT delivered nor billed if the security agent blocks it.
+      if (!llmResult.isBlocked) {
+        const engineOutboundBlock = await this.screenOutboundReply(
+          workspaceId,
+          customer.id,
+          llmResult.response
+        )
+        if (engineOutboundBlock) {
+          return res.status(200).json({
+            success: false,
+            blocked: true,
+            reason: "SECURITY_BLOCKED",
+            sessionId: chatSession.id,
+          })
+        }
+      }
 
       // Check if operator handoff was triggered by this LLM call (contactOperator CF sets activeChatbot=false)
       // Also reload customer language (may have changed via changeLanguage chatbot function)

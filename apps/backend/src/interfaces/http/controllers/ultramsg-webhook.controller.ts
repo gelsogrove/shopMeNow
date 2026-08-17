@@ -1592,6 +1592,43 @@ export class UltraMsgWebhookController {
                 skipSecurityCheck: true, // bot-generated content, not user input
               })
             }
+
+            // 📎 Flow-step media (flow builder Assets, deterministic node
+            // data — the LLM never sees them): images go out as real
+            // WhatsApp media with the Asset title as caption; documents as
+            // a titled link line, because provider.sendMediaMessage is
+            // image-typed across Meta/UltraMsg/Wasender — extending it to
+            // 'document' is a provider-layer change, deliberately separate.
+            if (customOutput.attachments?.length) {
+              for (const media of customOutput.attachments) {
+                try {
+                  if (media.type === 'image') {
+                    await directSend.sendMedia({
+                      workspaceId,
+                      customerId: customer.id,
+                      phoneNumber: customer.phone,
+                      mediaUrl: media.url,
+                      caption: media.title,
+                      skipSecurityCheck: true,
+                    })
+                  } else {
+                    await directSend.send({
+                      workspaceId,
+                      customerId: customer.id,
+                      phoneNumber: customer.phone,
+                      messageContent: `${media.title}: ${media.url}`,
+                      skipSecurityCheck: true,
+                    })
+                  }
+                } catch (mediaError) {
+                  logger.error('[ULTRAMSG] ❌ Failed to send flow-step media', {
+                    error: mediaError instanceof Error ? mediaError.message : String(mediaError),
+                    url: media.url,
+                    workspaceId,
+                  })
+                }
+              }
+            }
           } catch (sendError) {
             logger.error('[ULTRAMSG] ❌ Failed to send custom chatbot response', {
               error: sendError,
