@@ -1284,3 +1284,79 @@ export async function applyEscalationNotification(
     logger.error('[applyEscalationNotification] Email notification failed', { workspaceId, error: err instanceof Error ? err.message : String(err) })
   }
 }
+
+export interface EscalationSideEffectsParams {
+  output: Pick<
+    ChatbotOutput,
+    | 'shouldEscalate'
+    | 'escalationSummary'
+    | 'notificationEmails'
+    | 'operatorContactMethod'
+    | 'operatorWhatsappNumber'
+    | 'smtpConfig'
+  >
+  workspaceId: string
+  customerId: string
+  customerName: string
+  customerPhone?: string
+  history: Array<{ role: 'user' | 'assistant'; content: string }>
+}
+
+/**
+ * The host-side effects of a module escalation (shouldEscalate=true): notify
+ * the operator and disable the chatbot for the customer, so their next
+ * messages reach a human instead of the LLM.
+ *
+ * ONE definition for every entry point that invokes a custom chatbot. Andrea
+ * 2026-08-18, seen live (demoam, "the Robot cut my cat"): these two effects
+ * were inlined only in the widget's ongoing-message branch — an emergency
+ * escalated on a visitor's FIRST message went through the registration branch,
+ * which announced the hand-off and then silently dropped it: no operator
+ * notification, chat still active. A branch that consumes ChatbotOutput must
+ * call this, never re-implement the effects inline.
+ *
+ * Returns true when the escalation was applied. Never throws — the customer
+ * reply must go out regardless.
+ */
+export async function applyEscalationSideEffects(
+  params: EscalationSideEffectsParams,
+  db: PrismaClient = defaultPrisma
+): Promise<boolean> {
+  const { output, workspaceId, customerId, customerName, customerPhone, history } = params
+  if (!output.shouldEscalate || !output.escalationSummary) return false
+
+  // Fire-and-forget: notification latency must not delay the chat response.
+  void applyEscalationNotification(
+    {
+      workspaceId,
+      customerId,
+      escalationSummary: output.escalationSummary,
+      history,
+      customerName,
+      customerPhone,
+      notificationEmails: output.notificationEmails,
+      operatorContactMethod: output.operatorContactMethod,
+      operatorWhatsappNumber: output.operatorWhatsappNumber,
+      smtpConfig: output.smtpConfig,
+    },
+    db
+  )
+
+  try {
+    await db.customers.update({
+      where: { id: customerId, workspaceId },
+      data: { activeChatbot: false },
+    })
+    logger.info('[applyEscalationSideEffects] Escalation applied — chatbot disabled for customer', {
+      workspaceId,
+      customerId,
+    })
+  } catch (err) {
+    logger.error('[applyEscalationSideEffects] Failed to disable chatbot', {
+      workspaceId,
+      customerId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+  return true
+}

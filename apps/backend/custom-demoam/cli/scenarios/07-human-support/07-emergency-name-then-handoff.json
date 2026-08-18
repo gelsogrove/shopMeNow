@@ -1,0 +1,15 @@
+{
+  "description": "Emergenza descritta al primo messaggio (il robot ha ferito un animale) — niente seriale, niente flow, niente controlli tecnici: si chiede SOLO il nome, poi handing-off di sistema con il nome e escalation reale (reason 'emergency'). Riproduce l'incidente live del 2026-08-18 ('the Robot cut my cat'): il bypass totale del gate saltava il nome e l'handoff usciva anonimo.",
+  "contractRule": "Regola 35: in caso di emergency si chiama il supporto umano chiedendo prima il nome, si risponde con l'handing-off di sistema e si disabilita la chat. Il riconoscimento dell'emergenza è dell'LLM via {{humanSupportInstructions}} nel main prompt, mai keyword detection.",
+  "phone": "+391110000707",
+  "newSession": true,
+  "turns": [
+    { "message": "il robot ha ferito il mio gatto in giardino!" },
+    { "message": "Luca Bianchi" }
+  ],
+  "expect": {
+    "escalated": true,
+    "replyContains": ["Luca"],
+    "replyExcludes": ["numero di serie", "serial number", "wifi", "batteria", "battery"]
+  }
+}

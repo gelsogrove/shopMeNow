@@ -16,6 +16,7 @@ import fs from "fs"
 import path from "path"
 
 import {
+  caseShapeFor,
   intakeEvidenceOnRecord,
   midIntakePendingQuestion,
   nextPreOperatorAction,
@@ -240,7 +241,22 @@ describe("escalate shape — evidence beats declaration (CONTRACT.md 11)", () =>
   })
 
   it("the escalate handler derives the shape from evidence, not from the model's reason alone", () => {
-    expect(AGENT_SOURCE).toContain("intakeEvidenceOnRecord(state) ? 'technical' : caseShapeFor(reason)")
+    // Updated 2026-08-18 with Andrea's CONTRACT.md rule 35: 'emergency' is the
+    // ONE reason exempt from the evidence override — an emergency skips every
+    // technical check but still runs the gate as no_device (name only), never
+    // bypasses it. For every other reason, evidence still beats declaration.
+    expect(AGENT_SOURCE).toContain(
+      "reason === 'emergency' || !intakeEvidenceOnRecord(state)\n        ? caseShapeFor(reason)\n        : 'technical'"
+    )
+  })
+
+  it("emergency runs the pre-operator gate as no_device (CONTRACT.md 35): name asked, never bypassed", () => {
+    // The old code wrapped the whole gate in `if (reason !== 'emergency')`,
+    // so an emergency skipped the name and the hand-off went out anonymous
+    // ("Grazie. Sto disabilitando la chat...", seen live 2026-08-18, "the
+    // Robot cut my cat"). The bypass must never come back.
+    expect(AGENT_SOURCE).not.toContain("if (reason !== 'emergency')")
+    expect(caseShapeFor("emergency")).toBe("no_device")
   })
 })
 

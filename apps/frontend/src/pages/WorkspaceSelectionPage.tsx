@@ -37,6 +37,7 @@ import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useIsDemoUser } from "@/hooks/useIsDemoUser"
+import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
@@ -262,8 +263,8 @@ export function WorkspaceSelectionPage() {
   const [activeChecklistItemKey, setActiveChecklistItemKey] = useState<string | null>(null)
   const [showOnlyPending, setShowOnlyPending] = useState(false)
   
-  // Support tickets unread count (only loaded in Chat History)
-  const supportUnreadCount = 0
+  // Support tickets unread count — same user-scoped endpoint the chat header uses
+  const supportUnreadCount = useSupportUnreadCount(false)
   
   // PayPal connection state
   const [paypalStatus, setPaypalStatus] = useState<PayPalStatusResponse | null>(null)

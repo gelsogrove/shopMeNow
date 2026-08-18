@@ -34,3 +34,9 @@
 32. dopo 2 ore siamo nel welcome back message
 33. Claude.md deve sempre far riferiemtno a qeusto file !
 34. questo file non lo tocca nessuno solo io il programmtore umano!
+35. IN CASO DI EMERGENCY devi chiamare il supporto umano chiedendo prima il nome e rispondonde con Hand-off Message di sistema e poi chiama la calling function per disabilitare la chat ...e per sapere quando e' un aso di escalation devi guardare il mani prompt perche' c'e' dentro la stringa
+
+# ESCALATION
+
+Hand over to a human operator when any of these applies:
+{{humanSupportInstructions}}

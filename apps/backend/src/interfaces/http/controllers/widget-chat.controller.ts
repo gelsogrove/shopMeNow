@@ -37,7 +37,7 @@ import {
   WIDGET_PUSH_CONSENT_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
-import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from "../../../application/services/custom-client-chatbot.service"
+import { CustomClientChatbotService, applyCustomerPatches, applyEscalationSideEffects } from "../../../application/services/custom-client-chatbot.service"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 
 const llmRouterService = new LLMRouterService(prisma)
@@ -1139,6 +1139,7 @@ export class WidgetChatController {
       // Pass history: [] because this is the first message of a new session.
       // chatbotFn will prepend welcomeMessage automatically when history is empty.
       let customClientRegHandled = false
+      let regShouldEscalate = false
       try {
         const wipRegMessageStr =
           typeof workspace.wipMessage === "string"
@@ -1172,6 +1173,19 @@ export class WidgetChatController {
           customClientRegHandled = true
           const customOutput = customClientRegResult.output
           await applyCustomerPatches(customOutput.patches, customer.id, resolvedWorkspaceId)
+
+          // An escalation can happen on the very FIRST message (e.g. an
+          // emergency) — same side effects as the ongoing-message branch:
+          // notify the operator, disable the chatbot. Seen live 2026-08-18:
+          // this branch used to drop shouldEscalate silently.
+          regShouldEscalate = await applyEscalationSideEffects({
+            output: customOutput,
+            workspaceId: resolvedWorkspaceId,
+            customerId: customer.id,
+            customerName: customer.name || "Unknown",
+            customerPhone: normalizedPhone || undefined,
+            history: [{ role: "user", content: firstMessage }],
+          })
           // Keep the FULL reply in llmResponse for the DB save (so the backoffice
           // shows the internal orange briefing); the customer-facing part is split
           // out at the response/suggestions sites below.
@@ -1299,6 +1313,7 @@ export class WidgetChatController {
         response: splitCustomChatbotReply(llmResponse).customerReply,
         isNewCustomer,
         suggestions,
+        shouldEscalate: regShouldEscalate,
         // 🌍 Return customer language — widget can sync its dropdown
         language: normalizedLanguage,
         // 👤 Profile data — widget saves this in localStorage to show profile badge in header
@@ -2324,29 +2339,14 @@ export class WidgetChatController {
           const customOutput = customClientResult.output
           await applyCustomerPatches(customOutput.patches, customer.id, resolvedWorkspaceId)
 
-          if (customOutput.shouldEscalate && customOutput.escalationSummary) {
-            void applyEscalationNotification({
-              workspaceId: resolvedWorkspaceId,
-              customerId: customer.id,
-              escalationSummary: customOutput.escalationSummary,
-              history: historyForCustomClient.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' })),
-              customerName: customer.name || 'Unknown',
-              customerPhone: customer.phone || undefined,
-              notificationEmails: customOutput.notificationEmails,
-              operatorContactMethod: customOutput.operatorContactMethod,
-              operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
-              smtpConfig: customOutput.smtpConfig,
-            })
-            // Disable chatbot so subsequent messages go to operator, not LLM (mirrors WhatsApp behavior)
-            await prisma.customers.update({
-              where: { id: customer.id },
-              data: { activeChatbot: false },
-            })
-            logger.info('[WIDGET-CUSTOM-CLIENT] Escalation triggered — chatbot disabled for customer', {
-              customerId: customer.id,
-              workspaceId: resolvedWorkspaceId,
-            })
-          }
+          await applyEscalationSideEffects({
+            output: customOutput,
+            workspaceId: resolvedWorkspaceId,
+            customerId: customer.id,
+            customerName: customer.name || 'Unknown',
+            customerPhone: customer.phone || undefined,
+            history: historyForCustomClient.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' })),
+          })
 
           if (customOutput.error) {
             logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ custom-ecolaundry returned error", {

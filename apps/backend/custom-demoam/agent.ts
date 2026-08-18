@@ -949,37 +949,47 @@ async function executeTool(
 
     const state = getState(ctx.sessionId)
 
-    if (reason !== 'emergency') {
-      // One ordered checklist decides everything here. The shape says which
-      // checklist applies; nextPreOperatorAction says which field is next.
-      // This function used to be five nested gates that both READ and WROTE
-      // the same handful of flags — the order of the ifs WAS the logic, so
-      // every guard added to fix one symptom shifted the balance and exposed
-      // the next (Andrea, 2026-08-05: thirteen fixes in one evening, each
-      // revealing another). Decide first, mutate after.
-      //
-      // EVIDENCE BEATS DECLARATION: the model picks `reason` fresh on every
-      // call, and on a technical case it flip-flopped between calls — the
-      // first escalate declared a no_device reason (gate asked ONLY the
-      // name), the second a technical one (flow forced after) — so the
-      // customer's name landed BEFORE the technical checks, violating rule
-      // 11's "name last" (Andrea 2026-08-17, seen live, es conversation).
-      // With intake facts on record there IS a device being diagnosed: the
-      // shape is technical no matter what reason the model declares.
-      const shape = intakeEvidenceOnRecord(state) ? 'technical' : caseShapeFor(reason)
+    // One ordered checklist decides everything here. The shape says which
+    // checklist applies; nextPreOperatorAction says which field is next.
+    // This function used to be five nested gates that both READ and WROTE
+    // the same handful of flags — the order of the ifs WAS the logic, so
+    // every guard added to fix one symptom shifted the balance and exposed
+    // the next (Andrea, 2026-08-05: thirteen fixes in one evening, each
+    // revealing another). Decide first, mutate after.
+    //
+    // EVIDENCE BEATS DECLARATION: the model picks `reason` fresh on every
+    // call, and on a technical case it flip-flopped between calls — the
+    // first escalate declared a no_device reason (gate asked ONLY the
+    // name), the second a technical one (flow forced after) — so the
+    // customer's name landed BEFORE the technical checks, violating rule
+    // 11's "name last" (Andrea 2026-08-17, seen live, es conversation).
+    // With intake facts on record there IS a device being diagnosed: the
+    // shape is technical no matter what reason the model declares.
+    //
+    // 'emergency' is exempt from that override (CONTRACT.md rule 35): it
+    // skips every technical check, but never the name — it runs the gate
+    // as 'no_device' instead of bypassing it.
+    const shape =
+      reason === 'emergency' || !intakeEvidenceOnRecord(state)
+        ? caseShapeFor(reason)
+        : 'technical'
 
-      // A flow with a question pending can only be advanced by answer_step
-      // or abandoned by abandon_flow — never short-circuited into the gate.
-      //
-      // Andrea 2026-08-06, seen in the CLI runner: mid-flow (cut-scheduling
-      // question pending) the model called escalate_to_operator; the gate,
-      // seeing serial/description/when answered, dictated the NAME question
-      // — so the customer was asked their name in the middle of the
-      // technical checks, answered the next flow question instead, and that
-      // answer ("sì la programmazione è attiva") was saved as their name and
-      // read back in the hand-off. The gate must not even look while a node
-      // is pending.
-      if (state.currentNodeId) {
+    // A flow with a question pending can only be advanced by answer_step
+    // or abandoned by abandon_flow — never short-circuited into the gate.
+    //
+    // Andrea 2026-08-06, seen in the CLI runner: mid-flow (cut-scheduling
+    // question pending) the model called escalate_to_operator; the gate,
+    // seeing serial/description/when answered, dictated the NAME question
+    // — so the customer was asked their name in the middle of the
+    // technical checks, answered the next flow question instead, and that
+    // answer ("sì la programmazione è attiva") was saved as their name and
+    // read back in the hand-off. The gate must not even look while a node
+    // is pending. An emergency is the one interruption that outranks the
+    // flow (rule 35): the flow is detached, never the emergency deferred.
+    if (state.currentNodeId) {
+      if (reason === 'emergency') {
+        detachFlow(ctx.sessionId)
+      } else {
         return {
           ok: false,
           error: 'flow_question_pending',
@@ -989,97 +999,98 @@ async function executeTool(
             'subject, then continue the flow to its end.',
         }
       }
+    }
 
-      // Recorded for the operator briefing: "no technical details" must read
-      // as "there was no device to diagnose", not "the customer refused".
-      if (shape === 'no_device' && !state.skippedTechnicalGate) {
-        updateState(ctx.sessionId, { skippedTechnicalGate: true }, { mirror: false })
-      }
+    // Recorded for the operator briefing: "no technical details" must read
+    // as "there was no device to diagnose", not "the customer refused".
+    if (shape === 'no_device' && !state.skippedTechnicalGate) {
+      updateState(ctx.sessionId, { skippedTechnicalGate: true }, { mirror: false })
+    }
 
-      // A technical case goes through the Human Support flow before a human
-      // sees it: that flow IS the pre-operator technical check (powered on,
-      // wifi, cut scheduling, battery), with real branches and a corrective
-      // LOOP on "No". Only once it reaches its ESCALATE terminal does the
-      // gate below ask the last thing the flow engine cannot capture — the
-      // customer's name — and hand over.
+    // A technical case goes through the Human Support flow before a human
+    // sees it: that flow IS the pre-operator technical check (powered on,
+    // wifi, cut scheduling, battery), with real branches and a corrective
+    // LOOP on "No". Only once it reaches its ESCALATE terminal does the
+    // gate below ask the last thing the flow engine cannot capture — the
+    // customer's name — and hand over.
+    //
+    // 'no_device' (complaint / faq_not_found / requested_operator /
+    // emergency) skips it entirely: there is no device to diagnose (or no
+    // time to diagnose it), so the only question is the name. Naming the
+    // tool by function name rather than "the instruction above" keeps this
+    // unambiguous in every language.
+    const technicalFlowStillDue =
+      shape === 'technical' &&
+      !!ctx.humanSupportFlowId &&
+      !state.humanSupportFlowDone &&
+      !state.currentNodeId
+    if (technicalFlowStillDue) {
+      // Never order a move the receiving tool will refuse. startFlow's own
+      // precondition is that intake is complete (it is what the flow is
+      // chosen from), so ordering start_flow with intake still pending was
+      // two tools commanding incompatible things: escalate said "attach the
+      // flow NOW", startFlow answered 'intake_incomplete', nothing retried,
+      // and the conversation walked to the name question with the technical
+      // checks never asked — then improvised a question of its own at
+      // hand-off (Andrea 2026-08-16, 04-serial-number/02, intermittent).
       //
-      // 'no_device' (complaint / faq_not_found / requested_operator) skips it
-      // entirely: there is no device to diagnose, so the only question is the
-      // name. Naming the tool by function name rather than "the instruction
-      // above" keeps this unambiguous in every language.
-      const technicalFlowStillDue =
-        shape === 'technical' &&
-        !!ctx.humanSupportFlowId &&
-        !state.humanSupportFlowDone &&
-        !state.currentNodeId
-      if (technicalFlowStillDue) {
-        // Never order a move the receiving tool will refuse. startFlow's own
-        // precondition is that intake is complete (it is what the flow is
-        // chosen from), so ordering start_flow with intake still pending was
-        // two tools commanding incompatible things: escalate said "attach the
-        // flow NOW", startFlow answered 'intake_incomplete', nothing retried,
-        // and the conversation walked to the name question with the technical
-        // checks never asked — then improvised a question of its own at
-        // hand-off (Andrea 2026-08-16, 04-serial-number/02, intermittent).
-        //
-        // The sequence lives in ONE place: whatever nextIntakeStep still
-        // wants comes first, and the flow is ordered only once that is empty.
-        // Adding flows or FAQs cannot reintroduce the contradiction, because
-        // there is no second copy of the rule to fall out of sync.
-        const intakeStillPending = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
-        if (intakeStillPending) {
-          return {
-            ok: false,
-            error: 'intake_incomplete',
-            dictates_text: true,
-            instruction: formatIntakeBlock(intakeStillPending) ?? '',
-          }
-        }
-
+      // The sequence lives in ONE place: whatever nextIntakeStep still
+      // wants comes first, and the flow is ordered only once that is empty.
+      // Adding flows or FAQs cannot reintroduce the contradiction, because
+      // there is no second copy of the rule to fall out of sync.
+      const intakeStillPending = nextIntakeStep(getState(ctx.sessionId), ctx.gateQuestions)
+      if (intakeStillPending) {
         return {
           ok: false,
-          error: 'human_support_flow_required',
-          dictates_text: false,
-          force_tool: 'start_flow',
-          instruction:
-            `Before handing over: call start_flow with flowId '${ctx.humanSupportFlowId}' NOW — it runs ` +
-            'the standard pre-operator checks. Follow it to completion, then call escalate_to_operator ' +
-            'again with the same reason.',
+          error: 'intake_incomplete',
+          dictates_text: true,
+          instruction: formatIntakeBlock(intakeStillPending) ?? '',
         }
       }
 
-      const action = nextPreOperatorAction(
-        getState(ctx.sessionId),
-        ctx.gateQuestions,
-        getAskedCounts(ctx.sessionId),
-        shape,
-      )
+      return {
+        ok: false,
+        error: 'human_support_flow_required',
+        dictates_text: false,
+        force_tool: 'start_flow',
+        instruction:
+          `Before handing over: call start_flow with flowId '${ctx.humanSupportFlowId}' NOW — it runs ` +
+          'the standard pre-operator checks. Follow it to completion, then call escalate_to_operator ' +
+          'again with the same reason.',
+      }
+    }
 
-      if (action.kind === 'ask') {
-        // The hand-over is now officially in progress and waiting on fields:
-        // recorded so that the remember() save completing the checklist can
-        // force the escalate call the model kept forgetting to repeat.
-        updateState(ctx.sessionId, { pendingEscalationReason: reason }, { mirror: false })
+    const action = nextPreOperatorAction(
+      getState(ctx.sessionId),
+      ctx.gateQuestions,
+      getAskedCounts(ctx.sessionId),
+      shape,
+    )
 
-        if (action.alreadyAsked) {
-          return {
-            ok: false,
-            error: 'previous_answer_not_saved',
-            instruction:
-              `The "${action.field}" question was already put to the customer. If they answered it, call ` +
-              `remember({key:'${action.field}', value:'...'}) with that answer FIRST — do not ask again — ` +
-              'then call escalate_to_operator again in the same turn. Only ask it again if they genuinely ' +
-              'never answered.',
-          }
-        }
+    if (action.kind === 'ask') {
+      // The hand-over is now officially in progress and waiting on fields:
+      // recorded so that the remember() save completing the checklist can
+      // force the escalate call the model kept forgetting to repeat.
+      updateState(ctx.sessionId, { pendingEscalationReason: reason }, { mirror: false })
 
-        registerFieldRequest(ctx.sessionId, action.field)
+      if (action.alreadyAsked) {
         return {
           ok: false,
-          error: 'pre_operator_check_required',
-          dictates_text: true,
-          instruction: formatPreOperatorInstruction(action),
+          error: 'previous_answer_not_saved',
+          instruction:
+            `The "${action.field}" question was already put to the customer. If they answered it, call ` +
+            `remember({key:'${action.field}', value:'...'}) with that answer FIRST — do not ask again — ` +
+            'then call escalate_to_operator again in the same turn. Only ask it again if they genuinely ' +
+            'never answered.',
         }
+      }
+
+      registerFieldRequest(ctx.sessionId, action.field)
+      return {
+        ok: false,
+        error: 'pre_operator_check_required',
+        dictates_text: true,
+        instruction: formatPreOperatorInstruction(action),
       }
     }
 

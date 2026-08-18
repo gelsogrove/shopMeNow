@@ -54,6 +54,7 @@ host (webhook/widget)
 | 20/21 — lingue | tag `⟦LANG:xx⟧` deciso dal modello (mai detector nel codice, §14), filtrato da `resolveEnabledLanguage`, re-render forzato se fuori lista | `state.ts`, `agent.ts` | 01-welcome/02-03-07, 03-faq/06 | 06/08: cliente danese |
 | 23 — stato anti-"sì/ok" | nodo pendente = risposte ammesse dal grafo (`advance` rifiuta), intake ordinato da `INTAKE_ORDER`, escalation solo deliberata | `gate.ts`, `flow-machine.ts` | 03-faq/03 + `demoam-flow-machine.spec` | 16/08: "grazie" → escalation |
 | — hop esauriti | il fallback ripropone la domanda pendente (`pendingQuestionText`); **mai** escalation | `agent.ts` | grep in `demoam-guarantees.spec` | 16/08 |
+| 35 — emergency: solo nome, poi handoff | `caseShapeFor('emergency') = no_device`: il gate gira SEMPRE (niente più bypass `reason !== 'emergency'`), chiede solo il nome, poi handoff di sistema col nome; flow pendente → `detachFlow`, mai rifiuto; riconoscimento emergenza all'LLM via `{{humanSupportInstructions}}` (§14). Lato host `applyEscalationSideEffects` (notifica operatore + `activeChatbot=false`) chiamata da OGNI branch, incluso il primo messaggio widget | `gate.ts`, `agent.ts`, `custom-client-chatbot.service.ts` | `demoam-guarantees.spec` (grep anti-bypass) + `custom-client-chatbot-escalation.spec` + scenario 07-hs/07 | 18/08: "the Robot cut my cat" — handoff anonimo e chat mai disabilitata |
 
 ## Zona dichiaratamente probabilistica (sorvegliata, non eliminabile — §14)
 

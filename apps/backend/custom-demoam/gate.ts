@@ -549,7 +549,10 @@ export type PreOperatorField =
 export type CaseShape = 'technical' | 'no_device'
 
 export function caseShapeFor(reason: string): CaseShape {
-  return reason === 'complaint' || reason === 'faq_not_found' || reason === 'requested_operator'
+  return reason === 'complaint' ||
+    reason === 'faq_not_found' ||
+    reason === 'requested_operator' ||
+    reason === 'emergency'
     ? 'no_device'
     : 'technical'
 }
