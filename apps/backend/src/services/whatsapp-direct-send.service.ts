@@ -270,12 +270,14 @@ export class WhatsAppDirectSendService {
   }
 
   /**
-   * Send an image (with optional caption) directly via the workspace's provider.
+   * Send a media message (image, video or document, with optional caption)
+   * directly via the workspace's provider.
    *
    * Same pipeline as send() — provider resolution, billing deduction, timeline —
-   * but uses provider.sendMediaMessage(..., 'image'). The caption is run through
-   * mdToWhatsApp so bold/links render correctly. Used for the welcome-video
-   * thumbnail (works identically across Meta, UltraMsg and Wasender).
+   * but uses provider.sendMediaMessage. The caption is run through mdToWhatsApp
+   * so bold/links render correctly. All three providers (Meta, UltraMsg,
+   * Wasender) support the three media types natively; `filename` is what the
+   * customer's WhatsApp shows for documents instead of "Untitled".
    */
   async sendMedia(params: {
     workspaceId: string
@@ -283,6 +285,8 @@ export class WhatsAppDirectSendService {
     phoneNumber: string
     mediaUrl: string
     caption?: string
+    mediaType?: "image" | "video" | "document"
+    filename?: string
     conversationMessageId?: string
     skipSecurityCheck?: boolean
     isPlayground?: boolean
@@ -293,6 +297,8 @@ export class WhatsAppDirectSendService {
       phoneNumber,
       mediaUrl,
       caption,
+      mediaType = "image",
+      filename,
       conversationMessageId,
       skipSecurityCheck = false,
       isPlayground = false,
@@ -354,7 +360,7 @@ export class WhatsAppDirectSendService {
 
     let sendResult: { success: boolean; messageId?: string; error?: string }
     try {
-      sendResult = await provider.sendMediaMessage(phoneNumber, mediaUrl, formattedCaption, "image")
+      sendResult = await provider.sendMediaMessage(phoneNumber, mediaUrl, formattedCaption, mediaType, filename)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error("[DirectSend] ❌ Provider media send failed", { workspaceId, customerId, error: errorMessage })
@@ -378,9 +384,9 @@ export class WhatsAppDirectSendService {
       agent: "Send media to WhatsApp",
       timestamp: new Date().toISOString(),
       model: "WhatsApp Cloud API",
-      input: { phoneNumber, mediaUrl, caption: caption?.substring(0, 200) },
+      input: { phoneNumber, mediaUrl, mediaType, caption: caption?.substring(0, 200) },
       output: {
-        textResponse: `✅ Image delivered to ${phoneNumber}${sendResult.messageId ? ` (waId: ${sendResult.messageId})` : ""}`,
+        textResponse: `✅ ${mediaType} delivered to ${phoneNumber}${sendResult.messageId ? ` (waId: ${sendResult.messageId})` : ""}`,
       },
     })
 

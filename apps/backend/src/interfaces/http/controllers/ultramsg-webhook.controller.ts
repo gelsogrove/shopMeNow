@@ -1594,21 +1594,31 @@ export class UltraMsgWebhookController {
             }
 
             // 📎 Flow-step media (flow builder Assets, deterministic node
-            // data — the LLM never sees them): images go out as real
-            // WhatsApp media with the Asset title as caption; documents as
-            // a titled link line, because provider.sendMediaMessage is
-            // image-typed across Meta/UltraMsg/Wasender — extending it to
-            // 'document' is a provider-layer change, deliberately separate.
+            // data — the LLM never sees them): image/video/document go out
+            // as native WhatsApp media with the Asset title as caption
+            // (documents also carry a filename so the customer's chat shows
+            // the real name, not "Untitled"). Only Asset type "link" stays
+            // a titled text line — a link is not a file.
             if (customOutput.attachments?.length) {
               for (const media of customOutput.attachments) {
                 try {
-                  if (media.type === 'image') {
+                  if (media.type === 'image' || media.type === 'video' || media.type === 'document') {
+                    const urlExt = new URL(media.url).pathname.match(/\.[a-z0-9]{2,5}$/i)?.[0] ?? ''
                     await directSend.sendMedia({
                       workspaceId,
                       customerId: customer.id,
                       phoneNumber: customer.phone,
                       mediaUrl: media.url,
                       caption: media.title,
+                      mediaType: media.type,
+                      ...(media.type === 'document'
+                        ? {
+                            filename:
+                              urlExt && !media.title.toLowerCase().endsWith(urlExt.toLowerCase())
+                                ? `${media.title}${urlExt}`
+                                : media.title,
+                          }
+                        : {}),
                       skipSecurityCheck: true,
                     })
                   } else {
