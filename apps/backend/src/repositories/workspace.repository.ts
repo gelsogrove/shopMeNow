@@ -854,6 +854,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           ultraMsgApiUrl: true,
           notificationEmail: true,
           language: true,
+          defaultLanguage: true,
+          enabledLanguages: true,
           currency: true,
           messageLimit: true,
           welcomeMessage: true,
