@@ -57,6 +57,7 @@ import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
 import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
+import { sendFlowStepMedia } from '../../../services/whatsapp/flow-step-media.send'
 import { splitCustomChatbotReply } from '../../../utils/custom-chatbot-reply'
 import { formatWelcomeReply } from '../../../utils/welcome-video'
 
@@ -1593,51 +1594,15 @@ export class UltraMsgWebhookController {
               })
             }
 
-            // 📎 Flow-step media (flow builder Assets, deterministic node
-            // data — the LLM never sees them): image/video/document go out
-            // as native WhatsApp media with the Asset title as caption
-            // (documents also carry a filename so the customer's chat shows
-            // the real name, not "Untitled"). Only Asset type "link" stays
-            // a titled text line — a link is not a file.
+            // 📎 Flow-step media: shared delivery helper — one definition for
+            // every provider path (see flow-step-media.send.ts).
             if (customOutput.attachments?.length) {
-              for (const media of customOutput.attachments) {
-                try {
-                  if (media.type === 'image' || media.type === 'video' || media.type === 'document') {
-                    const urlExt = new URL(media.url).pathname.match(/\.[a-z0-9]{2,5}$/i)?.[0] ?? ''
-                    await directSend.sendMedia({
-                      workspaceId,
-                      customerId: customer.id,
-                      phoneNumber: customer.phone,
-                      mediaUrl: media.url,
-                      caption: media.title,
-                      mediaType: media.type,
-                      ...(media.type === 'document'
-                        ? {
-                            filename:
-                              urlExt && !media.title.toLowerCase().endsWith(urlExt.toLowerCase())
-                                ? `${media.title}${urlExt}`
-                                : media.title,
-                          }
-                        : {}),
-                      skipSecurityCheck: true,
-                    })
-                  } else {
-                    await directSend.send({
-                      workspaceId,
-                      customerId: customer.id,
-                      phoneNumber: customer.phone,
-                      messageContent: `${media.title}: ${media.url}`,
-                      skipSecurityCheck: true,
-                    })
-                  }
-                } catch (mediaError) {
-                  logger.error('[ULTRAMSG] ❌ Failed to send flow-step media', {
-                    error: mediaError instanceof Error ? mediaError.message : String(mediaError),
-                    url: media.url,
-                    workspaceId,
-                  })
-                }
-              }
+              await sendFlowStepMedia(directSend, {
+                workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                media: customOutput.attachments,
+              })
             }
           } catch (sendError) {
             logger.error('[ULTRAMSG] ❌ Failed to send custom chatbot response', {

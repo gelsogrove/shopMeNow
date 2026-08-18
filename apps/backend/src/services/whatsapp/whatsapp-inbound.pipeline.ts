@@ -30,6 +30,7 @@ import { WorkspaceAccessService } from "../../application/services/workspace-acc
 import { SubscriptionBillingService } from "../../application/services/subscription-billing.service"
 import { websocketService } from "../websocket.service"
 import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
+import { sendFlowStepMedia } from "./flow-step-media.send"
 import { formatWelcomeReply } from "../../utils/welcome-video"
 import { detectLanguageFromPhonePrefix } from "../../utils/language-detector"
 import { ingestInboundWebhookMedia } from "../inbound-media-webhook.service"
@@ -779,6 +780,18 @@ export class WhatsAppInboundPipeline {
               ttsVoiceId:
                 customOutput.audioVoices?.[replyLanguage ?? ""] ??
                 customOutput.audioVoices?.default,
+            })
+          }
+
+          // 📎 Flow-step media (flow builder Assets): text first, then the
+          // node's image/video/document as native WhatsApp media — same
+          // delivery on every provider (Meta/UltraMsg/Wasender).
+          if (customOutput.attachments?.length) {
+            await sendFlowStepMedia(directSend, {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              media: customOutput.attachments,
             })
           }
         } catch (sendError) {
