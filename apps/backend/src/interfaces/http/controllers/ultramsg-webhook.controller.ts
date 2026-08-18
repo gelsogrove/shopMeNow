@@ -58,6 +58,7 @@ import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
 import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
 import { sendFlowStepMedia } from '../../../services/whatsapp/flow-step-media.send'
+import { persistFlowStepMediaAttachments } from '../../../services/flow-step-media.persist'
 import { splitCustomChatbotReply } from '../../../utils/custom-chatbot-reply'
 import { formatWelcomeReply } from '../../../utils/welcome-video'
 
@@ -1603,6 +1604,13 @@ export class UltraMsgWebhookController {
                 phoneNumber: customer.phone,
                 media: customOutput.attachments,
               })
+              if (assistantMessageId) {
+                await persistFlowStepMediaAttachments({
+                  workspaceId,
+                  conversationMessageId: assistantMessageId,
+                  media: customOutput.attachments,
+                })
+              }
             }
           } catch (sendError) {
             logger.error('[ULTRAMSG] ❌ Failed to send custom chatbot response', {

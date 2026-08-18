@@ -38,6 +38,7 @@ import {
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
 import { CustomClientChatbotService, applyCustomerPatches, applyEscalationSideEffects } from "../../../application/services/custom-client-chatbot.service"
+import { persistFlowStepMediaAttachments } from "../../../services/flow-step-media.persist"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 
 const llmRouterService = new LLMRouterService(prisma)
@@ -2398,7 +2399,7 @@ export class WidgetChatController {
           // the backoffice renders it as an internal orange balloon — but only
           // the customer-facing part is sent to the widget (parity with WhatsApp).
           if (customOutput.reply) {
-            await prisma.conversationMessage.create({
+            const savedAssistant = await prisma.conversationMessage.create({
               data: {
                 workspaceId: resolvedWorkspaceId,
                 customerId: customer.id,
@@ -2409,6 +2410,16 @@ export class WidgetChatController {
                 tokensUsed: customOutput.meta?.tokensUsed || 0,
               },
             })
+            // 📎 Flow-step media persisted on the saved message so the /chat
+            // operator view and widget history render them (one definition:
+            // flow-step-media.persist.ts).
+            if (customOutput.attachments?.length) {
+              await persistFlowStepMediaAttachments({
+                workspaceId: resolvedWorkspaceId,
+                conversationMessageId: savedAssistant.id,
+                media: customOutput.attachments,
+              })
+            }
           }
 
           // 👤 Strip the internal operator briefing — the customer must NEVER see it.

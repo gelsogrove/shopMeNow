@@ -31,6 +31,7 @@ import { SubscriptionBillingService } from "../../application/services/subscript
 import { websocketService } from "../websocket.service"
 import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
 import { sendFlowStepMedia } from "./flow-step-media.send"
+import { persistFlowStepMediaAttachments } from "../flow-step-media.persist"
 import { formatWelcomeReply } from "../../utils/welcome-video"
 import { detectLanguageFromPhonePrefix } from "../../utils/language-detector"
 import { ingestInboundWebhookMedia } from "../inbound-media-webhook.service"
@@ -785,7 +786,8 @@ export class WhatsAppInboundPipeline {
 
           // 📎 Flow-step media (flow builder Assets): text first, then the
           // node's image/video/document as native WhatsApp media — same
-          // delivery on every provider (Meta/UltraMsg/Wasender).
+          // delivery on every provider (Meta/UltraMsg/Wasender). Persisted on
+          // the saved assistant message so the /chat view renders them too.
           if (customOutput.attachments?.length) {
             await sendFlowStepMedia(directSend, {
               workspaceId: customer.workspaceId,
@@ -793,6 +795,13 @@ export class WhatsAppInboundPipeline {
               phoneNumber: customer.phone,
               media: customOutput.attachments,
             })
+            if (savedAssistantMessageId) {
+              await persistFlowStepMediaAttachments({
+                workspaceId: customer.workspaceId,
+                conversationMessageId: savedAssistantMessageId,
+                media: customOutput.attachments,
+              })
+            }
           }
         } catch (sendError) {
           logger.error("[PIPELINE] ❌ Failed to send custom chatbot response", {
