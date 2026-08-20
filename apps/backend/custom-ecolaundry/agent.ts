@@ -20,6 +20,7 @@ import nodemailer from 'nodemailer'
 
 import {
   type CustomerPatch,
+  type Greeting,
   type SessionState,
   drainPatches,
   dehydrateState,
@@ -32,6 +33,7 @@ import {
   incrementTurn,
   registerMessageTimestamp,
   resetState,
+  resolveGreeting,
   updateLanguageOnTurn,
   updateState,
 } from './state.js'
@@ -1096,6 +1098,8 @@ export interface ChatbotInput {
     messages?: {
       rateLimited?: string | null
       sessionTooLong?: string | null
+      /** Greeting for a customer we already know by name. */
+      welcomeBack?: string | null
     } | null
   }
   context: {
@@ -1197,8 +1201,20 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     // the TEXT comes from configuration and the LLM renders it in the
     // customer's language. Nothing configured → no greeting at all, never a
     // hardcoded one (CLAUDE.md §1A).
-    const isFirstTurn = input.context.history.length === 0
-    const greeting = isFirstTurn ? resolveGreetingText(settings, getState(sessionId).name) : undefined
+    // A customer the host already has on record (recognised phone number or an
+    // existing customer row) is greeted with welcomeBack, by name; a first-time
+    // visitor gets the plain welcome. Recognition is the host's, never guessed
+    // from the message text.
+    const greetingKind = resolveGreeting({
+      historyLength: input.context.history.length,
+      isKnownCustomer: !!input.context.customerId,
+    })
+    const greeting = resolveGreetingText(
+      settings,
+      getState(sessionId).name,
+      greetingKind,
+      input.config.messages,
+    )
 
     const result = await agentTurn(ctx, systemPrompt, history, input.userMessage, greeting)
     const patches = drainPatches(sessionId)
