@@ -394,6 +394,30 @@ function detectLanguageForTurn(sessionId: string, text: string): string {
   return winner
 }
 
+// ── Greeting: decided by CODE, from facts the host already provides ──────────
+
+export type Greeting = 'new' | 'returning' | 'none'
+
+/**
+ * Which greeting is due this turn.
+ *
+ * - Conversation already in progress          -> 'none'
+ * - Known customer (the host recognised their
+ *   phone number / customer record)           -> 'returning'
+ * - Anyone else opening a chat                -> 'new'
+ *
+ * Recognition comes from the host, not from the text: a WhatsApp number or a
+ * widget visitor already converted to a Customer arrives with an id, which is
+ * exactly "we have seen this person before".
+ */
+export function resolveGreeting(params: {
+  historyLength: number
+  isKnownCustomer: boolean
+}): Greeting {
+  if (params.historyLength > 0) return 'none'
+  return params.isKnownCustomer ? 'returning' : 'new'
+}
+
 export function formatStateForPrompt(state: SessionState): string {
   const fields: string[] = []
   if (state.name) fields.push(`Customer name: ${state.name}`)

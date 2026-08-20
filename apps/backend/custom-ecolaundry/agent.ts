@@ -62,9 +62,12 @@ interface Settings {
   // (ChatbotSettingsJson in chatbot-settings-json.service.ts).
   rateLimitedMessage: string
   sessionTooLongMessage: string
-  /** Opening line for the first turn. Written in one language; the LLM renders
-   *  it in the customer's. Empty = no greeting is delivered at all. */
+  /** Opening line for a customer we have never seen. Written in one language;
+   *  the LLM renders it in the customer's. Empty = no greeting at all. */
   welcomeMessage: string
+  /** Opening line for a customer the host already knows (recognised phone /
+   *  customer record). Falls back to `welcomeMessage` when not configured. */
+  welcomeBackMessage: string
   /** Languages the chatbot may reply in. A detected language outside this list
    *  falls back to `defaultLanguage`. Empty list = no restriction. */
   enabledLanguages: string[]
@@ -87,6 +90,7 @@ const DEFAULT_SETTINGS: Settings = {
   rateLimitedMessage: '',
   sessionTooLongMessage: '',
   welcomeMessage: '',
+  welcomeBackMessage: '',
   enabledLanguages: [],
   defaultLanguage: 'es',
 }
@@ -932,7 +936,12 @@ async function buildSystemPrompt(): Promise<string> {
  */
 function isRealCustomerName(name?: string): boolean {
   const trimmed = (name || '').trim()
-  return trimmed !== '' && trimmed !== 'Customer' && trimmed !== 'New Customer'
+  if (trimmed === '' || trimmed === 'Customer' || trimmed === 'New Customer') return false
+  // Anonymous widget visitors reach us as "Visitor <last 8 chars of the id>"
+  // (widget-chat.controller). That is an internal handle, not a name: greeting
+  // someone as "Ciao Visitor 8_vcllde!" is worse than not naming them at all.
+  if (/^Visitor(\s+\S+)?$/i.test(trimmed)) return false
+  return true
 }
 
 /**
@@ -942,8 +951,22 @@ function isRealCustomerName(name?: string): boolean {
  * punctuation left dangling around it, so "Ciao {{customerName}}!" degrades to
  * "Ciao!" and not "Ciao !".
  */
-function resolveGreetingText(settings: Settings, customerName?: string): string | undefined {
-  const raw = settings.welcomeMessage?.trim()
+function resolveGreetingText(
+  settings: Settings,
+  customerName: string | undefined,
+  greeting: Greeting,
+  hostMessages?: { welcomeBack?: string | null } | null,
+): string | undefined {
+  if (greeting === 'none') return undefined
+
+  // Returning customer: workspace copy first (the host renders it), then the
+  // module default, then the new-customer line rather than no greeting at all.
+  const raw =
+    greeting === 'returning'
+      ? (hostMessages?.welcomeBack?.trim() ||
+         settings.welcomeBackMessage?.trim() ||
+         settings.welcomeMessage?.trim())
+      : settings.welcomeMessage?.trim()
   if (!raw) return undefined
 
   const name = isRealCustomerName(customerName) ? customerName!.trim() : ''
