@@ -322,6 +322,19 @@ interface ToolContext {
   escalationBriefing?: string
 }
 
+/** Machine number from a tool argument, accepting both 4 and "4". */
+function parseMachineNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (/^\d{1,3}$/.test(trimmed)) {
+      const parsed = Number(trimmed)
+      if (parsed > 0) return parsed
+    }
+  }
+  return null
+}
+
 async function executeTool(
   ctx: ToolContext,
   name: string,
@@ -332,7 +345,12 @@ async function executeTool(
     if (typeof args.name === 'string') patch.name = args.name
     if (typeof args.location === 'string') patch.location = args.location
     if (args.machineType === 'washer' || args.machineType === 'dryer') patch.machineType = args.machineType
-    if (typeof args.machine === 'number' && Number.isFinite(args.machine)) patch.machine = args.machine
+    // The schema says integer, but models routinely send "4" as a string. It
+    // used to be dropped silently, losing the machine number for the rest of
+    // the conversation — and a price answered without it comes from the wrong
+    // table row (seen live 2026-08-20: 7 € quoted for Alemanya washer 4).
+    const machine = parseMachineNumber(args.machine)
+    if (machine !== null) patch.machine = machine
     if (typeof args.displayCode === 'string') patch.displayCode = args.displayCode
     if (typeof args.symptom === 'string' && args.symptom.trim()) patch.symptom = args.symptom.trim()
     // NOTE: `language` is NOT accepted here anymore. Language is detected
@@ -622,10 +640,12 @@ async function callLLM(
   history: Message[],
   settings: Settings,
   greeting?: string,
+  options?: { withoutTools?: boolean },
 ): Promise<LlmResponse> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
+  const missingFactsBlock = formatMissingFactsBlock(state)
   const runtimeBlock = formatRuntimeBlock(settings, greeting)
 
   // Cached block first (cache_control: ephemeral). State + runtime blocks are
@@ -641,15 +661,22 @@ async function callLLM(
   if (stateBlock) {
     systemContent.push({ type: 'text', text: stateBlock })
   }
+  if (missingFactsBlock) {
+    systemContent.push({ type: 'text', text: missingFactsBlock })
+  }
   systemContent.push({ type: 'text', text: runtimeBlock })
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     model: resolveModel(settings),
     messages: [{ role: 'system', content: systemContent }, ...history],
-    tools: TOOLS,
-    tool_choice: 'auto',
     temperature: resolveTemperature(settings),
     max_tokens: resolveMaxTokens(settings),
+  }
+  // Omitting tools entirely (rather than tool_choice:'none') leaves the model
+  // no way to reply except with text — used by the last-resort empty-reply call.
+  if (!options?.withoutTools) {
+    payload.tools = TOOLS
+    payload.tool_choice = 'auto'
   }
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -716,7 +743,6 @@ async function agentTurnInternal(
 ): Promise<TurnResult> {
   history.push({ role: 'user', content: sanitizedMessage })
 
-  let nudgedAfterEmpty = false
   let tokensUsed = 0
   let escalated = false
   const maxToolHops = ctx.settings.maxToolHops
@@ -731,18 +757,18 @@ async function agentTurnInternal(
     if (!response.tool_calls || response.tool_calls.length === 0) {
       const text = (response.content || '').trim()
 
-      // Empty-reply recovery (see architecture.md §7).
-      if (!text && !nudgedAfterEmpty && hop < maxToolHops - 1) {
-        nudgedAfterEmpty = true
+      // Empty-reply recovery (see architecture.md §7). Retried on EVERY empty
+      // hop, not just the first: seen live 2026-08-20, the model went empty
+      // twice in one turn and the single-shot nudge let the second one through
+      // to the customer as silence.
+      if (!text && hop < maxToolHops - 1) {
         history.push({ role: 'assistant', content: '' })
         history.push({
           role: 'user',
           content:
             '[system] Your previous reply was empty. Please respond to the customer now, in their language, following the rules in the system prompt. Do not call any more tools unless strictly necessary.',
         })
-        if (process.env.LLM_DEBUG === '1') {
-          console.error('[empty_reply_nudge] retrying with explicit instruction')
-        }
+        console.error('[empty_reply_nudge] retrying with explicit instruction')
         continue
       }
 
@@ -787,9 +813,27 @@ async function agentTurnInternal(
     }
   }
 
-  if (process.env.LLM_DEBUG === '1') {
-    console.error(`[warn] max tool hops (${maxToolHops}) reached without text reply`)
+  // Hop budget exhausted with no text. Rather than hand the customer silence,
+  // make one last tools-disabled call: with no tools on the request the model
+  // has nothing to answer with except words.
+  console.error(`[warn] max tool hops (${maxToolHops}) reached without text reply — final text-only attempt`)
+  try {
+    const lastResort = await callLLM(cachedSystemPrompt, getState(ctx.sessionId), history, ctx.settings, greeting, {
+      withoutTools: true,
+    })
+    tokensUsed += (lastResort.usage?.prompt_tokens ?? 0) + (lastResort.usage?.completion_tokens ?? 0)
+    const text = (lastResort.content || '').trim()
+    if (text) {
+      history.push({ role: 'assistant', content: text })
+      return { reply: text, tokensUsed, escalated }
+    }
+  } catch (err) {
+    console.error(`[empty_reply_last_resort_failed] ${err instanceof Error ? err.message : String(err)}`)
   }
+
+  // Still nothing: surface it as an error so the host serves its configured
+  // fallback instead of the customer seeing an empty bubble.
+  console.error(`[empty_reply] session=${ctx.sessionId} produced no text after ${maxToolHops} hops`)
   return { reply: '', tokensUsed, escalated }
 }
 
@@ -910,6 +954,33 @@ function resolveGreetingText(settings: Settings, customerName?: string): string 
     : raw.replace(/[ \t]*[,;:]?[ \t]*\{\{\s*customerName\s*\}\}/g, '')
 
   return resolved.trim() || undefined
+}
+
+/**
+ * Facts the model must not infer from the absence of a SESSION STATE line.
+ * A missing `Machine:` reads as "nothing to see here", and the model answered a
+ * price anyway by picking a table row (2026-08-20: 7 € quoted for Alemanya
+ * washer 4, which costs 4 €). Stating the gap outright — and what to do about
+ * it — is a code-side guarantee, not another rule buried in common.md.
+ */
+function formatMissingFactsBlock(state: SessionState): string {
+  const missing: string[] = []
+  if (!state.location) missing.push('- Sede (location): DESCONOCIDA')
+  if (state.machine === undefined) missing.push('- Número de máquina: DESCONOCIDO')
+  if (!state.machineType) missing.push('- Tipo de máquina (lavadora/secadora): DESCONOCIDO')
+  if (missing.length === 0) return ''
+
+  return [
+    '',
+    '═══ DATOS QUE AÚN NO TIENES ═══',
+    ...missing,
+    '',
+    'Un precio depende de la sede Y del tipo Y del número exacto de máquina:',
+    'máquinas contiguas cuestan distinto. Si el cliente pide un precio y alguno',
+    'de esos datos falta arriba, PREGÚNTALO en vez de responder con un importe.',
+    'Nunca deduzcas el dato que falta ni des un precio "aproximado".',
+    '',
+  ].join('\n')
 }
 
 function formatRuntimeBlock(settings: Settings, greeting?: string): string {
@@ -1109,8 +1180,26 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const result = await agentTurn(ctx, systemPrompt, history, input.userMessage, greeting)
     const patches = drainPatches(sessionId)
 
+    // Silence is never an acceptable answer: after the retries inside the turn
+    // still produced nothing, report it as an LLM failure so the host serves
+    // its configured fallback instead of an empty bubble (seen live
+    // 2026-08-20 — two empty replies out of four messages).
+    const reply = result.reply || null
+    if (reply === null && !result.escalated) {
+      console.error(`[chatbotFn] empty reply for session=${sessionId} — serving host fallback`)
+      return {
+        reply: null,
+        shouldEscalate: false,
+        closeChat: false,
+        patches: patches.length > 0 ? patches : undefined,
+        persistedState: dehydrateState(sessionId),
+        meta: { tokensUsed: result.tokensUsed, agentChain: ['custom-ecolaundry'] },
+        error: 'llm_unavailable',
+      }
+    }
+
     return {
-      reply: result.reply || null,
+      reply,
       shouldEscalate: result.escalated,
       // The real operator briefing (PII already resolved), not a bare ticket id:
       // the host emails exactly this text through its shared SMTP transport.
