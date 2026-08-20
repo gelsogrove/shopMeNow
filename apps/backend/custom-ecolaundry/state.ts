@@ -405,6 +405,10 @@ export function formatStateForPrompt(state: SessionState): string {
     fields.push(`Machine type: ${state.machineType}`)
   }
   if (state.displayCode) fields.push(`Display: ${state.displayCode}`)
+  // Category-D symptom (no display code). common.md promises the model this
+  // exact line and keys the "don't ask for displayCode again" rule on it, so
+  // omitting it made the symptom silently vanish between turns.
+  if (state.symptom) fields.push(`Reported symptom: ${state.symptom}`)
   if (state.language) fields.push(`Language: ${state.language}`)
   if (fields.length === 0) return ''
   return ['', '═══ SESSION STATE ═══', ...fields, ''].join('\n')
