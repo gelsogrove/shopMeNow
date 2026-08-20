@@ -22,6 +22,8 @@ import {
   type CustomerPatch,
   type SessionState,
   drainPatches,
+  dehydrateState,
+  hydrateState,
   pushPatch,
   formatStateForPrompt,
   formatStateOneLine,
@@ -60,6 +62,14 @@ interface Settings {
   // (ChatbotSettingsJson in chatbot-settings-json.service.ts).
   rateLimitedMessage: string
   sessionTooLongMessage: string
+  /** Opening line for the first turn. Written in one language; the LLM renders
+   *  it in the customer's. Empty = no greeting is delivered at all. */
+  welcomeMessage: string
+  /** Languages the chatbot may reply in. A detected language outside this list
+   *  falls back to `defaultLanguage`. Empty list = no restriction. */
+  enabledLanguages: string[]
+  /** ISO 639-1 used when the detected language is not enabled. */
+  defaultLanguage: string
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -76,6 +86,9 @@ const DEFAULT_SETTINGS: Settings = {
   maxTurnsPerSession: 50,
   rateLimitedMessage: '',
   sessionTooLongMessage: '',
+  welcomeMessage: '',
+  enabledLanguages: [],
+  defaultLanguage: 'es',
 }
 
 function loadSettings(): Settings {
@@ -303,6 +316,10 @@ interface ToolContext {
     rateLimited?: string | null
     sessionTooLong?: string | null
   } | null
+  /** Operator briefing produced by escalate_to_operator this turn, with PII
+   *  placeholders already resolved. chatbotFn hands it to the host, which owns
+   *  the actual delivery (shared SMTP transport + recipient routing). */
+  escalationBriefing?: string
 }
 
 async function executeTool(
@@ -428,25 +445,14 @@ async function executeTool(
     // summary contains placeholders because the LLM never saw real PII.
     const summary = substitutePlaceholders(rawSummary, state)
 
-    try {
-      await sendEscalationEmail({
-        ticketId,
-        reason,
-        summary,
-        state,
-        settings: ctx.settings,
-        customerName: ctx.customerName,
-        customerPhone: ctx.customerPhone,
-      })
-      return { ok: true, ticket_id: ticketId, eta_minutes: 5, email_sent: !!GMAIL_USER }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`[escalation_email_failed] ${msg}`)
-      // Still return ok:true so the bot can tell the customer the case has
-      // been registered — the briefing is logged for retry/audit even if
-      // email failed (e.g. SMTP down). The ticket exists.
-      return { ok: true, ticket_id: ticketId, eta_minutes: 5, email_sent: false, email_error: msg }
-    }
+    // Delivery belongs to the HOST: it already owns the shared SMTP transport
+    // (SMTP_HOST/SMTP_USER/… — the module's own Gmail credentials do not exist
+    // in production) plus recipient routing and multi-operator delivery modes.
+    // We only build the briefing and hand it up through ChatbotOutput.
+    logEscalationBriefing({ ticketId, reason, summary, state, settings: ctx.settings, customerName: ctx.customerName, customerPhone: ctx.customerPhone })
+    ctx.escalationBriefing = summary
+
+    return { ok: true, ticket_id: ticketId, eta_minutes: 5 }
   }
 
   return { ok: false, error: `unknown tool: ${name}` }
@@ -567,9 +573,9 @@ async function sendInvoiceEmail(params: InvoiceParams): Promise<void> {
   })
 }
 
-// ── Email escalation ──────────────────────────────────────────────────────────
-// Real SMTP via Gmail App Password. Falls back to console-only briefing when
-// GMAIL_USER/GMAIL_APP_PASSWORD are not set (POC / first run).
+// ── Escalation briefing (audit log) ───────────────────────────────────────────
+// The briefing is logged here as the module's audit trail; the EMAIL itself is
+// sent by the host from ChatbotOutput.escalationSummary (see chatbotFn).
 
 interface EscalationParams {
   ticketId: string
@@ -581,15 +587,13 @@ interface EscalationParams {
   customerPhone?: string
 }
 
-async function sendEscalationEmail(params: EscalationParams): Promise<void> {
+function logEscalationBriefing(params: EscalationParams): void {
   const { ticketId, reason, summary, state, settings, customerName, customerPhone } = params
-  const operatorEmail = resolveOperatorEmail(settings)
 
-  // Always log the briefing — single source of truth for audit / fallback.
   console.error('\n══════ ESCALATION BRIEFING ══════')
   console.error(`Ticket: ${ticketId}`)
   console.error(`Reason: ${reason}`)
-  console.error(`To: ${operatorEmail || '(no operatorEmail configured)'}`)
+  console.error(`To: ${resolveOperatorEmail(settings) || '(recipient resolved by host)'}`)
   console.error(`Customer (from state): ${state.name ?? customerName ?? '?'}`)
   console.error(`Phone: ${customerPhone ?? '?'}`)
   console.error(`Location: ${state.location ?? '?'}`)
@@ -599,36 +603,6 @@ async function sendEscalationEmail(params: EscalationParams): Promise<void> {
   console.error('---')
   console.error(summary)
   console.error('══════════════════════════════════\n')
-
-  if (!operatorEmail) {
-    throw new Error('operatorEmail not configured (settings or env)')
-  }
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    // Soft-fail in POC: log warning, don't crash. Production should make this hard.
-    throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD missing in .env (briefing logged to console only)')
-  }
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-  })
-
-  const subject = `${settings.emailSubjectPrefix} ${ticketId} — ${state.location ?? 'sede ?'} — ${reason}`
-  const textBody = [
-    `Ticket: ${ticketId}`,
-    `Razón: ${reason}`,
-    '',
-    summary,
-    '',
-    '— Ecolaundry Bot',
-  ].join('\n')
-
-  await transporter.sendMail({
-    from: settings.emailFrom,
-    to: operatorEmail,
-    subject,
-    text: textBody,
-  })
 }
 
 // ── LLM call with system-prompt caching ───────────────────────────────────────
@@ -647,11 +621,12 @@ async function callLLM(
   state: SessionState,
   history: Message[],
   settings: Settings,
+  greeting?: string,
 ): Promise<LlmResponse> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(settings)
+  const runtimeBlock = formatRuntimeBlock(settings, greeting)
 
   // Cached block first (cache_control: ephemeral). State + runtime blocks are
   // appended WITHOUT cache_control so they can change per turn / per day
@@ -737,6 +712,7 @@ async function agentTurnInternal(
   cachedSystemPrompt: string,
   history: Message[],
   sanitizedMessage: string,
+  greeting?: string,
 ): Promise<TurnResult> {
   history.push({ role: 'user', content: sanitizedMessage })
 
@@ -747,7 +723,7 @@ async function agentTurnInternal(
 
   for (let hop = 0; hop < maxToolHops; hop++) {
     const state = getState(ctx.sessionId)
-    const response = await callLLM(cachedSystemPrompt, state, history, ctx.settings)
+    const response = await callLLM(cachedSystemPrompt, state, history, ctx.settings, greeting)
     tokensUsed +=
       (response.usage?.prompt_tokens ?? 0) + (response.usage?.completion_tokens ?? 0)
 
@@ -826,6 +802,7 @@ async function agentTurn(
   cachedSystemPrompt: string,
   history: Message[],
   rawMessage: string,
+  greeting?: string,
 ): Promise<TurnResult> {
   const sanitized = sanitizeUserMessage(rawMessage, ctx.settings.maxMessageChars)
   if (!sanitized) {
@@ -847,7 +824,12 @@ async function agentTurn(
 
   // Deterministic language detection BEFORE the LLM turn. Eliminates the
   // T1 empty-reply bug caused by `remember({language})` standalone tool calls.
-  updateLanguageOnTurn(ctx.sessionId, sanitized)
+  updateLanguageOnTurn(
+    ctx.sessionId,
+    sanitized,
+    ctx.settings.enabledLanguages,
+    ctx.settings.defaultLanguage,
+  )
 
   // PII redaction (see pii.ts). Pre-scan extracts structured PII
   // (email/CIF/NIF/IBAN/card/phone) into SessionState and replaces them
@@ -861,7 +843,7 @@ async function agentTurn(
   }
 
   return withSessionLock(ctx.sessionId, () =>
-    agentTurnInternal(ctx, cachedSystemPrompt, history, cleanText),
+    agentTurnInternal(ctx, cachedSystemPrompt, history, cleanText, greeting),
   )
 }
 
@@ -900,7 +882,37 @@ async function buildSystemPrompt(): Promise<string> {
   return parts.join('\n')
 }
 
-function formatRuntimeBlock(settings: Settings): string {
+/**
+ * Whether a name identifies the customer or is one of the host's stand-ins for
+ * "we don't know yet" (widget visitors arrive as "New Customer").
+ */
+function isRealCustomerName(name?: string): boolean {
+  const trimmed = (name || '').trim()
+  return trimmed !== '' && trimmed !== 'Customer' && trimmed !== 'New Customer'
+}
+
+/**
+ * The configured greeting with {{customerName}} resolved, or undefined when
+ * nothing is configured (no greeting is then delivered — never an invented one).
+ * When the name is unknown the placeholder is dropped together with any
+ * punctuation left dangling around it, so "Ciao {{customerName}}!" degrades to
+ * "Ciao!" and not "Ciao !".
+ */
+function resolveGreetingText(settings: Settings, customerName?: string): string | undefined {
+  const raw = settings.welcomeMessage?.trim()
+  if (!raw) return undefined
+
+  const name = isRealCustomerName(customerName) ? customerName!.trim() : ''
+  const resolved = name
+    ? raw.replace(/\{\{\s*customerName\s*\}\}/g, name)
+    // Drop the placeholder together with the separator that introduced it, so
+    // "Hola {{customerName}}!" degrades to "Hola!" and never "Hola !".
+    : raw.replace(/[ \t]*[,;:]?[ \t]*\{\{\s*customerName\s*\}\}/g, '')
+
+  return resolved.trim() || undefined
+}
+
+function formatRuntimeBlock(settings: Settings, greeting?: string): string {
   const now = new Date()
   const date = now.toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -911,14 +923,30 @@ function formatRuntimeBlock(settings: Settings): string {
     hour: '2-digit',
     minute: '2-digit',
   })
-  return [
+  const lines = [
     '',
     '═══ RUNTIME ═══',
     `Current date: ${date}`,
     `Current time: ${time}`,
     `Operator briefing language: ${settings.operatorBriefingLanguage}`,
-    '',
-  ].join('\n')
+  ]
+
+  if (greeting) {
+    lines.push(
+      '',
+      '═══ SALUDO DE APERTURA (primer turno) ═══',
+      'Es el primer mensaje de este cliente. Abre tu respuesta con este saludo,',
+      "TRADUCIDO al idioma del cliente y escrito con naturalidad en ese idioma:",
+      '',
+      greeting,
+      '',
+      'Luego, en el MISMO mensaje, atiende lo que el cliente acaba de pedir.',
+      'No lo saludes dos veces ni añadas otra presentación tuya.',
+    )
+  }
+
+  lines.push('')
+  return lines.join('\n')
 }
 
 async function readFileOrEmpty(filepath: string): Promise<string> {
@@ -981,14 +1009,21 @@ export interface ChatbotInput {
     customerId?: string
     phoneNumber?: string
     history: HistoryEntry[]
+    /** Durable state this module returned on a previous turn, possibly from
+     *  another dyno. Hydrated back into the in-RAM session map. */
+    persistedState?: unknown
   }
 }
 
 export interface ChatbotOutput {
   reply: string | null
   shouldEscalate: boolean
+  /** Operator briefing, PII resolved. The host emails it (shared SMTP). */
   escalationSummary?: string
   notificationEmails?: string
+  /** Durable session state; the host stores it on ChatSession.context and
+   *  returns it as `context.persistedState` on the next turn. */
+  persistedState?: unknown
   /** When true, the host should close this chat session and stop forwarding
    *  new customer messages to the bot. Set after the bot completes an
    *  escalation flow (the operator now owns the conversation). */
@@ -1041,6 +1076,10 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     const settings = effectiveSettings(input.config.settings)
 
+    // Restore durable state before anything reads it: Heroku recycles dynos and
+    // may run several, so the in-RAM Map alone loses the conversation mid-flow.
+    hydrateState(sessionId, input.context.persistedState)
+
     const ctx: ToolContext = {
       sessionId,
       customerName: input.userName,
@@ -1054,23 +1093,32 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     // Only seed when we don't already have a name in state and the profile name
     // is a real one (not the "New Customer"/"Customer" placeholder).
     const seededState = getState(sessionId)
-    const profileName = (input.userName || '').trim()
-    const isPlaceholderName =
-      !profileName || profileName === 'Customer' || profileName === 'New Customer'
-    if (!seededState.name && !isPlaceholderName) {
-      updateState(sessionId, { name: profileName })
+    if (!seededState.name && isRealCustomerName(input.userName)) {
+      updateState(sessionId, { name: input.userName.trim() })
     }
 
-    const result = await agentTurn(ctx, systemPrompt, history, input.userMessage)
+    // 👋 Greeting: the host skips its own standalone welcome for workspaces
+    // running a custom module (welcome-message.handler), so the opening line is
+    // ours to deliver. CODE decides WHEN (first turn only, no prior history);
+    // the TEXT comes from configuration and the LLM renders it in the
+    // customer's language. Nothing configured → no greeting at all, never a
+    // hardcoded one (CLAUDE.md §1A).
+    const isFirstTurn = input.context.history.length === 0
+    const greeting = isFirstTurn ? resolveGreetingText(settings, getState(sessionId).name) : undefined
+
+    const result = await agentTurn(ctx, systemPrompt, history, input.userMessage, greeting)
     const patches = drainPatches(sessionId)
 
     return {
       reply: result.reply || null,
       shouldEscalate: result.escalated,
-      escalationSummary: result.escalated ? `Ticket created for ${sessionId}` : undefined,
+      // The real operator briefing (PII already resolved), not a bare ticket id:
+      // the host emails exactly this text through its shared SMTP transport.
+      escalationSummary: ctx.escalationBriefing,
       notificationEmails: result.escalated ? resolveOperatorEmail(settings) || undefined : undefined,
       closeChat: result.escalated,
       patches: patches.length > 0 ? patches : undefined,
+      persistedState: dehydrateState(sessionId),
       meta: {
         tokensUsed: result.tokensUsed,
         agentChain: ['custom-ecolaundry'],

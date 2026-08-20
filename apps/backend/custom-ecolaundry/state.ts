@@ -100,6 +100,52 @@ export function resetState(sessionId: string): void {
   sessions.delete(sessionId)
 }
 
+// ── Durable state across dyno restarts ───────────────────────────────────────
+// The in-RAM Map above is per-process: Heroku recycles dynos daily and may run
+// several at once, so without this a conversation loses name/location/machine
+// mid-flow and the bot starts asking again. The host persists whatever
+// `dehydrateState` returns into ChatSession.context and gives it back through
+// `input.context.persistedState` on the next turn.
+
+interface PersistedSession {
+  state: SessionState
+  turnCount: number
+}
+
+/**
+ * Restores a session from the host's durable copy. In-RAM state wins when it
+ * already holds the session (same dyno, same conversation): it is at least as
+ * fresh as what the host stored at the end of the previous turn.
+ */
+export function hydrateState(sessionId: string, persisted: unknown): void {
+  if (sessions.has(sessionId)) return
+  if (!persisted || typeof persisted !== 'object' || Array.isArray(persisted)) return
+
+  const { state, turnCount } = persisted as Partial<PersistedSession>
+  if (!state || typeof state !== 'object' || Array.isArray(state)) return
+
+  sessions.set(sessionId, {
+    state: { ...(state as SessionState) },
+    // Patches are drained by the host every turn, so a restored session starts
+    // with none pending — re-emitting them would rewrite the Customers row.
+    patches: [],
+    turnCount: typeof turnCount === 'number' && turnCount >= 0 ? turnCount : 0,
+    // Rate-limit timestamps are deliberately dropped: they only make sense
+    // within one process's clock window.
+    recentMessageTimestamps: [],
+  })
+}
+
+/**
+ * The durable snapshot for the host to store. Returns undefined for an unknown
+ * session so the host skips the write entirely.
+ */
+export function dehydrateState(sessionId: string): PersistedSession | undefined {
+  const e = sessions.get(sessionId)
+  if (!e) return undefined
+  return { state: { ...e.state }, turnCount: e.turnCount }
+}
+
 export function drainPatches(sessionId: string): CustomerPatch[] {
   const e = entry(sessionId)
   const out = e.patches
@@ -266,7 +312,43 @@ export function detectLanguageHeuristic(text: string): KnownLang | null {
  * - If the message has hits: pick the top scorer. On tie with the current
  *   language, stay sticky. Otherwise switch.
  */
-export function updateLanguageOnTurn(sessionId: string, text: string): string {
+/**
+ * Gate on top of detection: the chatbot may only reply in `enabledLanguages`,
+ * and anything outside that list resolves to `defaultLanguage`. Both come from
+ * the workspace settings, so adding a language is a configuration change and
+ * never a code change. An empty list means the tenant set no restriction, and
+ * every detected language is allowed through.
+ */
+export function resolveEnabledLanguage(
+  lang: string,
+  enabledLanguages: readonly string[],
+  defaultLanguage: string,
+): string {
+  if (enabledLanguages.length === 0) return lang
+  const normalized = lang.toLowerCase()
+  return enabledLanguages.includes(normalized) ? normalized : defaultLanguage
+}
+
+export function updateLanguageOnTurn(
+  sessionId: string,
+  text: string,
+  enabledLanguages: readonly string[] = [],
+  defaultLanguage?: string,
+): string {
+  const detected = detectLanguageForTurn(sessionId, text)
+  const allowed = resolveEnabledLanguage(
+    detected,
+    enabledLanguages,
+    defaultLanguage || DEFAULT_LANGUAGE,
+  )
+  if (allowed !== getState(sessionId).language) {
+    updateState(sessionId, { language: allowed })
+  }
+  return allowed
+}
+
+/** Pure detection, before the enabled-languages gate is applied. */
+function detectLanguageForTurn(sessionId: string, text: string): string {
   const state = getState(sessionId)
   // `current` is widened to `string` because state.language now accepts any
   // ISO 2-letter code (the LLM can reply in languages outside the closed
