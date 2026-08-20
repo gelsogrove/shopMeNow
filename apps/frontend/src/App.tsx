@@ -334,6 +334,23 @@ export function App() {
           }
         />
 
+        {/* Ecolaundry — self-service laundromat demo. Same DemoWidgetPage, branded by
+            slug ("ecolaundry"). Resolves the workspace via customChatbotId="ecolaundry". */}
+        <Route
+          path="/demo/ecolaundry/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <DemoWidgetPage />
+            </Suspense>
+          }
+        />
+
         {/* DemoRobot — STORM robotic-lawnmower support demo. Same DemoWidgetPage,
             branded by slug ("demorobot"). Resolves the workspace via
             customChatbotId="demorobot"; the widget mirrors the production embed

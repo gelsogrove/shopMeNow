@@ -153,6 +153,26 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
   },
+  // Ecolaundry — self-service laundromat support. Same WhatsApp-green branding;
+  // only the wordmark ("laundry") and monogram ("EL") differ.
+  ecolaundry: {
+    titleA: "Eco",
+    titleB: "laundry",
+    monogram: "EL",
+    primaryColor: "#25D366",
+    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
+    blob1: "bg-emerald-400/30",
+    blob2: "bg-teal-300/20",
+    accentText: "text-emerald-300",
+    badge: "bg-white/10 text-emerald-50",
+    dot: "bg-emerald-300",
+    introText: "text-emerald-50/90",
+    tryLabel: "text-emerald-200",
+    itemsText: "text-emerald-50/90",
+    spinner: "border-emerald-200 border-t-white",
+    loadingText: "text-emerald-50",
+    openHint: "text-emerald-100/80",
+  },
   // DemoRobot — STORM robotic-lawnmower support. Same emerald page styling; the
   // WIDGET however is loaded via the real embed snippet with the production
   // config for this workspace (sparkles icon + channel logo + #3aad38).

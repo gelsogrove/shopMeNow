@@ -1,0 +1,15 @@
+{
+  "model": "anthropic/claude-haiku-4.5",
+  "temperature": 0.3,
+  "maxTokens": 800,
+  "maxToolHops": 4,
+  "operatorBriefingLanguage": "es",
+  "operatorEmail": "echatbotai@gmail.com",
+  "emailFrom": "Ecolaundry Bot <noreply@ecolaundry.demo>",
+  "emailSubjectPrefix": "[Ecolaundry] Incidencia",
+  "maxMessageChars": 2000,
+  "maxMessagesPerMinute": 30,
+  "maxTurnsPerSession": 50,
+  "rateLimitedMessage": "Has enviado muchos mensajes en poco tiempo. Por favor espera un momento antes de continuar.",
+  "sessionTooLongMessage": "Esta conversación es muy larga. Por favor inicia una nueva sesión o contacta directamente con un operador."
+}
