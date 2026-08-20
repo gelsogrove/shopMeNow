@@ -108,8 +108,8 @@ const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
 const PlaygroundKanbanPage = lazy(() => import("./pages/PlaygroundKanbanPage"))
 const FeedbackBoardPage = lazy(() => import("./pages/FeedbackBoardPage"))
 // Not lazy: the gate must render immediately, before the demo page chunk loads.
-// Re-enable together with the <DemoPasswordGate> wrapper on /demo/demorobot.
-// import { DemoPasswordGate } from "./components/DemoPasswordGate"
+// In use on /demo/ecolaundry; /demo/demorobot stays open (wrapper commented there).
+import { DemoPasswordGate } from "./components/DemoPasswordGate"
 
 function AuthLoginRedirect() {
   const location = useLocation()
@@ -335,19 +335,29 @@ export function App() {
         />
 
         {/* Ecolaundry — self-service laundromat demo. Same DemoWidgetPage, branded by
-            slug ("ecolaundry"). Resolves the workspace via customChatbotId="ecolaundry". */}
+            slug ("ecolaundry"). Resolves the workspace via customChatbotId="ecolaundry".
+            Behind a username+password gate (Andrea 2026-08-21): the prompts carry a
+            real customer's addresses and prices, so the page is not left wide open.
+            Light barrier only — the credentials ship in the bundle. */}
         <Route
           path="/demo/ecolaundry/*"
           element={
-            <Suspense
-              fallback={
-                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
-                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-                </div>
-              }
+            <DemoPasswordGate
+              username="demo"
+              password="Admin1234"
+              unlockHours={24}
+              storageScope="ecolaundry"
             >
-              <DemoWidgetPage />
-            </Suspense>
+              <Suspense
+                fallback={
+                  <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                    <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  </div>
+                }
+              >
+                <DemoWidgetPage />
+              </Suspense>
+            </DemoPasswordGate>
           }
         />
 

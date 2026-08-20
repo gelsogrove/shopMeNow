@@ -1000,10 +1000,12 @@ function formatMissingFactsBlock(state: SessionState): string {
     '═══ DATOS QUE AÚN NO TIENES ═══',
     ...missing,
     '',
+    'Cada dato de esta lista lo tiene que decir el CLIENTE. No lo deduzcas, no',
+    'lo des por supuesto y no hables como si ya lo supieras: si falta el tipo,',
+    'no digas "la lavadora" ni "la secadora" — pregunta cuál de las dos es.',
     'Un precio depende de la sede Y del tipo Y del número exacto de máquina:',
     'máquinas contiguas cuestan distinto. Si el cliente pide un precio y alguno',
     'de esos datos falta arriba, PREGÚNTALO en vez de responder con un importe.',
-    'Nunca deduzcas el dato que falta ni des un precio "aproximado".',
     '',
   ].join('\n')
 }

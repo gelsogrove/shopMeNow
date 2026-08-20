@@ -446,6 +446,12 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🙋 Ask to talk to a human operator",
     ],
   },
+  // Ecolaundry shows no suggestion list (Andrea 2026-08-21): the empty array
+  // opts out, instead of inheriting demowash's dry-cleaning examples, which
+  // this self-service laundromat does not offer.
+  ecolaundry: {
+    en: [],
+  },
 }
 
 // Resolve the browser language (e.g. "it-IT" → "it"), English fallback.
@@ -460,8 +466,10 @@ function resolveDemoIntro(lang: string): DemoIntroCopy {
 }
 
 function resolveDemoItems(slug: string, lang: string): string[] {
+  // A brand declared with no items opts out of the suggestion list entirely
+  // (the block is not rendered) — unknown brands still fall back to demowash.
   const brand = DEMO_ITEMS_I18N[slug] ?? DEMO_ITEMS_I18N.demowash
-  return brand[lang] || brand.en
+  return brand[lang] || brand.en || []
 }
 
 // 📣 Simulated PROMOTIONAL push cards, per brand × language. Clicking the demo
@@ -1048,19 +1056,22 @@ export function DemoWidgetPage() {
             {t.intro}
           </p>
 
-          {/* Suggested things to try in the demo — guides the visitor. */}
-          <div className="mt-6">
-            <p className={`text-xs font-semibold uppercase tracking-wide ${brand.tryLabel} sm:text-sm`}>
-              {t.tryFor}
-            </p>
-            <ul className={`mx-auto mt-3 flex max-w-md flex-col gap-2 text-left text-sm ${brand.itemsText} sm:mx-0 sm:text-base`}>
-              {items.map((item, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Suggested things to try in the demo — guides the visitor. Brands
+              that declare no items (ecolaundry) skip the block altogether. */}
+          {items.length > 0 && (
+            <div className="mt-6">
+              <p className={`text-xs font-semibold uppercase tracking-wide ${brand.tryLabel} sm:text-sm`}>
+                {t.tryFor}
+              </p>
+              <ul className={`mx-auto mt-3 flex max-w-md flex-col gap-2 text-left text-sm ${brand.itemsText} sm:mx-0 sm:text-base`}>
+                {items.map((item, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Feature status table — what the assistant already does vs. what is
               still coming. Only on demorobot, where the list applies. */}
