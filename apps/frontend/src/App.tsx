@@ -317,6 +317,24 @@ export function App() {
           }
         />
 
+        {/* Demosappada — "Visit Sappada Dolomiti" mountain-tourism demo. Same
+            DemoWidgetPage, branded by slug ("demosappada"). Resolves the workspace
+            via customChatbotId="demosappada". */}
+        <Route
+          path="/demo/demosappada/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <DemoWidgetPage />
+            </Suspense>
+          }
+        />
+
         {/* Demobeauty — beauty-center franchise demo. Same DemoWidgetPage, branded by
             slug ("demobeauty"). Resolves the workspace via customChatbotId="demobeauty". */}
         <Route
