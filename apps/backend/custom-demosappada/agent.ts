@@ -221,6 +221,22 @@ export interface StayProfile {
   /** 'yes' | 'no' — whether they wanted an itinerary. Asked once. */
   itinerary?: string
   /**
+   * True once the presentation video has been sent to THIS GUEST.
+   *
+   * On the customer, not on the session: widget sessions and WhatsApp threads
+   * start fresh constantly, and a per-session flag showed the same video again
+   * on day two of the holiday.
+   */
+  videoSent?: boolean
+  /**
+   * True once the end-of-stay feedback has been collected. Without it the
+   * assistant asks "how did it go?" every time they write after leaving —
+   * the prompt says not to, but the prompt has no way to know.
+   */
+  feedbackGiven?: boolean
+  /** Their words about this stay, so the archive keeps them. */
+  lastFeedback?: string
+  /**
    * Holidays already finished, oldest first. A guest who comes back next
    * February is starting a NEW stay: dates, questions and what-they-did all
    * reset — but what they did last time is exactly what makes the welcome
@@ -736,6 +752,9 @@ function rolloverStay(profile: StayProfile): StayProfile {
       arrivalDate: profile.arrivalDate,
       departureDate: profile.departureDate,
       doneAlready: profile.doneAlready,
+      // What they thought of it is the most valuable thing the stay produced:
+      // it is what makes the next welcome-back worth reading.
+      feedback: profile.lastFeedback,
     })
   }
 
@@ -755,6 +774,11 @@ function rolloverStay(profile: StayProfile): StayProfile {
     doneAlready: undefined,
     itinerary: undefined,
     asked: [],
+    feedbackGiven: undefined,
+    lastFeedback: undefined,
+    // videoSent is NOT cleared: they have seen the presentation once, and a
+    // returning guest does not need to be introduced to Sappada again.
+    videoSent: profile.videoSent,
   }
 }
 
@@ -849,7 +873,9 @@ function formatStayBlock(
             'alloggio — per la prossima volta, e registra con save_push_consent. Chiederlo ADESSO ha ' +
             'senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno dato all\'arrivo.',
           '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
-          'Se il feedback lo hanno già dato, non richiederlo: passa al resto.',
+          profile.feedbackGiven
+            ? '  ⚠️ IL FEEDBACK È GIÀ STATO DATO: non richiederlo, passa direttamente al punto 2 e 3.'
+            : '  Il feedback non è ancora stato raccolto.',
         )
       }
     }
@@ -950,7 +976,18 @@ const TAG_INTEREST_LODGING = 'INTERESSE-ALLOGGI'
  */
 function isCurrentlyInTown(profile: StayProfile | null, now: Date): boolean | null {
   const departure = profile?.departureDate
-  if (!departure) return null
+
+  // No dates yet. Someone writing to a destination assistant is almost always
+  // standing in the destination — that is what the QR code on the wall is for
+  // — so they count as in town until a departure date says otherwise. Waiting
+  // for the dates meant a guest who never answered that question was never
+  // tagged, and never reached by a single campaign.
+  if (!departure) {
+    const arrival = profile?.arrivalDate
+    if (!arrival) return true
+    const arrivalMs = Date.parse(`${arrival}T00:00:00`)
+    return Number.isNaN(arrivalMs) ? true : now.getTime() >= arrivalMs
+  }
 
   const departureMs = Date.parse(`${departure}T23:59:59`)
   if (Number.isNaN(departureMs)) return null
@@ -1372,6 +1409,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // (Andrea, 2026-08-23). An instruction cannot be the guarantee here.
   let stayWasSaved = false
   let forcedSaveDone = false
+  /** Last free-text answer the model produced, kept as a fallback. */
+  let pendingReply = ''
 
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
@@ -1388,6 +1427,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // what makes the assistant feel like a form.
       if (stayEnabled && !stayWasSaved && !forcedSaveDone && mentionsStayFacts(userMessage)) {
         forcedSaveDone = true
+        // Keep what the model already wrote: the extra hop is for the save,
+        // not for a better answer, and if the hop budget runs out afterwards
+        // this is what the guest gets instead of silence.
+        pendingReply = result.content || pendingReply
         messages.push({ role: 'assistant', content: result.content || null })
         messages.push({
           role: 'user',
@@ -1425,7 +1468,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         const welcomeText = isNew
           ? settings.welcomeMessage
           : settings.welcomeBackMessage || settings.welcomeMessage
-        const sendVideo = isNew && !getState(sessionId).videoSent
+        const sendVideo = isNew && !getState(sessionId).videoSent && !stayProfile?.videoSent
         finalReply = await withWelcome(
           finalReply,
           welcomeText,
@@ -1434,7 +1477,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           settings,
           knownName,
         )
-        if (sendVideo) updateState(sessionId, { videoSent: true }, { mirror: false })
+        if (sendVideo) {
+          updateState(sessionId, { videoSent: true }, { mirror: false })
+          if (customerId && input.config.handlers?.saveStayProfile) {
+            await input.config.handlers.saveStayProfile({
+              workspaceId: input.config.workspaceId,
+              customerId,
+              profile: { videoSent: true },
+            })
+          }
+        }
       }
 
       return {
@@ -1638,6 +1690,19 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             rating,
             comment,
           })
+
+          // Recorded on the stay too: the prompt is told not to ask twice, but
+          // only the profile can tell it whether it already has an answer.
+          if (saved && input.config.handlers.saveStayProfile) {
+            await input.config.handlers.saveStayProfile({
+              workspaceId: input.config.workspaceId,
+              customerId,
+              profile: {
+                feedbackGiven: true,
+                ...(comment ? { lastFeedback: comment } : {}),
+              },
+            })
+          }
           toolOutput = JSON.stringify({
             ok: saved,
             instruction:
@@ -1700,7 +1765,28 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
   }
 
-  // Hop budget exhausted with no free-text reply: the model kept calling tools.
+  // Hop budget exhausted. If the model wrote something before the forced save
+  // took its last hop, send that rather than nothing: an answer the guest can
+  // read beats silence, and silence is what they got (2026-08-23).
+  if (pendingReply.trim()) {
+    const { reply, lang } = extractLanguage(pendingReply)
+    const checked = stripUnverifiableContacts(reply, approvedContent)
+    if (lang) {
+      commitLanguageFromReply(
+        sessionId,
+        resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage),
+      )
+    }
+    if (checked.text.trim()) {
+      return {
+        reply: checked.text,
+        language: getState(sessionId).language,
+        tokensUsed,
+        answeredFromFaq,
+      }
+    }
+  }
+
   return { reply: null, tokensUsed, answeredFromFaq, error: 'tool_hop_limit' }
 }
 

@@ -298,7 +298,7 @@ export function formatStateForPrompt(state: SessionState): string {
       ? `- The conversation language is already **${state.language}**. KEEP replying in ${state.language}.`
       : state.languageIsSeed
         ? `- The customer's profile suggests **${state.language}**, but that is only a hint. Detect the language from THIS message and reply in it — even a single word is enough. Use ${seed} only when the message carries no language signal at all.`
-        : `- No language is set yet (this is the first message). Detect the language from the customer's message — even a single word is enough. If the message carries NO language signal at all (a bare number, a name, "ok"), use ${seed}.`,
+        : `- No language is set yet (this is the first message). 🚨 Detect the language from the customer's OWN WORDS and reply in THAT language — "hola", "guten Tag", "hello" is already enough, and the workspace default must NEVER override a clear signal in the message. A guest who wrote in Spanish and was answered in Italian has been told, in effect, that nobody read what they wrote. Use ${seed} ONLY when the message carries no language signal at all (a bare number, a name, an emoji).`,
     hasLang
       ? `- ONLY switch away from ${state.language} if the customer's latest message is a REAL sentence (roughly 3+ meaningful words) clearly written in another language.`
       : `- The workspace default is the fallback when the very first message is genuinely undecidable.`,

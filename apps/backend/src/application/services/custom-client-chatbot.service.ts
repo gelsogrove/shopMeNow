@@ -197,6 +197,12 @@ type StayProfile = {
   consentAsked?: boolean
   /** 'yes' | 'no' — whether they wanted a day-by-day plan. */
   itinerary?: string
+  /** Presentation video already shown to this guest. */
+  videoSent?: boolean
+  /** End-of-stay feedback already collected. */
+  feedbackGiven?: boolean
+  /** Their words about this stay, archived with it. */
+  lastFeedback?: string
   notes?: string
 }
 
