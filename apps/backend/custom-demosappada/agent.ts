@@ -936,13 +936,33 @@ function formatStayBlock(
         'ricordarglielo ogni volta: se non puoi rispettarlo, dillo apertamente e proponi altro.',
     )
   }
-  if (profile.arrivalDate) lines.push(`Arrivo: ${profile.arrivalDate}`)
+  if (profile.arrivalDate) {
+    const arrivalDay = new Date(`${profile.arrivalDate}T12:00:00`)
+    const arrivalLabel = Number.isNaN(arrivalDay.getTime())
+      ? profile.arrivalDate
+      : arrivalDay.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+    lines.push(`Arrivo: ${profile.arrivalDate} (${arrivalLabel})`)
+  }
 
   if (profile.departureDate) {
     const departure = Date.parse(`${profile.departureDate}T23:59:59`)
     if (!Number.isNaN(departure)) {
       const daysLeft = Math.ceil((departure - now.getTime()) / 86_400_000)
-      lines.push(`Partenza: ${profile.departureDate}`)
+      // With the weekday spelled out: the model said "giovedì 2 settembre"
+    // about a date it had just saved as the 3rd — the day of the week is
+    // arithmetic, and arithmetic is not what a language model is for
+    // (Andrea, 2026-08-23).
+    const departureDay = new Date(`${profile.departureDate}T12:00:00`)
+    const departureLabel = Number.isNaN(departureDay.getTime())
+      ? profile.departureDate
+      : departureDay.toLocaleDateString('it-IT', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        })
+    lines.push(
+      `Partenza: ${profile.departureDate} (${departureLabel}) — usa QUESTO giorno della settimana, non calcolarlo tu`,
+    )
       if (daysLeft > 1) {
         lines.push(
           `GIORNI RIMANENTI: ${daysLeft}. Concentra i consigli in questo tempo: proponi prima le cose ` +
@@ -964,9 +984,12 @@ function formatStayBlock(
             'zona. Continua però a rispondere normalmente a qualsiasi cosa ti chiedano.',
           'In questo momento hai tre cose da fare, una per messaggio, senza affollarle:',
           '  1. Chiedi come è andata — cosa è piaciuto e cosa no — e salva con save_feedback.',
-          '  2. Poi chiedi se vogliono continuare a ricevere notizie da Sappada — eventi e offerte di ' +
-            'alloggio — per la prossima volta, e registra con save_push_consent. Chiederlo ADESSO ha ' +
-            'senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno dato all\'arrivo.',
+          '  2. Il consenso che avevano dato valeva SOLO per la permanenza, che ora è finita. Chiedi se ' +
+            'vogliono RINNOVARLO per la prossima volta: ' +
+            'gli eventi dell\'anno (il Carnevale, le feste d\'estate) e le offerte di alloggio. Chiedi su ' +
+            'quale delle due, o entrambe, e registra con save_push_consent indicando i topics scelti. ' +
+            'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
+            'dato all\'arrivo.',
           '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
           profile.feedbackGiven
             ? '  ⚠️ IL FEEDBACK È GIÀ STATO DATO: non richiederlo, passa direttamente al punto 2 e 3.'
@@ -1000,12 +1023,17 @@ function formatStayBlock(
   // is exactly what it gets wrong, re-asking a question the guest ignored.
   const asked = new Set(profile.asked ?? [])
   const missing: string[] = []
+
+  // Order matters: this is a conversation, not a form. The easy, sociable
+  // questions come first and the personal ones last — "da dove arrivate" was
+  // sixth, after allergies and a marketing consent, which is not how anyone
+  // talks to a guest (Andrea, 2026-08-23).
   if (!profile.adults && !profile.children && !profile.seniors && !asked.has('party')) {
     missing.push('con chi è (quanti adulti, bambini, anziani) → `party`')
   } else if (
     // "siamo in 3" says how many, not who: without the breakdown the advice
     // is guesswork, and the assistant had started inventing children that
-    // nobody had mentioned (Andrea, 2026-08-23).
+    // nobody had mentioned.
     profile.adults === undefined &&
     profile.children === undefined &&
     profile.seniors === undefined &&
@@ -1013,26 +1041,37 @@ function formatStayBlock(
   ) {
     missing.push('come sono divisi (adulti, bambini, anziani) → `party`')
   }
+
   if (!profile.departureDate && !asked.has('stay')) {
     missing.push('fino a quando resta → `stay`')
   }
+
+  if (!profile.origin && !asked.has('origin')) {
+    missing.push('da dove arriva → `origin`')
+  }
+
   if (profile.children && profile.children > 0 && !profile.childrenAges && !asked.has('childrenAges')) {
     missing.push("che età hanno i bambini → `childrenAges`")
   }
+
   if (!profile.constraints && !asked.has('constraints')) {
     missing.push(
       'se c\'è qualcosa da tenere presente — allergie o intolleranze, se sono senza auto, una ' +
         'gravidanza, difficoltà a camminare, un cane → `constraints`',
     )
   }
-  if (!profile.origin && !asked.has('origin')) {
-    missing.push('da dove arriva → `origin`')
-  }
-  if (!profile.consentAsked) {
-    missing.push('se vuole ricevere notizie su eventi e offerte di alloggio → `consent`')
-  }
+
   if (!profile.itinerary) {
     missing.push("se vuole che gli prepari un programma per i giorni che restano → `itinerary`")
+  }
+
+  // Last: a marketing consent asked before any trust is built gets a no.
+  if (!profile.consentAsked) {
+    missing.push(
+      'se ci dà il consenso a mandargli notizie su eventi e offerte del territorio SOLO PER LA DURATA ' +
+        'DELLA SUA PERMANENZA — dillo esplicitamente così, è un consenso a termine e si dà volentieri; ' +
+        'alla partenza gli chiederemo se vuole rinnovarlo → `consent`',
+    )
   }
 
   if (missing.length > 0) {
@@ -1067,6 +1106,13 @@ function formatStayBlock(
     ]
     lines.push(
       `GIÀ CHIESTO (non richiederlo MAI più, nemmeno se non ha risposto): ${done.join(', ')}`,
+    )
+  }
+
+  if (profile.consentAsked) {
+    lines.push(
+      'Il consenso per la permanenza è già stato chiesto. Non richiederlo ora: si torna sul tema SOLO ' +
+        'alla partenza, e lì riguarda il rinnovo per la prossima volta (eventi dell\'anno e alloggi).',
     )
   }
 
