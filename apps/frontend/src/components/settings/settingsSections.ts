@@ -42,7 +42,13 @@ export const ALL_SECTIONS: SettingsSection[] = [
   { key: "other", label: "Other", description: "Security, terms & conditions, maintenance message" },
 ]
 
-export const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["functions"]
+// Andrea 2026-08-22: Custom Tools is visible again. It reads
+// WorkspaceCallingFunction, which used to be consumed only by the deprecated
+// flow-builder pipeline — so for a custom-chatbot workspace the page offered
+// tools nothing could execute. Custom modules now receive the WEBHOOK ones
+// through getCustomTools/executeCustomTool (custom-client-chatbot.service.ts),
+// so the section drives real behaviour for both paradigms.
+export const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = []
 
 // "Flows" (demorobot) only makes sense once a custom chatbot module
 // is running — it's added, not filtered out, unlike HIDDEN_FOR_CUSTOM_CHATBOT.
@@ -70,10 +76,10 @@ export const SYSTEM_PROMPT_SECTION: SettingsSection = {
   description: "Edit the fixed system prompt this chatbot reads every turn",
 }
 
-// Andrea 2026-07-31: Main Prompt / Flows / FAQs are now visible for EVERY
+// Andrea 2026-07-31: Main Prompt / Flows / FAQs are visible for EVERY
 // workspace, not just channelMode === 'FLOW' ones — the previous conditional
-// made the menu change shape between workspaces. Custom Tools is hidden
-// everywhere for the same reason.
+// made the menu change shape between workspaces. Custom Tools follows the
+// same rule since 2026-08-22 (see HIDDEN_FOR_CUSTOM_CHATBOT above).
 // Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs -> rest.
 export function getVisibleSections(_isCustomChatbot: boolean): SettingsSection[] {
   const business = ALL_SECTIONS.find((s) => s.key === "business")!

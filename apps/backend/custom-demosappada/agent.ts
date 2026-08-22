@@ -154,6 +154,36 @@ export interface CatalogueEntry {
 
 export type GetCatalogueHandler = (params: { workspaceId: string }) => Promise<CatalogueEntry[]>
 
+/**
+ * A tool the tenant defined in Settings → Custom Tools, dispatched as a
+ * webhook by the host. The module never knows the URL or the credentials: it
+ * receives a name, a schema and a description, offers them to the LLM, and
+ * hands the arguments back for the host to execute.
+ */
+export interface CustomToolDefinition {
+  name: string
+  description: string
+  parameters: Record<string, unknown>
+  /** Tenant-authored guidance on how to present the result. */
+  responseInstructions?: string
+}
+
+export interface CustomToolResult {
+  ok: boolean
+  data?: unknown
+  error?: string
+}
+
+export type GetCustomToolsHandler = (params: { workspaceId: string }) => Promise<CustomToolDefinition[]>
+
+export type ExecuteCustomToolHandler = (params: {
+  workspaceId: string
+  customerId?: string
+  customerLanguage?: string
+  name: string
+  args: Record<string, unknown>
+}) => Promise<CustomToolResult>
+
 export interface ChatbotInput {
   userMessage: string
   userName: string
@@ -168,6 +198,8 @@ export interface ChatbotInput {
     handlers?: {
       getFaqs?: GetFaqsHandler
       getCatalogue?: GetCatalogueHandler
+      getCustomTools?: GetCustomToolsHandler
+      executeCustomTool?: ExecuteCustomToolHandler
     }
   }
   context: {
@@ -229,10 +261,34 @@ const ACCOMMODATION_TOOL = {
   },
 } as const
 
-function buildTools(weatherEnabled: boolean, accommodationEnabled: boolean) {
+/**
+ * Wrap a tenant-defined tool in the OpenAI function shape. The schema is
+ * authored in the Settings UI and stored as JSON; a tool with no schema still
+ * needs a valid empty one or the provider rejects the whole request.
+ */
+function customToolSchema(tool: CustomToolDefinition) {
+  return {
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters:
+        tool.parameters && typeof tool.parameters === 'object'
+          ? tool.parameters
+          : { type: 'object', properties: {}, additionalProperties: false },
+    },
+  }
+}
+
+function buildTools(
+  weatherEnabled: boolean,
+  accommodationEnabled: boolean,
+  customTools: CustomToolDefinition[],
+) {
   const tools: unknown[] = [REMEMBER_TOOL]
   if (weatherEnabled) tools.unshift(WEATHER_TOOL)
   if (accommodationEnabled) tools.push(ACCOMMODATION_TOOL)
+  for (const tool of customTools) tools.push(customToolSchema(tool))
   return tools
 }
 
@@ -513,6 +569,13 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   const weatherEnabled = settings.weatherEnabled !== false
   const accommodationEnabled = !!input.config.handlers?.getCatalogue
 
+  // Tenant-defined webhook tools (Settings → Custom Tools). Absent handler or
+  // an empty list simply means this workspace defined none.
+  const customTools = input.config.handlers?.getCustomTools
+    ? await input.config.handlers.getCustomTools({ workspaceId: input.config.workspaceId })
+    : []
+  const customToolsByName = new Map(customTools.map((t) => [t.name, t]))
+
   const systemPrompt = [
     settings.mainPrompt?.trim() || '',
     '',
@@ -550,7 +613,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   const maxHops = settings.maxToolHops ?? MAX_TOOL_HOPS
 
   for (let hop = 0; hop < maxHops; hop++) {
-    const result = await callLLM(messages, settings, buildTools(weatherEnabled, accommodationEnabled))
+    const result = await callLLM(
+      messages,
+      settings,
+      buildTools(weatherEnabled, accommodationEnabled, customTools),
+    )
     tokensUsed += result.tokensUsed
 
     if (result.toolCalls.length === 0) {
@@ -647,6 +714,39 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           toolOutput = JSON.stringify({ ok: true, saved: 'name' })
         } else {
           toolOutput = JSON.stringify({ ok: false, error: 'nothing_to_save' })
+        }
+      } else if (customToolsByName.has(name) && input.config.handlers?.executeCustomTool) {
+        const definition = customToolsByName.get(name)!
+        const result = await input.config.handlers.executeCustomTool({
+          workspaceId: input.config.workspaceId,
+          customerId: input.context.customerId,
+          customerLanguage: getState(sessionId).language,
+          name,
+          args: safeParseArgs(call.function.arguments),
+        })
+
+        if (result.ok) {
+          const rendered = typeof result.data === 'string' ? result.data : JSON.stringify(result.data)
+          // Whatever the tenant's own service returned is approved content:
+          // a phone number or URL it sends back is as verifiable as one from
+          // the FAQ block, and would otherwise be stripped before sending.
+          approvedContent += `\n${rendered}`
+          toolOutput = JSON.stringify({
+            ok: true,
+            result: result.data,
+            instruction:
+              definition.responseInstructions ||
+              'Present this result to the customer in their language. Use only what it contains — ' +
+                'do not add facts of your own.',
+          })
+        } else {
+          toolOutput = JSON.stringify({
+            ok: false,
+            error: result.error ?? 'tool_failed',
+            instruction:
+              'The tool failed. Do NOT invent what it would have returned. Tell the customer plainly ' +
+              'that you cannot retrieve that right now.',
+          })
         }
       } else {
         toolOutput = JSON.stringify({ ok: false, error: `unknown tool ${name}` })

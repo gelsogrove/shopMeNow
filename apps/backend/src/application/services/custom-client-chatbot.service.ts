@@ -11,6 +11,8 @@ import { buildChatbotSettingsJson } from "./chatbot-settings-json.service"
 import { googleCalendarService } from "../../services/google-calendar.service"
 import { zoomService } from "../../services/zoom.service"
 import { runRetrieval } from "../flow-builder/flow-retrieval-orchestrator.service"
+import { WebhookDispatchService } from "../../services/webhook-dispatch.service"
+import { WorkspaceEnvironmentVariableService } from "./workspace-environment-variable.service"
 import { OpenRouterEmbeddingProvider } from "../flow-builder/embedding-provider"
 
 type ChatChannel = string
@@ -150,6 +152,27 @@ type CatalogueEntry = {
   type?: string
 }
 
+// A tenant-defined tool (WorkspaceCallingFunction, executionType WEBHOOK) as a
+// custom module sees it. Only WEBHOOK is exposed: INTERNAL and
+// DELEGATE_TO_AGENT are wired to the deprecated flow-builder pipeline
+// (FlowAgentLLM), which custom modules do not run — surfacing them would let
+// someone define a tool from the UI that silently never executes.
+// Mirrors CustomToolDefinition in custom-demosappada/agent.ts.
+type CustomToolDefinition = {
+  name: string
+  description: string
+  /** JSON Schema for the arguments, already in OpenAI function-calling shape. */
+  parameters: Record<string, unknown>
+  /** How the LLM should present the result, authored by the tenant. */
+  responseInstructions?: string
+}
+
+type CustomToolResult = {
+  ok: boolean
+  data?: unknown
+  error?: string
+}
+
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
 // Single-iteration offset computation via Intl — accurate except at the rare
 // DST-transition minute, which never coincides with business booking slots.
@@ -241,6 +264,15 @@ type ChatbotInput = {
       // accommodation the Pro Loco keeps up to date (stock = places declared
       // free); any module that does not ask for it is unaffected.
       getCatalogue?: (params: { workspaceId: string }) => Promise<CatalogueEntry[]>
+      // Tenant-defined webhook tools, configured in Settings → Custom Tools.
+      getCustomTools?: (params: { workspaceId: string }) => Promise<CustomToolDefinition[]>
+      executeCustomTool?: (params: {
+        workspaceId: string
+        customerId?: string
+        customerLanguage?: string
+        name: string
+        args: Record<string, unknown>
+      }) => Promise<CustomToolResult>
     }
   }
   context: {
@@ -441,6 +473,8 @@ export class CustomClientChatbotService {
             listFlows: (p) => this.listFlows(p),
             loadFlow: (p) => this.loadFlow(p),
             getCatalogue: (p) => this.getCatalogue(p),
+            getCustomTools: (p) => this.getCustomTools(p),
+            executeCustomTool: (p) => this.executeCustomTool(p),
           },
         },
         context: {
@@ -1020,6 +1054,119 @@ export class CustomClientChatbotService {
         error: error instanceof Error ? error.message : String(error),
       })
       return []
+    }
+  }
+
+  /**
+   * The tenant's own tools, defined in Settings → Custom Tools.
+   *
+   * WEBHOOK only, on purpose. The other two execution types (INTERNAL,
+   * DELEGATE_TO_AGENT) resolve inside FunctionExecutor/FlowAgentLLM — the
+   * deprecated flow-builder pipeline that custom modules never run. Handing
+   * them to a module would produce a tool the LLM can call and nothing can
+   * execute, which is worse than not offering it.
+   */
+  private async getCustomTools(p: { workspaceId: string }): Promise<CustomToolDefinition[]> {
+    try {
+      const rows = await defaultPrisma.workspaceCallingFunction.findMany({
+        where: { workspaceId: p.workspaceId, isActive: true, executionType: "WEBHOOK" },
+        select: { functionName: true, description: true, parameters: true, responseInstructions: true },
+      })
+
+      return rows
+        .filter((r) => r.functionName?.trim() && r.description?.trim())
+        .map((r) => ({
+          name: r.functionName.trim(),
+          description: r.description!.trim(),
+          // A tool with no schema still needs a valid empty one, or the LLM
+          // provider rejects the whole request.
+          parameters:
+            r.parameters && typeof r.parameters === "object" && !Array.isArray(r.parameters)
+              ? (r.parameters as Record<string, unknown>)
+              : { type: "object", properties: {}, additionalProperties: false },
+          responseInstructions: r.responseInstructions?.trim() || undefined,
+        }))
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] getCustomTools failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
+   * Execute one tenant tool by dispatching its webhook.
+   *
+   * Reuses WebhookDispatchService — HMAC signing, timeout and the encrypted
+   * credential injection all already live there, and a second implementation
+   * would be a second thing to keep correct.
+   *
+   * Never throws: a failing webhook must come back as a refusal the model can
+   * act on honestly, not as a dead turn.
+   */
+  private async executeCustomTool(p: {
+    workspaceId: string
+    customerId?: string
+    customerLanguage?: string
+    name: string
+    args: Record<string, unknown>
+  }): Promise<CustomToolResult> {
+    try {
+      const fn = await defaultPrisma.workspaceCallingFunction.findUnique({
+        where: { workspaceId_functionName: { workspaceId: p.workspaceId, functionName: p.name } },
+      })
+
+      // Re-checked here, not trusted from the definition list: the row may have
+      // been deactivated or retyped between the two calls.
+      if (!fn || !fn.isActive || fn.executionType !== "WEBHOOK") {
+        return { ok: false, error: `tool "${p.name}" is not an active webhook tool` }
+      }
+
+      const workspace = await defaultPrisma.workspace.findUnique({
+        where: { id: p.workspaceId },
+        select: { webhookUrl: true, webhookSecret: true, webhookTimeout: true },
+      })
+
+      const url = fn.webhookUrl || workspace?.webhookUrl
+      if (!url) {
+        return { ok: false, error: `no webhook URL configured for tool "${p.name}"` }
+      }
+
+      let credentials: Map<string, string> | undefined
+      const mapping = fn.credentialsMapping as Record<string, unknown> | null
+      if (mapping && Object.keys(mapping).length > 0) {
+        credentials = await new WorkspaceEnvironmentVariableService(
+          defaultPrisma
+        ).getAllCredentialsForDispatch(p.workspaceId)
+      }
+
+      const data = await new WebhookDispatchService().dispatch({
+        url,
+        secret: workspace?.webhookSecret || undefined,
+        timeout: workspace?.webhookTimeout || undefined,
+        payload: {
+          function: p.name,
+          parameters: p.args,
+          context: {
+            workspaceId: p.workspaceId,
+            customerId: p.customerId,
+            customerLanguage: p.customerLanguage,
+          },
+        },
+        credentialsMapping: (fn.credentialsMapping as never) || undefined,
+        credentials,
+      })
+
+      return { ok: true, data }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error("[CustomClientChatbotService] executeCustomTool failed", {
+        workspaceId: p.workspaceId,
+        tool: p.name,
+        error: message,
+      })
+      return { ok: false, error: message }
     }
   }
 
