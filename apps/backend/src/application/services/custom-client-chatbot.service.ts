@@ -1591,9 +1591,23 @@ function renderStayNotes(profile: StayProfile, manualNotes: string): string {
   }
 
   const lines = parts.length > 0 ? [parts.join(" · ")] : []
-  if (profile.constraints) lines.push(`Da tenere presente: ${profile.constraints}`)
+  if (profile.constraints) lines.push(`⚠️ Da tenere presente: ${profile.constraints}`)
   if (profile.doneAlready) lines.push(`Ha fatto: ${profile.doneAlready}`)
-  if (profile.pastStays?.length) lines.push(`Visite precedenti: ${profile.pastStays.length}`)
+  // The guest's own words about the stay: the single most useful line on the
+  // card for whoever picks the phone up next.
+  if (profile.lastFeedback) lines.push(`Feedback: "${profile.lastFeedback}"`)
+  if (profile.itinerary === "no") lines.push("Non vuole un programma: preferisce chiedere man mano")
+  if (profile.pastStays?.length) {
+    const previous = profile.pastStays
+      .map((stay) => {
+        const s = stay as Record<string, unknown>
+        const when = typeof s.departureDate === "string" ? s.departureDate : "?"
+        const what = typeof s.doneAlready === "string" && s.doneAlready ? ` — ${s.doneAlready}` : ""
+        return `${when}${what}`
+      })
+      .join("; ")
+    lines.push(`Visite precedenti (${profile.pastStays.length}): ${previous}`)
+  }
 
   if (manualNotes) lines.push("", MANUAL_NOTES_SEPARATOR, manualNotes)
 
