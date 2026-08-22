@@ -534,6 +534,7 @@ function resolveDemoItems(slug: string, lang: string): string[] {
 const WASH_BADGE = "📣 PROMO · DemoWash"
 const RE_BADGE = "📣 PROMO · DemoRealEstate"
 const BEAUTY_BADGE = "📣 PROMO · Demobeauty"
+const SAPPADA_BADGE = "📣 PROMO · Visit Sappada"
 
 const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
   demowash: {
@@ -666,6 +667,31 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
       { badge: BEAUTY_BADGE, body: "🗓️ Erinnerung: morgen um 17:30 Uhr, Gesichtsbehandlung + Gel-Maniküre mit Elena (Navigli)." },
       { badge: BEAUTY_BADGE, body: "🎁 Bring eine Freundin mit: ihr bekommt beide -20% auf die nächste Behandlung!" },
       { badge: BEAUTY_BADGE, body: "📣 Neues Studio in Monza! Komm vorbei mit einem kostenlosen Haut-Check-up." },
+    ],
+  },
+  // Visit Sappada Dolomiti — seasonal tourism promos. it/en/de only, matching
+  // the languages custom-demosappada/settings.json declares as enabled.
+  demosappada: {
+    it: [
+      { badge: SAPPADA_BADGE, body: "❄️ Impianti aperti questo weekend! Skipass giornaliero a 38 €." },
+      { badge: SAPPADA_BADGE, body: "🍽️ Sagra dei piatti tipici sabato in centro: cjarsons e frico dalle 12." },
+      { badge: SAPPADA_BADGE, body: "🏔️ Ciaspolata guidata al tramonto, giovedì alle 16:30. Posti limitati!" },
+      { badge: SAPPADA_BADGE, body: "🏨 Ultime camere libere per il ponte: vuoi che ti mostri le disponibilità?" },
+      { badge: SAPPADA_BADGE, body: "☀️ Bel tempo previsto nel fine settimana: perfetto per i sentieri in quota." },
+    ],
+    en: [
+      { badge: SAPPADA_BADGE, body: "❄️ Lifts open this weekend! Day skipass €38." },
+      { badge: SAPPADA_BADGE, body: "🍽️ Traditional food festival Saturday downtown: cjarsons and frico from noon." },
+      { badge: SAPPADA_BADGE, body: "🏔️ Guided snowshoe hike at sunset, Thursday 4:30pm. Limited spots!" },
+      { badge: SAPPADA_BADGE, body: "🏨 Last rooms free for the long weekend: want me to show you what's available?" },
+      { badge: SAPPADA_BADGE, body: "☀️ Fine weather forecast for the weekend: perfect for the high trails." },
+    ],
+    de: [
+      { badge: SAPPADA_BADGE, body: "❄️ Lifte an diesem Wochenende geöffnet! Tagesskipass 38 €." },
+      { badge: SAPPADA_BADGE, body: "🍽️ Fest der typischen Gerichte am Samstag im Zentrum: Cjarsons und Frico ab 12 Uhr." },
+      { badge: SAPPADA_BADGE, body: "🏔️ Geführte Schneeschuhwanderung bei Sonnenuntergang, Donnerstag 16:30. Begrenzte Plätze!" },
+      { badge: SAPPADA_BADGE, body: "🏨 Letzte freie Zimmer für das lange Wochenende: soll ich dir die Verfügbarkeiten zeigen?" },
+      { badge: SAPPADA_BADGE, body: "☀️ Schönes Wetter am Wochenende: perfekt für die Höhenwege." },
     ],
   },
 }
