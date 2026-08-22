@@ -134,16 +134,20 @@ export interface FaqEntry {
 export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEntry[]>
 
 /**
- * An accommodation the Pro Loco keeps up to date. `stock` is the number of
- * places the structure has DECLARED free — 0 means "not declared", never
- * "full": the only structures whose availability we can know are the ones
- * that tell us, and silence from the others is not information about them.
+ * An accommodation the Pro Loco keeps on file: who they are and how to reach
+ * them.
+ *
+ * Deliberately WITHOUT a live availability count. Andrea, 2026-08-22: how
+ * availability gets maintained — who updates it, how often, and what the bot
+ * should say when nobody has — is an open question, and a number nobody keeps
+ * fresh is worse than no number at all. Until that process exists the bot
+ * hands over the contact and lets the structure answer. Re-introducing a
+ * count later is a field here and a line in formatCatalogue.
  */
 export interface CatalogueEntry {
   name: string
   description?: string
   price?: number
-  stock: number
   link?: string
   type?: string
 }
@@ -218,9 +222,9 @@ const ACCOMMODATION_TOOL = {
   function: {
     name: 'check_accommodation',
     description:
-      'List the accommodation the Pro Loco keeps on file, with the places each structure has declared ' +
-      'free right now. Call it whenever the customer asks where to sleep, whether there is a room, or ' +
-      'about a rifugio, hotel, B&B, apartment or campsite.',
+      'List the accommodation the Pro Loco keeps on file, with contacts. Call it whenever the customer ' +
+      'asks where to sleep, or about a rifugio, hotel, B&B, apartment or campsite. It does NOT report ' +
+      'whether rooms are free — only the structure knows that.',
     parameters: { type: 'object', properties: {}, additionalProperties: false },
   },
 } as const
@@ -232,21 +236,11 @@ function buildTools(weatherEnabled: boolean, accommodationEnabled: boolean) {
   return tools
 }
 
-/**
- * Render the catalogue for the model, keeping "declared free" and "not
- * declared" visibly apart.
- *
- * The distinction is the whole point. A structure that has not updated its
- * count is not full — nobody knows, and the honest move is to hand over its
- * phone number. Collapsing the two would let the bot tell a tourist that
- * Sappada is booked out on a night when half the village has rooms.
- */
+/** Render the structures for the model: who they are, how to reach them. */
 function formatCatalogue(entries: CatalogueEntry[]): string {
   const lines = entries.map((e) => {
     const bits = [e.type ? `[${e.type}]` : '', e.name].filter(Boolean)
     const detail: string[] = []
-    if (e.stock > 0) detail.push(`posti dichiarati liberi: ${e.stock}`)
-    else detail.push('disponibilità NON dichiarata — non dire che è pieno, invita a contattarla')
     if (e.price && e.price > 0) detail.push(`prezzo indicativo da €${e.price}`)
     if (e.link) detail.push(e.link)
     if (e.description) detail.push(e.description)
@@ -639,10 +633,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             ok: true,
             accommodation: rendered,
             instruction:
-              'Written in Italian as the source language — translate it. Lead with the structures that ' +
-              'have declared places free. For the others, availability is UNKNOWN, not full: never say ' +
-              'they are booked out — give the contact and suggest calling. Never promise a room is held: ' +
-              'you take no bookings.',
+              'Written in Italian as the source language — translate it. These are contacts, NOT ' +
+              'availability: you have no idea whether any of them has a room free. Never say a structure ' +
+              'is full, never say one has space, never say Sappada is booked out. Give the contact and ' +
+              'let the customer call. You take no bookings.',
           })
         }
       } else if (name === 'remember') {
