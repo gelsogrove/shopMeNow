@@ -156,6 +156,29 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     openHint: "text-emerald-100/80",
     pageLang: "it",
   },
+  // Visit Sappada Dolomiti — mountain tourism assistant. Same WhatsApp-green
+  // branding; only the wordmark ("Sappada") and monogram ("VS") differ. Page
+  // copy is forced to Italian: the tenant serves an Italian alpine resort and
+  // settings.json declares "it" as its default language.
+  demosappada: {
+    titleA: "Visit",
+    titleB: "Sappada",
+    monogram: "VS",
+    primaryColor: "#25D366",
+    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
+    blob1: "bg-emerald-400/30",
+    blob2: "bg-teal-300/20",
+    accentText: "text-emerald-300",
+    badge: "bg-white/10 text-emerald-50",
+    dot: "bg-emerald-300",
+    introText: "text-emerald-50/90",
+    tryLabel: "text-emerald-200",
+    itemsText: "text-emerald-50/90",
+    spinner: "border-emerald-200 border-t-white",
+    loadingText: "text-emerald-50",
+    openHint: "text-emerald-100/80",
+    pageLang: "it",
+  },
   // Demobeauty — beauty-center franchise. Same WhatsApp-green branding; only the
   // wordmark ("beauty") and monogram ("DB") differ.
   demobeauty: {
@@ -467,6 +490,35 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🌧️ Ask if the robot can work in the rain",
       "⚠️ Say your robot shows ERROR 001 on the display",
       "🙋 Ask to talk to a human operator",
+    ],
+  },
+  // Visit Sappada Dolomiti — tourism assistant. Only it/en/de: those are the
+  // languages custom-demosappada/settings.json declares as enabled, so the
+  // suggestions never invite a visitor into a language the bot won't answer in.
+  demosappada: {
+    it: [
+      "⛰️ Chiedi cosa fare a Sappada questo weekend",
+      "🌤️ Chiedi che tempo fa e se conviene salire in quota",
+      "🍽️ Chiedi dove mangiare piatti tipici della valle",
+      "🏨 Chiedi quali alloggi sono disponibili per 4 persone",
+      "🚶 Chiedi un'escursione adatta ai bambini",
+      "🙋 Chiedi di parlare con un operatore",
+    ],
+    en: [
+      "⛰️ Ask what to do in Sappada this weekend",
+      "🌤️ Ask about the weather and whether to head up the mountain",
+      "🍽️ Ask where to eat traditional dishes from the valley",
+      "🏨 Ask which places to stay are available for 4 people",
+      "🚶 Ask for a hike that suits children",
+      "🙋 Ask to talk to a human operator",
+    ],
+    de: [
+      "⛰️ Frag, was man dieses Wochenende in Sappada unternehmen kann",
+      "🌤️ Frag nach dem Wetter und ob sich der Aufstieg lohnt",
+      "🍽️ Frag, wo man typische Gerichte des Tals isst",
+      "🏨 Frag, welche Unterkünfte für 4 Personen frei sind",
+      "🚶 Frag nach einer Wanderung, die für Kinder geeignet ist",
+      "🙋 Mit einem Mitarbeiter sprechen",
     ],
   },
   // Ecolaundry shows no suggestion list (Andrea 2026-08-21): the empty array
