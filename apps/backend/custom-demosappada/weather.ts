@@ -18,12 +18,22 @@ const LATITUDE = 46.5667
 const LONGITUDE = 12.6833
 const TIMEZONE = 'Europe/Rome'
 
+/**
+ * How far ahead to forecast.
+ *
+ * Seven, not three: the assistant plans a whole holiday, and a guest staying
+ * a week needs to know which day to keep for the mountain. Open-Meteo serves
+ * up to 16 days at no cost, but accuracy past a week is not worth presenting
+ * as fact — beyond it the honest answer is "too far out to say".
+ */
+const FORECAST_DAYS = 7
+
 const FORECAST_URL =
   `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}` +
   `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max` +
   `&hourly=weather_code,temperature_2m,precipitation_probability` +
   `&current=weather_code,temperature_2m,precipitation` +
-  `&timezone=${TIMEZONE}&forecast_days=3`
+  `&timezone=${TIMEZONE}&forecast_days=${FORECAST_DAYS}`
 
 const REQUEST_TIMEOUT_MS = 6000
 
@@ -135,7 +145,12 @@ function describeRainWindow(hours: number[], probabilities: number[], indices: n
   if (rainy.length === 0) return null
   if (rainy.length === indices.length) return 'pioggia probabile per tutta la giornata'
 
-  const rainyHours = rainy.map((i) => hours[i])
+  // `hours` is positional (one entry per daylight index), while `rainy` holds
+  // GLOBAL indices into the hourly arrays — on day 2 those are already past
+  // 48, so reading hours[globalIndex] gave undefined and printed
+  // "tra le undefined e le NaN" (live check, 2026-08-23).
+  const rainyHours = rainy.map((i) => hours[indices.indexOf(i)]).filter((h) => h !== undefined)
+  if (rainyHours.length === 0) return null
   const first = rainyHours[0]
   const last = rainyHours[rainyHours.length - 1]
 
@@ -225,7 +240,14 @@ export async function getSappadaWeather(now: Date = new Date()): Promise<Weather
   const hourly = payload.hourly
   const labels = ['Oggi', 'Domani', 'Dopodomani']
 
-  for (let d = 0; d < Math.min(daily.time.length, 3); d++) {
+  /** Day name for anything past "dopodomani" — a week needs real dates. */
+  const dayLabel = (index: number, isoDate: string): string => {
+    if (index < labels.length) return labels[index]
+    const date = new Date(`${isoDate}T12:00:00`)
+    return date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
+
+  for (let d = 0; d < Math.min(daily.time.length, FORECAST_DAYS); d++) {
     let rainWindow: string | null = null
     if (hourly) {
       // For today only the hours still ahead matter; later days start at 08:00.
@@ -234,7 +256,7 @@ export async function getSappadaWeather(now: Date = new Date()): Promise<Weather
       const hours = indices.map((i) => Number(hourly.time[i].split('T')[1].slice(0, 2)))
       rainWindow = describeRainWindow(hours, hourly.precipitation_probability, indices)
     }
-    lines.push(formatDay(labels[d], daily, d, rainWindow))
+    lines.push(formatDay(dayLabel(d, daily.time[d]), daily, d, rainWindow))
   }
 
   return { ok: true, summary: lines.join('\n') }
@@ -245,7 +267,7 @@ export const WEATHER_TOOL = {
   function: {
     name: 'get_weather',
     description:
-      'Get the REAL current weather and 3-day forecast for Sappada. You have no other way to know the ' +
+      'Get the REAL current weather and 7-day forecast for Sappada. You have no other way to know the ' +
       'weather — never state or guess it without calling this first. Call it whenever the weather affects ' +
       'the answer: the customer asks about it, or asks what to do today/tomorrow, whether to hike, what ' +
       'to do with kids, or anything outdoors.',

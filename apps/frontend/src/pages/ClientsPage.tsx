@@ -91,6 +91,16 @@ export interface Client {
     comment?: string
     createdAt: string
   }
+  // 🏔️ Tourism: what the assistant learned during the stay.
+  stayProfile?: {
+    adults?: number
+    children?: number
+    seniors?: number
+    arrivalDate?: string
+    departureDate?: string
+    origin?: string
+    doneAlready?: string
+  }
 }
 
 // Effettua il parsing dell'indirizzo da una stringa
@@ -240,8 +250,14 @@ export default function ClientsPage(): JSX.Element {
         isBlacklisted: customer.isBlacklisted || false,
         isActive: customer.isActive !== undefined ? customer.isActive : true, // 🚨 CRITICAL: Campo per rilevare account activation
         registrationStatus: customer.registrationStatus || 'ACTIVE', // Default to ACTIVE for existing customers
-        feedback:
-          customer.feedbacks && customer.feedbacks.length > 0
+        stayProfile: customer.stayProfile || undefined,
+        feedback: customer.feedbackRating || customer.feedbackComment
+          ? {
+              rating: customer.feedbackRating || 0,
+              comment: customer.feedbackComment || undefined,
+              createdAt: customer.feedbackAt || customer.updatedAt,
+            }
+          : customer.feedbacks && customer.feedbacks.length > 0
             ? {
                 rating: customer.feedbacks[0].rating,
                 comment: customer.feedbacks[0].comment,
@@ -799,7 +815,7 @@ export default function ClientsPage(): JSX.Element {
                         }`}>
                           {client.activeChatbot !== false ? 'Chatbot Active' : 'Manual Mode'}
                         </span>
-                        {client.feedback && (
+                        {client.feedback && client.feedback.rating > 0 && (
                           <div className="flex items-center gap-0.5 ml-auto">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
@@ -814,6 +830,56 @@ export default function ClientsPage(): JSX.Element {
                           </div>
                         )}
                       </div>
+
+                      {/* 🏔️ Guest profile: who they are, how long they stay,
+                          what they have already done, and how it went. Built
+                          by the assistant during the conversation — this is
+                          what the Pro Loco keeps once the tourist has left. */}
+                      {(client.stayProfile || client.feedback?.comment) && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-600">
+                          {client.stayProfile && (
+                            <>
+                              {(client.stayProfile.adults ||
+                                client.stayProfile.children ||
+                                client.stayProfile.seniors) && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Party:</span>{" "}
+                                  {[
+                                    client.stayProfile.adults && `${client.stayProfile.adults} adults`,
+                                    client.stayProfile.children && `${client.stayProfile.children} children`,
+                                    client.stayProfile.seniors && `${client.stayProfile.seniors} seniors`,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                </div>
+                              )}
+                              {client.stayProfile.origin && (
+                                <div>
+                                  <span className="font-medium text-gray-700">From:</span>{" "}
+                                  {client.stayProfile.origin}
+                                </div>
+                              )}
+                              {(client.stayProfile.arrivalDate || client.stayProfile.departureDate) && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Stay:</span>{" "}
+                                  {client.stayProfile.arrivalDate || "?"} → {client.stayProfile.departureDate || "?"}
+                                </div>
+                              )}
+                              {client.stayProfile.doneAlready && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Done:</span>{" "}
+                                  {client.stayProfile.doneAlready}
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {client.feedback?.comment && (
+                            <div className="italic text-gray-500">
+                              “{client.feedback.comment}”
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Action buttons */}

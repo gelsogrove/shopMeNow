@@ -173,6 +173,33 @@ type CustomToolResult = {
   error?: string
 }
 
+// What a tourism module knows about a customer's stay. Structured (not a
+// sentence in `notes`) because the days remaining are recomputed from
+// departureDate on every turn — see custom-demosappada/agent.ts.
+type StayProfile = {
+  adults?: number
+  children?: number
+  childrenAges?: string
+  /** Free text: coeliac, no car, pregnancy, limited walking, a dog… */
+  constraints?: string
+  /** What a person at the Pro Loco wrote on the card. Read-only for the module. */
+  operatorNotes?: string
+  seniors?: number
+  arrivalDate?: string
+  departureDate?: string
+  origin?: string
+  /** Free text: what they have already done, so it is not proposed again. */
+  doneAlready?: string
+  /** Finished holidays, oldest first — kept when a new stay starts. */
+  pastStays?: Array<Record<string, unknown>>
+  /** Intake questions already put to this guest — asked once, never again. */
+  asked?: string[]
+  consentAsked?: boolean
+  /** 'yes' | 'no' — whether they wanted a day-by-day plan. */
+  itinerary?: string
+  notes?: string
+}
+
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
 // Single-iteration offset computation via Intl — accurate except at the rare
 // DST-transition minute, which never coincides with business booking slots.
@@ -273,6 +300,39 @@ type ChatbotInput = {
         name: string
         args: Record<string, unknown>
       }) => Promise<CustomToolResult>
+      // Tourism: read/merge the customer's stay profile, and store the
+      // end-of-stay feedback shown on the customer card.
+      getStayProfile?: (params: {
+        workspaceId: string
+        customerId: string
+      }) => Promise<StayProfile | null>
+      saveStayProfile?: (params: {
+        workspaceId: string
+        customerId: string
+        profile: StayProfile
+        replace?: boolean
+      }) => Promise<boolean>
+      saveFeedback?: (params: {
+        workspaceId: string
+        customerId: string
+        rating?: number
+        comment?: string
+      }) => Promise<boolean>
+      // GDPR consent for promotional messages. Separate from the stay profile
+      // on purpose: a marketing consent is a legal record, not a note.
+      savePushConsent?: (params: {
+        workspaceId: string
+        customerId: string
+        granted: boolean
+      }) => Promise<boolean>
+      // Add/remove tags on the customer record (e.g. INLOCO while the guest
+      // is actually in town, so a campaign can target only who is here now).
+      setCustomerTags?: (params: {
+        workspaceId: string
+        customerId: string
+        add?: string[]
+        remove?: string[]
+      }) => Promise<string[]>
     }
   }
   context: {
@@ -475,6 +535,11 @@ export class CustomClientChatbotService {
             getCatalogue: (p) => this.getCatalogue(p),
             getCustomTools: (p) => this.getCustomTools(p),
             executeCustomTool: (p) => this.executeCustomTool(p),
+            getStayProfile: (p) => this.getStayProfile(p),
+            saveStayProfile: (p) => this.saveStayProfile(p),
+            saveFeedback: (p) => this.saveFeedback(p),
+            savePushConsent: (p) => this.savePushConsent(p),
+            setCustomerTags: (p) => this.setCustomerTags(p),
           },
         },
         context: {
@@ -1171,6 +1236,196 @@ export class CustomClientChatbotService {
   }
 
   /**
+   * The customer's stay profile, workspace-scoped like every other read.
+   */
+  private async getStayProfile(p: {
+    workspaceId: string
+    customerId: string
+  }): Promise<StayProfile | null> {
+    try {
+      const customer = await defaultPrisma.customers.findFirst({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        select: { stayProfile: true, notes: true },
+      })
+      const profile = customer?.stayProfile
+      const manual = extractManualNotes(customer?.notes)
+      if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+        // Even with no stay on record, an operator's note is worth carrying.
+        return manual ? ({ operatorNotes: manual } as StayProfile) : null
+      }
+      return { ...(profile as StayProfile), ...(manual ? { operatorNotes: manual } : {}) }
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] getStayProfile failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
+
+  /**
+   * Merge new facts into the stay profile.
+   *
+   * MERGE, never replace: the assistant learns the stay one answer at a time
+   * ("we're four", then "until Sunday", then "we came from Vienna"), and a
+   * write that replaced the object would erase what the previous turns
+   * collected. Undefined values are skipped for the same reason.
+   */
+  private async saveStayProfile(p: {
+    workspaceId: string
+    customerId: string
+    profile: StayProfile
+    replace?: boolean
+  }): Promise<boolean> {
+    try {
+      // `replace` is for the one case a merge would be wrong: a guest starting
+      // a NEW holiday, where last summer's dates and activities must actually
+      // go away rather than survive the write.
+      const current = p.replace ? {} : ((await this.getStayProfile(p)) ?? {})
+      const merged: Record<string, unknown> = { ...current }
+      for (const [key, value] of Object.entries(p.profile)) {
+        if (value !== undefined && value !== null && value !== "") merged[key] = value
+      }
+
+      // The same facts, once as data and once as a sentence: `stayProfile` is
+      // what the code computes on (days left, tags), `notes` is what a person
+      // at the Pro Loco reads on the customer card — and what the chatbot's
+      // own prompt carries, so it always knows who it is talking to. Derived
+      // from the structured record, never the other way round.
+      const existing = await defaultPrisma.customers.findFirst({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        select: { notes: true },
+      })
+
+      const updated = await defaultPrisma.customers.updateMany({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        data: {
+          stayProfile: merged as never,
+          notes: renderStayNotes(merged as StayProfile, extractManualNotes(existing?.notes)),
+        },
+      })
+      return updated.count > 0
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] saveStayProfile failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  /**
+   * Store the end-of-stay feedback on the customer card.
+   */
+  private async saveFeedback(p: {
+    workspaceId: string
+    customerId: string
+    rating?: number
+    comment?: string
+  }): Promise<boolean> {
+    try {
+      const data: Record<string, unknown> = { feedbackAt: new Date() }
+      if (typeof p.rating === "number" && p.rating >= 1 && p.rating <= 5) {
+        data.feedbackRating = Math.round(p.rating)
+      }
+      if (p.comment?.trim()) data.feedbackComment = p.comment.trim()
+      if (Object.keys(data).length === 1) return false // nothing but the timestamp
+
+      const updated = await defaultPrisma.customers.updateMany({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        data: data as never,
+      })
+      return updated.count > 0
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] saveFeedback failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  /**
+   * Record the customer's consent to promotional messages.
+   *
+   * Kept out of `notes` and out of the stay profile deliberately: this is the
+   * legal basis for every campaign sent to this person, so it lives in the
+   * dedicated column with its timestamp, where the platform already looks for
+   * it. A consent buried in free text is a consent nobody can prove.
+   */
+  private async savePushConsent(p: {
+    workspaceId: string
+    customerId: string
+    granted: boolean
+  }): Promise<boolean> {
+    try {
+      const updated = await defaultPrisma.customers.updateMany({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        data: {
+          push_notifications_consent: p.granted,
+          push_notifications_consent_at: new Date(),
+        },
+      })
+      return updated.count > 0
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] savePushConsent failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  /**
+   * Add and remove tags on a customer, returning the resulting list.
+   *
+   * Read-modify-write on purpose: tags are a shared list (a campaign segment,
+   * a manual label someone typed in the UI), so a blind overwrite would drop
+   * whatever the module did not know about. Comparison is case-insensitive so
+   * "inloco" and "INLOCO" never both end up on the record.
+   */
+  private async setCustomerTags(p: {
+    workspaceId: string
+    customerId: string
+    add?: string[]
+    remove?: string[]
+  }): Promise<string[]> {
+    try {
+      const customer = await defaultPrisma.customers.findFirst({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        select: { tags: true },
+      })
+      if (!customer) return []
+
+      const removeSet = new Set((p.remove ?? []).map((t) => t.trim().toUpperCase()))
+      const kept = (customer.tags ?? []).filter(
+        (tag) => !removeSet.has(tag.trim().toUpperCase())
+      )
+
+      const present = new Set(kept.map((t) => t.trim().toUpperCase()))
+      for (const raw of p.add ?? []) {
+        const tag = raw.trim()
+        if (!tag) continue
+        if (present.has(tag.toUpperCase())) continue
+        kept.push(tag)
+        present.add(tag.toUpperCase())
+      }
+
+      await defaultPrisma.customers.updateMany({
+        where: { id: p.customerId, workspaceId: p.workspaceId },
+        data: { tags: kept },
+      })
+      return kept
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] setCustomerTags failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
    * Resolve which custom chatbot to use from workspace.customChatbotId (DB field
    * — authoritative, set in AI Personality settings). Returns null if no custom
    * chatbot is configured.
@@ -1274,6 +1529,69 @@ export class CustomClientChatbotService {
 
     return existing
   }
+}
+
+/**
+ * Everything below this line in `notes` was written by a person, not by the
+ * assistant, and must survive every automatic rewrite of the note.
+ *
+ * The Pro Loco writes things the chatbot could never infer — "affezionato,
+ * viene da dieci anni", "lamentela sul parcheggio" — and a generated summary
+ * that overwrote them would quietly destroy the only place they live.
+ */
+const MANUAL_NOTES_SEPARATOR = "--- note operatore ---"
+
+/** The hand-written part of a note, if any. */
+export function extractManualNotes(notes: string | null | undefined): string {
+  if (!notes) return ""
+  const index = notes.indexOf(MANUAL_NOTES_SEPARATOR)
+  if (index === -1) {
+    // No separator: either the note is entirely hand-written (it predates the
+    // assistant) or entirely generated. A note that does not look generated is
+    // treated as the operator's — losing their text is the worse mistake.
+    return notes.trimStart().startsWith("Da tenere presente:") ||
+      /^\d+ (adulti|bambini|anziani)/.test(notes.trim())
+      ? ""
+      : notes.trim()
+  }
+  return notes.slice(index + MANUAL_NOTES_SEPARATOR.length).trim()
+}
+
+/**
+ * The stay profile as a person would write it, for the customer card.
+ *
+ * Italian because it is what the Pro Loco reads on their own screen; the
+ * chatbot translates it for the guest like everything else. Kept short: a
+ * note nobody can take in at a glance is a note nobody reads.
+ */
+function renderStayNotes(profile: StayProfile, manualNotes: string): string {
+  const parts: string[] = []
+
+  const party: string[] = []
+  if (profile.adults) party.push(`${profile.adults} adulti`)
+  if (profile.children) {
+    party.push(
+      profile.childrenAges
+        ? `${profile.children} bambini (${profile.childrenAges})`
+        : `${profile.children} bambini`
+    )
+  }
+  if (profile.seniors) party.push(`${profile.seniors} anziani`)
+  if (party.length > 0) parts.push(party.join(", "))
+
+  if (profile.origin) parts.push(`da ${profile.origin}`)
+  if (profile.arrivalDate || profile.departureDate) {
+    parts.push(`soggiorno ${profile.arrivalDate ?? "?"} → ${profile.departureDate ?? "?"}`)
+  }
+
+  const lines = parts.length > 0 ? [parts.join(" · ")] : []
+  if (profile.constraints) lines.push(`Da tenere presente: ${profile.constraints}`)
+  if (profile.doneAlready) lines.push(`Ha fatto: ${profile.doneAlready}`)
+  if (profile.pastStays?.length) lines.push(`Visite precedenti: ${profile.pastStays.length}`)
+
+  if (manualNotes) lines.push("", MANUAL_NOTES_SEPARATOR, manualNotes)
+
+  return lines.join("\n")
 }
 
 const PATCH_KEY_TO_DB: Record<CustomerPatch['key'], string> = {

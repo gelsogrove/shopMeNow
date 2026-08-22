@@ -47,6 +47,12 @@ export interface CustomerProps {
   invoiceAddress?: InvoiceAddress
   salesId?: string
   feedbacks?: any[]
+  // 🏔️ Tourism (custom-demosappada): the guest profile the assistant builds
+  // during the stay, and the end-of-stay feedback shown on the customer card.
+  stayProfile?: any
+  feedbackRating?: number | null
+  feedbackComment?: string | null
+  feedbackAt?: Date | null
 }
 
 /**
@@ -80,6 +86,10 @@ export class Customer {
   readonly invoiceAddress?: InvoiceAddress
   readonly salesId?: string
   readonly feedbacks?: any[]
+  readonly stayProfile?: any
+  readonly feedbackRating?: number | null
+  readonly feedbackComment?: string | null
+  readonly feedbackAt?: Date | null
 
   constructor(props: CustomerProps) {
     this.id = props.id || uuidv4()
@@ -109,6 +119,10 @@ export class Customer {
     this.invoiceAddress = props.invoiceAddress
     this.salesId = props.salesId
     this.feedbacks = props.feedbacks || []
+    this.stayProfile = props.stayProfile
+    this.feedbackRating = props.feedbackRating
+    this.feedbackComment = props.feedbackComment
+    this.feedbackAt = props.feedbackAt
   }
 
   /**

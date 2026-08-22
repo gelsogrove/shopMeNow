@@ -42,6 +42,10 @@ export class CustomerRepository implements ICustomerRepository {
       invoiceAddress: customerData.invoiceAddress,
       salesId: customerData.salesId,
       feedbacks: customerData.feedbacks || [],
+      stayProfile: customerData.stayProfile,
+      feedbackRating: customerData.feedbackRating,
+      feedbackComment: customerData.feedbackComment,
+      feedbackAt: customerData.feedbackAt,
     })
   }
 

@@ -250,10 +250,20 @@ export type Greeting = 'new' | 'returning' | 'none'
 /**
  * Pure function: which greeting is due right now.
  *
- * - Empty history + unknown name  -> 'new'       (first contact ever)
- * - Empty history + known name    -> 'returning' (known customer, new chat)
+ * - Empty history                   -> 'new'       (first contact)
  * - Last message older than staleMs -> 'returning' (came back after a while)
- * - Otherwise                     -> 'none'      (conversation in progress)
+ * - Otherwise                       -> 'none'      (conversation in progress)
+ *
+ * What separates "new" from "returning" is having CONVERSED before, not being
+ * known by name. The support modules this descends from keyed it on the name,
+ * which works when the name arrives from an existing customer record — but
+ * here the tourist types their name into the widget's registration form
+ * seconds before the first message. That made a brand-new visitor "returning",
+ * so they got the welcome-back line and never saw the welcome or the
+ * presentation video (Andrea, 2026-08-23: "al welcome non lo vedo").
+ *
+ * `hasKnownName` stays in the signature: the caller passes it, and the
+ * welcome-back copy is addressed by name when we have one.
  */
 export function resolveGreeting(params: {
   historyLength: number
@@ -264,11 +274,9 @@ export function resolveGreeting(params: {
   nowMs: number
   staleMs: number
 }): Greeting {
-  const { historyLength, lastMessageAtMs, hasKnownName, nowMs, staleMs } = params
+  const { historyLength, lastMessageAtMs, nowMs, staleMs } = params
 
-  if (historyLength === 0) {
-    return hasKnownName ? 'returning' : 'new'
-  }
+  if (historyLength === 0) return 'new'
   if (lastMessageAtMs !== undefined && nowMs - lastMessageAtMs > staleMs) {
     return 'returning'
   }

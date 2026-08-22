@@ -174,6 +174,107 @@ export interface CustomToolResult {
   error?: string
 }
 
+/**
+ * What the assistant has learned about this holiday.
+ *
+ * Structured, not a sentence in `notes`: the days remaining are recomputed
+ * from `departureDate` on EVERY turn, and parsing that back out of prose
+ * would break the first time the wording changed. The human-readable summary
+ * for the Pro Loco's customer card is derived from this, never the reverse.
+ */
+export interface StayProfile {
+  adults?: number
+  children?: number
+  /** Free text: "8, 9 e 10 anni". Changes what is worth proposing. */
+  childrenAges?: string
+  /**
+   * Anything that constrains what can be recommended: coeliac, no car, a
+   * pregnancy, a bad knee, a dog, a wheelchair, a fear of heights.
+   *
+   * Free text on purpose. An enum would be a promise the world does not keep
+   * — the next guest always arrives with the constraint nobody listed — and
+   * the model reasons about the sentence better than about a code.
+   */
+  constraints?: string
+  /**
+   * What a person at the Pro Loco wrote on this guest's card. Read-only:
+   * the module never writes here, it only takes it into account.
+   */
+  operatorNotes?: string
+  seniors?: number
+  /** ISO date (YYYY-MM-DD). */
+  arrivalDate?: string
+  /** ISO date (YYYY-MM-DD) — the day they leave. */
+  departureDate?: string
+  /**
+   * Intake questions already put to this guest, whether or not they answered.
+   *
+   * Asked once, never again. Without this the model has no memory across
+   * conversations — a guest who comes back tomorrow gets "so, how many of you
+   * are there?" a second time, and one who simply ignored the question gets it
+   * every single turn (Andrea, 2026-08-23: "devono essere presenti solo una
+   * volta dopo il welcome").
+   */
+  asked?: string[]
+  /** True once the consent question has been put, whatever the answer was. */
+  consentAsked?: boolean
+  /** 'yes' | 'no' — whether they wanted an itinerary. Asked once. */
+  itinerary?: string
+  /**
+   * Holidays already finished, oldest first. A guest who comes back next
+   * February is starting a NEW stay: dates, questions and what-they-did all
+   * reset — but what they did last time is exactly what makes the welcome
+   * back worth something, so it is archived, never dropped.
+   */
+  pastStays?: Array<{
+    arrivalDate?: string
+    departureDate?: string
+    doneAlready?: string
+    feedback?: string
+  }>
+  origin?: string
+  /**
+   * What they have already done, appended as they tell us. Without it the
+   * assistant re-proposes the Cascatelle on day three: it has no memory of
+   * yesterday beyond the current conversation, and a holiday spans several.
+   */
+  doneAlready?: string
+  notes?: string
+}
+
+export type GetStayProfileHandler = (params: {
+  workspaceId: string
+  customerId: string
+}) => Promise<StayProfile | null>
+
+export type SaveStayProfileHandler = (params: {
+  workspaceId: string
+  customerId: string
+  profile: StayProfile
+  /** Overwrite instead of merging — used when a finished stay is rolled over. */
+  replace?: boolean
+}) => Promise<boolean>
+
+export type SaveFeedbackHandler = (params: {
+  workspaceId: string
+  customerId: string
+  rating?: number
+  comment?: string
+}) => Promise<boolean>
+
+export type SavePushConsentHandler = (params: {
+  workspaceId: string
+  customerId: string
+  granted: boolean
+}) => Promise<boolean>
+
+export type SetCustomerTagsHandler = (params: {
+  workspaceId: string
+  customerId: string
+  add?: string[]
+  remove?: string[]
+}) => Promise<string[]>
+
 export type GetCustomToolsHandler = (params: { workspaceId: string }) => Promise<CustomToolDefinition[]>
 
 export type ExecuteCustomToolHandler = (params: {
@@ -200,6 +301,11 @@ export interface ChatbotInput {
       getCatalogue?: GetCatalogueHandler
       getCustomTools?: GetCustomToolsHandler
       executeCustomTool?: ExecuteCustomToolHandler
+      getStayProfile?: GetStayProfileHandler
+      saveStayProfile?: SaveStayProfileHandler
+      saveFeedback?: SaveFeedbackHandler
+      savePushConsent?: SavePushConsentHandler
+      setCustomerTags?: SetCustomerTagsHandler
     }
   }
   context: {
@@ -249,6 +355,89 @@ const REMEMBER_TOOL = {
   },
 } as const
 
+const SAVE_STAY_TOOL = {
+  type: 'function',
+  function: {
+    name: 'save_stay',
+    description:
+      'Save what you have learned about this holiday. Call it the moment the customer tells you any of ' +
+      'it — how many they are, how long they stay, where they come from, or something they have already ' +
+      'done. Send ONLY the fields you actually learned; the rest is preserved.',
+    parameters: {
+      type: 'object',
+      properties: {
+        adults: { type: 'integer', description: 'How many adults.' },
+        children: { type: 'integer', description: 'How many children.' },
+        childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },
+        constraints: { type: 'string', description: 'Anything that limits what suits them: coeliac or another intolerance, no car, a pregnancy, limited walking, a dog, a wheelchair. Append to what is already there rather than replacing it.' },
+        seniors: { type: 'integer', description: 'How many elderly people.' },
+        arrivalDate: { type: 'string', description: 'YYYY-MM-DD, the day they arrived.' },
+        departureDate: { type: 'string', description: 'YYYY-MM-DD, the day they leave. Compute it from "we stay 5 days" using today\'s date in RUNTIME.' },
+        origin: { type: 'string', description: 'Where they travelled from (city or country).' },
+        doneAlready: { type: 'string', description: 'Something they have now done or seen, in a few words, so it is not proposed again.' },
+        asked: {
+          type: 'array',
+          description:
+            'Which intake questions you have now PUT to the guest, whether or not they answered. Send it ' +
+            'in the same call as the question you just asked, so it is never asked twice.',
+          items: { type: 'string', enum: ['party', 'stay', 'origin', 'childrenAges', 'constraints'] },
+        },
+        itinerary: {
+          type: 'string',
+          description:
+            "Their answer about wanting a day-by-day plan: 'yes' or 'no'. Send it as soon as they answer.",
+          enum: ['yes', 'no'],
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+} as const
+
+const SAVE_CONSENT_TOOL = {
+  type: 'function',
+  function: {
+    name: 'save_push_consent',
+    description:
+      'Record whether the customer agrees to receive messages about the area, and WHAT about: events, ' +
+      'accommodation offers, or both. Call it ONLY after they answered clearly, with their actual answer ' +
+      '— never assume a yes, and never assume both topics when they named one. Call it again at the end ' +
+      'of the holiday if you re-confirm it.',
+    parameters: {
+      type: 'object',
+      properties: {
+        granted: { type: 'boolean' },
+        topics: {
+          type: 'array',
+          description:
+            'What they agreed to hear about. Send only what they actually said yes to.',
+          items: { type: 'string', enum: ['events', 'lodging'] },
+        },
+      },
+      required: ['granted'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
+const SAVE_FEEDBACK_TOOL = {
+  type: 'function',
+  function: {
+    name: 'save_feedback',
+    description:
+      'Save the end-of-stay feedback: what went well, what did not, and a 1-5 rating if they gave one. ' +
+      'Call it once, when the holiday is ending and they have told you how it went.',
+    parameters: {
+      type: 'object',
+      properties: {
+        rating: { type: 'integer', minimum: 1, maximum: 5 },
+        comment: { type: 'string', description: 'What went well and what did not, in their own words.' },
+      },
+      additionalProperties: false,
+    },
+  },
+} as const
+
 const ACCOMMODATION_TOOL = {
   type: 'function',
   function: {
@@ -283,13 +472,379 @@ function customToolSchema(tool: CustomToolDefinition) {
 function buildTools(
   weatherEnabled: boolean,
   accommodationEnabled: boolean,
+  stayEnabled: boolean,
   customTools: CustomToolDefinition[],
 ) {
   const tools: unknown[] = [REMEMBER_TOOL]
   if (weatherEnabled) tools.unshift(WEATHER_TOOL)
   if (accommodationEnabled) tools.push(ACCOMMODATION_TOOL)
+  if (stayEnabled) tools.push(SAVE_STAY_TOOL, SAVE_CONSENT_TOOL, SAVE_FEEDBACK_TOOL)
   for (const tool of customTools) tools.push(customToolSchema(tool))
   return tools
+}
+
+/**
+ * Prepend the welcome (and, on a brand-new conversation, the presentation
+ * video) to a reply that does not already carry it.
+ *
+ * This is CODE, not another sentence in the prompt, because the prompt lost.
+ * The model can hold "greet on the first turn", "call get_weather" and "answer
+ * with real proposals" — but not all three at once: reinforcing any one of
+ * them made it drop another, turn after turn (Andrea, 2026-08-23: "al welcome
+ * non lo vedo"). The greeting is a fixed string in a fixed place, so it
+ * belongs to the mechanism; only the ANSWER needs a model.
+ *
+ * The intro line before the video is written here in the reply's own language,
+ * so a message never mixes two languages.
+ */
+const VIDEO_INTRO: Record<string, string> = {
+  it: 'Prima di iniziare, ecco una breve presentazione 👇',
+  en: 'Before we start, here is a short presentation 👇',
+  de: 'Bevor wir beginnen, hier eine kurze Vorstellung 👇',
+  es: 'Antes de empezar, aquí tienes una breve presentación 👇',
+  fr: 'Avant de commencer, voici une brève présentation 👇',
+}
+
+/**
+ * Translations of the tenant's welcome, keyed by `lang:text`.
+ *
+ * The welcome is authored once, in one language (CLAUDE.md §1A — no
+ * pre-translated copy in code), but it is prepended by CODE, so nothing
+ * translates it on the way out: an Austrian guest got the Italian welcome on
+ * top of a German reply (live check, 2026-08-23). One isolated call fixes it,
+ * and the cache means a tenant pays for it once per language for the life of
+ * the process, not once per guest.
+ */
+const welcomeTranslations = new Map<string, string>()
+
+async function translateWelcome(
+  text: string,
+  language: string,
+  settings: Settings,
+): Promise<string> {
+  const key = `${language}:${text}`
+  const cached = welcomeTranslations.get(key)
+  if (cached) return cached
+
+  try {
+    const result = await callLLM(
+      [
+        {
+          role: 'system',
+          content:
+            `Translate the user message into the language with ISO 639-1 code "${language}". ` +
+            'Keep the tone, the emoji and the Markdown exactly as they are. If it is already in that ' +
+            'language, return it unchanged. Output ONLY the translation — no preamble, no quotes.',
+        },
+        { role: 'user', content: text },
+      ],
+      { ...settings, maxTokens: 600 },
+      [],
+    )
+    const translated = result.content.trim()
+    if (!translated) return text
+    welcomeTranslations.set(key, translated)
+    return translated
+  } catch {
+    // A greeting in the wrong language beats no greeting at all.
+    return text
+  }
+}
+
+/**
+ * Substitute the per-customer placeholders in tenant copy.
+ *
+ * The host does this for the strings IT sends, but the greeting is prepended
+ * by this module, so nothing had resolved it: "Bentornato {{customerName}}!"
+ * reached a guest verbatim (live check, 2026-08-23). With no name known the
+ * placeholder is removed rather than left or filled with a stand-in — a
+ * greeting addressed to nobody still reads fine, one addressed to
+ * "{{customerName}}" does not.
+ */
+function substitutePlaceholders(text: string, customerName: string | undefined): string {
+  const name = customerName?.trim()
+  if (name) return text.replace(/\{\{\s*customerName\s*\}\}/gi, name)
+  return text
+    .replace(/[ \t]*\{\{\s*customerName\s*\}\}[ \t]*/gi, ' ')
+    .replace(/\s+([,!?.])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+}
+
+async function withWelcome(
+  reply: string,
+  welcomeText: string | undefined,
+  videoUrl: string | undefined,
+  language: string | undefined,
+  settings: Settings,
+  customerName: string | undefined,
+): Promise<string> {
+  const welcome = substitutePlaceholders(welcomeText?.trim() ?? '', customerName)
+  if (!welcome) return reply
+
+  // The model greeted anyway — don't say it twice.
+  const opening = welcome.slice(0, 24).toLowerCase()
+  if (reply.toLowerCase().includes(opening)) return reply
+
+  const lang = (language || settings.defaultLanguage || 'it').toLowerCase()
+  const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
+  const greeting =
+    lang === sourceLang ? welcome : await translateWelcome(welcome, lang, settings)
+
+  const parts = [greeting]
+  const video = videoUrl?.trim()
+  if (video && !reply.includes(video)) {
+    parts.push('', VIDEO_INTRO[lang] ?? VIDEO_INTRO.it, video)
+  }
+  parts.push('', reply)
+  return parts.join('\n')
+}
+
+/**
+ * Days after departure before a new message counts as a NEW holiday.
+ *
+ * Three, not zero: someone writing the evening they got home is still closing
+ * the last trip ("we left the jacket at the rifugio"), and resetting their
+ * stay there would lose the thread mid-conversation.
+ */
+const NEW_STAY_AFTER_DEPARTURE_DAYS = 3
+
+/**
+ * Has this guest come back for a fresh holiday?
+ *
+ * Detected from the calendar, never asked: a returning guest does not
+ * announce a new stay, they just say hello. Without this the profile stays
+ * frozen on last summer — the assistant keeps insisting the holiday is over,
+ * never asks the new dates, and refuses to propose the Cascatelle because
+ * they were done in August (Andrea, 2026-08-23).
+ */
+function isNewStay(profile: StayProfile | null, now: Date): boolean {
+  const departure = profile?.departureDate
+  if (!departure) return false
+  const departureMs = Date.parse(`${departure}T23:59:59`)
+  if (Number.isNaN(departureMs)) return false
+  const daysSince = (now.getTime() - departureMs) / 86_400_000
+  return daysSince > NEW_STAY_AFTER_DEPARTURE_DAYS
+}
+
+/**
+ * Roll the current stay into history and clear what belongs to one holiday.
+ *
+ * Kept: where they come from, who they are, the consent (a legal record, not
+ * a holiday detail) and everything already archived.
+ * Cleared: dates, the questions asked, what they did, the itinerary answer —
+ * all of it is about a trip that is over.
+ */
+function rolloverStay(profile: StayProfile): StayProfile {
+  const history = [...(profile.pastStays ?? [])]
+  if (profile.arrivalDate || profile.departureDate || profile.doneAlready) {
+    history.push({
+      arrivalDate: profile.arrivalDate,
+      departureDate: profile.departureDate,
+      doneAlready: profile.doneAlready,
+    })
+  }
+
+  return {
+    // Facts that outlive a single holiday.
+    adults: profile.adults,
+    children: profile.children,
+    childrenAges: profile.childrenAges,
+    seniors: profile.seniors,
+    origin: profile.origin,
+    consentAsked: profile.consentAsked,
+    // Kept in history, cleared from the live stay.
+    pastStays: history.slice(-5),
+    // Everything below is deliberately absent: a new holiday, asked afresh.
+    arrivalDate: undefined,
+    departureDate: undefined,
+    doneAlready: undefined,
+    itinerary: undefined,
+    asked: [],
+  }
+}
+
+/**
+ * Render the stay for the model, with the days remaining computed HERE.
+ *
+ * The count is derived from `departureDate` on every turn, never stored:
+ * "3 giorni" written down on Monday is wrong by Wednesday, and the whole
+ * point of knowing the stay is to concentrate the suggestions into the time
+ * that is actually left.
+ */
+function formatStayBlock(
+  profile: StayProfile | null,
+  now: Date,
+  returningGuest = false,
+): string {
+  if (!profile) return ''
+
+  const lines: string[] = []
+
+  if (returningGuest) {
+    const last = profile.pastStays?.[profile.pastStays.length - 1]
+    lines.push(
+      'È TORNATO — nuova vacanza. Salutalo come si saluta chi si rivede, non come uno sconosciuto:',
+      last?.doneAlready
+        ? `  la volta scorsa aveva fatto: ${last.doneAlready}. Ricordaglielo con piacere, e proponigli ` +
+          'qualcosa di nuovo oppure la stessa cosa in un\'altra stagione (le Cascatelle d\'inverno sono ' +
+          'un\'altra cosa).'
+        : '  non sappiamo cosa avesse fatto la volta scorsa.',
+      '  Le date di questa vacanza NON le sai ancora: chiediglielo.',
+    )
+  }
+  const party: string[] = []
+  if (profile.adults) party.push(`${profile.adults} adulti`)
+  if (profile.children) {
+    party.push(
+      profile.childrenAges
+        ? `${profile.children} bambini (${profile.childrenAges})`
+        : `${profile.children} bambini`,
+    )
+  }
+  if (profile.seniors) party.push(`${profile.seniors} anziani`)
+  if (party.length > 0) lines.push(`In vacanza: ${party.join(', ')}`)
+  if (profile.origin) lines.push(`Arrivano da: ${profile.origin}`)
+  if (profile.constraints) {
+    lines.push(
+      `⚠️ DA TENERE PRESENTE SEMPRE: ${profile.constraints}. Filtra OGNI proposta su questo, senza ` +
+        'ricordarglielo ogni volta: se non puoi rispettarlo, dillo apertamente e proponi altro.',
+    )
+  }
+  if (profile.arrivalDate) lines.push(`Arrivo: ${profile.arrivalDate}`)
+
+  if (profile.departureDate) {
+    const departure = Date.parse(`${profile.departureDate}T23:59:59`)
+    if (!Number.isNaN(departure)) {
+      const daysLeft = Math.ceil((departure - now.getTime()) / 86_400_000)
+      lines.push(`Partenza: ${profile.departureDate}`)
+      if (daysLeft > 1) {
+        lines.push(
+          `GIORNI RIMANENTI: ${daysLeft}. Concentra i consigli in questo tempo: proponi prima le cose ` +
+            `che non vorresti si perdessero.`,
+        )
+      } else if (daysLeft === 1) {
+        lines.push(
+          'ULTIMO GIORNO PIENO. Proponi solo cose che stanno in una giornata, e verso sera chiedi come ' +
+            'è andata la vacanza (cosa è piaciuto e cosa no) e salvala con save_feedback, poi salutali ' +
+            'dicendo che li aspettiamo di nuovo.',
+        )
+      } else if (daysLeft <= 0) {
+        lines.push(
+          'LA VACANZA È FINITA (o finisce oggi). Non proporre più attività: chiedi come è andata — cosa ' +
+            'è piaciuto e cosa no — salvala con save_feedback e salutali dicendo che li aspettiamo di nuovo.',
+        )
+      }
+    }
+  }
+
+  if (profile.operatorNotes) {
+    lines.push(
+      `NOTA DELLA PRO LOCO su questo ospite: ${profile.operatorNotes}. Tienine conto, ma non citarla ` +
+        'mai apertamente: è scritta per noi, non per lui.',
+    )
+  }
+
+  if (profile.doneAlready) {
+    lines.push(
+      `GIÀ FATTO (non riproporlo, semmai costruiscici sopra): ${profile.doneAlready}`,
+    )
+  }
+
+  // What is still open, and what must never be asked again. Computed here so
+  // the model is told plainly instead of inferring it from absence — absence
+  // is exactly what it gets wrong, re-asking a question the guest ignored.
+  const asked = new Set(profile.asked ?? [])
+  const missing: string[] = []
+  if (!profile.adults && !profile.children && !profile.seniors && !asked.has('party')) {
+    missing.push('con chi è (quanti adulti, bambini, anziani) → `party`')
+  }
+  if (!profile.departureDate && !asked.has('stay')) {
+    missing.push('fino a quando resta → `stay`')
+  }
+  if (profile.children && !profile.childrenAges && !asked.has('childrenAges')) {
+    missing.push("che età hanno i bambini → `childrenAges`")
+  }
+  if (!profile.constraints && !asked.has('constraints')) {
+    missing.push(
+      'se c\'è qualcosa da tenere presente — allergie o intolleranze, se sono senza auto, una ' +
+        'gravidanza, difficoltà a camminare, un cane → `constraints`',
+    )
+  }
+  if (!profile.origin && !asked.has('origin')) {
+    missing.push('da dove arriva → `origin`')
+  }
+  if (!profile.consentAsked) {
+    missing.push('se vuole ricevere notizie su eventi e offerte di alloggio → `consent`')
+  }
+  if (!profile.itinerary) {
+    missing.push("se vuole che gli prepari un programma per i giorni che restano → `itinerary`")
+  }
+
+  if (missing.length > 0) {
+    lines.push(
+      'ANCORA DA CHIEDERE (una sola per messaggio, agganciata al discorso, mai due insieme):',
+      ...missing.map((m) => `  - ${m}`),
+    )
+  } else {
+    lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
+  }
+
+  if (asked.size > 0 || profile.consentAsked || profile.itinerary) {
+    const done = [
+      ...Array.from(asked),
+      ...(profile.consentAsked ? ['consent'] : []),
+      ...(profile.itinerary ? ['itinerary'] : []),
+    ]
+    lines.push(
+      `GIÀ CHIESTO (non richiederlo MAI più, nemmeno se non ha risposto): ${done.join(', ')}`,
+    )
+  }
+
+  if (profile.itinerary === 'no') {
+    lines.push('Ha detto che NON vuole un programma: rispondi solo alle sue domande, non pianificare.')
+  } else if (profile.itinerary === 'yes') {
+    lines.push('Vuole il programma: sei il suo pianificatore, porta avanti il piano.')
+  }
+
+  if (lines.length === 0) return ''
+  return ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n')
+}
+
+/**
+ * Tags the module maintains on the customer record.
+ *
+ * They exist for the campaign side of the product: a promotion for tonight's
+ * dinner must reach only the guests who are IN TOWN tonight, and an offer on
+ * accommodation only those who agreed to hear about accommodation. Segmenting
+ * at send time is what makes the consent worth something.
+ *
+ * `INLOCO` is DERIVED from the stay dates, never asked and never set by the
+ * model: the guest does not announce their departure, the calendar does.
+ */
+const TAG_IN_LOCO = 'INLOCO'
+const TAG_INTEREST_EVENTS = 'INTERESSE-EVENTI'
+const TAG_INTEREST_LODGING = 'INTERESSE-ALLOGGI'
+
+/**
+ * Is this guest in town right now, according to the dates they gave us?
+ * Returns null when we cannot tell — an unknown stay must not remove a tag
+ * someone set by hand.
+ */
+function isCurrentlyInTown(profile: StayProfile | null, now: Date): boolean | null {
+  const departure = profile?.departureDate
+  if (!departure) return null
+
+  const departureMs = Date.parse(`${departure}T23:59:59`)
+  if (Number.isNaN(departureMs)) return null
+  if (now.getTime() > departureMs) return false
+
+  const arrival = profile?.arrivalDate
+  if (arrival) {
+    const arrivalMs = Date.parse(`${arrival}T00:00:00`)
+    if (!Number.isNaN(arrivalMs) && now.getTime() < arrivalMs) return false
+  }
+  return true
 }
 
 /** Render the structures for the model: who they are, how to reach them. */
@@ -407,33 +962,20 @@ function formatRuntimeBlock(params: {
   if (settings.privacyPolicyUrl) lines.push(`Privacy policy URL: ${settings.privacyPolicyUrl}`)
 
   if (greeting === 'new') {
-    const welcome = settings.welcomeMessage?.trim()
-    if (welcome) {
-      lines.push(
-        '',
-        'FIRST TURN — open with this welcome, translated into the customer\'s language:',
-        welcome,
-      )
-    }
-    const video = settings.welcomeVideoUrl?.trim()
-    if (video) {
-      lines.push(
-        '',
-        'PRESENTATION VIDEO (first turn only). After the welcome, leave a blank line, write ONE short',
-        'sentence meaning "before we start, here is a short presentation", ending with 👇, in the SAME',
-        'language as the rest of your reply — never English unless the reply is English. Then, on the next',
-        'line, this URL bare and verbatim: no markdown, no surrounding text, no shortening.',
-        video,
-        'The system turns that link into a playable video. From the second turn on, never repeat it.',
-      )
-    }
-    lines.push('', 'Then answer what the customer actually asked, in the same message.')
+    // The welcome and the video are prepended by CODE after the model answers
+    // (withWelcome above). Asking the model for them too is what made it drop
+    // get_weather to make room for the greeting.
+    lines.push(
+      '',
+      'A welcome line and a presentation video are added automatically before your reply — do NOT write',
+      'a greeting or any video link yourself. Start directly with the answer to what the customer asked.',
+    )
   } else if (greeting === 'returning') {
-    const back = settings.welcomeBackMessage?.trim()
-    if (back) {
-      lines.push('', 'RETURNING CUSTOMER — open with this, translated into their language:', back)
-    }
-    lines.push('Do NOT send the presentation video again.')
+    lines.push(
+      '',
+      'A short welcome-back line is added automatically before your reply — do NOT greet the customer',
+      'yourself, and never send the presentation video again. Start directly with the answer.',
+    )
   } else {
     lines.push('', 'Mid-conversation: no greeting, no video. Answer directly.')
   }
@@ -552,13 +1094,52 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   seedLanguageIfNeeded(sessionId, input.config.language, settings.enabledLanguages, settings.defaultLanguage)
 
   const lastTimestamp = history.length > 0 ? history[history.length - 1]?.timestamp : undefined
-  const greeting = resolveGreeting({
+  // The stay tools need a customer to write to: in the playground there is
+  // none, so they are simply not offered rather than failing at call time.
+  const customerId = input.context.customerId
+  const stayEnabled = !!customerId && !!input.config.handlers?.saveStayProfile
+  let stayProfile =
+    customerId && input.config.handlers?.getStayProfile
+      ? await input.config.handlers.getStayProfile({
+          workspaceId: input.config.workspaceId,
+          customerId,
+        })
+      : null
+
+  // Coming back for a new holiday: archive the finished one and start the
+  // stay fresh, keeping who they are and the consent. Done BEFORE the prompt
+  // is built, so this turn already behaves like the first of a new trip.
+  let returningGuest = false
+  if (stayProfile && isNewStay(stayProfile, now)) {
+    const rolled = rolloverStay(stayProfile)
+    if (customerId && input.config.handlers?.saveStayProfile) {
+      // A merge would keep the old dates alive, so the cleared stay is written
+      // whole: `replace: true` tells the host to overwrite rather than merge.
+      await input.config.handlers.saveStayProfile({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        profile: rolled,
+        replace: true,
+      })
+    }
+    stayProfile = rolled
+    returningGuest = true
+  }
+
+  let greeting = resolveGreeting({
     historyLength: history.length,
     lastMessageAtMs: lastTimestamp ? Date.parse(lastTimestamp) : undefined,
     hasKnownName: !!knownName,
     nowMs: now.getTime(),
     staleMs: WELCOME_BACK_STALE_MS,
   })
+
+  // A guest whose stay we already know is not new, however empty this
+  // conversation's history looks. WhatsApp threads and widget sessions start
+  // fresh all the time — on the third day of the holiday that produced the
+  // full welcome and the presentation video all over again (live check,
+  // 2026-08-23). The stay profile is the durable record; the history is not.
+  if (greeting === 'new' && stayProfile) greeting = 'returning'
   updateState(sessionId, { greeting }, { mirror: false })
 
   const faqs = input.config.handlers?.getFaqs
@@ -576,6 +1157,28 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     : []
   const customToolsByName = new Map(customTools.map((t) => [t.name, t]))
 
+
+  // INLOCO is kept in sync by CODE, every turn, from the stay dates. It is the
+  // segment a campaign for tonight is sent to, so it must be true even when
+  // the guest never says "we're leaving" — and the model must not be able to
+  // set it, because "are you still here?" is not a question worth asking.
+  if (customerId && input.config.handlers?.setCustomerTags) {
+    const inTown = isCurrentlyInTown(stayProfile, now)
+    if (inTown === true) {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        add: [TAG_IN_LOCO],
+      })
+    } else if (inTown === false) {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        remove: [TAG_IN_LOCO],
+      })
+    }
+  }
+
   const systemPrompt = [
     settings.mainPrompt?.trim() || '',
     '',
@@ -584,6 +1187,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     faqBlock,
     '',
     formatRuntimeBlock({ now, channel: input.channel, greeting, settings, customerName: knownName }),
+    formatStayBlock(stayProfile, now, returningGuest),
     formatStateForPrompt(getState(sessionId)),
   ]
     .filter((part) => part !== '')
@@ -616,7 +1220,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     const result = await callLLM(
       messages,
       settings,
-      buildTools(weatherEnabled, accommodationEnabled, customTools),
+      buildTools(weatherEnabled, accommodationEnabled, stayEnabled, customTools),
     )
     tokensUsed += result.tokensUsed
 
@@ -637,8 +1241,29 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         commitLanguageFromReply(sessionId, resolved)
       }
 
+      // Applied HERE, after the model has written its answer: the greeting is
+      // the one part of the message that must not depend on the model
+      // remembering to produce it.
+      let finalReply = checked.text
+      if (finalReply && greeting !== 'none') {
+        const isNew = greeting === 'new'
+        const welcomeText = isNew
+          ? settings.welcomeMessage
+          : settings.welcomeBackMessage || settings.welcomeMessage
+        const sendVideo = isNew && !getState(sessionId).videoSent
+        finalReply = await withWelcome(
+          finalReply,
+          welcomeText,
+          sendVideo ? settings.welcomeVideoUrl : undefined,
+          getState(sessionId).language,
+          settings,
+          knownName,
+        )
+        if (sendVideo) updateState(sessionId, { videoSent: true }, { mirror: false })
+      }
+
       return {
-        reply: checked.text || null,
+        reply: finalReply || null,
         language: getState(sessionId).language,
         tokensUsed,
         answeredFromFaq,
@@ -704,6 +1329,144 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               'availability: you have no idea whether any of them has a room free. Never say a structure ' +
               'is full, never say one has space, never say Sappada is booked out. Give the contact and ' +
               'let the customer call. You take no bookings.',
+          })
+        }
+      } else if (name === 'save_stay') {
+        if (!stayEnabled || !customerId) {
+          toolOutput = JSON.stringify({ ok: false, error: 'no_customer' })
+        } else {
+          const args = safeParseArgs(call.function.arguments)
+          const profile: StayProfile = {}
+          const num = (v: unknown) => (typeof v === 'number' && v >= 0 ? Math.round(v) : undefined)
+          const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
+
+          profile.adults = num(args.adults)
+          profile.children = num(args.children)
+          profile.childrenAges = str(args.childrenAges)
+
+          // Appended: constraints arrive one at a time over a conversation
+          // ("she's coeliac"… later "and we're on foot"), and a replacing
+          // write would drop the one told first.
+          const constraint = str(args.constraints)
+          if (constraint) {
+            const previous = stayProfile?.constraints?.trim()
+            profile.constraints =
+              previous && !previous.toLowerCase().includes(constraint.toLowerCase())
+                ? `${previous}; ${constraint}`
+                : constraint
+          }
+          profile.seniors = num(args.seniors)
+          profile.arrivalDate = str(args.arrivalDate)
+          profile.departureDate = str(args.departureDate)
+          profile.origin = str(args.origin)
+
+          // Appended, never replaced: each visit adds to the list of what they
+          // have seen, and a write that overwrote it would make the assistant
+          // forget everything but the last thing.
+          const done = str(args.doneAlready)
+          if (done) {
+            const previous = stayProfile?.doneAlready?.trim()
+            profile.doneAlready = previous && !previous.includes(done) ? `${previous}; ${done}` : done
+          }
+
+          const itineraryAnswer = str(args.itinerary)
+          if (itineraryAnswer === 'yes' || itineraryAnswer === 'no') {
+            profile.itinerary = itineraryAnswer
+          }
+
+          // Accumulated, never replaced: each call reports the question just
+          // asked, and the set is what stops it being asked again tomorrow.
+          const nowAsked = Array.isArray(args.asked) ? (args.asked as unknown[]) : []
+          const askedSet = new Set(stayProfile?.asked ?? [])
+          for (const item of nowAsked) {
+            if (typeof item === 'string' && item.trim()) askedSet.add(item.trim())
+          }
+          if (askedSet.size > (stayProfile?.asked?.length ?? 0)) {
+            profile.asked = Array.from(askedSet)
+          }
+
+          const saved = await input.config.handlers!.saveStayProfile!({
+            workspaceId: input.config.workspaceId,
+            customerId,
+            profile,
+          })
+          toolOutput = JSON.stringify({
+            ok: saved,
+            instruction: done
+              ? 'Saved. Now ask briefly how it went — one short question, in their language. Their answer ' +
+                'goes to save_feedback. Do not ask again about something already recorded.'
+              : 'Saved. Do not thank them for the information or repeat it back: just carry on helping.',
+          })
+        }
+      } else if (name === 'save_push_consent') {
+        if (!customerId || !input.config.handlers?.savePushConsent) {
+          toolOutput = JSON.stringify({ ok: false, error: 'no_customer' })
+        } else {
+          const args = safeParseArgs(call.function.arguments)
+          const granted = args.granted === true
+          const saved = await input.config.handlers.savePushConsent({
+            workspaceId: input.config.workspaceId,
+            customerId,
+            granted,
+          })
+
+          // Marked whatever the answer was: a "no" that is not recorded as
+          // ASKED gets asked again, which is the one thing a refusal must
+          // never lead to.
+          if (input.config.handlers.saveStayProfile) {
+            await input.config.handlers.saveStayProfile({
+              workspaceId: input.config.workspaceId,
+              customerId,
+              profile: { consentAsked: true },
+            })
+          }
+
+          // The interests are what makes the consent usable: an offer on rooms
+          // goes only to whoever agreed to hear about rooms. Stored as tags so
+          // the campaign side can segment without knowing this module exists.
+          if (input.config.handlers.setCustomerTags) {
+            const topics = Array.isArray(args.topics) ? (args.topics as unknown[]) : []
+            const wantsEvents = granted && topics.includes('events')
+            const wantsLodging = granted && topics.includes('lodging')
+            await input.config.handlers.setCustomerTags({
+              workspaceId: input.config.workspaceId,
+              customerId,
+              add: [
+                ...(wantsEvents ? [TAG_INTEREST_EVENTS] : []),
+                ...(wantsLodging ? [TAG_INTEREST_LODGING] : []),
+              ],
+              remove: [
+                ...(wantsEvents ? [] : [TAG_INTEREST_EVENTS]),
+                ...(wantsLodging ? [] : [TAG_INTEREST_LODGING]),
+              ],
+            })
+          }
+
+          toolOutput = JSON.stringify({
+            ok: saved,
+            instruction: granted
+              ? 'Consent recorded. Thank them in one short line and move on — do not oversell it.'
+              : 'Refusal recorded. Accept it without insisting, and never ask again.',
+          })
+        }
+      } else if (name === 'save_feedback') {
+        if (!customerId || !input.config.handlers?.saveFeedback) {
+          toolOutput = JSON.stringify({ ok: false, error: 'no_customer' })
+        } else {
+          const args = safeParseArgs(call.function.arguments)
+          const rating = typeof args.rating === 'number' ? Math.round(args.rating) : undefined
+          const comment = typeof args.comment === 'string' ? args.comment.trim() : undefined
+          const saved = await input.config.handlers.saveFeedback({
+            workspaceId: input.config.workspaceId,
+            customerId,
+            rating,
+            comment,
+          })
+          toolOutput = JSON.stringify({
+            ok: saved,
+            instruction:
+              'Saved. Thank them warmly in one line. If the holiday is over, say goodbye telling them ' +
+              'we look forward to having them back. Never ask for the same feedback twice.',
           })
         }
       } else if (name === 'remember') {

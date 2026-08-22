@@ -509,6 +509,20 @@ model Customers {
   operatorQueuePosition         Int?                    // 📋 Position in operator queue (null = not queued; 1 = currently being served)
   operatorQueueEnteredAt        DateTime?               // 🕐 When customer entered the operator queue (used to order by FIFO when positions tie)
   invoiceAddress                Json?
+
+  // 🏔️ Tourism (custom-demosappada): what the assistant learned about this
+  // stay, so every turn knows who it is talking to and how much holiday is
+  // left. Structured rather than free text because the days remaining are
+  // COMPUTED from departureDate on each turn — parsing that back out of a
+  // sentence would break the moment the wording changed.
+  // Shape: { adults, children, seniors, arrivalDate, departureDate, origin,
+  //           doneAlready, notes }
+  stayProfile                   Json?
+  // End-of-stay feedback collected in conversation, shown on the customer card.
+  feedbackRating                Int?      // 1-5
+  feedbackComment               String?   @db.Text
+  feedbackAt                    DateTime?
+
   salesId                       String?
   cart                          Carts?
   chatSessions                  ChatSession[]
