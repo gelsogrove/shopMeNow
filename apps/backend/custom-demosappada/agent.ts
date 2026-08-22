@@ -541,7 +541,25 @@ async function translateWelcome(
   const key = `${language}:${text}`
   const cached = welcomeTranslations.get(key)
   if (cached) return cached
+  const translated = await translateText(text, language, settings)
+  if (translated !== text) welcomeTranslations.set(key, translated)
+  return translated
+}
 
+/**
+ * Translate a reply into the language the model itself declared.
+ *
+ * The model reliably KNOWS the language — it emits ⟦LANG:es⟧ correctly — and
+ * then writes the answer in the workspace default anyway. Asking it more
+ * firmly in the prompt did not change that (2026-08-23: a Spanish "hola qué
+ * hago hoy" answered in Italian, tagged es). So the mismatch is repaired
+ * afterwards, by code, instead of being hoped away.
+ */
+async function translateText(
+  text: string,
+  language: string,
+  settings: Settings,
+): Promise<string> {
   try {
     const result = await callLLM(
       [
@@ -557,12 +575,9 @@ async function translateWelcome(
       { ...settings, maxTokens: 600 },
       [],
     )
-    const translated = result.content.trim()
-    if (!translated) return text
-    welcomeTranslations.set(key, translated)
-    return translated
+    return result.content.trim() || text
   } catch {
-    // A greeting in the wrong language beats no greeting at all.
+    // A reply in the wrong language beats no reply at all.
     return text
   }
 }
@@ -645,6 +660,53 @@ function mentionsStayFacts(message: string): boolean {
       text,
     )
   return hasNumber && hasStayWord
+}
+
+/**
+ * Function words that identify a language cheaply, without an LLM call.
+ *
+ * Only used to answer "is this reply obviously NOT in the declared language",
+ * so a wrong guess costs one translation call, never a wrong answer. Nothing
+ * here routes the conversation (CLAUDE.md §14): it checks output, not intent.
+ */
+const LANGUAGE_MARKERS: Record<string, RegExp> = {
+  it: /\b(il|la|le|gli|di|che|per|sono|siete|questo|quanto|giorno|oggi)\b/gi,
+  es: /\b(el|la|los|las|de|que|para|est[aá]|sois|cu[aá]nto|d[ií]a|hoy|hola)\b/gi,
+  en: /\b(the|and|for|you|are|this|how|many|day|today)\b/gi,
+  de: /\b(der|die|das|und|f[uü]r|sind|ihr|wie|viele|tag|heute)\b/gi,
+  fr: /\b(le|la|les|des|que|pour|vous|[eê]tes|combien|jour|aujourd)\b/gi,
+  pt: /\b(o|os|as|de|que|para|est[aã]o|quantos|dia|hoje)\b/gi,
+  nl: /\b(de|het|een|en|voor|zijn|hoeveel|dag|vandaag)\b/gi,
+  da: /\b(og|det|den|for|er|hvor|mange|dag|i dag)\b/gi,
+}
+
+function countMarkers(text: string, language: string): number {
+  const re = LANGUAGE_MARKERS[language]
+  if (!re) return 0
+  return (text.match(re) || []).length
+}
+
+/**
+ * Does the text look like it is NOT in `language`, while clearly being in
+ * another one we know? Conservative: only returns true when some other
+ * language scores clearly higher, so an ambiguous short reply is left alone.
+ */
+function looksLikeWrongLanguage(text: string, language: string): boolean {
+  const words = text.split(/\s+/).length
+  if (words < 8) return false // too short to judge
+
+  const declared = countMarkers(text, language)
+  let best = declared
+  let bestLang = language
+  for (const other of Object.keys(LANGUAGE_MARKERS)) {
+    if (other === language) continue
+    const score = countMarkers(text, other)
+    if (score > best) {
+      best = score
+      bestLang = other
+    }
+  }
+  return bestLang !== language && best >= declared + 3
 }
 
 /**
@@ -1448,7 +1510,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         return { reply: null, tokensUsed, answeredFromFaq, error: 'empty_reply' }
       }
 
-      const checked = stripUnverifiableContacts(reply, approvedContent)
+      const checked: { text: string; removed: string[] } = stripUnverifiableContacts(reply, approvedContent)
       if (checked.removed.length > 0) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][stripped] ${checked.removed.join(' | ')}`)
@@ -1457,6 +1519,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (lang) {
         const resolved = resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
         commitLanguageFromReply(sessionId, resolved)
+      }
+
+      // The model declares the language correctly and then writes in another
+      // one. Repaired here rather than asked for again in the prompt.
+      if (lang) {
+        const target = resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
+        if (checked.text && looksLikeWrongLanguage(checked.text, target)) {
+          // eslint-disable-next-line no-console
+          console.error(`[demosappada][lang-fix] declared=${target} but reply was not`)
+          checked.text = await translateText(checked.text, target, settings)
+        }
       }
 
       // Applied HERE, after the model has written its answer: the greeting is
