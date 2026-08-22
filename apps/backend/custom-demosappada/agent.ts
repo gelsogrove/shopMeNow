@@ -1168,10 +1168,31 @@ function formatRuntimeBlock(params: {
   customerName?: string
 }): string {
   const { now, channel, greeting, settings, customerName } = params
+  // The part of the day, spelled out. The model was given only a clock and
+  // called 01:35 on a Sunday "sabato sera" — right about the feel of it,
+  // wrong about the day, and confidently so (Andrea, 2026-08-23). Naming the
+  // moment removes the guess, and naming what is CLOSED at that hour stops
+  // the assistant proposing a museum in the middle of the night.
+  const hour = now.getHours()
+  const partOfDay =
+    hour < 5
+      ? 'notte fonda — quasi tutto è chiuso, e non ha senso proporre attività per adesso'
+      : hour < 12
+        ? 'mattina'
+        : hour < 14
+          ? 'ora di pranzo'
+          : hour < 18
+            ? 'pomeriggio'
+            : hour < 22
+              ? 'sera'
+              : 'tarda sera — musei e negozi sono chiusi'
+
   const lines = [
     '═══ RUNTIME ═══',
     `Today: ${now.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`,
-    `Local time: ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
+    `Local time: ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${partOfDay})`,
+    'Use this date and this hour EXACTLY as given: never state a different weekday, and never guess',
+    'what time it is. "Oggi" is the date above, whatever hour it is.',
     `Channel: ${channel}`,
   ]
   if (customerName) lines.push(`Customer name: ${customerName}`)
@@ -1187,6 +1208,10 @@ function formatRuntimeBlock(params: {
       'a greeting, do NOT introduce yourself, do NOT offer help in general, do NOT write a video link.',
       'Anything of that kind you write is deleted before sending, and what remains is what the guest',
       'reads — so start your very first sentence with the substance.',
+      '🚨 Do NOT assume what they want. "Ciao" is not a request for dinner, or for a walk, or for',
+      'anything else: it is a hello. When the message carries no request, say one true, useful thing',
+      'about right now — the weather, or which day of their stay is the good one — and ask the first',
+      'question from ANCORA DA CHIEDERE. Never invent the topic on their behalf.',
       'On this first turn, when they asked something whose answer depends on WHO they are — what to do',
       'today, where to eat, which walk, a plan for the days — do NOT hand over a full set of',
       'recommendations and then ask who they are: ask FIRST, in one short line, joining the two things',
