@@ -140,14 +140,12 @@ type FaqEntry = { question: string; answer: string; keywords?: string[] }
 
 // A catalogue row as a custom module sees it. Deliberately generic: the table
 // is `products`, but what a row means is the tenant's business (for
-// custom-demosappada a row is an accommodation and `stock` counts places
-// declared free). Mirrors CatalogueEntry in custom-demosappada/agent.ts —
-// structural typing across the dynamic import.
+// custom-demosappada a row is an accommodation). Mirrors CatalogueEntry in
+// custom-demosappada/agent.ts — structural typing across the dynamic import.
 type CatalogueEntry = {
   name: string
   description?: string
   price?: number
-  stock: number
   link?: string
   type?: string
 }
@@ -997,24 +995,22 @@ export class CustomClientChatbotService {
    * The workspace's catalogue rows, workspace-scoped like every other read.
    *
    * Generic on purpose: the table is `products`, but what a row MEANS belongs
-   * to the tenant — for custom-demosappada a row is an accommodation and
-   * `stock` is how many places the structure has declared free. Availability
-   * that the local structures maintain themselves is the only kind that is
-   * true: Booking and Google Hotels see only what is loaded onto their own
-   * channels, which for a village of family-run B&Bs is a fraction of the beds.
+   * to the tenant — for custom-demosappada a row is an accommodation and the
+   * module serves it as a contact, not as live availability (Andrea
+   * 2026-08-22: how availability would be kept current is still an open
+   * question, and a stale count is worse than none).
    */
   private async getCatalogue(p: { workspaceId: string }): Promise<CatalogueEntry[]> {
     try {
       const rows = await defaultPrisma.products.findMany({
         where: { workspaceId: p.workspaceId, isActive: true },
         orderBy: { name: "asc" },
-        select: { name: true, description: true, price: true, stock: true, link: true, type: true },
+        select: { name: true, description: true, price: true, link: true, type: true },
       })
       return rows.map((r) => ({
         name: r.name,
         description: r.description ?? undefined,
         price: r.price !== null && r.price !== undefined ? Number(r.price) : undefined,
-        stock: r.stock,
         link: r.link ?? undefined,
         type: r.type ?? undefined,
       }))
