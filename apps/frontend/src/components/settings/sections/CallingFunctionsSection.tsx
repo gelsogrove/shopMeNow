@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
 import {
     Wrench,
     Plus,
@@ -104,6 +105,8 @@ interface CallingFunctionsSectionProps {
      * type selector is reduced to Webhook.
      */
     isCustomChatbot?: boolean
+    /** workspace.customChatbotId — selects which built-in tools to list. */
+    customChatbotId?: string | null
     onFieldChange?: (field: string, value: any) => void
     onFieldFocus?: (fieldKey: string) => void
 }
@@ -112,6 +115,7 @@ export function CallingFunctionsSection({
     workspaceId,
     canEdit,
     isCustomChatbot = false,
+    customChatbotId,
 }: CallingFunctionsSectionProps) {
     // F50 — Andrea 2026-05-13: the Visual Flow Builder ("Agent Configuration"
     // graph with sub-LLM per node) is deprecated. It caused unacceptable
@@ -120,6 +124,8 @@ export function CallingFunctionsSection({
     // The CTA below is permanently hidden until physical removal in a
     // dedicated cleanup session. The underlying page (/agents) redirects
     // to /chat at the route layer (see App.tsx).
+    const builtInTools = (customChatbotId && BUILT_IN_TOOLS[customChatbotId]) || []
+
     const [functions, setFunctions] = useState<CallingFunction[]>([])
     const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
     const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
@@ -347,6 +353,44 @@ export function CallingFunctionsSection({
                 </div>
                 {/* F50: Agent Configuration CTA permanently hidden (Visual Flow Builder deprecated). */}
             </div>
+
+            {/* Built-in tools — code-defined, listed read-only so this page answers
+                "which tools can this bot call?" rather than only showing the webhook ones. */}
+            {builtInTools.length > 0 && (
+                <Card>
+                    <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
+                        <CardTitle className="text-base font-semibold flex items-center gap-2">
+                            <Wrench className="h-5 w-5 text-slate-500" />
+                            Built-in Tools
+                        </CardTitle>
+                        <p className="text-sm text-gray-500">
+                            Shipped with this chatbot module. They cannot be created or deleted here —
+                            switch them on or off in AI Personality → Advanced Settings (JSON).
+                        </p>
+                    </CardHeader>
+                    <CardContent className="p-0 divide-y">
+                        {builtInTools.map((tool) => (
+                            <div key={tool.name} className="p-4 flex items-start gap-3">
+                                <div className="mt-1 p-2 rounded-lg bg-slate-100 text-slate-500">
+                                    <Wrench className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <code className="text-sm font-semibold text-gray-900">{tool.name}</code>
+                                        <Badge variant="outline" className="text-xs">In code</Badge>
+                                        {tool.toggleKey && (
+                                            <Badge variant="outline" className="text-xs font-mono">
+                                                {tool.toggleKey}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-1">{tool.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Functions List Card */}
             <Card>
