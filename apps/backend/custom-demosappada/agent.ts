@@ -1507,6 +1507,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   let forcedSaveDone = false
   /** Last free-text answer the model produced, kept as a fallback. */
   let pendingReply = ''
+  let emptyRetryDone = false
 
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
@@ -1534,13 +1535,29 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             '[SYSTEM] Il cliente ti ha appena dato informazioni sul suo soggiorno e non le hai ancora ' +
             'salvate. Chiama ORA save_stay con quello che hai imparato da questo messaggio (quante ' +
             'persone, bambini e le loro età, anziani, quanti giorni, da dove arrivano, esigenze ' +
-            'particolari), e registra in `asked` le domande che hai fatto. Non scrivere nulla al ' +
-            'cliente in questo passaggio.',
+            'particolari), e registra in `asked` le domande che hai fatto. Subito dopo il salvataggio ' +
+            'scrivi al cliente la risposta: se resta una domanda da fare, falla; altrimenti conferma ' +
+            'brevemente e prosegui. Non lasciarlo MAI senza risposta.',
         })
         continue
       }
       const { reply, lang } = extractLanguage(result.content)
       if (!reply.trim()) {
+        // Silence is never an acceptable answer: the guest wrote something and
+        // is watching an empty bubble. It happened when the forced save ate
+        // the turn (Andrea, 2026-08-23). One more hop, asked plainly.
+        if (!emptyRetryDone) {
+          emptyRetryDone = true
+          messages.push({ role: 'assistant', content: null })
+          messages.push({
+            role: 'user',
+            content:
+              '[SYSTEM] Non hai scritto nulla al cliente. Scrivi ORA la risposta: se c\'è una domanda ' +
+              'in sospeso nel blocco QUESTO OSPITE falla, altrimenti rispondi a quello che ti ha detto. ' +
+              'Una sola domanda, poche righe.',
+          })
+          continue
+        }
         return { reply: null, tokensUsed, answeredFromFaq, error: 'empty_reply' }
       }
 
