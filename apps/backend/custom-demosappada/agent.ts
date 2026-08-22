@@ -552,6 +552,64 @@ async function translateWelcome(
 }
 
 /**
+ * Words a self-introduction opens with, in the languages this workspace
+ * serves. Matching the SHAPE of a greeting, not any particular sentence:
+ * the tenant's welcome is configuration and may say anything, while what the
+ * model improvises is always some form of "hello, I am the assistant".
+ */
+const GREETING_OPENERS =
+  /^(ciao|salve|buongiorno|buonasera|benvenut\w*|hi|hello|hey|welcome|good (morning|afternoon|evening)|hallo|guten (tag|morgen|abend)|willkommen|hola|bienvenid\w*|bonjour|bienvenue)\b/i
+
+/** Does this line introduce the assistant rather than answer anything? */
+const SELF_INTRODUCTION =
+  /(sono l'assistente|sono il tuo assistente|assistente (virtuale|digitale)|i am the|i'm the .*assistant|ich bin (der|die|dein)|soy el asistente|je suis l'assistant)/i
+
+/**
+ * Drop an opening greeting the model wrote, keeping the answer under it.
+ *
+ * Conservative on purpose: only leading paragraphs are considered, and only
+ * while they look like an introduction — the moment a paragraph carries real
+ * content the rest is returned untouched. Cutting an answer would be a far
+ * worse failure than leaving one greeting too many.
+ */
+function stripLeadingGreeting(reply: string): string {
+  const paragraphs = reply.split(/\n{2,}/)
+  let start = 0
+  let sawGreeting = false
+
+  while (start < paragraphs.length) {
+    const paragraph = paragraphs[start].trim()
+    if (!paragraph) {
+      start++
+      continue
+    }
+
+    // Anything carrying a fact — a number, an hour, a price, a bullet list —
+    // is the answer, and the answer is never dropped.
+    if (/\d/.test(paragraph) || /^[-•*]/m.test(paragraph)) break
+
+    const opensAsGreeting = GREETING_OPENERS.test(paragraph) || SELF_INTRODUCTION.test(paragraph)
+
+    // The paragraphs that FOLLOW a greeting are still preamble while they only
+    // restate what the assistant can do ("I'm here to help you discover…",
+    // "how can I help?"). One greeting from the model was three paragraphs
+    // long, and cutting only the first left the rest under the real welcome.
+    const continuesPreamble =
+      sawGreeting &&
+      /(aiutart|aiutarl|posso aiutar|sono qui per|dimmi pure|come posso|scoprire il meglio|here to help|how can i help|tell me|wie kann ich|ich helfe|estoy aquí para)/i.test(
+        paragraph,
+      )
+
+    if (!opensAsGreeting && !continuesPreamble) break
+
+    sawGreeting = true
+    start++
+  }
+
+  return paragraphs.slice(start).join('\n\n').trim()
+}
+
+/**
  * Substitute the per-customer placeholders in tenant copy.
  *
  * The host does this for the strings IT sends, but the greeting is prepended
@@ -582,9 +640,17 @@ async function withWelcome(
   const welcome = substitutePlaceholders(welcomeText?.trim() ?? '', customerName)
   if (!welcome) return reply
 
-  // The model greeted anyway — don't say it twice.
-  const opening = welcome.slice(0, 24).toLowerCase()
-  if (reply.toLowerCase().includes(opening)) return reply
+  // The model was told not to greet, and greeted anyway — so the greeting it
+  // wrote is REMOVED rather than the configured one skipped.
+  //
+  // Comparing the two texts does not work: the model paraphrases ("Ciao! Sono
+  // l'assistente della Pro Loco di Sappada") and no substring of the tenant's
+  // welcome appears in it, so the guard passed and the guest read two
+  // different welcomes in a row (Andrea, 2026-08-23). What identifies a
+  // greeting is its SHAPE — an opening line that introduces the assistant and
+  // asks nothing — not its wording, and the shape is something code can find.
+  const stripped = stripLeadingGreeting(reply)
+  const body = stripped.trim() ? stripped : reply
 
   const lang = (language || settings.defaultLanguage || 'it').toLowerCase()
   const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
@@ -596,7 +662,7 @@ async function withWelcome(
   if (video && !reply.includes(video)) {
     parts.push('', VIDEO_INTRO[lang] ?? VIDEO_INTRO.it, video)
   }
-  parts.push('', reply)
+  parts.push('', body)
   return parts.join('\n')
 }
 
@@ -967,8 +1033,13 @@ function formatRuntimeBlock(params: {
     // get_weather to make room for the greeting.
     lines.push(
       '',
-      'A welcome line and a presentation video are added automatically before your reply — do NOT write',
-      'a greeting or any video link yourself. Start directly with the answer to what the customer asked.',
+      '🚨 A welcome line and a presentation video are added automatically ABOVE your reply. Do NOT write',
+      'a greeting, do NOT introduce yourself, do NOT offer help in general, do NOT write a video link.',
+      'Anything of that kind you write is deleted before sending, and what remains is what the guest',
+      'reads — so start your very first sentence with the substance.',
+      'On this first turn: answer what they asked (or, if they asked nothing, give one concrete',
+      'suggestion), then ask the FIRST question from ANCORA DA CHIEDERE. Never end with a generic',
+      '"how can I help you?" — that question is already answered by the welcome above you.',
     )
   } else if (greeting === 'returning') {
     lines.push(
