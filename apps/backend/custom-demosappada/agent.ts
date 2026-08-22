@@ -987,10 +987,19 @@ function formatStayBlock(
   }
 
   if (missing.length > 0) {
+    // ONE question is shown, not the list. Given the list the model merges
+    // them — "siete in quanti, e quanto vi fermate?" — which is two questions
+    // in one breath and reads like a form (Andrea, 2026-08-23). What it
+    // cannot see, it cannot ask.
     lines.push(
-      'ANCORA DA CHIEDERE (una sola per messaggio, agganciata al discorso, mai due insieme):',
-      ...missing.map((m) => `  - ${m}`),
+      '🚨 LA PROSSIMA DOMANDA DA FARE — questa e SOLO questa, una per messaggio:',
+      `  ${missing[0]}`,
+      'Non chiedere nient\'altro sul suo soggiorno in questo messaggio: le altre verranno dopo, una',
+      'alla volta. Registrala in `asked` con save_stay nello stesso momento in cui la fai.',
     )
+    if (missing.length > 1) {
+      lines.push(`  (dopo questa ne restano ${missing.length - 1}, ma NON anticiparle ora)`)
+    }
   } else {
     lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
   }
