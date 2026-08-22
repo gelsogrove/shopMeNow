@@ -610,6 +610,28 @@ function stripLeadingGreeting(reply: string): string {
 }
 
 /**
+ * Does this message plausibly carry facts about the stay?
+ *
+ * Deliberately crude — it only decides whether it is worth ONE extra hop
+ * asking the model to save; the model still judges what the facts are. A
+ * false positive costs a hop, a false negative costs the guest being asked
+ * the same question tomorrow.
+ *
+ * This is not phrase-based intent detection (CLAUDE.md §14): nothing here
+ * routes the conversation or picks an answer. It only asks "might there be
+ * something to write down".
+ */
+function mentionsStayFacts(message: string): boolean {
+  const text = message.toLowerCase()
+  const hasNumber = /\d/.test(text) || /\b(un|uno|una|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|zwei|drei|vier|two|three|four|five)\b/.test(text)
+  const hasStayWord =
+    /(siamo|sono in|bambin|figli|ragazz|anni|anziani|nonn|moglie|marito|famiglia|coppia|giorn|settiman|notte|nott|restiamo|rimaniamo|partiamo|arriviamo|veniamo da|arriviamo da|celiac|glutine|intolleran|allerg|incinta|carrozzin|cane|senza auto|a piedi|macchina|kinder|jahre|tage|wir sind|children|days|we are|we're staying)/.test(
+      text,
+    )
+  return hasNumber && hasStayWord
+}
+
+/**
  * Substitute the per-customer placeholders in tenant copy.
  *
  * The host does this for the strings IT sends, but the greeting is prepended
@@ -1287,6 +1309,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
   const maxHops = settings.maxToolHops ?? MAX_TOOL_HOPS
 
+  // Whether the guest's answer was actually recorded this turn. The prompt
+  // asks the model to call save_stay the moment it learns something, and the
+  // model regularly does not: it acknowledged "siamo in 4, due bambini di 7 e
+  // 9 anni" in prose and saved nothing, so two turns later it asked again
+  // (Andrea, 2026-08-23). An instruction cannot be the guarantee here.
+  let stayWasSaved = false
+  let forcedSaveDone = false
+
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
       messages,
@@ -1296,6 +1326,24 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     tokensUsed += result.tokensUsed
 
     if (result.toolCalls.length === 0) {
+      // The turn is about to end. If the guest told us something about their
+      // stay and nothing was written, spend one hop forcing the tool rather
+      // than letting the fact evaporate — asking the same question twice is
+      // what makes the assistant feel like a form.
+      if (stayEnabled && !stayWasSaved && !forcedSaveDone && mentionsStayFacts(userMessage)) {
+        forcedSaveDone = true
+        messages.push({ role: 'assistant', content: result.content || null })
+        messages.push({
+          role: 'user',
+          content:
+            '[SYSTEM] Il cliente ti ha appena dato informazioni sul suo soggiorno e non le hai ancora ' +
+            'salvate. Chiama ORA save_stay con quello che hai imparato da questo messaggio (quante ' +
+            'persone, bambini e le loro età, anziani, quanti giorni, da dove arrivano, esigenze ' +
+            'particolari), e registra in `asked` le domande che hai fatto. Non scrivere nulla al ' +
+            'cliente in questo passaggio.',
+        })
+        continue
+      }
       const { reply, lang } = extractLanguage(result.content)
       if (!reply.trim()) {
         return { reply: null, tokensUsed, answeredFromFaq, error: 'empty_reply' }
@@ -1461,6 +1509,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             customerId,
             profile,
           })
+          if (saved) stayWasSaved = true
           toolOutput = JSON.stringify({
             ok: saved,
             instruction: done
