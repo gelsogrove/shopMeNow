@@ -983,6 +983,12 @@ function formatStayBlock(
     )
   }
 
+  lines.push(
+    'Se il cliente CORREGGE o AGGIORNA uno di questi dati — partono prima, si è aggiunta una persona, ' +
+      'cambia l\'alloggio — richiama subito save_stay con il valore NUOVO: sovrascrive quello vecchio, ' +
+      'e da lì in poi i giorni rimanenti e i consigli si ricalcolano da soli.',
+  )
+
   if (profile.doneAlready) {
     lines.push(
       `GIÀ FATTO (non riproporlo, semmai costruiscici sopra): ${profile.doneAlready}`,
@@ -996,11 +1002,21 @@ function formatStayBlock(
   const missing: string[] = []
   if (!profile.adults && !profile.children && !profile.seniors && !asked.has('party')) {
     missing.push('con chi è (quanti adulti, bambini, anziani) → `party`')
+  } else if (
+    // "siamo in 3" says how many, not who: without the breakdown the advice
+    // is guesswork, and the assistant had started inventing children that
+    // nobody had mentioned (Andrea, 2026-08-23).
+    profile.adults === undefined &&
+    profile.children === undefined &&
+    profile.seniors === undefined &&
+    asked.has('party')
+  ) {
+    missing.push('come sono divisi (adulti, bambini, anziani) → `party`')
   }
   if (!profile.departureDate && !asked.has('stay')) {
     missing.push('fino a quando resta → `stay`')
   }
-  if (profile.children && !profile.childrenAges && !asked.has('childrenAges')) {
+  if (profile.children && profile.children > 0 && !profile.childrenAges && !asked.has('childrenAges')) {
     missing.push("che età hanno i bambini → `childrenAges`")
   }
   if (!profile.constraints && !asked.has('constraints')) {
