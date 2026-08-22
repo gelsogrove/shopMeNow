@@ -925,6 +925,7 @@ export function SettingsPage() {
           <CallingFunctionsSection
             workspaceId={currentWorkspace?.id || ""}
             canEdit={canEdit}
+            isCustomChatbot={isCustomChatbot}
           />
         )
       case "calendar":

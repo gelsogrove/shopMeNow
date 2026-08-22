@@ -60,9 +60,50 @@ const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNo
 }
 
 
+/**
+ * Tools that live in the chatbot module's own code, keyed by customChatbotId.
+ *
+ * They are NOT rows in workspace_calling_functions and cannot be created or
+ * deleted here: an internal tool needs an implementation, and a UI that let
+ * someone "add" one would only produce a name nothing answers to. They are
+ * listed read-only so this page answers the question it looks like it answers
+ * — "which tools can this bot call?" — instead of showing half the picture.
+ *
+ * The on/off switch is a key in AI Personality → Advanced Settings (JSON),
+ * which the module reads from its settings.json.
+ */
+const BUILT_IN_TOOLS: Record<string, Array<{ name: string; description: string; toggleKey?: string }>> = {
+    demosappada: [
+        {
+            name: "get_weather",
+            description:
+                "Live weather and 3-day forecast for Sappada (Open-Meteo). The model cannot know the weather without it — without this tool it would invent a plausible forecast.",
+            toggleKey: "weatherEnabled",
+        },
+        {
+            name: "check_accommodation",
+            description:
+                "Accommodation the Pro Loco keeps on file, with contacts. Reports contacts only, never availability. Appears automatically when the workspace has catalogue rows.",
+        },
+        {
+            name: "remember",
+            description: "Saves the customer's name to their profile when they mention it.",
+        },
+    ],
+}
+
 interface CallingFunctionsSectionProps {
     workspaceId: string
     canEdit: boolean
+    /**
+     * True when this workspace runs a code-based custom chatbot module
+     * (workspace.customChatbotId). Those modules execute WEBHOOK functions
+     * only — INTERNAL and DELEGATE_TO_AGENT resolve inside the deprecated
+     * flow-builder pipeline, which they never run. Offering the other two
+     * would let someone define a tool that silently never fires, so the
+     * type selector is reduced to Webhook.
+     */
+    isCustomChatbot?: boolean
     onFieldChange?: (field: string, value: any) => void
     onFieldFocus?: (fieldKey: string) => void
 }
@@ -70,6 +111,7 @@ interface CallingFunctionsSectionProps {
 export function CallingFunctionsSection({
     workspaceId,
     canEdit,
+    isCustomChatbot = false,
 }: CallingFunctionsSectionProps) {
     // F50 — Andrea 2026-05-13: the Visual Flow Builder ("Agent Configuration"
     // graph with sub-LLM per node) is deprecated. It caused unacceptable
@@ -689,8 +731,12 @@ Credentials Mapping: {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="WEBHOOK">🌐 Webhook (External API)</SelectItem>
-                                        <SelectItem value="INTERNAL">⚙️ Internal Logic (System)</SelectItem>
-                                        <SelectItem value="DELEGATE_TO_AGENT">🤖 Specialized Agent</SelectItem>
+                                        {!isCustomChatbot && (
+                                            <>
+                                                <SelectItem value="INTERNAL">⚙️ Internal Logic (System)</SelectItem>
+                                                <SelectItem value="DELEGATE_TO_AGENT">🤖 Specialized Agent</SelectItem>
+                                            </>
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
