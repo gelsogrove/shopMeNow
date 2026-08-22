@@ -1,0 +1,14 @@
+{
+  "name": "demosappada-chatbot",
+  "version": "0.1.0",
+  "description": "Loco.AI Sappada — tourism assistant: FAQ-grounded answers recombined with live weather",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -138,6 +138,20 @@ type GetFaqsParams = { workspaceId: string }
 // schema) and is optional: modules that ignore it keep their current prompt.
 type FaqEntry = { question: string; answer: string; keywords?: string[] }
 
+// A catalogue row as a custom module sees it. Deliberately generic: the table
+// is `products`, but what a row means is the tenant's business (for
+// custom-demosappada a row is an accommodation and `stock` counts places
+// declared free). Mirrors CatalogueEntry in custom-demosappada/agent.ts —
+// structural typing across the dynamic import.
+type CatalogueEntry = {
+  name: string
+  description?: string
+  price?: number
+  stock: number
+  link?: string
+  type?: string
+}
+
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
 // Single-iteration offset computation via Intl — accurate except at the rare
 // DST-transition minute, which never coincides with business booking slots.
@@ -225,6 +239,10 @@ type ChatbotInput = {
       // the model attaches one by id via its start_flow tool.
       listFlows?: (params: { workspaceId: string }) => Promise<FlowSummary[]>
       loadFlow?: (params: { workspaceId: string; flowId: string }) => Promise<LoadedFlow | null>
+      // The workspace's catalogue rows. Used by custom-demosappada to serve
+      // accommodation the Pro Loco keeps up to date (stock = places declared
+      // free); any module that does not ask for it is unaffected.
+      getCatalogue?: (params: { workspaceId: string }) => Promise<CatalogueEntry[]>
     }
   }
   context: {
@@ -424,6 +442,7 @@ export class CustomClientChatbotService {
             getFaqs: (p) => this.getFaqs(p),
             listFlows: (p) => this.listFlows(p),
             loadFlow: (p) => this.loadFlow(p),
+            getCatalogue: (p) => this.getCatalogue(p),
           },
         },
         context: {
@@ -967,6 +986,40 @@ export class CustomClientChatbotService {
       return faqs
     } catch (error) {
       logger.error("[CustomClientChatbotService] getFaqs failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
+   * The workspace's catalogue rows, workspace-scoped like every other read.
+   *
+   * Generic on purpose: the table is `products`, but what a row MEANS belongs
+   * to the tenant — for custom-demosappada a row is an accommodation and
+   * `stock` is how many places the structure has declared free. Availability
+   * that the local structures maintain themselves is the only kind that is
+   * true: Booking and Google Hotels see only what is loaded onto their own
+   * channels, which for a village of family-run B&Bs is a fraction of the beds.
+   */
+  private async getCatalogue(p: { workspaceId: string }): Promise<CatalogueEntry[]> {
+    try {
+      const rows = await defaultPrisma.products.findMany({
+        where: { workspaceId: p.workspaceId, isActive: true },
+        orderBy: { name: "asc" },
+        select: { name: true, description: true, price: true, stock: true, link: true, type: true },
+      })
+      return rows.map((r) => ({
+        name: r.name,
+        description: r.description ?? undefined,
+        price: r.price !== null && r.price !== undefined ? Number(r.price) : undefined,
+        stock: r.stock,
+        link: r.link ?? undefined,
+        type: r.type ?? undefined,
+      }))
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] getCatalogue failed", {
         workspaceId: p.workspaceId,
         error: error instanceof Error ? error.message : String(error),
       })
