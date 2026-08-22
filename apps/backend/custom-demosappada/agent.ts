@@ -689,13 +689,19 @@ async function withWelcome(
 }
 
 /**
- * Days after departure before a new message counts as a NEW holiday.
+ * Days after departure before the finished stay is archived.
  *
- * Three, not zero: someone writing the evening they got home is still closing
- * the last trip ("we left the jacket at the rifugio"), and resetting their
- * stay there would lose the thread mid-conversation.
+ * Three, not zero: the days right after leaving are when the goodbye happens
+ * — the feedback, the consent, the "we left a jacket at the rifugio". Wiping
+ * the stay there would take the conversation's subject away mid-sentence.
+ *
+ * After that the holiday is closed: the profile is archived, the itinerary
+ * and what-they-did are cleared, and the guest goes back to being a contact.
+ * When they write again — next week or next February — the assistant starts
+ * a fresh stay and asks the dates anew, which is exactly the service being
+ * offered to them a second time.
  */
-const NEW_STAY_AFTER_DEPARTURE_DAYS = 3
+const ARCHIVE_STAY_AFTER_DEPARTURE_DAYS = 3
 
 /**
  * Has this guest come back for a fresh holiday?
@@ -706,13 +712,13 @@ const NEW_STAY_AFTER_DEPARTURE_DAYS = 3
  * never asks the new dates, and refuses to propose the Cascatelle because
  * they were done in August (Andrea, 2026-08-23).
  */
-function isNewStay(profile: StayProfile | null, now: Date): boolean {
+function isStayOverAndClosed(profile: StayProfile | null, now: Date): boolean {
   const departure = profile?.departureDate
   if (!departure) return false
   const departureMs = Date.parse(`${departure}T23:59:59`)
   if (Number.isNaN(departureMs)) return false
   const daysSince = (now.getTime() - departureMs) / 86_400_000
-  return daysSince > NEW_STAY_AFTER_DEPARTURE_DAYS
+  return daysSince > ARCHIVE_STAY_AFTER_DEPARTURE_DAYS
 }
 
 /**
@@ -750,6 +756,18 @@ function rolloverStay(profile: StayProfile): StayProfile {
     itinerary: undefined,
     asked: [],
   }
+}
+
+/**
+ * Days of holiday left, or null when we do not know the departure.
+ * Zero or negative means today is the last day (or it is already over).
+ */
+function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
+  const departure = profile?.departureDate
+  if (!departure) return null
+  const departureMs = Date.parse(`${departure}T23:59:59`)
+  if (Number.isNaN(departureMs)) return null
+  return Math.ceil((departureMs - now.getTime()) / 86_400_000)
 }
 
 /**
@@ -818,9 +836,20 @@ function formatStayBlock(
             'dicendo che li aspettiamo di nuovo.',
         )
       } else if (daysLeft <= 0) {
+        // Not an ending: the guest can write whenever they like, and often
+        // does (a phone left behind, a recipe, a question about next year).
+        // What changes is the JOB — from planning their days to closing the
+        // relationship well and keeping it open (Andrea, 2026-08-23).
         lines.push(
-          'LA VACANZA È FINITA (o finisce oggi). Non proporre più attività: chiedi come è andata — cosa ' +
-            'è piaciuto e cosa no — salvala con save_feedback e salutali dicendo che li aspettiamo di nuovo.',
+          'LA VACANZA È FINITA (o finisce oggi). Non proporre più attività da fare qui: non sono più in ' +
+            'zona. Continua però a rispondere normalmente a qualsiasi cosa ti chiedano.',
+          'In questo momento hai tre cose da fare, una per messaggio, senza affollarle:',
+          '  1. Chiedi come è andata — cosa è piaciuto e cosa no — e salva con save_feedback.',
+          '  2. Poi chiedi se vogliono continuare a ricevere notizie da Sappada — eventi e offerte di ' +
+            'alloggio — per la prossima volta, e registra con save_push_consent. Chiederlo ADESSO ha ' +
+            'senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno dato all\'arrivo.',
+          '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
+          'Se il feedback lo hanno già dato, non richiederlo: passa al resto.',
         )
       }
     }
@@ -1059,9 +1088,14 @@ function formatRuntimeBlock(params: {
       'a greeting, do NOT introduce yourself, do NOT offer help in general, do NOT write a video link.',
       'Anything of that kind you write is deleted before sending, and what remains is what the guest',
       'reads — so start your very first sentence with the substance.',
-      'On this first turn: answer what they asked (or, if they asked nothing, give one concrete',
-      'suggestion), then ask the FIRST question from ANCORA DA CHIEDERE. Never end with a generic',
-      '"how can I help you?" — that question is already answered by the welcome above you.',
+      'On this first turn, when they asked something whose answer depends on WHO they are — what to do',
+      'today, where to eat, which walk, a plan for the days — do NOT hand over a full set of',
+      'recommendations and then ask who they are: ask FIRST, in one short line, joining the two things',
+      'you need most ("siete in quanti, e quanto vi fermate?"). One line of recommendation before it is',
+      'fine as a taster; six is a list you will have to throw away.',
+      'When what they asked does not depend on it (a phone number, an opening time, how to get here),',
+      'answer it fully, then ask the FIRST question from ANCORA DA CHIEDERE.',
+      'Never end with a generic "how can I help you?" — the welcome above you already said that.',
     )
   } else if (greeting === 'returning') {
     lines.push(
@@ -1202,8 +1236,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // Coming back for a new holiday: archive the finished one and start the
   // stay fresh, keeping who they are and the consent. Done BEFORE the prompt
   // is built, so this turn already behaves like the first of a new trip.
+  // Closing a finished holiday is CODE, not a tool the model may or may not
+  // call. A tool would leave the profile dirty on any turn where the model was
+  // busy with something else — and a stale INLOCO tag means a "dinner tonight"
+  // campaign reaching someone who went home in August (CLAUDE.md §16).
   let returningGuest = false
-  if (stayProfile && isNewStay(stayProfile, now)) {
+  if (stayProfile && isStayOverAndClosed(stayProfile, now)) {
     const rolled = rolloverStay(stayProfile)
     if (customerId && input.config.handlers?.saveStayProfile) {
       // A merge would keep the old dates alive, so the cleared stay is written
@@ -1213,6 +1251,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         customerId,
         profile: rolled,
         replace: true,
+      })
+    }
+    // The stay tags go with the stay. The interest tags do NOT: they record a
+    // consent, which outlives the holiday and is what a campaign next spring
+    // is sent on.
+    if (customerId && input.config.handlers?.setCustomerTags) {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        remove: [TAG_IN_LOCO],
       })
     }
     stayProfile = rolled
@@ -1233,6 +1281,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // full welcome and the presentation video all over again (live check,
   // 2026-08-23). The stay profile is the durable record; the history is not.
   if (greeting === 'new' && stayProfile) greeting = 'returning'
+
+  // On the day they leave, no greeting at all. "Bentornato! Come va la
+  // vacanza?" prefixed to someone writing "oggi ripartiamo" reads as if
+  // nobody was listening — and this turn's job is the goodbye, not a hello
+  // (live check, 2026-08-23).
+  if (greeting === 'returning' && daysLeftInStay(stayProfile, now) !== null && daysLeftInStay(stayProfile, now)! <= 0) {
+    greeting = 'none'
+  }
   updateState(sessionId, { greeting }, { mirror: false })
 
   const faqs = input.config.handlers?.getFaqs
