@@ -67,6 +67,26 @@ function describeCode(code: number): string {
   return WEATHER_CODES[code] ?? 'condizioni variabili'
 }
 
+/** WMO codes that describe some form of precipitation. */
+function isPrecipitationCode(code: number): boolean {
+  return code >= 51
+}
+
+/**
+ * Below this probability the day is not a rainy day, whatever the WMO code
+ * says.
+ *
+ * The daily code reports the most significant phenomenon the model saw at ANY
+ * point in the day, so a single 3%-likely shower stamps the whole day
+ * "rovesci". Printed next to its own probability that reads as a
+ * contradiction — "rovesci deboli e zero probabilità di pioggia" was the
+ * actual sentence a customer got (live run, 2026-08-22). The probability is
+ * the number a tourist plans around, so it wins: below the threshold the
+ * summary describes the sky, and the possible shower is mentioned as the
+ * afterthought it is.
+ */
+const RAIN_MENTION_THRESHOLD = 25
+
 interface OpenMeteoResponse {
   current?: { time: string; weather_code: number; temperature_2m: number; precipitation: number }
   hourly?: { time: string[]; weather_code: number[]; temperature_2m: number[]; precipitation_probability: number[] }
@@ -135,13 +155,34 @@ function formatDay(
   index: number,
   rainWindow: string | null,
 ): string {
+  const code = daily.weather_code[index]
+  const probability = daily.precipitation_probability_max[index]
+  const unlikelyRain =
+    isPrecipitationCode(code) &&
+    typeof probability === 'number' &&
+    probability < RAIN_MENTION_THRESHOLD
+
+  const sky = unlikelyRain ? 'in prevalenza asciutto' : describeCode(code)
+
   const parts = [
-    `${label}: ${describeCode(daily.weather_code[index])}`,
+    `${label}: ${sky}`,
     `min ${Math.round(daily.temperature_2m_min[index])}°C / max ${Math.round(daily.temperature_2m_max[index])}°C`,
   ]
-  const probability = daily.precipitation_probability_max[index]
-  if (typeof probability === 'number') parts.push(`probabilità di pioggia ${probability}%`)
-  if (rainWindow) parts.push(rainWindow)
+
+  if (unlikelyRain) {
+    // The code label is phrased for the "Oggi: rovesci" slot, so it does not
+    // decline into a subordinate clause ("qualche rovesci deboli isolato").
+    // The clause is built without it: what matters here is that the chance is
+    // small, not which flavour of precipitation it would have been.
+    parts.push(
+      `possibile qualche precipitazione isolata ma poco probabile (${probability}%) — trattala come una giornata buona`,
+    )
+  } else if (typeof probability === 'number') {
+    parts.push(`probabilità di pioggia ${probability}%`)
+    // The hourly window only means something on a day that may actually rain.
+    if (rainWindow) parts.push(rainWindow)
+  }
+
   return `- ${parts.join(', ')}`
 }
 
