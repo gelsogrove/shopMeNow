@@ -710,6 +710,39 @@ function looksLikeWrongLanguage(text: string, language: string): boolean {
 }
 
 /**
+ * Did the guest actually ask something?
+ *
+ * A question mark, or one of the shapes a request takes without one ("dimmi
+ * dove", "vorrei sapere", "quanto costa"). Used only to decide whether a
+ * reply that consists of nothing but our own intake question is acceptable —
+ * it never picks an answer or routes anything (CLAUDE.md §14).
+ */
+function guestAskedSomething(message: string): boolean {
+  if (message.includes('?')) return true
+  return /\b(dimmi|dove|quando|quanto|come|quale|quali|vorrei|mi serve|cerco|consigli|posso|c'è|ci sono|apre|chiude|costa)\b/i.test(
+    message,
+  )
+}
+
+/**
+ * Is this reply nothing but our own intake question?
+ *
+ * Short, ends in a question mark, and carries no fact of its own. When the
+ * guest asked something and gets this back, their question was dropped —
+ * which happened the moment "one question at a time" was made strict: asked
+ * the price of a cable car, the assistant replied "until when are you
+ * staying?" and nothing else (Andrea, 2026-08-23).
+ */
+function isBareIntakeQuestion(reply: string): boolean {
+  const text = reply.trim()
+  if (!text.endsWith('?')) return false
+  if (text.length > 180) return false
+  // A reply carrying a number, a name in bold or a list is doing real work.
+  if (/\d/.test(text) || /\*\*/.test(text) || /^[-•*]/m.test(text)) return false
+  return true
+}
+
+/**
  * Substitute the per-customer placeholders in tenant copy.
  *
  * The host does this for the strings IT sends, but the greeting is prepended
@@ -992,7 +1025,13 @@ function formatStayBlock(
     // in one breath and reads like a form (Andrea, 2026-08-23). What it
     // cannot see, it cannot ask.
     lines.push(
-      '🚨 LA PROSSIMA DOMANDA DA FARE — questa e SOLO questa, una per messaggio:',
+      '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
+      'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
+      '(o di\' onestamente che non lo sai e dove trovarlo), e SOLO DOPO, in coda, aggiungi la domanda',
+      'qui sotto. Ignorare la domanda del cliente per fargliene una tua è il modo più veloce per farlo',
+      'smettere di scrivere.',
+      '',
+      'LA PROSSIMA DOMANDA DA FARE — questa e SOLO questa, una per messaggio, MAI due insieme:',
       `  ${missing[0]}`,
       'Non chiedere nient\'altro sul suo soggiorno in questo messaggio: le altre verranno dopo, una',
       'alla volta. Registrala in `asked` con save_stay nello stesso momento in cui la fai.',
@@ -1508,6 +1547,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   /** Last free-text answer the model produced, kept as a fallback. */
   let pendingReply = ''
   let emptyRetryDone = false
+  let droppedQuestionRetryDone = false
 
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
@@ -1570,6 +1610,30 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (lang) {
         const resolved = resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
         commitLanguageFromReply(sessionId, resolved)
+      }
+
+      // GUARD: the guest asked something and got only our intake question back.
+      // Their question was dropped — the one failure that makes people stop
+      // writing. One more hop, spent answering them.
+      if (
+        !droppedQuestionRetryDone &&
+        guestAskedSomething(userMessage) &&
+        isBareIntakeQuestion(checked.text)
+      ) {
+        droppedQuestionRetryDone = true
+        // eslint-disable-next-line no-console
+        console.error('[demosappada][guard] guest question ignored — retrying')
+        pendingReply = result.content || pendingReply
+        messages.push({ role: 'assistant', content: result.content || null })
+        messages.push({
+          role: 'user',
+          content:
+            '[SYSTEM] Hai risposto solo con una tua domanda, ignorando quello che il cliente ti ha ' +
+            'chiesto. Riscrivi la risposta: PRIMA rispondi alla sua domanda — se non hai il dato, dillo ' +
+            'apertamente e indica dove trovarlo (InfoPoint 0435 469131 o il sito ufficiale) — e SOLO ' +
+            'DOPO, in coda, rimetti la tua domanda in una riga.',
+        })
+        continue
       }
 
       // The model declares the language correctly and then writes in another
