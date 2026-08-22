@@ -133,6 +133,29 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
   },
+  // Visit Sappada Dolomiti — mountain tourism assistant. Same WhatsApp-green
+  // branding; only the wordmark ("Sappada") and monogram ("VS") differ. Page
+  // copy is forced to Italian: the tenant serves an Italian alpine resort and
+  // settings.json declares "it" as its default language.
+  demosappada: {
+    titleA: "Visit",
+    titleB: "Sappada",
+    monogram: "VS",
+    primaryColor: "#25D366",
+    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
+    blob1: "bg-emerald-400/30",
+    blob2: "bg-teal-300/20",
+    accentText: "text-emerald-300",
+    badge: "bg-white/10 text-emerald-50",
+    dot: "bg-emerald-300",
+    introText: "text-emerald-50/90",
+    tryLabel: "text-emerald-200",
+    itemsText: "text-emerald-50/90",
+    spinner: "border-emerald-200 border-t-white",
+    loadingText: "text-emerald-50",
+    openHint: "text-emerald-100/80",
+    pageLang: "it",
+  },
   // Demobeauty — beauty-center franchise. Same WhatsApp-green branding; only the
   // wordmark ("beauty") and monogram ("DB") differ.
   demobeauty: {
