@@ -90,6 +90,26 @@ const BUILT_IN_TOOLS: Record<string, Array<{ name: string; description: string; 
             name: "remember",
             description: "Saves the customer's name to their profile when they mention it.",
         },
+        {
+            name: "save_stay",
+            description:
+                "Records who the guest is and how long they stay — party, dates, origin, constraints, interests — so every later turn is answered knowing them.",
+        },
+        {
+            name: "save_itinerary",
+            description:
+                "Stores the day-by-day plan agreed with the guest, so a returning conversation carries it on instead of starting over.",
+        },
+        {
+            name: "save_push_consent",
+            description:
+                "Records consent to promotional messages and which topics were accepted, as interest tags used to target campaigns.",
+        },
+        {
+            name: "save_feedback",
+            description:
+                "Saves the end-of-stay feedback (rating and comment) onto the customer card.",
+        },
     ],
 }
 
@@ -98,11 +118,15 @@ interface CallingFunctionsSectionProps {
     canEdit: boolean
     /**
      * True when this workspace runs a code-based custom chatbot module
-     * (workspace.customChatbotId). Those modules execute WEBHOOK functions
-     * only — INTERNAL and DELEGATE_TO_AGENT resolve inside the deprecated
-     * flow-builder pipeline, which they never run. Offering the other two
-     * would let someone define a tool that silently never fires, so the
-     * type selector is reduced to Webhook.
+     * (workspace.customChatbotId). Those modules execute WEBHOOK and INTERNAL
+     * functions; DELEGATE_TO_AGENT still resolves inside the deprecated
+     * flow-builder pipeline, which they never run, so that one type alone is
+     * kept out of the selector.
+     *
+     * INTERNAL used to be excluded here too, back when the module loaded only
+     * WEBHOOK rows — which is what left this workspace's `changeLanguage` and
+     * `manageNotifications` rows active in the database and invisible to the
+     * model (Andrea, 2026-08-23).
      */
     isCustomChatbot?: boolean
     /** workspace.customChatbotId — selects which built-in tools to list. */
@@ -775,11 +799,9 @@ Credentials Mapping: {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="WEBHOOK">🌐 Webhook (External API)</SelectItem>
+                                        <SelectItem value="INTERNAL">⚙️ Internal Logic (System)</SelectItem>
                                         {!isCustomChatbot && (
-                                            <>
-                                                <SelectItem value="INTERNAL">⚙️ Internal Logic (System)</SelectItem>
-                                                <SelectItem value="DELEGATE_TO_AGENT">🤖 Specialized Agent</SelectItem>
-                                            </>
+                                            <SelectItem value="DELEGATE_TO_AGENT">🤖 Specialized Agent</SelectItem>
                                         )}
                                     </SelectContent>
                                 </Select>

@@ -422,7 +422,7 @@ const SAVE_STAY_TOOL = {
           description:
             'Which intake questions you have now PUT to the guest, whether or not they answered. Send it ' +
             'in the same call as the question you just asked, so it is never asked twice.',
-          items: { type: 'string', enum: ['party', 'stay', 'origin', 'childrenAges', 'constraints'] },
+          items: { type: 'string', enum: ['party', 'stay', 'origin', 'childrenAges', 'constraints', 'interests'] },
         },
         itinerary: {
           type: 'string',
@@ -1514,6 +1514,24 @@ export function formatStayBlock(
     )
   }
 
+  // What they came here to DO — asked, not waited for. `interests` existed as
+  // a field and as a line in the prompt, but no question ever collected it,
+  // so it filled in only when a guest volunteered it. That is the difference
+  // between this assistant and a search engine: knowing they want to ski, or
+  // hunt mushrooms, or just eat well, is what turns an answer into a plan
+  // (Andrea, 2026-08-23: "altrimenti è uguale a ChatGPT").
+  //
+  // Asked right before the itinerary, so what they say goes straight into
+  // building it rather than sitting unused in the profile.
+  if (!stay.interests && !asked.has('interests')) {
+    missing.push(
+      'cosa gli piacerebbe fare in questi giorni. NOMINA QUALCHE ESEMPIO concreto e adatto ALLA ' +
+        'STAGIONE che trovi in RUNTIME — sciare o le ciaspole d\'inverno, camminare o i funghi ' +
+        'd\'autunno, le malghe e i rifugi d\'estate — e lascia aperto ad altro. Serve a costruire il ' +
+        'programma sulle loro passioni invece che su una lista uguale per tutti → `interests`',
+    )
+  }
+
   // Before the itinerary, never after: a nine-day plan built without knowing
   // they were on foot had to be rewritten from scratch, and the guest read
   // the same wall of text twice (Andrea, 2026-08-23).
@@ -1648,6 +1666,25 @@ const UNSUBSCRIBE_RE = /^\s*unsubscribe[\s.!]*$/i
 
 function isUnsubscribeCommand(message: string): boolean {
   return UNSUBSCRIBE_RE.test(message)
+}
+
+/**
+ * Which season the guest is actually in, for the RUNTIME block.
+ *
+ * Sappada is a two-season destination and the FAQ block describes both at
+ * once: proposing a chairlift in November or a snowshoe walk in July is the
+ * failure this prevents. Months, not equinoxes — what matters is whether the
+ * lifts and the trails are open, and the shoulder months are named as such so
+ * the model hedges instead of promising.
+ */
+function seasonOf(now: Date): string {
+  const month = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, month: 'numeric' }).format(now),
+  )
+  if (month === 12 || month <= 2) return 'inverno (neve, impianti, ciaspole)'
+  if (month >= 6 && month <= 9) return 'estate (escursioni, malghe, rifugi aperti)'
+  if (month >= 3 && month <= 5) return 'primavera — stagione di mezzo: impianti chiusi, quota alta ancora innevata, verifica sempre'
+  return 'autunno — stagione di mezzo: impianti chiusi, molti rifugi chiusi, verifica sempre'
 }
 
 const TAG_IN_LOCO = 'INLOCO'
@@ -1831,6 +1868,12 @@ function formatRuntimeBlock(params: {
     'Use this date and this hour EXACTLY as given: never state a different weekday, and never guess',
     'what time it is. "Oggi" is the date above, whatever hour it is.',
     `Channel: ${channel}`,
+    // The season decides which half of the FAQ block is even applicable —
+    // the ski lifts and the Cascatelle are not alternatives, they are
+    // different months. Derived from the date rather than asked, and stated
+    // plainly because a model reasoning "August, so probably warm" is
+    // guessing at exactly the point where it must not.
+    `Season: ${seasonOf(now)}`,
   ]
   if (customerName) lines.push(`Customer name: ${customerName}`)
   if (settings.privacyPolicyUrl) lines.push(`Privacy policy URL: ${settings.privacyPolicyUrl}`)
@@ -2326,14 +2369,35 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // The question the block showed this turn is recorded as ASKED, whether
       // or not the model remembered to do it and whether or not the guest
       // answered. It was put to them; asking again would be the failure.
+      //
+      // `consent` and `itinerary` are marked HERE too, not only inside their
+      // tools. They used to rely on save_push_consent / save_itinerary firing
+      // — which happens only when the guest answers clearly. Asked at the end
+      // of the intake and met with silence, a shrug or a change of subject,
+      // the flag stayed false and the question came back on every single
+      // message, for the rest of the holiday (Andrea, 2026-08-23: "solo la
+      // prima volta … questo deve andare sì o sì"). Their tools still record
+      // the ANSWER; this records that it was PUT.
       if (questionShown && stayEnabled && customerId && input.config.handlers?.saveStayProfile) {
         const already = new Set(stayProfile?.asked ?? [])
-        if (!already.has(questionShown) && questionShown !== 'consent' && questionShown !== 'itinerary') {
+        const profile: StayProfile = {}
+        if (!already.has(questionShown)) {
           already.add(questionShown)
+          profile.asked = Array.from(already)
+        }
+        if (questionShown === 'consent' && !stayProfile?.consentAsked) {
+          profile.consentAsked = true
+        }
+        if (questionShown === 'itinerary' && !stayProfile?.itinerary) {
+          // 'asked' rather than yes/no: the answer, when it comes, overwrites
+          // this with what they actually chose.
+          profile.itinerary = 'asked'
+        }
+        if (Object.keys(profile).length > 0) {
           await input.config.handlers.saveStayProfile({
             workspaceId: input.config.workspaceId,
             customerId,
-            profile: { asked: Array.from(already) },
+            profile,
           })
         }
       }

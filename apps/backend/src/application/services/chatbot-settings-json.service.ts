@@ -366,6 +366,142 @@ export async function buildChatbotSettingsJson(
   }
 }
 
+
+/**
+ * The internal calling functions every chatbot workspace gets.
+ *
+ * They exist as ROWS, not as code in a module, because that is where they are
+ * managed from: the Settings UI lists them, a tenant can reword a description
+ * or deactivate one, and the module simply receives whatever is active
+ * (Andrea, 2026-08-23: "dentro custom tools devi avere tutte le calling
+ * function che usiamo, perché le maneggiamo da lì").
+ *
+ * Nothing here is tenant-specific: each one writes a column that exists for
+ * every customer of every workspace, so the same five serve any module.
+ * `isSystemFunction` marks them as core — the UI must not offer to delete
+ * them, only to deactivate.
+ *
+ * Seeding is additive and idempotent: a row that already exists is left
+ * exactly as it is, so a description edited in the UI survives every save.
+ */
+const INTERNAL_CALLING_FUNCTIONS: Array<{
+  functionName: string
+  description: string
+  parameters: Record<string, unknown>
+  responseInstructions: string
+}> = [
+  {
+    functionName: "changeLanguage",
+    description:
+      "Change the language this customer is written to, when they ask for it explicitly or start writing in another language.",
+    parameters: {
+      type: "object",
+      properties: {
+        language: { type: "string", description: "ISO code: it, en, de, es, fr." },
+      },
+      required: ["language"],
+      additionalProperties: false,
+    },
+    responseInstructions: "Confirm in one short line, in the NEW language.",
+  },
+  {
+    functionName: "updateCustomerName",
+    description:
+      "Save or correct the name this customer wants to be called by. Call it the moment they tell you.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The name as they gave it." },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
+    responseInstructions: "Use the name naturally from now on; do not announce that you saved it.",
+  },
+  {
+    functionName: "updateCustomerNotes",
+    description:
+      "Append something durable learned about this customer that the next conversation should know. Not for passing chit-chat.",
+    parameters: {
+      type: "object",
+      properties: {
+        notes: { type: "string", description: "One short sentence, in the customer's own terms." },
+      },
+      required: ["notes"],
+      additionalProperties: false,
+    },
+    responseInstructions: "Say nothing about it — this is a background record.",
+  },
+  {
+    functionName: "saveFeedback",
+    description:
+      "Save the customer's feedback: what went well, what did not, and a 1-5 rating if they gave one.",
+    parameters: {
+      type: "object",
+      properties: {
+        rating: { type: "integer", minimum: 1, maximum: 5 },
+        comment: { type: "string", description: "Their words, not a summary." },
+      },
+      additionalProperties: false,
+    },
+    responseInstructions: "Thank them briefly and sincerely, without overselling it.",
+  },
+  {
+    functionName: "manageNotifications",
+    description:
+      "Record consent to promotional messages. Call it ONLY after a clear answer — never assume a yes.",
+    parameters: {
+      type: "object",
+      properties: {
+        granted: { type: "boolean", description: "true = accepts, false = revokes." },
+        action: { type: "string", enum: ["SUBSCRIBE", "UNSUBSCRIBE"] },
+      },
+      additionalProperties: false,
+    },
+    responseInstructions:
+      "On acceptance, say in one line that they can stop any time by writing UNSUBSCRIBE. On refusal, accept it without insisting.",
+  },
+]
+
+/**
+ * Ensure the internal calling functions exist for this workspace.
+ *
+ * Runs on every settings save so a workspace created before these existed
+ * picks them up. Failures are logged and swallowed: a missing tool row must
+ * never make a settings save fail.
+ */
+export async function seedInternalCallingFunctions(workspaceId: string): Promise<void> {
+  try {
+    const existing = await prisma.workspaceCallingFunction.findMany({
+      where: { workspaceId },
+      select: { functionName: true },
+    })
+    const have = new Set(existing.map((r) => r.functionName))
+
+    const missing = INTERNAL_CALLING_FUNCTIONS.filter((f) => !have.has(f.functionName))
+    if (missing.length === 0) return
+
+    await prisma.workspaceCallingFunction.createMany({
+      data: missing.map((f) => ({
+        workspaceId,
+        functionName: f.functionName,
+        description: f.description,
+        parameters: f.parameters as never,
+        responseInstructions: f.responseInstructions,
+        executionType: "INTERNAL",
+        isSystemFunction: true,
+        isActive: true,
+      })),
+      skipDuplicates: true,
+    })
+    logger.info(
+      `[ChatbotSettings] Seeded ${missing.length} internal calling function(s) for ${workspaceId}`
+    )
+  } catch (err) {
+    logger.warn("[ChatbotSettings] Could not seed internal calling functions:", err)
+  }
+}
+
 /**
  * Rewrites `custom-<module>/settings.json` from the saved workspace row.
  *
@@ -382,6 +518,11 @@ export async function writeChatbotSettingsJson(
   if (!workspace.customChatbotId) return
 
   try {
+    // The tools this workspace can call are part of "everything configured on
+    // save": seeded first, so a module reading the fresh file and the tool
+    // list in the same turn sees a consistent picture.
+    if (workspace.id) await seedInternalCallingFunctions(workspace.id)
+
     const settings = await buildChatbotSettingsJson(workspace)
     if (!settings) return
 

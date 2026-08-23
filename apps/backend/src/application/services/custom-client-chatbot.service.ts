@@ -1147,7 +1147,17 @@ export class CustomClientChatbotService {
   private async getCustomTools(p: { workspaceId: string }): Promise<CustomToolDefinition[]> {
     try {
       const rows = await defaultPrisma.workspaceCallingFunction.findMany({
-        where: { workspaceId: p.workspaceId, isActive: true, executionType: "WEBHOOK" },
+        // INTERNAL as well as WEBHOOK: an internal function is executed by
+        // this host against its own handlers instead of an HTTP endpoint, but
+        // it is declared to the model exactly the same way. Filtering to
+        // WEBHOOK alone is what left Sappada's `changeLanguage` and
+        // `manageNotifications` rows active in the database and invisible to
+        // the model (Andrea, 2026-08-23: "le maneggiamo da li").
+        where: {
+          workspaceId: p.workspaceId,
+          isActive: true,
+          executionType: { in: ["WEBHOOK", "INTERNAL"] },
+        },
         select: { functionName: true, description: true, parameters: true, responseInstructions: true },
       })
 
@@ -1197,8 +1207,16 @@ export class CustomClientChatbotService {
 
       // Re-checked here, not trusted from the definition list: the row may have
       // been deactivated or retyped between the two calls.
-      if (!fn || !fn.isActive || fn.executionType !== "WEBHOOK") {
-        return { ok: false, error: `tool "${p.name}" is not an active webhook tool` }
+      if (!fn || !fn.isActive) {
+        return { ok: false, error: `tool "${p.name}" is not active` }
+      }
+
+      if (fn.executionType === "INTERNAL") {
+        return await this.executeInternalTool(p)
+      }
+
+      if (fn.executionType !== "WEBHOOK") {
+        return { ok: false, error: `tool "${p.name}" has unsupported executionType` }
       }
 
       const workspace = await defaultPrisma.workspace.findUnique({
@@ -1397,6 +1415,112 @@ export class CustomClientChatbotService {
    * whatever the module did not know about. Comparison is case-insensitive so
    * "inloco" and "INLOCO" never both end up on the record.
    */
+  /**
+   * Execute an INTERNAL calling function against this host's own storage.
+   *
+   * The row in `workspace_calling_functions` owns WHAT the model sees — name,
+   * description, parameter schema — and this switch owns HOW it is carried
+   * out. Nothing here is tenant-specific: every branch writes a column that
+   * exists for every customer of every workspace, so the same five functions
+   * serve any chatbot module without a line of code per tenant (Andrea,
+   * 2026-08-23: "il settings deve andare perfetto per altri chatbot").
+   *
+   * Every query is scoped by workspaceId as well as customerId — a customer
+   * id is not a capability, and the tenant boundary is enforced at the query,
+   * never assumed from the caller.
+   */
+  private async executeInternalTool(p: {
+    workspaceId: string
+    customerId?: string
+    name: string
+    args: Record<string, unknown>
+  }): Promise<CustomToolResult> {
+    if (!p.customerId) {
+      return { ok: false, error: "no customer in context" }
+    }
+    const where = { id: p.customerId, workspaceId: p.workspaceId }
+    const text = (value: unknown): string | undefined => {
+      const trimmed = typeof value === "string" ? value.trim() : ""
+      return trimmed.length > 0 ? trimmed : undefined
+    }
+
+    switch (p.name) {
+      case "changeLanguage": {
+        const language = text(p.args.language)
+        if (!language) return { ok: false, error: "language is required" }
+        const updated = await defaultPrisma.customers.updateMany({
+          where,
+          data: { language },
+        })
+        return updated.count > 0
+          ? { ok: true, data: { language } }
+          : { ok: false, error: "customer not found" }
+      }
+
+      case "updateCustomerName": {
+        const name = text(p.args.name)
+        if (!name) return { ok: false, error: "name is required" }
+        const updated = await defaultPrisma.customers.updateMany({ where, data: { name } })
+        return updated.count > 0
+          ? { ok: true, data: { name } }
+          : { ok: false, error: "customer not found" }
+      }
+
+      case "updateCustomerNotes": {
+        const note = text(p.args.notes)
+        if (!note) return { ok: false, error: "notes is required" }
+        // Appended, never replaced: notes accumulate what has been learned
+        // about this customer, and an overwrite silently discards whatever
+        // an operator typed on the card by hand.
+        const current = await defaultPrisma.customers.findFirst({
+          where,
+          select: { notes: true },
+        })
+        if (!current) return { ok: false, error: "customer not found" }
+        const merged = current.notes?.trim() ? `${current.notes.trim()}\n${note}` : note
+        await defaultPrisma.customers.updateMany({ where, data: { notes: merged } })
+        return { ok: true, data: { notes: merged } }
+      }
+
+      case "saveFeedback": {
+        const rating = typeof p.args.rating === "number" ? p.args.rating : undefined
+        const saved = await this.saveFeedback({
+          workspaceId: p.workspaceId,
+          customerId: p.customerId,
+          rating,
+          comment: text(p.args.comment),
+        })
+        return saved ? { ok: true, data: { saved } } : { ok: false, error: "nothing to save" }
+      }
+
+      case "manageNotifications": {
+        // Accepts either shape the platform already uses for this function:
+        // an explicit boolean, or the SUBSCRIBE/UNSUBSCRIBE action string.
+        const action = text(p.args.action)?.toUpperCase()
+        const granted =
+          typeof p.args.granted === "boolean"
+            ? p.args.granted
+            : action === "SUBSCRIBE"
+              ? true
+              : action === "UNSUBSCRIBE"
+                ? false
+                : undefined
+        if (granted === undefined) {
+          return { ok: false, error: "granted or action (SUBSCRIBE/UNSUBSCRIBE) is required" }
+        }
+        const saved = await this.savePushConsent({
+          workspaceId: p.workspaceId,
+          customerId: p.customerId,
+          granted,
+        })
+        return saved ? { ok: true, data: { granted } } : { ok: false, error: "customer not found" }
+      }
+
+      default:
+        return { ok: false, error: `unknown internal tool "${p.name}"` }
+    }
+  }
+
   private async setCustomerTags(p: {
     workspaceId: string
     customerId: string
