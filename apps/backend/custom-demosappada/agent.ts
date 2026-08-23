@@ -197,6 +197,17 @@ export interface StayProfile {
    */
   constraints?: string
   /**
+   * What they said they enjoy — nature, food, history, quiet, walking.
+   *
+   * Kept apart from `constraints` on purpose. A constraint FILTERS ("no car"
+   * rules things out); an interest ORIENTS ("we like food" moves the dairy up
+   * the list without ruling the museum out). Merged into one field the block
+   * below would filter every proposal on a preference, and a guest who likes
+   * nature would stop being told about anything indoors — including on the
+   * day it rains (Andrea, 2026-08-23).
+   */
+  interests?: string
+  /**
    * What a person at the Pro Loco wrote on this guest's card. Read-only:
    * the module never writes here, it only takes it into account.
    */
@@ -396,6 +407,7 @@ const SAVE_STAY_TOOL = {
         children: { type: 'integer', description: 'How many children.' },
         childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },
         constraints: { type: 'string', description: 'Anything that limits what suits them: coeliac or another intolerance, no car, a pregnancy, limited walking, a dog, a wheelchair. Append to what is already there rather than replacing it.' },
+        interests: { type: 'string', description: 'What they said they enjoy: nature, food, history, quiet, walking, local culture. A preference, NOT a limitation — anything that rules an option out belongs in constraints. Append to what is already there rather than replacing it.' },
         seniors: { type: 'integer', description: 'How many elderly people.' },
         arrivalDate: { type: 'string', description: 'YYYY-MM-DD, the day they arrived.' },
         departureDate: { type: 'string', description: 'YYYY-MM-DD, the day they leave. Compute it from "we stay 5 days" using today\'s date in RUNTIME.' },
@@ -932,8 +944,20 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
  * point of knowing the stay is to concentrate the suggestions into the time
  * that is actually left.
  */
-/** The key of the intake question the block is about to show, if any. */
-let nextAskedKey: string | null = null
+/**
+ * What formatStayBlock produced: the prompt text, and WHICH intake question it
+ * put in front of the model.
+ *
+ * The key used to be a module-level `let` that the function assigned as a side
+ * effect. Two turns being served at once on the same dyno shared it, so one
+ * guest's pending question leaked into another's turn — and any turn that
+ * returned early left the previous value standing (CLAUDE.md §10: no shared
+ * state across conversations).
+ */
+export interface StayBlock {
+  text: string
+  askedKey: string | null
+}
 
 /** Extract the `key` marker from a question line ("… → `party`"). */
 function keyOf(question: string): string | null {
@@ -945,13 +969,19 @@ export function formatStayBlock(
   profile: StayProfile | null,
   now: Date,
   returningGuest = false,
-): string {
-  if (!profile) return ''
+): StayBlock {
+  // A guest with no saved profile is precisely the one everything still has to
+  // be asked of. Returning early here meant the FIRST message — the only turn
+  // where the intake has not started at all — got no question and no key: the
+  // model improvised a seven-day plan for two people it knew nothing about,
+  // and the single-question guard stayed off because there was no pending key
+  // to guard (Andrea, live, 2026-08-23).
+  const stay: StayProfile = profile ?? ({} as StayProfile)
 
   const lines: string[] = []
 
-  if (returningGuest) {
-    const last = profile.pastStays?.[profile.pastStays.length - 1]
+  if (returningGuest && profile) {
+    const last = stay.pastStays?.[stay.pastStays.length - 1]
     lines.push(
       'È TORNATO — nuova vacanza. Salutalo come si saluta chi si rivede, non come uno sconosciuto:',
       last?.doneAlready
@@ -963,38 +993,45 @@ export function formatStayBlock(
     )
   }
   const party: string[] = []
-  if (profile.adults) party.push(`${profile.adults} adulti`)
-  if (profile.children) {
+  if (stay.adults) party.push(`${stay.adults} adulti`)
+  if (stay.children) {
     party.push(
-      profile.childrenAges
-        ? `${profile.children} bambini (${profile.childrenAges})`
-        : `${profile.children} bambini`,
+      stay.childrenAges
+        ? `${stay.children} bambini (${stay.childrenAges})`
+        : `${stay.children} bambini`,
     )
   }
-  if (profile.seniors) party.push(`${profile.seniors} anziani`)
+  if (stay.seniors) party.push(`${stay.seniors} anziani`)
   if (party.length > 0) lines.push(`In vacanza: ${party.join(', ')}`)
-  if (profile.origin) lines.push(`Arrivano da: ${profile.origin}`)
-  if (profile.constraints) {
+  if (stay.origin) lines.push(`Arrivano da: ${stay.origin}`)
+  if (stay.interests) {
     lines.push(
-      `⚠️ DA TENERE PRESENTE SEMPRE: ${profile.constraints}. Filtra OGNI proposta su questo, senza ` +
+      `Gli interessa: ${stay.interests}. Dai la precedenza a queste cose quando scegli cosa proporre, ` +
+        'ma non escludere il resto: è una preferenza, non un vincolo.',
+    )
+  }
+
+  if (stay.constraints) {
+    lines.push(
+      `⚠️ DA TENERE PRESENTE SEMPRE: ${stay.constraints}. Filtra OGNI proposta su questo, senza ` +
         'ricordarglielo ogni volta: se non puoi rispettarlo, dillo apertamente e proponi altro.',
     )
   }
-  if (profile.arrivalDate) {
-    const arrivalDay = new Date(`${profile.arrivalDate}T12:00:00`)
+  if (stay.arrivalDate) {
+    const arrivalDay = new Date(`${stay.arrivalDate}T12:00:00`)
     const arrivalLabel = Number.isNaN(arrivalDay.getTime())
-      ? profile.arrivalDate
+      ? stay.arrivalDate
       : arrivalDay.toLocaleDateString('it-IT', {
           timeZone: TIMEZONE,
           weekday: 'long',
           day: 'numeric',
           month: 'long',
         })
-    lines.push(`Arrivo: ${profile.arrivalDate} (${arrivalLabel})`)
+    lines.push(`Arrivo: ${stay.arrivalDate} (${arrivalLabel})`)
   }
 
-  if (profile.departureDate) {
-    const departure = Date.parse(`${profile.departureDate}T23:59:59`)
+  if (stay.departureDate) {
+    const departure = Date.parse(`${stay.departureDate}T23:59:59`)
     if (!Number.isNaN(departure)) {
       // Counted between CALENDAR DAYS in Sappada, not from a millisecond
       // difference: `T23:59:59` is parsed in the host's zone, so on a UTC dyno
@@ -1008,7 +1045,7 @@ export function formatStayBlock(
       const todayInSappada = now.toLocaleDateString('en-CA', { timeZone: TIMEZONE })
       const daysLeft =
         Math.round(
-          (Date.parse(`${profile.departureDate}T12:00:00Z`) -
+          (Date.parse(`${stay.departureDate}T12:00:00Z`) -
             Date.parse(`${todayInSappada}T12:00:00Z`)) /
             86_400_000,
         ) + 1
@@ -1016,9 +1053,9 @@ export function formatStayBlock(
     // about a date it had just saved as the 3rd — the day of the week is
     // arithmetic, and arithmetic is not what a language model is for
     // (Andrea, 2026-08-23).
-    const departureDay = new Date(`${profile.departureDate}T12:00:00`)
+    const departureDay = new Date(`${stay.departureDate}T12:00:00`)
     const departureLabel = Number.isNaN(departureDay.getTime())
-      ? profile.departureDate
+      ? stay.departureDate
       : departureDay.toLocaleDateString('it-IT', {
           timeZone: TIMEZONE,
           weekday: 'long',
@@ -1026,7 +1063,7 @@ export function formatStayBlock(
           month: 'long',
         })
     lines.push(
-      `Partenza: ${profile.departureDate} (${departureLabel}) — usa QUESTO giorno della settimana, non calcolarlo tu`,
+      `Partenza: ${stay.departureDate} (${departureLabel}) — usa QUESTO giorno della settimana, non calcolarlo tu`,
     )
       if (daysLeft > 1) {
         lines.push(
@@ -1056,7 +1093,7 @@ export function formatStayBlock(
             'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
             'dato all\'arrivo.',
           '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
-          profile.feedbackGiven
+          stay.feedbackGiven
             ? '  ⚠️ IL FEEDBACK È GIÀ STATO DATO: non richiederlo, passa direttamente al punto 2 e 3.'
             : '  Il feedback non è ancora stato raccolto.',
         )
@@ -1064,9 +1101,9 @@ export function formatStayBlock(
     }
   }
 
-  if (profile.operatorNotes) {
+  if (stay.operatorNotes) {
     lines.push(
-      `NOTA DELLA PRO LOCO su questo ospite: ${profile.operatorNotes}. Tienine conto, ma non citarla ` +
+      `NOTA DELLA PRO LOCO su questo ospite: ${stay.operatorNotes}. Tienine conto, ma non citarla ` +
         'mai apertamente: è scritta per noi, non per lui.',
     )
   }
@@ -1077,64 +1114,66 @@ export function formatStayBlock(
       'e da lì in poi i giorni rimanenti e i consigli si ricalcolano da soli.',
   )
 
-  if (profile.doneAlready) {
+  if (stay.doneAlready) {
     lines.push(
-      `GIÀ FATTO (non riproporlo, semmai costruiscici sopra): ${profile.doneAlready}`,
+      `GIÀ FATTO (non riproporlo, semmai costruiscici sopra): ${stay.doneAlready}`,
     )
   }
 
   // What is still open, and what must never be asked again. Computed here so
   // the model is told plainly instead of inferring it from absence — absence
   // is exactly what it gets wrong, re-asking a question the guest ignored.
-  const asked = new Set(profile.asked ?? [])
+  const asked = new Set(stay.asked ?? [])
   const missing: string[] = []
 
   // Order matters: this is a conversation, not a form. The easy, sociable
   // questions come first and the personal ones last — "da dove arrivate" was
   // sixth, after allergies and a marketing consent, which is not how anyone
   // talks to a guest (Andrea, 2026-08-23).
-  if (!profile.adults && !profile.children && !profile.seniors && !asked.has('party')) {
+  if (!stay.adults && !stay.children && !stay.seniors && !asked.has('party')) {
     missing.push('con chi è (quanti adulti, bambini, anziani) — così gli dai i consigli giusti → `party`')
   } else if (
     // "siamo in 3" says how many, not who: without the breakdown the advice
     // is guesswork, and the assistant had started inventing children that
     // nobody had mentioned.
-    profile.adults === undefined &&
-    profile.children === undefined &&
-    profile.seniors === undefined &&
+    stay.adults === undefined &&
+    stay.children === undefined &&
+    stay.seniors === undefined &&
     asked.has('party')
   ) {
     missing.push('come sono divisi (adulti, bambini, anziani) — così gli dai i consigli giusti → `party`')
   }
 
-  if (!profile.departureDate && !asked.has('stay')) {
+  if (!stay.departureDate && !asked.has('stay')) {
     missing.push('fino a quando resta → `stay`')
   }
 
-  if (!profile.origin && !asked.has('origin')) {
+  if (!stay.origin && !asked.has('origin')) {
     missing.push('da dove arriva → `origin`')
   }
 
-  if (profile.children && profile.children > 0 && !profile.childrenAges && !asked.has('childrenAges')) {
+  if (stay.children && stay.children > 0 && !stay.childrenAges && !asked.has('childrenAges')) {
     missing.push("che età hanno i bambini — così gli proponi cose adatte a loro → `childrenAges`")
   }
 
-  if (!profile.constraints && !asked.has('constraints')) {
+  if (!stay.constraints && !asked.has('constraints')) {
     missing.push(
-      'se c\'è qualcosa da tenere presente — allergie o intolleranze, se sono senza auto, una ' +
-        'gravidanza, difficoltà a camminare, un cane — così gli dai consigli mirati → `constraints`',
+      'se c\'è qualcosa che devi sapere — allergie o intolleranze, se sono senza auto, una ' +
+        'gravidanza, difficoltà a camminare, un cane — oppure qualcosa che li interessa in ' +
+        'particolare; digli che userai qualsiasi cosa ti dicano per affinare i consigli. ' +
+        'UNA domanda sola, non due → `constraints`',
     )
   }
 
   // Before the itinerary, never after: a nine-day plan built without knowing
   // they were on foot had to be rewritten from scratch, and the guest read
   // the same wall of text twice (Andrea, 2026-08-23).
-  if (!profile.itinerary) {
+  if (!stay.itinerary) {
     missing.push("se vuole che gli prepari un programma per i giorni che restano → `itinerary`")
   }
 
   // Last: a marketing consent asked before any trust is built gets a no.
-  if (!profile.consentAsked) {
+  if (!stay.consentAsked) {
     missing.push(
       'se ci dà il consenso a mandargli notizie su eventi e offerte del territorio SOLO PER LA DURATA ' +
         'DELLA SUA PERMANENZA — dillo esplicitamente così, è un consenso a termine e si dà volentieri; ' +
@@ -1142,7 +1181,7 @@ export function formatStayBlock(
     )
   }
 
-  nextAskedKey = missing.length > 0 ? keyOf(missing[0]) : null
+  const askedKey = missing.length > 0 ? keyOf(missing[0]) : null
 
   if (missing.length > 0) {
     // ONE question is shown, not the list. Given the list the model merges
@@ -1181,41 +1220,41 @@ export function formatStayBlock(
     lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
   }
 
-  if (asked.size > 0 || profile.consentAsked || profile.itinerary) {
+  if (asked.size > 0 || stay.consentAsked || stay.itinerary) {
     const done = [
       ...Array.from(asked),
-      ...(profile.consentAsked ? ['consent'] : []),
-      ...(profile.itinerary ? ['itinerary'] : []),
+      ...(stay.consentAsked ? ['consent'] : []),
+      ...(stay.itinerary ? ['itinerary'] : []),
     ]
     lines.push(
       `GIÀ CHIESTO (non richiederlo MAI più, nemmeno se non ha risposto): ${done.join(', ')}`,
     )
   }
 
-  if (profile.consentAsked) {
+  if (stay.consentAsked) {
     lines.push(
       'Il consenso per la permanenza è già stato chiesto. Non richiederlo ora: si torna sul tema SOLO ' +
         'alla partenza, e lì riguarda il rinnovo per la prossima volta (eventi dell\'anno e alloggi).',
     )
   }
 
-  if (profile.itineraryPlan) {
+  if (stay.itineraryPlan) {
     lines.push(
       'PROGRAMMA CONCORDATO (è il vostro piano: portalo avanti, non ricominciare da capo):',
-      ...profile.itineraryPlan.split('\n').map((line) => `  ${line}`),
+      ...stay.itineraryPlan.split('\n').map((line) => `  ${line}`),
       'Quando qualcosa cambia — meteo, una cosa già fatta, una partenza anticipata — aggiorna SOLO i ' +
         'giorni interessati e risalvalo INTERO con save_itinerary.',
     )
   }
 
-  if (profile.itinerary === 'no') {
+  if (stay.itinerary === 'no') {
     lines.push('Ha detto che NON vuole un programma: rispondi solo alle sue domande, non pianificare.')
-  } else if (profile.itinerary === 'yes') {
+  } else if (stay.itinerary === 'yes') {
     lines.push('Vuole il programma: sei il suo pianificatore, porta avanti il piano.')
   }
 
-  if (lines.length === 0) return ''
-  return ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n')
+  if (lines.length === 0) return { text: '', askedKey }
+  return { text: ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n'), askedKey }
 }
 
 /**
@@ -1666,6 +1705,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
   }
 
+  const stayBlock = formatStayBlock(stayProfile, now, returningGuest)
+
   const systemPrompt = [
     settings.mainPrompt?.trim() || '',
     '',
@@ -1674,14 +1715,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     faqBlock,
     '',
     formatRuntimeBlock({ now, channel: input.channel, greeting, settings, customerName: knownName }),
-    formatStayBlock(stayProfile, now, returningGuest),
+    stayBlock.text,
     formatStateForPrompt(getState(sessionId)),
   ]
     .filter((part) => part !== '')
     .join('\n')
 
-  // Captured now: formatStayBlock set it while building the prompt above.
-  const questionShown = nextAskedKey
+  // Carried on the block itself, not read back from module state: the pending
+  // question belongs to THIS turn's guest.
+  const questionShown = stayBlock.askedKey
 
   const trimmedHistory = history.slice(-(settings.maxHistoryMessages ?? 30))
   const messages: Message[] = [
@@ -1965,6 +2007,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               previous && !previous.toLowerCase().includes(constraint.toLowerCase())
                 ? `${previous}; ${constraint}`
                 : constraint
+          }
+          // Appended for the same reason as constraints: what they enjoy comes
+          // out over several turns, and a replacing write would lose the first.
+          const interest = str(args.interests)
+          if (interest) {
+            const previous = stayProfile?.interests?.trim()
+            profile.interests =
+              previous && !previous.toLowerCase().includes(interest.toLowerCase())
+                ? `${previous}; ${interest}`
+                : interest
           }
           profile.seniors = num(args.seniors)
           profile.arrivalDate = str(args.arrivalDate)

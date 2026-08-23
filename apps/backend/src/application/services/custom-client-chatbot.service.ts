@@ -182,6 +182,8 @@ type StayProfile = {
   childrenAges?: string
   /** Free text: coeliac, no car, pregnancy, limited walking, a dog… */
   constraints?: string
+  /** What they enjoy — a preference that orients, not a limit that filters. */
+  interests?: string
   /** What a person at the Pro Loco wrote on the card. Read-only for the module. */
   operatorNotes?: string
   seniors?: number
@@ -1594,6 +1596,7 @@ function renderStayNotes(profile: StayProfile, manualNotes: string): string {
 
   const lines = parts.length > 0 ? [parts.join(" · ")] : []
   if (profile.constraints) lines.push(`⚠️ Da tenere presente: ${profile.constraints}`)
+  if (profile.interests) lines.push(`Interessi: ${profile.interests}`)
   if (profile.doneAlready) lines.push(`Ha fatto: ${profile.doneAlready}`)
   // The guest's own words about the stay: the single most useful line on the
   // card for whoever picks the phone up next.
