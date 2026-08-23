@@ -1902,6 +1902,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   let pendingReply = ''
   let emptyRetryDone = false
   let droppedQuestionRetryDone = false
+  let missingExamplesRetryDone = false
 
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
@@ -2003,6 +2004,35 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             'chiesto. Riscrivi la risposta: PRIMA rispondi alla sua domanda — se non hai il dato, dillo ' +
             'apertamente e indica dove trovarlo (InfoPoint 0435 469131 o il sito ufficiale) — e SOLO ' +
             'DOPO, in coda, rimetti la tua domanda in una riga.',
+        })
+        continue
+      }
+
+      // GUARD: the intake question went out stripped of its examples. The
+      // prompt lists them and says to pronounce them; asked for six examples
+      // "in one line" the model kept the question and dropped the list, which
+      // is how "c'è qualcosa che devo tenere presente?" reached a guest
+      // (Andrea, live, 2026-08-23). One hop to put them back.
+      if (
+        !missingExamplesRetryDone &&
+        intakeQuestionLacksExamples(checked.text, questionShown)
+      ) {
+        missingExamplesRetryDone = true
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][guard] intake question without examples (${questionShown}) — retrying`)
+        pendingReply = result.content || pendingReply
+        messages.push({ role: 'assistant', content: result.content || null })
+        messages.push({
+          role: 'user',
+          content:
+            questionShown === 'party'
+              ? '[SYSTEM] Hai chiesto con chi è senza nominare le categorie, e una domanda chiusa come ' +
+                '"siete entrambi adulti?" si porta via bambini e anziani in un colpo solo. Riscrivi la ' +
+                'risposta tenendo tutto il resto com\'è: la domanda deve nominare adulti, bambini e anziani.'
+              : '[SYSTEM] Hai chiesto se c\'è qualcosa da sapere senza dare gli esempi, e a una domanda ' +
+                'generica si risponde "no". Riscrivi la risposta tenendo tutto il resto com\'è: la domanda ' +
+                'deve nominare qualche esempio concreto — allergie o intolleranze, se sono senza auto, una ' +
+                'gravidanza, difficoltà a camminare, un cane, o al contrario qualcosa che gli piace.',
         })
         continue
       }
