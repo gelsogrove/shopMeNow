@@ -1000,11 +1000,18 @@ export function formatStayBlock(
       // difference: `T23:59:59` is parsed in the host's zone, so on a UTC dyno
       // the small hours of a Rome day still belonged to the previous one and
       // the count came out a day short (Andrea, live, 2026-08-23).
+      //
+      // DAYS OF PRESENCE, not nights: a guest who says "restiamo 5 giorni" is
+      // counting the days they are here, arrival day included — so the day of
+      // departure itself is 1, not 0 (Andrea's call, 2026-08-23). The +1 is
+      // what turns a calendar gap into that count.
       const todayInSappada = now.toLocaleDateString('en-CA', { timeZone: TIMEZONE })
-      const daysLeft = Math.round(
-        (Date.parse(`${profile.departureDate}T12:00:00Z`) - Date.parse(`${todayInSappada}T12:00:00Z`)) /
-          86_400_000,
-      )
+      const daysLeft =
+        Math.round(
+          (Date.parse(`${profile.departureDate}T12:00:00Z`) -
+            Date.parse(`${todayInSappada}T12:00:00Z`)) /
+            86_400_000,
+        ) + 1
       // With the weekday spelled out: the model said "giovedì 2 settembre"
     // about a date it had just saved as the 3rd — the day of the week is
     // arithmetic, and arithmetic is not what a language model is for
@@ -1028,7 +1035,7 @@ export function formatStayBlock(
         )
       } else if (daysLeft === 1) {
         lines.push(
-          'ULTIMO GIORNO PIENO. Proponi solo cose che stanno in una giornata, e verso sera chiedi come ' +
+          'OGGI È IL GIORNO DELLA PARTENZA. Proponi solo cose che stanno in una mattinata, e chiedi come ' +
             'è andata la vacanza (cosa è piaciuto e cosa no) e salvala con save_feedback, poi salutali ' +
             'dicendo che li aspettiamo di nuovo.',
         )
