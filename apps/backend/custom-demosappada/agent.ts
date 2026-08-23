@@ -618,6 +618,7 @@ function mediaLinksIn(text: string): string[] {
  */
 const SUBJECT_MIN_SCORE = 0.6
 const SUBJECT_MIN_MARGIN = 0.2
+const SUPPORT_MIN_RATIO = 1.5
 
 function withFaqMedia(
   reply: string,
@@ -655,7 +656,12 @@ function withFaqMedia(
   if (runnerUp && top.score - runnerUp.score < SUBJECT_MIN_MARGIN) {
     const topSupport = answerOverlap(top.faq, reply, faqs)
     const rivalSupport = answerOverlap(runnerUp.faq, reply, faqs)
-    if (topSupport - rivalSupport < SUBJECT_MIN_MARGIN) return reply
+    // Compared as a RATIO, not a difference. A short reply covers only a
+    // sliver of a long FAQ answer, so both supports are small numbers
+    // (0.031 vs 0.016 for Malga Tuglia) and no absolute gap between them
+    // would ever clear a fixed threshold. What matters is not how much the
+    // winner covers, but that it covers decisively more than its rival.
+    if (topSupport <= rivalSupport * SUPPORT_MIN_RATIO) return reply
   }
 
   const links = mediaLinksIn(top.faq.answer).filter((l) => !skip.has(l))
