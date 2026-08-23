@@ -9,10 +9,15 @@
   "maxHistoryMessages": 30,
   "privacyPolicyUrl": "https://www.echatbot.ai/privacy-policy",
   "defaultLanguage": "it",
-  "enabledLanguages": ["it", "en", "de"],
+  "enabledLanguages": [
+    "it",
+    "en",
+    "de"
+  ],
   "welcomeMessage": "Ciao! 👋 Sono {{chatbotName}}, l'assistente di {{companyName}}. Ti aiuto a scoprire cosa fare, dove mangiare, come muoverti e tutte le informazioni utili su Sappada.",
   "welcomeBackMessage": "Bentornato {{customerName}}! 👋 Come posso aiutarti oggi?",
   "rateLimitedMessage": "Stai scrivendo un po' troppo in fretta — aspetta qualche secondo e riprova.",
+  "unsubscribedMessage": "Grazie, è tutto a posto: non riceverai più nostri messaggi promozionali. Se cambi idea puoi riscrivermi quando vuoi.",
   "sessionTooLongMessage": "Questa conversazione è andata avanti parecchio. Per informazioni più approfondite puoi contattare l'InfoPoint di Sappada allo 0435 469131.",
   "welcomeVideoUrl": "https://www.youtube.com/watch?v=d0n2ElZp7aM",
   "weatherEnabled": true,

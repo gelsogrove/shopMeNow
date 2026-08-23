@@ -65,6 +65,8 @@ interface Settings {
   welcomeMessage?: string
   welcomeBackMessage?: string
   rateLimitedMessage?: string
+  /** Confirmation sent after an UNSUBSCRIBE. Authored in ONE language; the host translates. */
+  unsubscribedMessage?: string
   sessionTooLongMessage?: string
   /** Presentation video shown once, on the first turn of a new conversation. */
   welcomeVideoUrl?: string
@@ -123,6 +125,8 @@ export interface WorkspaceMessages {
   welcomeBack?: string | null
   rateLimited?: string | null
   sessionTooLong?: string | null
+  /** Confirmation sent after the customer revokes consent with UNSUBSCRIBE. */
+  unsubscribed?: string | null
 }
 
 export interface FaqEntry {
@@ -463,7 +467,7 @@ const SAVE_CONSENT_TOOL = {
     name: 'save_push_consent',
     description:
       'Record whether the customer agrees to receive messages about the area, and WHAT about: events, ' +
-      'accommodation offers, or both. Call it ONLY after they answered clearly, with their actual answer ' +
+      'accommodation, general offers, or any combination. Call it ONLY after they answered clearly, with their actual answer ' +
       '— never assume a yes, and never assume both topics when they named one. Call it again at the end ' +
       'of the holiday if you re-confirm it.',
     parameters: {
@@ -473,8 +477,9 @@ const SAVE_CONSENT_TOOL = {
         topics: {
           type: 'array',
           description:
-            'What they agreed to hear about. Send only what they actually said yes to.',
-          items: { type: 'string', enum: ['events', 'lodging'] },
+            'What they agreed to hear about. Send only what they actually said yes to — never all ' +
+            'three because they said a general yes.',
+          items: { type: 'string', enum: ['events', 'lodging', 'offers'] },
         },
       },
       required: ['granted'],
@@ -580,11 +585,33 @@ const VIDEO_INTRO: Record<string, string> = {
  * because an instruction the model may still ignore is not a guarantee
  * (CLAUDE.md §16 iron rule 1).
  */
-const FAQ_MEDIA_RE =
-  /https?:\/\/[^\s<>()\[\]]*(?:youtube\.com|youtu\.be|vimeo\.com|\.jpg|\.jpeg|\.png|\.webp|\.gif|\.mp4)[^\s<>()\[\]]*/gi
+const ANY_LINK_RE = /https?:\/\/[^\s<>()\[\]]+/gi
+const VIDEO_LINK_RE = /(?:youtube\.com|youtu\.be|vimeo\.com|\.mp4)/i
+const PHOTO_LINK_RE = /\.(?:jpg|jpeg|png|webp|gif)(?:$|[?#])/i
 
+/**
+ * Every link a FAQ entry carries, richest first.
+ *
+ * Andrea's order, 2026-08-23: "preferisco sempre il video" — a video, else a
+ * photo, else the page itself. One link goes out, so which one it is decides
+ * what the guest sees: a detail answer about a rifugio should show the place,
+ * and only fall back to a URL when there is nothing to show.
+ *
+ * Trailing sentence punctuation is trimmed: a link cited mid-sentence ends up
+ * carrying the comma after it, and a comma inside a URL breaks the preview.
+ */
 function mediaLinksIn(text: string): string[] {
-  return Array.from(new Set(text.match(FAQ_MEDIA_RE) ?? []))
+  const links = Array.from(new Set((text.match(ANY_LINK_RE) ?? []).map(trimUrlPunctuation)))
+  const rank = (link: string): number => {
+    if (VIDEO_LINK_RE.test(link)) return 0
+    if (PHOTO_LINK_RE.test(link)) return 1
+    return 2
+  }
+  return links.sort((a, b) => rank(a) - rank(b))
+}
+
+function trimUrlPunctuation(raw: string): string {
+  return raw.replace(/[)\].,;:!?]+$/, '')
 }
 
 /**
@@ -637,9 +664,45 @@ function presentationVideoGoesOut(
   return !getState(sessionId).videoSent && !stayProfile?.videoSent
 }
 
+/**
+ * May a place's own photo or video go out on this turn at all?
+ *
+ * Two turns where the answer is no, for opposite reasons:
+ *
+ * - the presentation video is going out (see above) — one video per message;
+ * - the holiday is OVER. The closing turns are feedback, the renewed consent
+ *   and the goodbye, and the guest is on the motorway home. The prompt
+ *   already says "non proporre più attività: non sono più in zona", yet a
+ *   guest writing "ci sono piaciute le cascatelle" was sent the waterfall
+ *   video underneath the feedback question — an advert for the place they
+ *   have just left, stapled under the one thing they were meant to read
+ *   (Andrea, 2026-08-23). A medium is sent when it serves the guest, not
+ *   when a word matches.
+ */
+function contentMediaAllowed(
+  greeting: 'new' | 'returning' | 'none',
+  sessionId: string,
+  stayProfile: StayProfile | null | undefined,
+  settings: Settings,
+  now: Date,
+): boolean {
+  if (presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) return false
+  const daysLeft = daysLeftInStay(stayProfile ?? null, now)
+  return daysLeft === null || daysLeft > 0
+}
+
 const SUBJECT_MIN_SCORE = 0.6
 const SUBJECT_MIN_MARGIN = 0.2
 const SUPPORT_MIN_RATIO = 1.5
+
+/**
+ * How many places a reply can name before it stops being ABOUT one of them.
+ *
+ * Two, because a detail answer legitimately brushes past a neighbour — the
+ * Cascatelle entry names the museum by the bridge — while a list names four,
+ * six, ten. Measured on the same score, so no phrase matching is involved.
+ */
+const LIST_NAMED_PLACES = 2
 
 function withFaqMedia(
   reply: string,
@@ -648,6 +711,16 @@ function withFaqMedia(
   excluded: string[],
 ): string {
   const skip = new Set([...mediaLinksIn(reply), ...excluded.filter(Boolean)])
+
+  // A reply that names several places is a LIST, even when only one of them
+  // happens to carry a video — and then that one wins by having no rival,
+  // which is exactly backwards. Asked "cosa faccio con i bambini", the reply
+  // offers the Gnomi, the Daini, the SapPark, Nevelandia and mentions the
+  // Cascatelle in passing; the waterfall video is the only one in the set, so
+  // it was being attached to an answer that was not about waterfalls
+  // (Andrea, 2026-08-23). Media belong to a detail answer, never to a list.
+  const namedPlaces = faqs.filter((faq) => subjectScore(faq, reply, faqs) >= SUBJECT_MIN_SCORE).length
+  if (namedPlaces > LIST_NAMED_PLACES) return reply
 
   // The reply is the stronger signal: it spells the place out in full, while
   // the guest writes "si le cascatelle" and never types the second half of
@@ -1353,8 +1426,10 @@ export function formatStayBlock(
           '  1. Chiedi come è andata — cosa è piaciuto e cosa no — e salva con save_feedback.',
           '  2. Il consenso che avevano dato valeva SOLO per la permanenza, che ora è finita. Chiedi se ' +
             'vogliono RINNOVARLO per la prossima volta: ' +
-            'gli eventi dell\'anno (il Carnevale, le feste d\'estate) e le offerte di alloggio. Chiedi su ' +
-            'quale delle due, o entrambe, e registra con save_push_consent indicando i topics scelti. ' +
+            'gli eventi dell\'anno (il Carnevale, le feste d\'estate), le offerte di alloggio e le ' +
+            'promozioni del territorio. Chiedi su quali delle tre, e registra con save_push_consent ' +
+            'indicando SOLO i topics che hanno nominato. Se accettano, ricorda anche qui in una riga ' +
+            'che possono togliere il consenso quando vogliono scrivendo UNSUBSCRIBE. ' +
             'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
             'dato all\'arrivo.',
           '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
@@ -1449,9 +1524,13 @@ export function formatStayBlock(
   // Last: a marketing consent asked before any trust is built gets a no.
   if (!stay.consentAsked) {
     missing.push(
-      'se ci dà il consenso a mandargli notizie su eventi e offerte del territorio SOLO PER LA DURATA ' +
-        'DELLA SUA PERMANENZA — dillo esplicitamente così, è un consenso a termine e si dà volentieri; ' +
-        'alla partenza gli chiederemo se vuole rinnovarlo → `consent`',
+      'se ci dà il consenso a mandargli notizie SOLO PER LA DURATA DELLA SUA PERMANENZA — dillo ' +
+        'esplicitamente così, è un consenso a termine e si dà volentieri. NOMINA LE TRE COSE e chiedi ' +
+        'su quali: gli eventi di questi giorni, le offerte degli alloggi, le offerte e promozioni del ' +
+        'territorio. Registra con save_push_consent SOLO i topics che ha davvero nominato — un "sì" ' +
+        'generico non è un sì a tutti e tre. Quando accetta, DILLO SEMPRE nella stessa risposta: che ' +
+        'può togliere il consenso quando vuole scrivendo UNSUBSCRIBE. ' +
+        'Alla partenza gli chiederemo se vuole rinnovarlo → `consent`',
     )
   }
 
@@ -1520,6 +1599,14 @@ export function formatStayBlock(
       ...stay.itineraryPlan.split('\n').map((line) => `  ${line}`),
       'Quando qualcosa cambia — meteo, una cosa già fatta, una partenza anticipata — aggiorna SOLO i ' +
         'giorni interessati e risalvalo INTERO con save_itinerary.',
+      // Asking during the stay, not only at the end: the answer is what feeds
+      // `doneAlready`, and `doneAlready` is what stops the same excursion
+      // being proposed twice. Left to the end of the holiday it arrives too
+      // late to be useful to THIS guest (Andrea, 2026-08-23).
+      'Se il programma prevedeva qualcosa per IERI o per OGGI e non sai ancora com\'è andata, chiedilo ' +
+        'in una riga, con naturalezza, in coda alla tua risposta: sapere se ci sono stati e se è ' +
+        'piaciuto è quello che ti evita di riproporglielo. Quello che ti dicono va salvato subito con ' +
+        'save_stay in `doneAlready`. Non insistere se non rispondono.',
     )
   }
 
@@ -1544,9 +1631,29 @@ export function formatStayBlock(
  * `INLOCO` is DERIVED from the stay dates, never asked and never set by the
  * model: the guest does not announce their departure, the calendar does.
  */
+/**
+ * The word the guest was promised: writing it revokes the consent.
+ *
+ * This is NOT phrase-based intent detection (CLAUDE.md §14) — nothing here
+ * guesses what the guest meant. It is a COMMAND WORD we ourselves published
+ * to them when they opted in, in the same class as the numeric selection the
+ * rule explicitly allows. Recognising it is honouring a promise, and the GDPR
+ * right to withdraw cannot depend on the model noticing.
+ *
+ * Matched alone on the line, in any case, with optional punctuation: a
+ * sentence that merely CONTAINS the word ("cosa vuol dire unsubscribe?") is a
+ * question, not a revocation.
+ */
+const UNSUBSCRIBE_RE = /^\s*unsubscribe[\s.!]*$/i
+
+function isUnsubscribeCommand(message: string): boolean {
+  return UNSUBSCRIBE_RE.test(message)
+}
+
 const TAG_IN_LOCO = 'INLOCO'
 const TAG_INTEREST_EVENTS = 'INTERESSE-EVENTI'
 const TAG_INTEREST_LODGING = 'INTERESSE-ALLOGGI'
+const TAG_INTEREST_OFFERS = 'INTERESSE-OFFERTE'
 
 /**
  * Is this guest in town right now, according to the dates they gave us?
@@ -1879,6 +1986,37 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // The stay tools need a customer to write to: in the playground there is
   // none, so they are simply not offered rather than failing at call time.
   const customerId = input.context.customerId
+
+  // Revocation, before ANY other guard: a guest withdrawing consent must not
+  // be turned away by a rate limit or a session cap, and must not depend on
+  // the model choosing to call a tool. Deterministic code, because this is
+  // the promise made when the consent was taken (CLAUDE.md §16 iron rule 1).
+  if (isUnsubscribeCommand(userMessage) && customerId) {
+    if (input.config.handlers?.savePushConsent) {
+      await input.config.handlers.savePushConsent({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        granted: false,
+      })
+    }
+    // The interest tags go with it: a consent that is revoked but leaves its
+    // segments behind is a campaign waiting to reach someone who said stop.
+    if (input.config.handlers?.setCustomerTags) {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        remove: [TAG_INTEREST_EVENTS, TAG_INTEREST_LODGING, TAG_INTEREST_OFFERS],
+      })
+    }
+    // eslint-disable-next-line no-console
+    console.error(`[demosappada][unsubscribe] consent revoked for ${customerId}`)
+    return {
+      reply: settings.unsubscribedMessage?.trim() || null,
+      tokensUsed: 0,
+      answeredFromFaq: false,
+    }
+  }
+
   const stayEnabled = !!customerId && !!input.config.handlers?.saveStayProfile
   let stayProfile =
     customerId && input.config.handlers?.getStayProfile
@@ -2100,7 +2238,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // After the strip, never before: the links come from the FAQ block, so
       // they would survive the guard anyway, and appending first would only
       // make it re-scan text it already approved.
-      if (!presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) {
+      if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now)) {
         checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
       }
 
@@ -2426,19 +2564,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // the campaign side can segment without knowing this module exists.
           if (input.config.handlers.setCustomerTags) {
             const topics = Array.isArray(args.topics) ? (args.topics as unknown[]) : []
-            const wantsEvents = granted && topics.includes('events')
-            const wantsLodging = granted && topics.includes('lodging')
+            const wanted = (topic: string): boolean => granted && topics.includes(topic)
+            const byTopic: Array<[string, string]> = [
+              ['events', TAG_INTEREST_EVENTS],
+              ['lodging', TAG_INTEREST_LODGING],
+              ['offers', TAG_INTEREST_OFFERS],
+            ]
             await input.config.handlers.setCustomerTags({
               workspaceId: input.config.workspaceId,
               customerId,
-              add: [
-                ...(wantsEvents ? [TAG_INTEREST_EVENTS] : []),
-                ...(wantsLodging ? [TAG_INTEREST_LODGING] : []),
-              ],
-              remove: [
-                ...(wantsEvents ? [] : [TAG_INTEREST_EVENTS]),
-                ...(wantsLodging ? [] : [TAG_INTEREST_LODGING]),
-              ],
+              add: byTopic.filter(([topic]) => wanted(topic)).map(([, tag]) => tag),
+              remove: byTopic.filter(([topic]) => !wanted(topic)).map(([, tag]) => tag),
             })
           }
 
@@ -2543,7 +2679,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   if (pendingReply.trim()) {
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
-    if (!presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) {
+    if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
     if (questionShown) {
@@ -2584,6 +2720,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
   if (messages?.welcomeBack?.trim()) settings.welcomeBackMessage = messages.welcomeBack.trim()
   if (messages?.rateLimited?.trim()) settings.rateLimitedMessage = messages.rateLimited.trim()
   if (messages?.sessionTooLong?.trim()) settings.sessionTooLongMessage = messages.sessionTooLong.trim()
+  if (messages?.unsubscribed?.trim()) settings.unsubscribedMessage = messages.unsubscribed.trim()
 
   const { sessionId } = input.context
 

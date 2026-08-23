@@ -283,6 +283,8 @@ type ChatbotInput = {
       rateLimited?: string | null
       /** Shown when the conversation exceeds maxTurnsPerSession. */
       sessionTooLong?: string | null
+      /** Confirmation sent after the customer revokes consent with UNSUBSCRIBE. */
+      unsubscribed?: string | null
       /** Intake wording — the module fixes WHEN to ask, the workspace HOW. */
       intakeQuestions?: Record<string, string> | null
     } | null
@@ -530,6 +532,7 @@ export class CustomClientChatbotService {
             // rather than falling back to hardcoded English.
             rateLimited: (chatbotSettings?.rateLimitedMessage as string | undefined) ?? null,
             sessionTooLong: (chatbotSettings?.sessionTooLongMessage as string | undefined) ?? null,
+            unsubscribed: (chatbotSettings?.unsubscribedMessage as string | undefined) ?? null,
             intakeQuestions: (chatbotSettings?.intakeQuestions as Record<string, string> | undefined) ?? null,
           },
           handlers: {

@@ -81,6 +81,8 @@ export interface ChatbotSettingsJson {
   rateLimitedMessage?: string
   /** Shown when the conversation exceeds maxTurnsPerSession. */
   sessionTooLongMessage?: string
+  /** Confirmation sent after the customer revokes consent with UNSUBSCRIBE. */
+  unsubscribedMessage?: string
   /**
    * The intake questions asked verbatim while no flow is attached. Written in
    * one language; the chatbot translates them into the customer's.
