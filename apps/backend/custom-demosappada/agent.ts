@@ -610,13 +610,20 @@ function withFaqVideos(
   const already = videoLinksIn(reply)
   const skip = new Set([...already, ...excluded.filter(Boolean)])
 
+  // A reply that enumerates many places is a list, however it is worded, and
+  // the giveaway is that OTHER entries are named in it too. Counting them is
+  // language-independent and needs no phrase matching (CLAUDE.md §14): with
+  // the ten huts of the "quali rifugi" answer, nine other entries match and
+  // the single video-bearing one loses its claim to be the subject.
+  const namedEntries = faqs.filter((faq) => isSubjectOf(faq, reply)).length
+  if (namedEntries > 1) return reply
+
   const candidates = faqs.filter((faq) => {
     const links = videoLinksIn(faq.answer).filter((l) => !skip.has(l))
     if (links.length === 0) return false
-    // The subject has to be present in what the guest asked or in what the
-    // reply answered — a passing mention inside a longer list does not make
-    // the turn a detail about that place.
-    return isSubjectOf(faq, reply) || isSubjectOf(faq, userMessage)
+    // Asking about a place is enough; the reply alone is not, so that a hut
+    // mentioned in passing does not drag its video into an unrelated answer.
+    return isSubjectOf(faq, userMessage) || isSubjectOf(faq, reply)
   })
 
   if (candidates.length !== 1) return reply
