@@ -984,14 +984,27 @@ export function formatStayBlock(
     const arrivalDay = new Date(`${profile.arrivalDate}T12:00:00`)
     const arrivalLabel = Number.isNaN(arrivalDay.getTime())
       ? profile.arrivalDate
-      : arrivalDay.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+      : arrivalDay.toLocaleDateString('it-IT', {
+          timeZone: TIMEZONE,
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        })
     lines.push(`Arrivo: ${profile.arrivalDate} (${arrivalLabel})`)
   }
 
   if (profile.departureDate) {
     const departure = Date.parse(`${profile.departureDate}T23:59:59`)
     if (!Number.isNaN(departure)) {
-      const daysLeft = Math.ceil((departure - now.getTime()) / 86_400_000)
+      // Counted between CALENDAR DAYS in Sappada, not from a millisecond
+      // difference: `T23:59:59` is parsed in the host's zone, so on a UTC dyno
+      // the small hours of a Rome day still belonged to the previous one and
+      // the count came out a day short (Andrea, live, 2026-08-23).
+      const todayInSappada = now.toLocaleDateString('en-CA', { timeZone: TIMEZONE })
+      const daysLeft = Math.round(
+        (Date.parse(`${profile.departureDate}T12:00:00Z`) - Date.parse(`${todayInSappada}T12:00:00Z`)) /
+          86_400_000,
+      )
       // With the weekday spelled out: the model said "giovedì 2 settembre"
     // about a date it had just saved as the 3rd — the day of the week is
     // arithmetic, and arithmetic is not what a language model is for
@@ -1000,6 +1013,7 @@ export function formatStayBlock(
     const departureLabel = Number.isNaN(departureDay.getTime())
       ? profile.departureDate
       : departureDay.toLocaleDateString('it-IT', {
+          timeZone: TIMEZONE,
           weekday: 'long',
           day: 'numeric',
           month: 'long',
