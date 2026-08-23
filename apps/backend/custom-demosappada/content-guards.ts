@@ -53,6 +53,28 @@ export interface ContentCheck {
  * exist. Emergency numbers pass unconditionally — they are not tenant data
  * and must never be filtered out of a reply about an emergency.
  */
+/**
+ * Clock times as a guest reads them: "9.00", "17:30", "8-12".
+ *
+ * Bare integers are deliberately NOT matched — "20 minuti di cammino" and
+ * "2 ore" are durations the model derives legitimately from the source, and
+ * stripping them would gut correct answers to catch nothing.
+ */
+const TIME_RE = /\b([01]?\d|2[0-3])[.:][0-5]\d\b/g
+
+/** Prices: an amount with a currency mark, in either order. */
+const PRICE_RE = /(?:€\s?\d+(?:[.,]\d{1,2})?|\b\d+(?:[.,]\d{1,2})?\s?(?:€|euro))/gi
+
+/** Digits only, so "9.00" and "9:00" compare equal. */
+function timeDigits(raw: string): string {
+  return raw.replace(/\D/g, '')
+}
+
+/** The numeric part of a price, so "€45" and "45 euro" compare equal. */
+function priceDigits(raw: string): string {
+  return raw.replace(/[^\d]/g, '')
+}
+
 export function stripUnverifiableContacts(reply: string, approvedContent: string): ContentCheck {
   const haystack = approvedContent.toLowerCase()
   const haystackDigits = digitsOf(approvedContent)
@@ -64,6 +86,29 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
     // A URL may be cited with different trailing punctuation than the source.
     const withoutScheme = url.replace(/^https?:\/\//, '').replace(/\/$/, '')
     if (withoutScheme.length > 0 && haystack.includes(withoutScheme)) return match
+    removed.push(match)
+    return ''
+  })
+
+  // Opening times and prices: the two facts after contacts that send someone
+  // somewhere for nothing — a guest who reads "apre alle 9" and finds a
+  // closed door has been failed as surely as one given a wrong number.
+  // Verified against the source rather than trusted: the prompt already
+  // forbids inventing them, and a prompt is a request (CLAUDE.md §16 rule 1).
+  //
+  // Compared on digits alone, so the model may reformat freely: the source's
+  // "9.00" covers a reply's "9:00", and "€45" covers "45 euro".
+  text = text.replace(TIME_RE, (match) => {
+    const digits = timeDigits(match)
+    if (haystackDigits.includes(digits)) return match
+    removed.push(match)
+    return ''
+  })
+
+  text = text.replace(PRICE_RE, (match) => {
+    const digits = priceDigits(match)
+    if (digits.length === 0) return match
+    if (haystackDigits.includes(digits)) return match
     removed.push(match)
     return ''
   })
