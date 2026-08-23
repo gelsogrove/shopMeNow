@@ -906,7 +906,7 @@ function keyOf(question: string): string | null {
   return m ? m[1] : null
 }
 
-function formatStayBlock(
+export function formatStayBlock(
   profile: StayProfile | null,
   now: Date,
   returningGuest = false,
