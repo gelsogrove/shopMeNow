@@ -221,6 +221,16 @@ export interface StayProfile {
   /** 'yes' | 'no' — whether they wanted an itinerary. Asked once. */
   itinerary?: string
   /**
+   * The plan they accepted, one line per day ("2026-08-24: Cascatelle al
+   * mattino, museo il pomeriggio").
+   *
+   * Saved because a plan that lives only in the conversation is lost the
+   * moment they close the chat — and a guest who comes back tomorrow asking
+   * "cosa avevamo detto per oggi?" deserves an answer. Rewritten in full on
+   * every change: a plan is one object, not a log of edits.
+   */
+  itineraryPlan?: string
+  /**
    * True once the presentation video has been sent to THIS GUEST.
    *
    * On the customer, not on the session: widget sessions and WhatsApp threads
@@ -410,6 +420,31 @@ const SAVE_STAY_TOOL = {
   },
 } as const
 
+const SAVE_ITINERARY_TOOL = {
+  type: 'function',
+  function: {
+    name: 'save_itinerary',
+    description:
+      'Save the day-by-day plan the customer ACCEPTED, so it survives the conversation and you can pick ' +
+      'it up tomorrow. Call it right after they agree to a plan, and again — with the FULL updated plan ' +
+      '— every time something changes it: the weather turns, they do something else, they leave earlier.',
+    parameters: {
+      type: 'object',
+      properties: {
+        plan: {
+          type: 'string',
+          description:
+            'The whole plan, one line per day, starting with the ISO date: "2026-08-24: mattina ' +
+            'Cascatelle, pomeriggio museo". Short lines — this is your own note, not the message you ' +
+            'send the customer.',
+        },
+      },
+      required: ['plan'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
 const SAVE_CONSENT_TOOL = {
   type: 'function',
   function: {
@@ -494,7 +529,7 @@ function buildTools(
   const tools: unknown[] = [REMEMBER_TOOL]
   if (weatherEnabled) tools.unshift(WEATHER_TOOL)
   if (accommodationEnabled) tools.push(ACCOMMODATION_TOOL)
-  if (stayEnabled) tools.push(SAVE_STAY_TOOL, SAVE_CONSENT_TOOL, SAVE_FEEDBACK_TOOL)
+  if (stayEnabled) tools.push(SAVE_STAY_TOOL, SAVE_ITINERARY_TOOL, SAVE_CONSENT_TOOL, SAVE_FEEDBACK_TOOL)
   for (const tool of customTools) tools.push(customToolSchema(tool))
   return tools
 }
@@ -1132,6 +1167,15 @@ export function formatStayBlock(
     lines.push(
       'Il consenso per la permanenza è già stato chiesto. Non richiederlo ora: si torna sul tema SOLO ' +
         'alla partenza, e lì riguarda il rinnovo per la prossima volta (eventi dell\'anno e alloggi).',
+    )
+  }
+
+  if (profile.itineraryPlan) {
+    lines.push(
+      'PROGRAMMA CONCORDATO (è il vostro piano: portalo avanti, non ricominciare da capo):',
+      ...profile.itineraryPlan.split('\n').map((line) => `  ${line}`),
+      'Quando qualcosa cambia — meteo, una cosa già fatta, una partenza anticipata — aggiorna SOLO i ' +
+        'giorni interessati e risalvalo INTERO con save_itinerary.',
     )
   }
 
@@ -1915,6 +1959,27 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
                 'goes to save_feedback. Do not ask again about something already recorded.'
               : 'Saved. Do not thank them for the information or repeat it back: just carry on helping.',
           })
+        }
+      } else if (name === 'save_itinerary') {
+        if (!stayEnabled || !customerId) {
+          toolOutput = JSON.stringify({ ok: false, error: 'no_customer' })
+        } else {
+          const args = safeParseArgs(call.function.arguments)
+          const plan = typeof args.plan === 'string' ? args.plan.trim() : ''
+          if (!plan) {
+            toolOutput = JSON.stringify({ ok: false, error: 'empty_plan' })
+          } else {
+            const saved = await input.config.handlers!.saveStayProfile!({
+              workspaceId: input.config.workspaceId,
+              customerId,
+              profile: { itineraryPlan: plan, itinerary: 'yes' },
+            })
+            toolOutput = JSON.stringify({
+              ok: saved,
+              instruction:
+                'Plan saved. Do not read it back to the customer — they just agreed to it. Carry on.',
+            })
+          }
         }
       } else if (name === 'save_push_consent') {
         if (!customerId || !input.config.handlers?.savePushConsent) {

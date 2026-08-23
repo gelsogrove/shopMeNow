@@ -197,6 +197,8 @@ type StayProfile = {
   consentAsked?: boolean
   /** 'yes' | 'no' — whether they wanted a day-by-day plan. */
   itinerary?: string
+  /** The accepted plan, one line per day. Rewritten whole on every change. */
+  itineraryPlan?: string
   /** Presentation video already shown to this guest. */
   videoSent?: boolean
   /** End-of-stay feedback already collected. */
@@ -1596,7 +1598,11 @@ function renderStayNotes(profile: StayProfile, manualNotes: string): string {
   // The guest's own words about the stay: the single most useful line on the
   // card for whoever picks the phone up next.
   if (profile.lastFeedback) lines.push(`Feedback: "${profile.lastFeedback}"`)
-  if (profile.itinerary === "no") lines.push("Non vuole un programma: preferisce chiedere man mano")
+  if (profile.itineraryPlan) {
+    lines.push("Programma concordato:", ...profile.itineraryPlan.split("\n").map((l) => `  ${l}`))
+  } else if (profile.itinerary === "no") {
+    lines.push("Non vuole un programma: preferisce chiedere man mano")
+  }
   if (profile.pastStays?.length) {
     const previous = profile.pastStays
       .map((stay) => {
