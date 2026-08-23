@@ -447,6 +447,18 @@ const INTERNAL_CALLING_FUNCTIONS: Array<{
     responseInstructions: "Thank them briefly and sincerely, without overselling it.",
   },
   {
+    functionName: "startNewStay",
+    description:
+      "Reset the customer's stay and start a fresh one. Call it ONLY when they say so themselves — they are back, they are starting another holiday, the previous one is over. Never call it to fix a wrong date: that is what the save-stay tool is for.",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    responseInstructions:
+      "Welcome them back warmly, then ask the dates of this new stay — you do not know them yet.",
+  },
+  {
     functionName: "manageNotifications",
     description:
       "Record consent to promotional messages. Call it ONLY after a clear answer — never assume a yes.",

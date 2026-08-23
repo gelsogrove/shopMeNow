@@ -1493,6 +1493,37 @@ export class CustomClientChatbotService {
         return saved ? { ok: true, data: { saved } } : { ok: false, error: "nothing to save" }
       }
 
+      case "startNewStay": {
+        // The calendar already rolls a stay over three days after departure.
+        // This is the other route to the same place: the guest SAYS they are
+        // back. Without it, someone returning early — or whose dates were
+        // never saved — stays pinned to a holiday that ended (Andrea,
+        // 2026-08-23).
+        //
+        // Archiving is the module's own logic (what to keep, what to clear),
+        // so this only records the intent; the module rolls the profile over
+        // on the next turn exactly as it does for a calendar rollover.
+        const current = await defaultPrisma.customers.findFirst({
+          where,
+          select: { stayProfile: true },
+        })
+        if (!current) return { ok: false, error: "customer not found" }
+
+        // MERGED onto the existing profile, never written over it: the flag
+        // alone as the whole column would erase the party, the origin and
+        // every past stay — the very history the next welcome-back is built
+        // from.
+        const existing =
+          current.stayProfile && typeof current.stayProfile === "object" && !Array.isArray(current.stayProfile)
+            ? (current.stayProfile as Record<string, unknown>)
+            : {}
+        await defaultPrisma.customers.updateMany({
+          where,
+          data: { stayProfile: { ...existing, restartRequested: true } as never },
+        })
+        return { ok: true, data: { restart: true } }
+      }
+
       case "manageNotifications": {
         // Accepts either shape the platform already uses for this function:
         // an explicit boolean, or the SUBSCRIBE/UNSUBSCRIBE action string.
@@ -1517,7 +1548,15 @@ export class CustomClientChatbotService {
       }
 
       default:
-        return { ok: false, error: `unknown internal tool "${p.name}"` }
+        // Other INTERNAL functions exist in the database — demoam's
+        // appointment suite (bookAppointment, listAvailableSlots, …) is
+        // resolved by the deprecated flow-builder pipeline, not here. Saying
+        // so plainly beats a silent success: the model can tell the customer
+        // it cannot do it, instead of claiming it did.
+        return {
+          ok: false,
+          error: `internal tool "${p.name}" is not implemented for code-based chatbot modules`,
+        }
     }
   }
 

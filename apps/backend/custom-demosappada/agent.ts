@@ -233,6 +233,14 @@ export interface StayProfile {
   asked?: string[]
   /** True once the consent question has been put, whatever the answer was. */
   consentAsked?: boolean
+  /**
+   * Set by the `startNewStay` tool when the guest SAYS they are back.
+   *
+   * The calendar rollover only fires three days after a departure we know
+   * about; someone returning early, or whose dates were never saved, would
+   * stay pinned to a finished holiday. Cleared by the rollover it triggers.
+   */
+  restartRequested?: boolean
   /** 'yes' | 'no' — whether they wanted an itinerary. Asked once. */
   itinerary?: string
   /**
@@ -416,7 +424,14 @@ const SAVE_STAY_TOOL = {
         arrivalDate: { type: 'string', description: 'YYYY-MM-DD, the day they arrived.' },
         departureDate: { type: 'string', description: 'YYYY-MM-DD, the day they leave. Compute it from "we stay 5 days" using today\'s date in RUNTIME.' },
         origin: { type: 'string', description: 'Where they travelled from (city or country).' },
-        doneAlready: { type: 'string', description: 'Something they have now done or seen, in a few words, so it is not proposed again.' },
+        doneAlready: {
+          type: 'string',
+          description:
+            'Something they have now done or seen, in a few words, so it is not proposed again. ' +
+            'When they say HOW it went, put that in the same line — "Cascatelle (piaciute molto)", ' +
+            '"Malga Tuglia (troppo faticosa coi bambini)", "cena da X (deludente)". What they did ' +
+            'stops you repeating it; what they thought of it tells you what to propose next.',
+        },
         asked: {
           type: 'array',
           description:
@@ -452,7 +467,10 @@ const SAVE_ITINERARY_TOOL = {
           description:
             'The whole plan, one line per day, starting with the ISO date: "2026-08-24: mattina ' +
             'Cascatelle, pomeriggio museo". Short lines — this is your own note, not the message you ' +
-            'send the customer.',
+            'send the customer. Build it in this order: what they SAID THEY WANT (interests) first, ' +
+            'then the season in RUNTIME, then the weather per day, then who they are and their ' +
+            'constraints, and never repeat what is already in GIÀ FATTO. A plan that ignores their ' +
+            'interests is a generic list and is worse than no plan.',
         },
       },
       required: ['plan'],
@@ -1239,13 +1257,18 @@ function rolloverStay(profile: StayProfile): StayProfile {
   }
 
   return {
-    // Facts that outlive a single holiday.
+    // Facts that outlive a single holiday: who they are and where they come
+    // from do not change between one August and the next.
     adults: profile.adults,
     children: profile.children,
     childrenAges: profile.childrenAges,
     seniors: profile.seniors,
     origin: profile.origin,
     consentAsked: profile.consentAsked,
+    // Written by a person at the Pro Loco, never by this module. Wiping it
+    // would delete someone else's work.
+    operatorNotes: profile.operatorNotes,
+    notes: profile.notes,
     // Kept in history, cleared from the live stay.
     pastStays: history.slice(-5),
     // Everything below is deliberately absent: a new holiday, asked afresh.
@@ -1253,7 +1276,19 @@ function rolloverStay(profile: StayProfile): StayProfile {
     departureDate: undefined,
     doneAlready: undefined,
     itinerary: undefined,
+    // The plan belonged to the days that are over. Left behind it would be
+    // presented as "il vostro programma" on the first turn of a holiday whose
+    // dates we do not even know yet.
+    itineraryPlan: undefined,
+    // Both are about THIS trip: what limited them last winter (a plaster cast,
+    // a pregnancy) and what they felt like doing then are not facts about the
+    // person, and carrying them over silently filters a holiday they have not
+    // described yet. Asked again, like the dates.
+    constraints: undefined,
+    interests: undefined,
     asked: [],
+    // Consumed: the restart it asked for has just happened.
+    restartRequested: undefined,
     feedbackGiven: undefined,
     lastFeedback: undefined,
     // videoSent is NOT cleared: they have seen the presentation once, and a
@@ -1327,6 +1362,15 @@ export function formatStayBlock(
           'qualcosa di nuovo oppure la stessa cosa in un\'altra stagione (le Cascatelle d\'inverno sono ' +
           'un\'altra cosa).'
         : '  non sappiamo cosa avesse fatto la volta scorsa.',
+      // The archived feedback is the sharpest thing we hold about a returning
+      // guest: it says what to steer AWAY from, which `doneAlready` alone
+      // never does.
+      ...(last?.feedback
+        ? [
+            `  alla fine ci aveva detto: ${last.feedback}. Che gli sia piaciuto o no, orienta le ` +
+              'proposte di quest\'anno di conseguenza.',
+          ]
+        : []),
       '  Le date di questa vacanza NON le sai ancora: chiediglielo.',
     )
   }
@@ -1426,10 +1470,12 @@ export function formatStayBlock(
           '  1. Chiedi come è andata — cosa è piaciuto e cosa no — e salva con save_feedback.',
           '  2. Il consenso che avevano dato valeva SOLO per la permanenza, che ora è finita. Chiedi se ' +
             'vogliono RINNOVARLO per la prossima volta: ' +
-            'gli eventi dell\'anno (il Carnevale, le feste d\'estate), le offerte di alloggio e le ' +
-            'promozioni del territorio. Chiedi su quali delle tre, e registra con save_push_consent ' +
-            'indicando SOLO i topics che hanno nominato. Se accettano, ricorda anche qui in una riga ' +
-            'che possono togliere il consenso quando vogliono scrivendo UNSUBSCRIBE. ' +
+            'gli eventi dell\'anno (il Carnevale, le feste d\'estate) e le offerte di alloggio. ' +
+            'SOLO QUESTE DUE: fuori stagione le promozioni generiche del territorio non servono a chi ' +
+            'non è qui, e un rinnovo più leggero si ottiene molto più facilmente. Chiedi su quale ' +
+            'delle due, o entrambe, e registra con save_push_consent indicando SOLO i topics che ' +
+            'hanno nominato — mai `offers` in questo momento. Ricorda anche qui, in una riga, che ' +
+            'possono togliere il consenso quando vogliono scrivendo UNSUBSCRIBE. ' +
             'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
             'dato all\'arrivo.',
           '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
@@ -1457,6 +1503,24 @@ export function formatStayBlock(
   if (stay.doneAlready) {
     lines.push(
       `GIÀ FATTO (non riproporlo, semmai costruiscici sopra): ${stay.doneAlready}`,
+      // Not proposing it again is half the job. The other half is READING the
+      // reaction: a walk that was too tiring rules out the other long ones,
+      // a disappointing dinner means suggest a different kind of place, and
+      // something they loved is the direction to go further in (Andrea,
+      // 2026-08-23). This is what makes the next proposal follow from the
+      // last one instead of restarting from a generic list.
+      'Se accanto a una di queste cose c\'è come è andata, USALA per scegliere la prossima: se una ' +
+        'non è piaciuta NON proporne una simile, cambia genere; se una è piaciuta molto, vai in ' +
+        'quella direzione. Non commentare il fatto che te lo ricordi, usalo e basta.',
+    )
+  }
+
+  // What they told us at the end of a PREVIOUS holiday. Saved and archived
+  // since the beginning, but never shown to the model, so it changed nothing
+  // (live check, 2026-08-23).
+  if (stay.lastFeedback) {
+    lines.push(
+      `COSA CI AVEVA DETTO L'ULTIMA VOLTA: ${stay.lastFeedback}. Tienine conto in ogni proposta.`,
     )
   }
 
@@ -2077,7 +2141,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // busy with something else — and a stale INLOCO tag means a "dinner tonight"
   // campaign reaching someone who went home in August (CLAUDE.md §16).
   let returningGuest = false
-  if (stayProfile && isStayOverAndClosed(stayProfile, now)) {
+  // Two routes into the same rollover: the calendar says the stay is long
+  // over, or the guest said so themselves through startNewStay.
+  if (stayProfile && (stayProfile.restartRequested || isStayOverAndClosed(stayProfile, now))) {
     const rolled = rolloverStay(stayProfile)
     if (customerId && input.config.handlers?.saveStayProfile) {
       // A merge would keep the old dates alive, so the cleared stay is written
