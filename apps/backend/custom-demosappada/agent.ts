@@ -616,6 +616,27 @@ function mediaLinksIn(text: string): string[] {
  * `excluded` keeps the presentation video out: it is prepended by withWelcome
  * and must not come back a second time as if it were content.
  */
+/**
+ * Is the presentation video going out on THIS turn?
+ *
+ * On a brand-new conversation withWelcome prepends the tenant's presentation
+ * video, and a FAQ video appended underneath makes it two videos in one
+ * message — two WhatsApp previews, with the intake question wedged between
+ * them (Andrea, 2026-08-23: "e dopo il welcome con le notizie?"). The
+ * presentation goes first because it is sent once in the guest's life; the
+ * place's own video is not lost, it arrives the moment they ask about it.
+ */
+function presentationVideoGoesOut(
+  greeting: 'new' | 'returning' | 'none',
+  sessionId: string,
+  stayProfile: StayProfile | null | undefined,
+  settings: Settings,
+): boolean {
+  if (greeting !== 'new') return false
+  if (!settings.welcomeVideoUrl?.trim()) return false
+  return !getState(sessionId).videoSent && !stayProfile?.videoSent
+}
+
 const SUBJECT_MIN_SCORE = 0.6
 const SUBJECT_MIN_MARGIN = 0.2
 const SUPPORT_MIN_RATIO = 1.5
@@ -2079,7 +2100,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // After the strip, never before: the links come from the FAQ block, so
       // they would survive the guard anyway, and appending first would only
       // make it re-scan text it already approved.
-      checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+      if (!presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) {
+        checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+      }
 
       // Only while an intake question is pending: with the intake closed a
       // second question is the model talking to the guest normally, and
@@ -2520,7 +2543,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   if (pendingReply.trim()) {
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
-    checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+    if (!presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) {
+      checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+    }
     if (questionShown) {
       const single = keepSingleQuestion(checked.text)
       if (single.removed.length > 0) {
