@@ -569,6 +569,103 @@ const VIDEO_INTRO: Record<string, string> = {
 }
 
 /**
+ * Video links carried BY a FAQ entry, as opposed to the tenant's presentation
+ * video. Two different things that the prompt used to call by one name: the
+ * blanket "no video" of a mid-conversation turn made the model drop the FAQ's
+ * own links too, so the guest asking about Malga Tuglia got neither of its two
+ * videos — nor the GPX track and the trail description alongside them
+ * (Andrea, 2026-08-23: "volevo un video una foto").
+ *
+ * Wording the prompt more carefully is half the fix; this is the other half,
+ * because an instruction the model may still ignore is not a guarantee
+ * (CLAUDE.md §16 iron rule 1).
+ */
+const FAQ_VIDEO_RE = /https?:\/\/[^\s<>()\[\]]*(?:youtube\.com|youtu\.be|vimeo\.com)[^\s<>()\[\]]*/gi
+
+function videoLinksIn(text: string): string[] {
+  return Array.from(new Set(text.match(FAQ_VIDEO_RE) ?? []))
+}
+
+/**
+ * Append the video of the ONE place the reply is about.
+ *
+ * Andrea's rule, 2026-08-23: media belong to a detail answer, never to a list.
+ * Asked "which mountain huts are there", the reply names ten of them — one
+ * video each would be ten WhatsApp notifications and a chat nobody reads.
+ *
+ * So the test is not "does a FAQ have a video" but "is this reply ABOUT that
+ * one place": the entry's video is appended only when the reply carries the
+ * single richest subject, and only when exactly one candidate qualifies. Two
+ * candidates mean the model combined entries — a list — and nothing is added.
+ *
+ * `excluded` keeps the presentation video out: it is prepended by withWelcome
+ * and must not come back a second time as if it were content.
+ */
+function withFaqVideos(
+  reply: string,
+  faqs: FaqEntry[],
+  userMessage: string,
+  excluded: string[],
+): string {
+  const already = videoLinksIn(reply)
+  const skip = new Set([...already, ...excluded.filter(Boolean)])
+
+  const candidates = faqs.filter((faq) => {
+    const links = videoLinksIn(faq.answer).filter((l) => !skip.has(l))
+    if (links.length === 0) return false
+    // The subject has to be present in what the guest asked or in what the
+    // reply answered — a passing mention inside a longer list does not make
+    // the turn a detail about that place.
+    return isSubjectOf(faq, reply) || isSubjectOf(faq, userMessage)
+  })
+
+  if (candidates.length !== 1) return reply
+
+  const links = videoLinksIn(candidates[0].answer).filter((l) => !skip.has(l))
+  return [reply, '', ...links].join('\n')
+}
+
+/**
+ * Whether `text` is substantially ABOUT this FAQ entry.
+ *
+ * Matching is on the entry's distinctive nouns — the words its question is
+ * built from, minus the ones every tourism question shares. Nothing here reads
+ * INTENT from phrasing (CLAUDE.md §14): it measures topic overlap, so it works
+ * the same in Italian, German and English.
+ */
+function isSubjectOf(faq: FaqEntry, text: string): boolean {
+  const haystack = text.toLowerCase()
+  const terms = distinctiveTerms(faq.question)
+  if (terms.length === 0) return false
+  const hits = terms.filter((t) => haystack.includes(t)).length
+  return hits / terms.length >= 0.5
+}
+
+/**
+ * Words too common across this tenant's FAQ set to identify an entry: every
+ * question mentions the destination, and most are shaped "what is X, how do I
+ * get there". Kept in code, not settings: this is a mechanism bound, not copy
+ * a customer ever reads (CLAUDE.md §1B).
+ */
+const GENERIC_QUESTION_WORDS = new Set([
+  'sappada', 'cosa', 'come', 'dove', 'quali', 'quando', 'quanto', 'sono', 'sono?', 'posso',
+  'arrivo', 'ci', 'si', 'che', 'per', 'del', 'della', 'delle', 'dei', 'con', 'una', 'uno',
+  'gli', 'le', 'la', 'il', 'lo', 'un', 'and', 'the', 'what', 'where', 'how', 'there',
+])
+
+function distinctiveTerms(question: string): string[] {
+  return Array.from(
+    new Set(
+      question
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 3 && !GENERIC_QUESTION_WORDS.has(w)),
+    ),
+  )
+}
+
+/**
  * Translations of the tenant's welcome, keyed by `lang:text`.
  *
  * The welcome is authored once, in one language (CLAUDE.md §1A — no
@@ -787,6 +884,40 @@ function isBareIntakeQuestion(reply: string): boolean {
   // A reply carrying a number, a name in bold or a list is doing real work.
   if (/\d/.test(text) || /\*\*/.test(text) || /^[-•*]/m.test(text)) return false
   return true
+}
+
+/**
+ * Did the intake question reach the guest WITHOUT the examples that make it
+ * answerable?
+ *
+ * Two questions carry examples, and both collapse without them. "C'è qualcosa
+ * che devo tenere presente?" gets a "no"; "siete entrambi adulti?" is a closed
+ * question that takes children and seniors off the table in one move (Andrea,
+ * live, 2026-08-23). The prompt now says to pronounce them, but an instruction
+ * is a request — this is the check.
+ *
+ * Only the presence of the categories is tested, never how they are worded:
+ * the model owns the phrasing and the language, and the guest may be reading
+ * in any of them. A reply that names none of the alternatives is the failure;
+ * one is enough to show the question was opened up.
+ */
+function intakeQuestionLacksExamples(reply: string, key: string | null): boolean {
+  if (key !== 'party' && key !== 'constraints') return false
+  const text = reply.toLowerCase()
+  const groups =
+    key === 'party'
+      ? [
+          /bambin|bimb|figl|piccol|kinder|child|enfant|niñ|nen/,
+          /anzian|nonn|senior|älter|âgé|mayor|gran/,
+        ]
+      : [
+          /allerg|intoller|celiac|glutine|gluten|unverträg/,
+          /auto|macchina|patente|car|coche|voiture|wagen|piedi|fuß|walk|pied/,
+          /gravidanz|incinta|pregnan|embaraz|enceinte|schwanger/,
+          /cammin|deambul|carrozzin|mobilit|walk|gehen|silla|fauteuil/,
+          /cane|cagnolin|animal|dog|hund|perro|chien/,
+        ]
+  return !groups.some((re) => re.test(text))
 }
 
 /**
@@ -1468,8 +1599,9 @@ function formatRuntimeBlock(params: {
     // get_weather to make room for the greeting.
     lines.push(
       '',
-      '🚨 A welcome line and a presentation video are added automatically ABOVE your reply. Do NOT write',
-      'a greeting, do NOT introduce yourself, do NOT offer help in general, do NOT write a video link.',
+      '🚨 A welcome line and the PRESENTATION video are added automatically ABOVE your reply. Do NOT write',
+      'a greeting, do NOT introduce yourself, do NOT offer help in general, do NOT repeat the presentation',
+      'video. Links that belong to a FAQ entry — including its videos — are content: quote them normally.',
       'Anything of that kind you write is deleted before sending, and what remains is what the guest',
       'reads — so start your very first sentence with the substance.',
       '🚨 Do NOT assume what they want. "Ciao" is not a request for dinner, or for a walk, or for',
@@ -1492,7 +1624,7 @@ function formatRuntimeBlock(params: {
       'yourself, and never send the presentation video again. Start directly with the answer.',
     )
   } else {
-    lines.push('', 'Mid-conversation: no greeting, no video. Answer directly.')
+    lines.push('', 'Mid-conversation: no greeting, no presentation video. Answer directly.')
   }
 
   return lines.join('\n')
@@ -1828,6 +1960,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         // eslint-disable-next-line no-console
         console.error(`[demosappada][stripped] ${checked.removed.join(' | ')}`)
       }
+
+      // After the strip, never before: the links come from the FAQ block, so
+      // they would survive the guard anyway, and appending first would only
+      // make it re-scan text it already approved.
+      checked.text = withFaqVideos(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
 
       // Only while an intake question is pending: with the intake closed a
       // second question is the model talking to the guest normally, and
@@ -2239,6 +2376,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   if (pendingReply.trim()) {
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
+    checked.text = withFaqVideos(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     if (questionShown) {
       const single = keepSingleQuestion(checked.text)
       if (single.removed.length > 0) {
