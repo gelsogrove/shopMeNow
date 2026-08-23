@@ -580,56 +580,87 @@ const VIDEO_INTRO: Record<string, string> = {
  * because an instruction the model may still ignore is not a guarantee
  * (CLAUDE.md §16 iron rule 1).
  */
-const FAQ_VIDEO_RE = /https?:\/\/[^\s<>()\[\]]*(?:youtube\.com|youtu\.be|vimeo\.com)[^\s<>()\[\]]*/gi
+const FAQ_MEDIA_RE =
+  /https?:\/\/[^\s<>()\[\]]*(?:youtube\.com|youtu\.be|vimeo\.com|\.jpg|\.jpeg|\.png|\.webp|\.gif|\.mp4)[^\s<>()\[\]]*/gi
 
-function videoLinksIn(text: string): string[] {
-  return Array.from(new Set(text.match(FAQ_VIDEO_RE) ?? []))
+function mediaLinksIn(text: string): string[] {
+  return Array.from(new Set(text.match(FAQ_MEDIA_RE) ?? []))
 }
 
 /**
- * Append the video of the ONE place the reply is about.
+ * Append the media of the ONE place the reply is about.
  *
  * Andrea's rule, 2026-08-23: media belong to a detail answer, never to a list.
  * Asked "which mountain huts are there", the reply names ten of them — one
  * video each would be ten WhatsApp notifications and a chat nobody reads.
  *
- * So the test is not "does a FAQ have a video" but "is this reply ABOUT that
- * one place": the entry's video is appended only when the reply carries the
- * single richest subject, and only when exactly one candidate qualifies. Two
- * candidates mean the model combined entries — a list — and nothing is added.
+ * The subject is the entry that WINS, not the only entry that matches. The
+ * previous test — "no other FAQ may look like the reply" — sounded equivalent
+ * and was not: a good detail answer about the Cascatelle also says
+ * `passeggiata`, `adatta ai bambini`, `facile`, so the two generic
+ * walks-with-children entries matched it too, three entries were counted and
+ * the video was dropped. That is the bug Andrea hit live (2026-08-23:
+ * "me lo devi dare subito, non se lo chiedo"), and it hit EVERY detail
+ * answer, not just that one.
+ *
+ * So the entries are ranked by topic overlap and the top one must beat the
+ * runner-up by a clear margin. One place described in depth wins outright;
+ * ten huts listed side by side all score alike, no one wins, and the reply
+ * stays text — which is the list rule, now enforced by the same measurement
+ * instead of a second heuristic.
+ *
+ * At most ONE link is appended (Andrea, 2026-08-23: "testo e video o link o
+ * foto"). Malga Tuglia carries two videos; sending both would be the ten
+ * notifications again, in miniature.
  *
  * `excluded` keeps the presentation video out: it is prepended by withWelcome
  * and must not come back a second time as if it were content.
  */
-function withFaqVideos(
+const SUBJECT_MIN_SCORE = 0.6
+const SUBJECT_MIN_MARGIN = 0.2
+
+function withFaqMedia(
   reply: string,
   faqs: FaqEntry[],
   userMessage: string,
   excluded: string[],
 ): string {
-  const already = videoLinksIn(reply)
-  const skip = new Set([...already, ...excluded.filter(Boolean)])
+  const skip = new Set([...mediaLinksIn(reply), ...excluded.filter(Boolean)])
 
-  // A reply that enumerates many places is a list, however it is worded, and
-  // the giveaway is that OTHER entries are named in it too. Counting them is
-  // language-independent and needs no phrase matching (CLAUDE.md §14): with
-  // the ten huts of the "quali rifugi" answer, nine other entries match and
-  // the single video-bearing one loses its claim to be the subject.
-  const namedEntries = faqs.filter((faq) => isSubjectOf(faq, reply)).length
-  if (namedEntries > 1) return reply
+  // The reply is the stronger signal: it spells the place out in full, while
+  // the guest writes "si le cascatelle" and never types the second half of
+  // the name. The question still counts, very slightly discounted, so that a
+  // place ASKED about beats one merely mentioned in passing.
+  const ranked = faqs
+    .map((faq) => ({
+      faq,
+      score: Math.max(
+        subjectScore(faq, reply, faqs),
+        subjectScore(faq, userMessage, faqs) * 0.99,
+      ),
+    }))
+    .sort((a, b) => b.score - a.score)
 
-  const candidates = faqs.filter((faq) => {
-    const links = videoLinksIn(faq.answer).filter((l) => !skip.has(l))
-    if (links.length === 0) return false
-    // Asking about a place is enough; the reply alone is not, so that a hut
-    // mentioned in passing does not drag its video into an unrelated answer.
-    return isSubjectOf(faq, userMessage) || isSubjectOf(faq, reply)
-  })
+  const top = ranked[0]
+  if (!top || top.score < SUBJECT_MIN_SCORE) return reply
 
-  if (candidates.length !== 1) return reply
+  // A tie is only fatal when the rival is a real rival. "C'è lo sci di fondo?"
+  // and "Cosa sono le Cascatelle?" both reduce to a single distinctive word,
+  // so the question alone cannot separate them — but their ANSWERS can: the
+  // waterfall entry describes the place the reply is describing, while the
+  // cross-country entry never mentions it. Comparing answers is what tells a
+  // homonym (`fondo`, the gravel underfoot) from the actual subject, and it
+  // is the same measurement, so it stays language-independent.
+  const runnerUp = ranked[1]
+  if (runnerUp && top.score - runnerUp.score < SUBJECT_MIN_MARGIN) {
+    const topSupport = answerOverlap(top.faq, reply, faqs)
+    const rivalSupport = answerOverlap(runnerUp.faq, reply, faqs)
+    if (topSupport - rivalSupport < SUBJECT_MIN_MARGIN) return reply
+  }
 
-  const links = videoLinksIn(candidates[0].answer).filter((l) => !skip.has(l))
-  return [reply, '', ...links].join('\n')
+  const links = mediaLinksIn(top.faq.answer).filter((l) => !skip.has(l))
+  if (links.length === 0) return reply
+  return [reply, '', links[0]].join('\n')
 }
 
 /**
@@ -640,12 +671,81 @@ function withFaqVideos(
  * INTENT from phrasing (CLAUDE.md §14): it measures topic overlap, so it works
  * the same in Italian, German and English.
  */
-function isSubjectOf(faq: FaqEntry, text: string): boolean {
-  const haystack = text.toLowerCase()
+function subjectScore(faq: FaqEntry, text: string, faqs: FaqEntry[]): number {
+  const words = wordsOf(text)
   const terms = distinctiveTerms(faq.question)
-  if (terms.length === 0) return false
-  const hits = terms.filter((t) => haystack.includes(t)).length
-  return hits / terms.length >= 0.5
+  if (terms.length === 0) return 0
+
+  // Terms are weighted by how rare they are across THIS tenant's FAQ set.
+  // Weighting them equally was the bug: the Cascatelle entry is identified by
+  // `cascatelle` and `arrivo`, and a detail answer that never repeats the
+  // word "arrivo" scored 0.5 — the same as an unrelated entry that happened
+  // to share one common word. `cascatelle` appears in one question out of 72
+  // and `arrivo` in a dozen, so the name must carry the weight, and the
+  // service verb almost none.
+  //
+  // This is plain inverse document frequency: no phrase matching, no keyword
+  // list, and it behaves the same in every language (CLAUDE.md §14) —
+  // a German reply naming `Cascatelle` and `Mühlbach` still lands on the
+  // right entry.
+  let total = 0
+  let matched = 0
+  for (const term of terms) {
+    const weight = termWeight(term, faqs)
+    total += weight
+    if (words.has(term)) matched += weight
+  }
+  return total === 0 ? 0 : matched / total
+}
+
+/**
+ * How much of the entry's ANSWER the reply actually covers.
+ *
+ * The tie-break of last resort: two entries whose questions score alike are
+ * told apart by whether the reply talks about what the entry talks about.
+ * Weighted the same way as the question, so a shared `sappada` counts for
+ * almost nothing and a shared `mühlbach` counts for a lot.
+ */
+function answerOverlap(faq: FaqEntry, reply: string, faqs: FaqEntry[]): number {
+  const words = wordsOf(reply)
+  const terms = distinctiveTerms(faq.answer)
+  if (terms.length === 0) return 0
+
+  let total = 0
+  let matched = 0
+  for (const term of terms) {
+    const weight = termWeight(term, faqs)
+    total += weight
+    if (words.has(term)) matched += weight
+  }
+  return total === 0 ? 0 : matched / total
+}
+
+/**
+ * How much a term identifies ONE entry: 1 when it belongs to a single
+ * question, falling towards 0 the more questions share it.
+ *
+ * Whole words, never substrings. `includes` scored "C'è lo sci di FONDO?" a
+ * perfect 1.0 against an answer about waterfalls, because the trail
+ * description said "il FONDO è ghiaioso" — same letters, opposite meaning
+ * (2026-08-23).
+ */
+function termWeight(term: string, faqs: FaqEntry[]): number {
+  let documents = 0
+  for (const faq of faqs) {
+    if (wordsOf(faq.question).has(term)) documents++
+  }
+  return documents <= 1 ? 1 : 1 / documents
+}
+
+function wordsOf(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(Boolean),
+  )
 }
 
 /**
@@ -1483,6 +1583,7 @@ const OPERATING_RULES = [
   '- You cover the destination the FAQ block describes and its immediate surroundings — roughly 15-20 km, the everyday radius of someone staying there: the neighbouring villages, the valley they are in, the nearest town for shopping or a station. Anywhere beyond that is outside what you cover, however famous it is and however sure you are about it.',
   '- Inside that radius you still only state what the FAQ block or a tool gave you. The radius widens the SUBJECT you may discuss, never the facts you may assert: if the block does not say it, you do not know it, even about the village next door.',
   '- Asked about somewhere beyond the radius, say plainly that you only cover this area, then offer what you do have here. Do not first answer about the far place: not its season, its distance, its travel time, its size, nor whether it is worth going. Those are the facts you have no source for.',
+  '- When your answer is about ONE place and its FAQ entry carries a photo, a video or a link, give it in that same reply. It is part of the answer, not a bonus to be produced only if the guest asks for it a second time.',
 ].join('\n')
 
 // ── Concurrency ───────────────────────────────────────────────────────────
@@ -1972,7 +2073,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // After the strip, never before: the links come from the FAQ block, so
       // they would survive the guard anyway, and appending first would only
       // make it re-scan text it already approved.
-      checked.text = withFaqVideos(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+      checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
 
       // Only while an intake question is pending: with the intake closed a
       // second question is the model talking to the guest normally, and
@@ -2413,7 +2514,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   if (pendingReply.trim()) {
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
-    checked.text = withFaqVideos(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+    checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     if (questionShown) {
       const single = keepSingleQuestion(checked.text)
       if (single.removed.length > 0) {
