@@ -897,6 +897,15 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
  * point of knowing the stay is to concentrate the suggestions into the time
  * that is actually left.
  */
+/** The key of the intake question the block is about to show, if any. */
+let nextAskedKey: string | null = null
+
+/** Extract the `key` marker from a question line ("… → `party`"). */
+function keyOf(question: string): string | null {
+  const m = question.match(/`([a-zA-Z]+)`\s*$/)
+  return m ? m[1] : null
+}
+
 function formatStayBlock(
   profile: StayProfile | null,
   now: Date,
@@ -1061,6 +1070,9 @@ function formatStayBlock(
     )
   }
 
+  // Before the itinerary, never after: a nine-day plan built without knowing
+  // they were on foot had to be rewritten from scratch, and the guest read
+  // the same wall of text twice (Andrea, 2026-08-23).
   if (!profile.itinerary) {
     missing.push("se vuole che gli prepari un programma per i giorni che restano → `itinerary`")
   }
@@ -1074,11 +1086,18 @@ function formatStayBlock(
     )
   }
 
+  nextAskedKey = missing.length > 0 ? keyOf(missing[0]) : null
+
   if (missing.length > 0) {
     // ONE question is shown, not the list. Given the list the model merges
     // them — "siete in quanti, e quanto vi fermate?" — which is two questions
     // in one breath and reads like a form (Andrea, 2026-08-23). What it
     // cannot see, it cannot ask.
+    //
+    // The key is marked by CODE after the turn (see markAskedKey below), not
+    // left to the model: asked "siete a piedi?" and answered "veniamo da
+    // Trieste", it saved the origin and forgot it had ever asked — so the
+    // question came round again.
     lines.push(
       '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
       'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
@@ -1200,6 +1219,9 @@ const OPERATING_RULES = [
   '- Opening hours in the FAQ block are seasonal and may be stale. Never assert that something is open right now; say what the entry says and suggest confirming.',
   '- Never invent a URL or a phone number. Unverifiable ones are stripped from your reply before it is sent, which leaves the customer with a broken sentence — so only cite what you were given.',
   '- There is no human operator behind you. Never promise a callback, never say a colleague will get in touch, never take a booking.',
+  '- You cover the destination the FAQ block describes and its immediate surroundings — roughly 15-20 km, the everyday radius of someone staying there: the neighbouring villages, the valley they are in, the nearest town for shopping or a station. Anywhere beyond that is outside what you cover, however famous it is and however sure you are about it.',
+  '- Inside that radius you still only state what the FAQ block or a tool gave you. The radius widens the SUBJECT you may discuss, never the facts you may assert: if the block does not say it, you do not know it, even about the village next door.',
+  '- Asked about somewhere beyond the radius, say plainly that you only cover this area, then offer what you do have here. Do not first answer about the far place: not its season, its distance, its travel time, its size, nor whether it is worth going. Those are the facts you have no source for.',
 ].join('\n')
 
 // ── Concurrency ───────────────────────────────────────────────────────────
@@ -1576,6 +1598,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     .filter((part) => part !== '')
     .join('\n')
 
+  // Captured now: formatStayBlock set it while building the prompt above.
+  const questionShown = nextAskedKey
+
   const trimmedHistory = history.slice(-(settings.maxHistoryMessages ?? 30))
   const messages: Message[] = [
     { role: 'system', content: systemPrompt },
@@ -1706,6 +1731,21 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // eslint-disable-next-line no-console
           console.error(`[demosappada][lang-fix] declared=${target} but reply was not`)
           checked.text = await translateText(checked.text, target, settings)
+        }
+      }
+
+      // The question the block showed this turn is recorded as ASKED, whether
+      // or not the model remembered to do it and whether or not the guest
+      // answered. It was put to them; asking again would be the failure.
+      if (questionShown && stayEnabled && customerId && input.config.handlers?.saveStayProfile) {
+        const already = new Set(stayProfile?.asked ?? [])
+        if (!already.has(questionShown) && questionShown !== 'consent' && questionShown !== 'itinerary') {
+          already.add(questionShown)
+          await input.config.handlers.saveStayProfile({
+            workspaceId: input.config.workspaceId,
+            customerId,
+            profile: { asked: Array.from(already) },
+          })
         }
       }
 
