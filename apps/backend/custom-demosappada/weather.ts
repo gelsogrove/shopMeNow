@@ -202,6 +202,29 @@ function formatDay(
 }
 
 /**
+ * The wall clock in Sappada, taken from the forecast payload rather than the
+ * server.
+ *
+ * Two things depend on the hour: which of today's hours are still ahead, and
+ * whether it is a reasonable time to send someone up a mountain. Reading it
+ * from `now.getHours()` gets both wrong off Rome time — on a UTC host at
+ * 02:00 Sappada it reports 00:00 — while `current.time` is already returned
+ * in the timezone the forecast was requested for.
+ */
+function sappadaClock(current: NonNullable<OpenMeteoResponse['current']>): { hour: number; label: string } | null {
+  const clock = current.time.split('T')[1]
+  if (!clock) return null
+  const hour = Number(clock.slice(0, 2))
+  if (!Number.isFinite(hour)) return null
+
+  // Coarse bands, not a greeting: the model needs to know whether the day is
+  // ahead, ending, or over, and picks its own words for it.
+  const label =
+    hour < 6 ? 'notte fonda' : hour < 12 ? 'mattina' : hour < 18 ? 'pomeriggio' : hour < 22 ? 'sera' : 'notte'
+  return { hour, label }
+}
+
+/**
  * Fetch the current conditions and the next two days for Sappada.
  *
  * Never throws: a weather outage must not take the conversation down with it.
@@ -229,10 +252,16 @@ export async function getSappadaWeather(now: Date = new Date()): Promise<Weather
 
   const lines: string[] = []
 
+  // Drives both the "Adesso" line and how much of today is left; null only if
+  // the payload carried no current block, in which case the host clock is the
+  // best available fallback.
+  const clock = payload.current ? sappadaClock(payload.current) : null
+
   if (payload.current) {
     const current = payload.current
+    const when = clock ? ` (ore ${String(clock.hour).padStart(2, '0')}:00, ${clock.label})` : ''
     lines.push(
-      `Adesso a Sappada: ${describeCode(current.weather_code)}, ${Math.round(current.temperature_2m)}°C` +
+      `Adesso a Sappada${when}: ${describeCode(current.weather_code)}, ${Math.round(current.temperature_2m)}°C` +
         (current.precipitation > 0 ? `, sta piovendo (${current.precipitation} mm)` : ''),
     )
   }
@@ -251,7 +280,7 @@ export async function getSappadaWeather(now: Date = new Date()): Promise<Weather
     let rainWindow: string | null = null
     if (hourly) {
       // For today only the hours still ahead matter; later days start at 08:00.
-      const fromHour = d === 0 ? now.getHours() : 0
+      const fromHour = d === 0 ? (clock ? clock.hour : now.getHours()) : 0
       const indices = daylightHours(hourly.time, daily.time[d], fromHour)
       const hours = indices.map((i) => Number(hourly.time[i].split('T')[1].slice(0, 2)))
       rainWindow = describeRainWindow(hours, hourly.precipitation_probability, indices)
@@ -267,10 +296,12 @@ export const WEATHER_TOOL = {
   function: {
     name: 'get_weather',
     description:
-      'Get the REAL current weather and 7-day forecast for Sappada. You have no other way to know the ' +
-      'weather — never state or guess it without calling this first. Call it whenever the weather affects ' +
-      'the answer: the customer asks about it, or asks what to do today/tomorrow, whether to hike, what ' +
-      'to do with kids, or anything outdoors.',
+      'Get the REAL current weather and 7-day forecast for Sappada, plus the local time in Sappada. ' +
+      'You have no other way to know either — never state or guess them without calling this first. ' +
+      'Call it whenever the weather affects the answer: the customer asks about it, or asks what to do ' +
+      'today/tomorrow, whether to hike, what to do with kids, or anything outdoors. The result opens ' +
+      'with the current hour: respect it when suggesting activities — do not propose something for a ' +
+      'part of the day that has already passed.',
     parameters: { type: 'object', properties: {}, additionalProperties: false },
   },
 } as const
