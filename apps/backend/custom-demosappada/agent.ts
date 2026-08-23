@@ -1131,7 +1131,10 @@ export function formatStayBlock(
   // sixth, after allergies and a marketing consent, which is not how anyone
   // talks to a guest (Andrea, 2026-08-23).
   if (!stay.adults && !stay.children && !stay.seniors && !asked.has('party')) {
-    missing.push('con chi è (quanti adulti, bambini, anziani) — così gli dai i consigli giusti → `party`')
+    missing.push(
+      'con chi è. NOMINA LE TRE CATEGORIE, non chiedere solo "in quanti siete": adulti, bambini, ' +
+        'anziani — così gli dai i consigli giusti → `party`',
+    )
   } else if (
     // "siamo in 3" says how many, not who: without the breakdown the advice
     // is guesswork, and the assistant had started inventing children that
@@ -1141,7 +1144,11 @@ export function formatStayBlock(
     stay.seniors === undefined &&
     asked.has('party')
   ) {
-    missing.push('come sono divisi (adulti, bambini, anziani) — così gli dai i consigli giusti → `party`')
+    missing.push(
+      'come sono divisi. NOMINA LE TRE CATEGORIE: adulti, bambini, anziani. Non dare per scontato ' +
+        'che siano tutti adulti — "siete entrambi adulti?" è una domanda chiusa che si porta via ' +
+        'bambini e anziani in un colpo solo (Andrea, live, 2026-08-23) → `party`',
+    )
   }
 
   if (!stay.departureDate && !asked.has('stay')) {
@@ -1158,9 +1165,11 @@ export function formatStayBlock(
 
   if (!stay.constraints && !asked.has('constraints')) {
     missing.push(
-      'se c\'è qualcosa che devi sapere — allergie o intolleranze, se sono senza auto, una ' +
-        'gravidanza, difficoltà a camminare, un cane — oppure qualcosa che li interessa in ' +
-        'particolare; digli che userai qualsiasi cosa ti dicano per affinare i consigli. ' +
+      'se c\'è qualcosa che devi sapere. GLI ESEMPI VANNO PRONUNCIATI, non riassunti: allergie o ' +
+        'intolleranze, se sono senza auto, una gravidanza, difficoltà a camminare, un cane — ' +
+        'oppure al contrario qualcosa che gli piace particolarmente. Senza esempi la domanda è ' +
+        '"c\'è qualcosa che devo tenere presente?", a cui si risponde "no" e non si cava niente ' +
+        '(Andrea, live, 2026-08-23). Chiudi dicendo che ti serve per affinare i consigli. ' +
         'UNA domanda sola, non due → `constraints`',
     )
   }
@@ -1209,9 +1218,11 @@ export function formatStayBlock(
       // the guest, and as if nothing could be suggested without an answer
       // (Andrea, live, 2026-08-23). The reason now travels WITH the question
       // above, phrased as what the guest gets out of it.
-      'La domanda qui sopra arriva già con il suo motivo: usa quello, in una riga sola. NON aggiungere',
-      'una tua spiegazione del perché la stai chiedendo, non dire che senza la risposta non puoi',
-      'consigliare nulla, non dire che cambia tutto. Chiedi, e basta.',
+      'La domanda qui sopra arriva già con il suo motivo e, dove ci sono, con i suoi esempi: usa gli',
+      'uni e gli altri. Gli esempi FANNO PARTE della domanda — pronunciali, sono il motivo per cui il',
+      'cliente capisce cosa gli stai chiedendo; senza, la domanda diventa generica e si prende un "no".',
+      'Resta comunque breve: quello che NON devi aggiungere è una tua spiegazione del perché la stai',
+      'chiedendo — non dire che senza la risposta non puoi consigliare nulla, non dire che cambia tutto.',
     )
     if (missing.length > 1) {
       lines.push(`  (dopo questa ne restano ${missing.length - 1}, ma NON anticiparle ora)`)
