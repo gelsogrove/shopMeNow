@@ -75,6 +75,15 @@ export interface ChatbotSettingsJson {
   welcomeMessage?: string
   /** Greeting for a customer we already know by name (returning visitor). */
   welcomeBackMessage?: string
+  /**
+   * Whether the customer may reach a human at all (workspace.hasHumanSupport).
+   *
+   * Exposed as a flag, not inferred: the module has to be able to branch on it
+   * (`if (!settings.humanSupportEnabled)`) rather than guess from the presence
+   * of an operator email or an instructions string, which are set for plenty of
+   * workspaces that still have escalation turned off (Andrea, 2026-08-23).
+   */
+  humanSupportEnabled?: boolean
   /** Sentence sent when the conversation is handed to a human operator. */
   humanSupportMessage?: string
   /** Shown when the customer exceeds the per-minute message cap. */
@@ -128,6 +137,7 @@ export interface WorkspaceChatbotSource {
   audioVoices?: unknown
   welcomeMessage?: string | null
   welcomeBackMessage?: string | null
+  hasHumanSupport?: boolean | null
   humanSupportMessage?: string | null
   termsAndConditions?: string | null
   // Free-form JSON for fields with no dedicated column (maxToolHops,
@@ -359,6 +369,14 @@ export async function buildChatbotSettingsJson(
       workspace.welcomeBackMessage?.trim() || current.welcomeBackMessage,
       workspace
     ),
+    // Same shape as audioOutput: the DB boolean wins when present, otherwise
+    // whatever the module shipped with stays. A module that never reads the
+    // key is unaffected — the generator merges onto the file, it does not
+    // rewrite it.
+    humanSupportEnabled:
+      typeof workspace.hasHumanSupport === "boolean"
+        ? workspace.hasHumanSupport
+        : current.humanSupportEnabled,
     humanSupportMessage: renderWorkspaceCopy(
       workspace.humanSupportMessage?.trim() || current.humanSupportMessage,
       workspace

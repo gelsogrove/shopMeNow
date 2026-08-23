@@ -70,14 +70,63 @@ function timeDigits(raw: string): string {
   return raw.replace(/\D/g, '')
 }
 
-/** The numeric part of a price, so "€45" and "45 euro" compare equal. */
-function priceDigits(raw: string): string {
-  return raw.replace(/[^\d]/g, '')
+/**
+ * A price as a comparable value, so "€45" and "45 euro" compare equal.
+ *
+ * The decimal separator is KEPT (normalised to a dot) and trailing zeros
+ * dropped, so "3,5" and "3.50" agree while staying distinct from "35".
+ * Stripping every non-digit made "3,5 km" — a walking distance in a FAQ —
+ * approve an invented "35 euro" (found while testing this guard, 2026-08-23).
+ */
+function priceValue(raw: string): string {
+  const digits = raw.replace(/[^\d.,]/g, '').replace(',', '.')
+  const [whole, decimals] = digits.split('.')
+  const fraction = (decimals ?? '').replace(/0+$/, '')
+  return fraction.length > 0 ? `${whole}.${fraction}` : whole
+}
+
+/**
+ * Every clock time the source actually states, as digits ("9.00" -> "900").
+ *
+ * Times and prices are SHORT, and the old check asked whether their digits
+ * appeared anywhere in the source's digits concatenated end to end. Across
+ * this tenant's 78 FAQ entries that haystack is ~2300 digits long, so a
+ * two-digit price matched 89 times out of 90 — usually straddling the seam
+ * between two unrelated numbers, e.g. "607" found inside a phone number.
+ * The guard was reporting clean while passing invented amounts through.
+ *
+ * So the source is tokenised the same way the reply is: a value is approved
+ * only when it appears there as a value in its own right. Phone numbers keep
+ * the substring test — at 6+ digits they are too long to collide by accident,
+ * and they legitimately appear formatted in ways a token scan would miss.
+ */
+function timesIn(source: string): Set<string> {
+  const found = new Set<string>()
+  for (const match of source.matchAll(TIME_RE)) found.add(timeDigits(match[0]))
+  return found
+}
+
+/**
+ * Every number the source states as a standalone figure, digits only.
+ *
+ * Deliberately wider than PRICE_RE: the source may write "3 chilogrammi" or
+ * "22 cm" while the reply phrases it as a price or a bare figure. What is
+ * excluded is digits glued to other digits by separators — a phone number's
+ * parts must not each become an approved "price".
+ */
+function standaloneNumbersIn(source: string): Set<string> {
+  const found = new Set<string>()
+  for (const match of source.matchAll(/(?<![\d.,:\-])\d+(?:[.,]\d{1,2})?(?![\d.,:\-])/g)) {
+    found.add(priceValue(match[0]))
+  }
+  return found
 }
 
 export function stripUnverifiableContacts(reply: string, approvedContent: string): ContentCheck {
   const haystack = approvedContent.toLowerCase()
   const haystackDigits = digitsOf(approvedContent)
+  const approvedTimes = timesIn(approvedContent)
+  const approvedNumbers = standaloneNumbersIn(approvedContent)
   const removed: string[] = []
 
   let text = reply.replace(URL_RE, (match) => {
@@ -96,19 +145,19 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
   // Verified against the source rather than trusted: the prompt already
   // forbids inventing them, and a prompt is a request (CLAUDE.md §16 rule 1).
   //
-  // Compared on digits alone, so the model may reformat freely: the source's
-  // "9.00" covers a reply's "9:00", and "€45" covers "45 euro".
+  // Matched against the values the source actually states, so the model may
+  // reformat freely — "9.00" covers "9:00", "€45" covers "45 euro" — without
+  // a short amount being approved by digits that merely occur somewhere.
   text = text.replace(TIME_RE, (match) => {
-    const digits = timeDigits(match)
-    if (haystackDigits.includes(digits)) return match
+    if (approvedTimes.has(timeDigits(match))) return match
     removed.push(match)
     return ''
   })
 
   text = text.replace(PRICE_RE, (match) => {
-    const digits = priceDigits(match)
+    const digits = priceValue(match)
     if (digits.length === 0) return match
-    if (haystackDigits.includes(digits)) return match
+    if (approvedNumbers.has(digits)) return match
     removed.push(match)
     return ''
   })

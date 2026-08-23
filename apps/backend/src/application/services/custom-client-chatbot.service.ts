@@ -966,6 +966,7 @@ export class CustomClientChatbotService {
           audioVoices: true,
           welcomeMessage: true,
           welcomeBackMessage: true,
+          hasHumanSupport: true,
           humanSupportMessage: true,
           termsAndConditions: true,
         },

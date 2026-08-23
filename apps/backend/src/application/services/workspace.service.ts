@@ -968,6 +968,7 @@ For privacy inquiries, please contact our support team.`
           audioVoices: true,
           welcomeMessage: true,
           welcomeBackMessage: true,
+          hasHumanSupport: true,
           humanSupportMessage: true,
           termsAndConditions: true,
           customChatbotAdvancedSettings: true,

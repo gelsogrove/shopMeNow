@@ -322,6 +322,12 @@ describe("buildChatbotSettingsJson", () => {
       "welcomeMessage",
       "welcomeBackMessage",
       "humanSupportMessage",
+      // Whether escalation is available at all (workspace.hasHumanSupport).
+      // Emitted alongside the message rather than inferred from it: the copy
+      // and the operator emails are filled in on plenty of workspaces that
+      // still have escalation switched off, so the module needs the flag to
+      // branch on (Andrea, 2026-08-23).
+      "humanSupportEnabled",
       // Language config: the codes the chatbot may reply in, and the fallback
       // when detection lands outside that set.
       "defaultLanguage",
