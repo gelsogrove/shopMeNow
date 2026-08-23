@@ -38,8 +38,8 @@ import {
   seedLanguageIfNeeded,
   updateState,
 } from './state.js'
-import { stripUnverifiableContacts } from './content-guards.js'
-import { getSappadaWeather, WEATHER_TOOL, type WeatherReport } from './weather.js'
+import { keepSingleQuestion, stripUnverifiableContacts } from './content-guards.js'
+import { getSappadaWeather, TIMEZONE, WEATHER_TOOL, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WEATHER_CACHE_MS, WELCOME_BACK_STALE_MS } from './bounds.js'
 
 // ── Settings ──────────────────────────────────────────────────────────────
@@ -1073,7 +1073,7 @@ export function formatStayBlock(
   // sixth, after allergies and a marketing consent, which is not how anyone
   // talks to a guest (Andrea, 2026-08-23).
   if (!profile.adults && !profile.children && !profile.seniors && !asked.has('party')) {
-    missing.push('con chi è (quanti adulti, bambini, anziani) → `party`')
+    missing.push('con chi è (quanti adulti, bambini, anziani) — così gli dai i consigli giusti → `party`')
   } else if (
     // "siamo in 3" says how many, not who: without the breakdown the advice
     // is guesswork, and the assistant had started inventing children that
@@ -1083,7 +1083,7 @@ export function formatStayBlock(
     profile.seniors === undefined &&
     asked.has('party')
   ) {
-    missing.push('come sono divisi (adulti, bambini, anziani) → `party`')
+    missing.push('come sono divisi (adulti, bambini, anziani) — così gli dai i consigli giusti → `party`')
   }
 
   if (!profile.departureDate && !asked.has('stay')) {
@@ -1095,13 +1095,13 @@ export function formatStayBlock(
   }
 
   if (profile.children && profile.children > 0 && !profile.childrenAges && !asked.has('childrenAges')) {
-    missing.push("che età hanno i bambini → `childrenAges`")
+    missing.push("che età hanno i bambini — così gli proponi cose adatte a loro → `childrenAges`")
   }
 
   if (!profile.constraints && !asked.has('constraints')) {
     missing.push(
       'se c\'è qualcosa da tenere presente — allergie o intolleranze, se sono senza auto, una ' +
-        'gravidanza, difficoltà a camminare, un cane → `constraints`',
+        'gravidanza, difficoltà a camminare, un cane — così gli dai consigli mirati → `constraints`',
     )
   }
 
@@ -1144,6 +1144,14 @@ export function formatStayBlock(
       `  ${missing[0]}`,
       'Non chiedere nient\'altro sul suo soggiorno in questo messaggio: le altre verranno dopo, una',
       'alla volta. Registrala in `asked` con save_stay nello stesso momento in cui la fai.',
+      // Given only the bare field the model justified the question on its own
+      // — "Cambia tutto quello che vi consiglio" — which reads as pressure on
+      // the guest, and as if nothing could be suggested without an answer
+      // (Andrea, live, 2026-08-23). The reason now travels WITH the question
+      // above, phrased as what the guest gets out of it.
+      'La domanda qui sopra arriva già con il suo motivo: usa quello, in una riga sola. NON aggiungere',
+      'una tua spiegazione del perché la stai chiedendo, non dire che senza la risposta non puoi',
+      'consigliare nulla, non dire che cambia tutto. Chiedi, e basta.',
     )
     if (missing.length > 1) {
       lines.push(`  (dopo questa ne restano ${missing.length - 1}, ma NON anticiparle ora)`)
@@ -1344,12 +1352,21 @@ function formatRuntimeBlock(params: {
   customerName?: string
 }): string {
   const { now, channel, greeting, settings, customerName } = params
+  // Every date and hour below is rendered in Sappada's zone, never the host's.
+  // `it-IT` sets only the LANGUAGE — left to itself the formatter uses the
+  // server clock, so the Heroku dyno (UTC, no TZ set) told a guest writing at
+  // 02:08 that it was 00:08, and between midnight and 02:00 Rome it named the
+  // wrong day too (Andrea, live, 2026-08-23).
+  const inSappada: Intl.DateTimeFormatOptions = { timeZone: TIMEZONE }
+
   // The part of the day, spelled out. The model was given only a clock and
   // called 01:35 on a Sunday "sabato sera" — right about the feel of it,
   // wrong about the day, and confidently so (Andrea, 2026-08-23). Naming the
   // moment removes the guess, and naming what is CLOSED at that hour stops
   // the assistant proposing a museum in the middle of the night.
-  const hour = now.getHours()
+  const hour = Number(
+    now.toLocaleString('en-GB', { timeZone: TIMEZONE, hour: '2-digit', hour12: false }),
+  )
   const partOfDay =
     hour < 5
       ? 'notte fonda — quasi tutto è chiuso, e non ha senso proporre attività per adesso'
@@ -1365,8 +1382,8 @@ function formatRuntimeBlock(params: {
 
   const lines = [
     '═══ RUNTIME ═══',
-    `Today: ${now.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`,
-    `Local time: ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${partOfDay})`,
+    `Today: ${now.toLocaleDateString('it-IT', { ...inSappada, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`,
+    `Local time: ${now.toLocaleTimeString('it-IT', { ...inSappada, hour: '2-digit', minute: '2-digit' })} (${partOfDay})`,
     'Use this date and this hour EXACTLY as given: never state a different weekday, and never guess',
     'what time it is. "Oggi" is the date above, whatever hour it is.',
     `Channel: ${channel}`,
@@ -1736,6 +1753,18 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (checked.removed.length > 0) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][stripped] ${checked.removed.join(' | ')}`)
+      }
+
+      // Only while an intake question is pending: with the intake closed a
+      // second question is the model talking to the guest normally, and
+      // trimming it would cut a real conversation short.
+      if (questionShown) {
+        const single = keepSingleQuestion(checked.text)
+        if (single.removed.length > 0) {
+          // eslint-disable-next-line no-console
+          console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
+          checked.text = single.text
+        }
       }
 
       if (lang) {
@@ -2126,6 +2155,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   if (pendingReply.trim()) {
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
+    if (questionShown) {
+      const single = keepSingleQuestion(checked.text)
+      if (single.removed.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
+        checked.text = single.text
+      }
+    }
     if (lang) {
       commitLanguageFromReply(
         sessionId,

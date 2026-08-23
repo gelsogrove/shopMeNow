@@ -16,7 +16,15 @@
 /** Sappada (UD), 1250 m. Fixed: this module serves one destination. */
 const LATITUDE = 46.5667
 const LONGITUDE = 12.6833
-const TIMEZONE = 'Europe/Rome'
+
+/**
+ * Exported because the runtime block must format its clock in the SAME zone
+ * the forecast is requested in. The host is not that zone: on Heroku it is
+ * UTC, which told a guest writing at 02:08 that it was 00:08 — and, for the
+ * two hours after midnight in Rome, put it on the wrong DAY as well
+ * (Andrea, live, 2026-08-23).
+ */
+export const TIMEZONE = 'Europe/Rome'
 
 /**
  * How far ahead to forecast.

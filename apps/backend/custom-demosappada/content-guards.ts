@@ -97,3 +97,52 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
 
   return { text, removed }
 }
+
+/**
+ * Keep at most one question in a reply while the intake is still open.
+ *
+ * The prompt already says "one question per message, NEVER two together", and
+ * the model is shown a single field — yet it merged two of them anyway:
+ * "siete tutti adulti, o ci sono bambini? E se sì, quanti anni hanno?"
+ * (Andrea, live, 2026-08-23). Iron rule 1: when an instruction keeps losing,
+ * the fix is code that removes the freedom.
+ *
+ * Sentences are counted, not phrases matched — nothing here reads WHAT was
+ * asked, only that a second question mark closes a later sentence. So it is
+ * language-independent (CLAUDE.md §14: no keyword detection on user text).
+ *
+ * Trailing questions are dropped from the END, because the intake question is
+ * appended last: what precedes it is the answer to the guest, which must
+ * survive intact.
+ */
+export function keepSingleQuestion(reply: string): ContentCheck {
+  // Split after ? ! . or a newline, keeping the delimiter with its sentence.
+  const parts = reply.match(/[^.!?\n]*(?:[.!?]+|\n+|$)/g)?.filter((p) => p.length > 0) ?? []
+  const isQuestion = (part: string): boolean => part.trimEnd().endsWith('?')
+
+  let seen = 0
+  const kept: string[] = []
+  const removed: string[] = []
+  for (const part of parts) {
+    if (isQuestion(part)) {
+      seen++
+      // The FIRST question is the one the guest is meant to answer.
+      if (seen > 1) {
+        const trimmed = part.trim()
+        if (trimmed.length > 0) removed.push(trimmed)
+        continue
+      }
+    }
+    kept.push(part)
+  }
+
+  if (removed.length === 0) return { text: reply, removed: [] }
+
+  const text = kept
+    .join('')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  return { text, removed }
+}
