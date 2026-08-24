@@ -84,7 +84,14 @@ describe("demosappada tools come from the database", () => {
       // The forced save pushes "[SYSTEM] Chiama ORA save_preferences". With the tool
       // absent the model cannot comply, the hop is spent, and the guest can be
       // left with an empty reply.
-      const forcedSave = AGENT_CODE.match(/if \(stayEnabled &&[^)]*mentionsStayFacts\(userMessage\)\)/)?.[0]
+      //
+      // Matched on the guard clause itself rather than on the trigger that
+      // follows it: the trigger used to be `mentionsStayFacts(userMessage)`, a
+      // regex over Italian words that missed most real answers and every
+      // foreign-language one, and was replaced by a structural test (an intake
+      // question was pending and the guest replied). What this test protects is
+      // the `stayToolAvailable` guard, which is unchanged.
+      const forcedSave = AGENT_CODE.match(/if \(stayEnabled && stayToolAvailable &&[^)]*\)/)?.[0]
 
       expect(forcedSave).toBeDefined()
       expect(forcedSave).toContain("stayToolAvailable")
