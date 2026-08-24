@@ -955,28 +955,6 @@ function stripLeadingGreeting(reply: string): string {
 }
 
 /**
- * Does this message plausibly carry facts about the stay?
- *
- * Deliberately crude — it only decides whether it is worth ONE extra hop
- * asking the model to save; the model still judges what the facts are. A
- * false positive costs a hop, a false negative costs the guest being asked
- * the same question tomorrow.
- *
- * This is not phrase-based intent detection (CLAUDE.md §14): nothing here
- * routes the conversation or picks an answer. It only asks "might there be
- * something to write down".
- */
-function mentionsStayFacts(message: string): boolean {
-  const text = message.toLowerCase()
-  const hasNumber = /\d/.test(text) || /\b(un|uno|una|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|zwei|drei|vier|two|three|four|five)\b/.test(text)
-  const hasStayWord =
-    /(siamo|sono in|bambin|figli|ragazz|anni|anziani|nonn|moglie|marito|famiglia|coppia|giorn|settiman|notte|nott|restiamo|rimaniamo|partiamo|arriviamo|veniamo da|arriviamo da|celiac|glutine|intolleran|allerg|incinta|carrozzin|cane|senza auto|a piedi|macchina|kinder|jahre|tage|wir sind|children|days|we are|we're staying)/.test(
-      text,
-    )
-  return hasNumber && hasStayWord
-}
-
-/**
  * Function words that identify a language cheaply, without an LLM call.
  *
  * Only used to answer "is this reply obviously NOT in the declared language",
@@ -1587,6 +1565,19 @@ export function formatStayBlock(
     missing.push('composition')
   }
 
+  // FOURTH: what they came here to DO — asked, not waited for. Knowing they
+  // want the mountains, or local food, or sport, is what turns an answer into
+  // a plan (Andrea, 2026-08-23: "altrimenti è uguale a ChatGPT").
+  //
+  // Ahead of the push consent (Andrea, 2026-08-24): it is a question about
+  // their holiday, and asking it before the marketing ask keeps the intake on
+  // the guest's side of the conversation for one more turn. The answer lands
+  // in `interests` on the profile and from there into the card the assistant
+  // reads on every later turn.
+  if (!stay.interests && !asked.has('interests')) {
+    missing.push('interests')
+  }
+
   // FOURTH: the push consent. It used to sit last, on the reasoning that a
   // marketing ask needs trust built first — but by then the intake had run
   // long enough that many guests never reached it. Asked here it still comes
@@ -1611,14 +1602,6 @@ export function formatStayBlock(
   // before the module ever sees it (realCustomerName, widget-chat.controller).
   if (!knownName && !asked.has('name')) {
     missing.push('name')
-  }
-
-  // What they came here to DO — asked, not waited for. Knowing they want to
-  // ski, or hunt mushrooms, or just eat well, is what turns an answer into a
-  // plan (Andrea, 2026-08-23: "altrimenti è uguale a ChatGPT"). Asked right
-  // before the itinerary, so it feeds straight into building it.
-  if (!stay.interests && !asked.has('interests')) {
-    missing.push('interests')
   }
 
   // Before the itinerary, never after: a nine-day plan built without knowing
@@ -1681,6 +1664,35 @@ export function formatStayBlock(
       'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
       `Quando risponde, registrala in \`asked\` con save_preferences come: ${askedKeys.join(', ')}`,
     )
+
+    // The turn that closes the intake. Every question has been answered, the
+    // guest has just given their name, and this is the first message where the
+    // assistant has the whole picture — so it is the one that must READ like
+    // it (Andrea, 2026-08-24: "Ciao [nome] oggi il meteo a Sappada è...").
+    //
+    // Shaped here rather than left to the model: without it the plan question
+    // arrives bare, on the turn where using their name for the first time is
+    // worth the most. The CONTENT stays the model's — the weather is whatever
+    // get_weather returned, the suggestion whatever fits their card.
+    if (askedKey === 'itinerary') {
+      lines.push(
+        '',
+        '## COME SI APRE QUESTO MESSAGGIO',
+        '',
+        'È il messaggio che chiude le domande: hai tutte le risposte e sai come si chiama.',
+        'Scrivilo in QUEST\'ORDINE, quattro pezzi e nient\'altro:',
+        // The name is NOT interpolated here: on the very turn the guest gives
+        // it, `remember` writes it to state AFTER this prompt was built, so
+        // it would still be empty. The model has the name in front of it — it
+        // is the message it is answering — so it is told to use it.
+        '1. "Perfetto <NOME>," — chiamalo per nome, con il nome che ti ha appena detto.',
+        '2. Com\'è il meteo a Sappada (il dato VERO da get_weather, mai stimato).',
+        '3. UN consiglio solo, coerente con quel meteo e con la sua scheda.',
+        '4. La domanda qui sopra, alla lettera, da sola in fondo.',
+        'Niente elenchi numerati di posti, niente riepilogo di quello che ti ha detto,',
+        'niente altre domande.',
+      )
+    }
   } else if (askedKey && !question) {
     // Configuration says nothing for this key, so nothing is asked. Silence
     // beats an English sentence sent to a guest writing in Italian, and beats
@@ -2329,8 +2341,34 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     customerName: knownName,
   })
 
+  // 📋 {{userPreference}} — the guest's card, substituted into the tenant's own
+  // main prompt so the author decides WHERE it lands (Andrea, 2026-08-24).
+  // Done at runtime, not by the settings generator: the card is rewritten as
+  // the conversation goes, while the generator renders the prompt once at save
+  // time and would freeze whatever was in it then.
+  //
+  // With nothing learned yet the placeholder resolves to empty and the line
+  // holding it collapses — the same rule as {{customerName}}, and better than
+  // telling the model "nothing known" in a language it then echoes.
+  const userPreference = stayProfile?.notes?.trim() ?? ''
+  const mainPromptRendered = (settings.mainPrompt?.trim() || '')
+    .split('\n')
+    // A line whose only content is the placeholder goes entirely when there is
+    // nothing to say: a bare "USER PREFERENCE:" label with no card under it
+    // invites the model to fill the gap with something it has not been told.
+    .filter((line) => {
+      if (!/\{\{\s*userPreference\s*\}\}/i.test(line)) return true
+      return userPreference.length > 0
+    })
+    .map((line) =>
+      line.replace(/\{\{\s*userPreference\s*\}\}/gi, userPreference).replace(/[ \t]{2,}/g, ' ')
+    )
+    .filter((line, i, all) => line.trim() !== '' || (all[i - 1]?.trim() ?? '') !== '')
+    .join('\n')
+    .trim()
+
   const systemPrompt = [
-    settings.mainPrompt?.trim() || '',
+    mainPromptRendered,
     '',
     OPERATING_RULES,
     '',
@@ -2389,6 +2427,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // (Andrea, 2026-08-23). An instruction cannot be the guarantee here.
   let stayWasSaved = false
   let forcedSaveDone = false
+  /** True when save_push_consent granted the consent on THIS turn. */
+  let consentJustGranted = false
   /** Last free-text answer the model produced, kept as a fallback. */
   let pendingReply = ''
   let emptyRetryDone = false
@@ -2408,10 +2448,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // stay and nothing was written, spend one hop forcing the tool rather
       // than letting the fact evaporate — asking the same question twice is
       // what makes the assistant feel like a form.
+      //
+      // The trigger is STRUCTURAL: an intake question was pending and the
+      // guest wrote back. It used to be `mentionsStayFacts(userMessage)`, a
+      // regex over Italian words — which is phrase detection on user text
+      // (CLAUDE.md §14) and failed on most real answers: "siamo tutti adulti",
+      // "in due, fino a sabato", and every reply in French, German, Spanish or
+      // English sailed past it, so nothing was saved and the question came
+      // back (Andrea, 2026-08-24: "se non salva... deve salvare").
+      //
+      // A guest answering our question is exactly the moment a fact exists to
+      // record. Nothing here reads WHAT they wrote.
+      //
       // `stayToolAvailable` guards the whole retry: with save_preferences switched off
       // there is nothing to force, and spending a hop ordering an absent tool
       // is how the guest ends up with an empty reply.
-      if (stayEnabled && stayToolAvailable && !stayWasSaved && !forcedSaveDone && mentionsStayFacts(userMessage)) {
+      const answeredOurQuestion = !!questionShown && userMessage.trim().length > 0
+      if (stayEnabled && stayToolAvailable && !stayWasSaved && !forcedSaveDone && answeredOurQuestion) {
         forcedSaveDone = true
         // Keep what the model already wrote: the extra hop is for the save,
         // not for a better answer, and if the hop budget runs out afterwards
@@ -2611,6 +2664,22 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         console.error(`[demosappada][intake-append] re-attached "${questionShown}"`)
         checked.text = body ? `${body}\n\n${dictatedQuestion}` : dictatedQuestion
         reachedGuest = true
+      }
+
+      // 🔔 The opt-out line, prepended by CODE on the turn the guest accepts.
+      //
+      // It used to be an instruction inside save_push_consent's tool output,
+      // asking the model to say it — and the model said it one turn LATE,
+      // stapled to the answer about the name instead of to the consent it
+      // belongs to (Andrea, 2026-08-24). The promise of how to opt out has to
+      // travel with the yes, so it is written here and not requested.
+      //
+      // Guarded on `consentJustGranted`, set where the tool ran this turn, so
+      // it appears exactly once in the guest's life.
+      if (consentJustGranted && settings.pushOptOutHint?.trim() && checked.text.trim()) {
+        const hint = settings.pushOptOutHint.trim()
+        const already = checked.text.toLowerCase().includes(hint.toLowerCase())
+        if (!already) checked.text = `${hint}\n\n${checked.text.trimStart()}`
       }
 
       // The escape hatch. `reachedGuest` looks for the question's wording in
@@ -2882,6 +2951,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         } else {
           const args = safeParseArgs(call.function.arguments)
           const granted = args.granted === true
+          if (granted) consentJustGranted = true
           const saved = await input.config.handlers.savePushConsent({
             workspaceId: input.config.workspaceId,
             customerId,
@@ -2920,15 +2990,13 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
           toolOutput = JSON.stringify({
             ok: saved,
-            // A guest who says yes is told how to say no later — the opt-out
-            // is part of the consent, not an afterthought. The wording comes
-            // from settings so it stays configurable and translatable; with
-            // nothing configured, nothing is claimed (CLAUDE.md §1A).
+            // The opt-out line is NOT requested here: the code prepends it to
+            // this turn's reply (see `consentJustGranted`). Asking the model
+            // for it is what made it arrive a turn late, attached to the
+            // wrong answer (Andrea, 2026-08-24).
             instruction: granted
-              ? settings.pushOptOutHint?.trim()
-                ? `Consent recorded. Reply with exactly this line, translated into the guest's ` +
-                  `language, and nothing else about the consent: "${settings.pushOptOutHint.trim()}"`
-                : 'Consent recorded. Thank them in one short line and move on — do not oversell it.'
+              ? 'Consent recorded. Do NOT thank them for it or mention it again — a line about it is ' +
+                'added automatically. Just carry on with the answer.'
               : 'Refusal recorded. Accept it without insisting, and never ask again.',
           })
         }
