@@ -1673,10 +1673,13 @@ export function formatStayBlock(
       // three museums with addresses, an offer of more detail and a link, and
       // put the question at the bottom (Andrea, 2026-08-25: "devono essere
       // domande secche una dopo l'altra").
-      'MANDALA COME RISPOSTA INTERA. Se il cliente non ti ha chiesto niente, il tuo messaggio',
-      'è SOLO questa domanda: niente consigli, niente elenchi di posti, niente link, niente',
-      'meteo, niente offerte di ulteriori dettagli. Al massimo mezza riga per dire che hai',
-      'capito ("Perfetto.") e poi la domanda.',
+      ...(askedKey === 'itinerary'
+        ? []
+        : [
+            'MANDALA COME RISPOSTA INTERA. Se il cliente non ti ha chiesto niente, il tuo messaggio',
+            'è SOLO questa domanda: niente consigli, niente elenchi di posti, niente link, niente',
+            'meteo, niente offerte di ulteriori dettagli, nemmeno mezza riga di introduzione.',
+          ]),
       'Se invece il cliente TI HA CHIESTO qualcosa, rispondi prima a lui — davvero, con i fatti',
       'che hai — e la domanda va in coda, da sola.',
       'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
@@ -2753,15 +2756,25 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         // Only when they asked NOTHING: a guest who did ask still gets their
         // answer first (that guard is right above), and the recommendations
         // come back in full the moment the intake is over.
-        if (!guestAskedSomething(userMessage) && askedText) {
-          const paragraphs = checked.text.split('\n\n')
-          const questionPara = paragraphs.findIndex((para) =>
-            para.includes(askedText.split('\n')[0])
-          )
-          if (questionPara >= 0 && paragraphs.length > 1) {
+        // The reply becomes the question, FULL STOP — not "the paragraph that
+        // contains it". Trimming by paragraph left the model's opener sitting
+        // on the same line as the question: "Oggi a Sappada il meteo è
+        // variabile. C'è qualcosa di particolare che vuoi segnalarci? …"
+        // (Andrea, 2026-08-25: "lascia stare il meteo, ora devi solo fare la
+        // domanda"). There is nothing to preserve: the guest asked nothing,
+        // so anything besides the question is the model filling space.
+        // `itinerary` is the one intake turn that is NOT a bare question: it
+        // closes the intake and Andrea asked for a greeting by name, the
+        // weather and one suggestion before the question (2026-08-24).
+        const bareTurn = questionShown !== 'itinerary'
+        if (bareTurn && !guestAskedSomething(userMessage) && askedText) {
+          if (checked.text.trim() !== askedText) {
             // eslint-disable-next-line no-console
-            console.error(`[demosappada][intake-bare] dropped ${paragraphs.length - 1} extra paragraph(s)`)
-            checked.text = paragraphs[questionPara].trim()
+            console.error(
+              `[demosappada][intake-bare] replaced reply with the question alone ` +
+                `(dropped ${checked.text.trim().length - askedText.length} chars)`
+            )
+            checked.text = askedText
           }
         }
 
