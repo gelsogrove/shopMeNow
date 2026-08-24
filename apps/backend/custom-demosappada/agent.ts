@@ -618,8 +618,17 @@ function contentMediaAllowed(
   stayProfile: StayProfile | null | undefined,
   settings: Settings,
   now: Date,
+  /** True while an intake question is pending this turn. */
+  intakePending = false,
 ): boolean {
   if (presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) return false
+
+  // While the intake is still running, the turn belongs to the question. A
+  // link or a video under it competes with the one thing the guest is being
+  // asked, and they were arriving on every single intake turn (Andrea,
+  // 2026-08-25: "non voglio il link"). Media come back the moment the
+  // questions are done and the conversation is about places again.
+  if (intakePending) return false
 
   // The welcome turn carries the greeting and the presentation — nothing else.
   // The guest wrote "ciao": they have not asked about a place yet, so there is
@@ -1655,11 +1664,21 @@ export function formatStayBlock(
       '## LA DOMANDA DA FARE ADESSO',
       '',
       'Questa istruzione ha la precedenza su qualsiasi altra cosa tu possa dedurre dalla',
-      'conversazione. Fai QUESTA domanda, alla lettera, tradotta nella lingua del cliente,',
-      'e nient\'altro:',
+      'conversazione. Fai QUESTA domanda, alla lettera, tradotta nella lingua del cliente:',
       '',
       question,
       '',
+      // The sentence demorobot has and demosappada did not: the question IS
+      // the reply, not something appended to one. Without it the model wrote
+      // three museums with addresses, an offer of more detail and a link, and
+      // put the question at the bottom (Andrea, 2026-08-25: "devono essere
+      // domande secche una dopo l'altra").
+      'MANDALA COME RISPOSTA INTERA. Se il cliente non ti ha chiesto niente, il tuo messaggio',
+      'è SOLO questa domanda: niente consigli, niente elenchi di posti, niente link, niente',
+      'meteo, niente offerte di ulteriori dettagli. Al massimo mezza riga per dire che hai',
+      'capito ("Perfetto.") e poi la domanda.',
+      'Se invece il cliente TI HA CHIESTO qualcosa, rispondi prima a lui — davvero, con i fatti',
+      'che hai — e la domanda va in coda, da sola.',
       'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
       'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
       `Quando risponde, registrala in \`asked\` con save_preferences come: ${askedKeys.join(', ')}`,
@@ -2512,7 +2531,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // After the strip, never before: the links come from the FAQ block, so
       // they would survive the guard anyway, and appending first would only
       // make it re-scan text it already approved.
-      if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now)) {
+      if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now, !!questionShown)) {
         checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
       }
 
@@ -2713,12 +2732,82 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // and its translation — so the model's own additions are the only thing
       // that goes.
       if (questionShown) {
+        // Our question in the language this reply is written in — used by both
+        // guards below (bare-question trim and preamble removal).
+        const askedText = (dictatedForCheck ?? dictatedQuestion ?? '').trim()
         const ours = [dictatedForCheck, dictatedQuestion].filter(Boolean).join('\n')
         const single = keepSingleQuestion(checked.text, ours || dictatedQuestion)
         if (single.removed.length > 0) {
           // eslint-disable-next-line no-console
           console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
           checked.text = single.text
+        }
+
+        // 🚨 During the intake, an answer to nothing is just the question.
+        //
+        // The guest replied "2 e stiamo fino a mercoledì" — they asked for
+        // nothing — and got three museums with addresses, an offer of more
+        // detail and a link, with the question at the bottom. Andrea,
+        // 2026-08-25: "devono essere domande secche una dopo l'altra".
+        //
+        // Only when they asked NOTHING: a guest who did ask still gets their
+        // answer first (that guard is right above), and the recommendations
+        // come back in full the moment the intake is over.
+        if (!guestAskedSomething(userMessage) && askedText) {
+          const paragraphs = checked.text.split('\n\n')
+          const questionPara = paragraphs.findIndex((para) =>
+            para.includes(askedText.split('\n')[0])
+          )
+          if (questionPara >= 0 && paragraphs.length > 1) {
+            // eslint-disable-next-line no-console
+            console.error(`[demosappada][intake-bare] dropped ${paragraphs.length - 1} extra paragraph(s)`)
+            checked.text = paragraphs[questionPara].trim()
+          }
+        }
+
+        // The model announces the question in prose before asking it: "fammi
+        // sapere se ci sono vincoli particolari, come allergie o intolleranze,
+        // se siete senza auto…" and then the dictated question says the same
+        // thing again, properly. The guest reads it twice (Andrea,
+        // 2026-08-25: "troppo lunga, frasi più corte").
+        //
+        // The prompt already forbids it ("NON anticipare le prossime", "non
+        // aggiungere spiegazioni sul perché la fai") and the model does it
+        // anyway, so it is cut here instead of asked for again (iron rule 1).
+        //
+        // Shape, not keywords: a sentence is a preamble when it sits
+        // immediately above our question and shares most of its distinctive
+        // words with it. Measured by overlap, so it holds in every language.
+        if (askedText) {
+          const words = (t: string): Set<string> =>
+            new Set(
+              t
+                .toLowerCase()
+                .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+                .split(/\s+/)
+                .filter((w) => w.length > 3)
+            )
+          const askWords = words(askedText)
+          const paragraphs = checked.text.split('\n\n')
+          const questionIdx = paragraphs.findIndex((para) => para.includes(askedText.split('\n')[0]))
+          if (questionIdx > 0 && askWords.size >= 4) {
+            const previous = paragraphs[questionIdx - 1]
+            const prevWords = words(previous)
+            let shared = 0
+            for (const w of prevWords) if (askWords.has(w)) shared++
+            // Three distinctive words in common is the separator, measured on
+            // real replies: a preamble that rehearses the question shares 5
+            // ("consigli", "particolari", "auto", "sapere", "esigenze") while
+            // a genuine recommendation before it shares 0 or 1 (a weather line
+            // plus three museums scored 1). A ratio does not separate them —
+            // the preamble is long, so its overlap ratio stays low.
+            if (shared >= 3) {
+              // eslint-disable-next-line no-console
+              console.error(`[demosappada][preamble] dropped "${previous.trim().slice(0, 60)}…"`)
+              paragraphs.splice(questionIdx - 1, 1)
+              checked.text = paragraphs.join('\n\n').replace(/\n{3,}/g, '\n\n').trim()
+            }
+          }
         }
       }
 
@@ -3162,7 +3251,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   if (pendingReply.trim()) {
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
-    if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now)) {
+    if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now, !!questionShown)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
     if (questionShown) {
