@@ -70,6 +70,20 @@ interface Settings {
   sessionTooLongMessage?: string
   /** Presentation video shown once, on the first turn of a new conversation. */
   welcomeVideoUrl?: string
+  /**
+   * The intake questions, DICTATED verbatim — one per turn.
+   *
+   * Written in one language; the model translates them and nothing else. The
+   * prompt used to DESCRIBE each question instead ("with whom — name the three
+   * categories…") and let the model compose it, which is how three of them
+   * ended up in a single numbered list (Andrea, live, 2026-08-24). Same
+   * mechanism as custom-demorobot's `intakeQuestions`: the code owns WHICH
+   * question and its WORDING, the model owns only the language.
+   *
+   * Resolution order per CLAUDE.md §1A: workspace advanced-settings (edited in
+   * the backoffice) → this module's settings.json → nothing asked at all.
+   */
+  intakeQuestions?: Partial<Record<IntakeKey, string>>
   /** Tenant switch for the live-forecast tool. Off ⇒ the bot never claims weather. */
   weatherEnabled?: boolean
   audioOutput: boolean
@@ -1230,6 +1244,24 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
  * returned early left the previous value standing (CLAUDE.md §10: no shared
  * state across conversations).
  */
+/**
+ * The intake steps, in the order they are put to the guest.
+ *
+ * A union rather than free strings: the key ties together the settings entry
+ * that supplies the wording, the `asked` marker that retires it, and the
+ * save_stay enum — a typo in any one of them would otherwise make a question
+ * repeat forever or vanish silently.
+ */
+export type IntakeKey =
+  | 'party'
+  | 'stay'
+  | 'childrenAges'
+  | 'constraints'
+  | 'interests'
+  | 'itinerary'
+  | 'consent'
+  | 'name'
+
 export interface StayBlock {
   text: string
   askedKey: string | null
@@ -1237,10 +1269,20 @@ export interface StayBlock {
   askedKeys: string[]
 }
 
-/** Extract the `key` marker from a question line ("… → `party`"). */
-function keyOf(question: string): string | null {
-  const m = question.match(/`([a-zA-Z]+)`\s*$/)
-  return m ? m[1] : null
+/**
+ * The exact sentence to put to the guest for this intake step.
+ *
+ * Resolution order, CLAUDE.md §1A: the workspace's own text (edited in the
+ * backoffice and merged into settings by the host) → this module's
+ * settings.json default → `null`, meaning nothing is asked at all.
+ *
+ * `null` is a real answer, not a failure to paper over: a question nobody
+ * configured is better skipped than improvised by the model or sent in the
+ * wrong language.
+ */
+function intakeQuestionFor(key: IntakeKey, settings: Settings): string | null {
+  const configured = settings.intakeQuestions?.[key]
+  return configured?.trim() ? configured.trim() : null
 }
 
 export function formatStayBlock(
@@ -1254,6 +1296,8 @@ export function formatStayBlock(
    * form, and without asking, the assistant never learns it at all.
    */
   knownName?: string,
+  /** Carries `intakeQuestions` — the wording this block dictates. */
+  settings: Settings = DEFAULT_SETTINGS,
 ): StayBlock {
   // A guest with no saved profile is precisely the one everything still has to
   // be asked of. Returning early here meant the FIRST message — the only turn
@@ -1453,106 +1497,60 @@ export function formatStayBlock(
   // the model is told plainly instead of inferring it from absence — absence
   // is exactly what it gets wrong, re-asking a question the guest ignored.
   const asked = new Set(stay.asked ?? [])
-  const missing: string[] = []
+
+  // Which question is DUE — the key only. The wording is dictated from
+  // settings further down, never composed here and never composed by the model.
+  const missing: IntakeKey[] = []
 
   // Order matters: this is a conversation, not a form. The easy, sociable
   // questions come first and the personal ones last — "da dove arrivate" was
   // sixth, after allergies and a marketing consent, which is not how anyone
   // talks to a guest (Andrea, 2026-08-23).
-  if (!stay.adults && !stay.children && !stay.seniors && !asked.has('party')) {
-    missing.push(
-      'con chi è. NOMINA LE TRE CATEGORIE, non chiedere solo "in quanti siete": adulti, bambini, ' +
-        'anziani — così gli dai i consigli giusti → `party`',
-    )
-  } else if (
-    // "siamo in 3" says how many, not who: without the breakdown the advice
-    // is guesswork, and the assistant had started inventing children that
-    // nobody had mentioned.
-    stay.adults === undefined &&
-    stay.children === undefined &&
-    stay.seniors === undefined &&
-    asked.has('party')
-  ) {
-    missing.push(
-      'come sono divisi. NOMINA LE TRE CATEGORIE: adulti, bambini, anziani. Non dare per scontato ' +
-        'che siano tutti adulti — "siete entrambi adulti?" è una domanda chiusa che si porta via ' +
-        'bambini e anziani in un colpo solo (Andrea, live, 2026-08-23) → `party`',
-    )
+  //
+  // `party` is due both when nothing is known and when a guest said "siamo in
+  // 3" without saying who: a headcount without the breakdown is guesswork, and
+  // the assistant had started inventing children nobody mentioned.
+  if (stay.adults === undefined && stay.children === undefined && stay.seniors === undefined) {
+    if (!asked.has('party') || !stay.adults) missing.push('party')
   }
 
   if (!stay.departureDate && !asked.has('stay')) {
-    missing.push('fino a quando resta → `stay`')
+    missing.push('stay')
   }
 
   if (stay.children && stay.children > 0 && !stay.childrenAges && !asked.has('childrenAges')) {
-    missing.push("che età hanno i bambini — così gli proponi cose adatte a loro → `childrenAges`")
+    missing.push('childrenAges')
   }
 
   if (!stay.constraints && !asked.has('constraints')) {
-    missing.push(
-      'se c\'è qualcosa che devi sapere. GLI ESEMPI VANNO PRONUNCIATI, non riassunti: allergie o ' +
-        'intolleranze, se sono senza auto, una gravidanza, difficoltà a camminare, un cane — ' +
-        'oppure al contrario qualcosa che gli piace particolarmente. Senza esempi la domanda è ' +
-        '"c\'è qualcosa che devo tenere presente?", a cui si risponde "no" e non si cava niente ' +
-        '(Andrea, live, 2026-08-23). Chiudi dicendo che ti serve per affinare i consigli. ' +
-        'UNA domanda sola, non due → `constraints`',
-    )
+    missing.push('constraints')
   }
 
-  // What they came here to DO — asked, not waited for. `interests` existed as
-  // a field and as a line in the prompt, but no question ever collected it,
-  // so it filled in only when a guest volunteered it. That is the difference
-  // between this assistant and a search engine: knowing they want to ski, or
-  // hunt mushrooms, or just eat well, is what turns an answer into a plan
-  // (Andrea, 2026-08-23: "altrimenti è uguale a ChatGPT").
-  //
-  // Asked right before the itinerary, so what they say goes straight into
-  // building it rather than sitting unused in the profile.
+  // What they came here to DO — asked, not waited for. Knowing they want to
+  // ski, or hunt mushrooms, or just eat well, is what turns an answer into a
+  // plan (Andrea, 2026-08-23: "altrimenti è uguale a ChatGPT"). Asked right
+  // before the itinerary, so it feeds straight into building it.
   if (!stay.interests && !asked.has('interests')) {
-    missing.push(
-      'cosa gli piacerebbe fare in questi giorni. NOMINA QUALCHE ESEMPIO concreto e adatto ALLA ' +
-        'STAGIONE che trovi in RUNTIME — sciare o le ciaspole d\'inverno, camminare o i funghi ' +
-        'd\'autunno, le malghe e i rifugi d\'estate — e lascia aperto ad altro. Serve a costruire il ' +
-        'programma sulle loro passioni invece che su una lista uguale per tutti → `interests`',
-    )
+    missing.push('interests')
   }
 
   // Before the itinerary, never after: a nine-day plan built without knowing
   // they were on foot had to be rewritten from scratch, and the guest read
   // the same wall of text twice (Andrea, 2026-08-23).
   if (!stay.itinerary) {
-    missing.push("se vuole che gli prepari un programma per i giorni che restano → `itinerary`")
+    missing.push('itinerary')
   }
 
   // Last: a marketing consent asked before any trust is built gets a no.
   if (!stay.consentAsked) {
-    missing.push(
-      'se ci dà il consenso a mandargli notizie SOLO PER LA DURATA DELLA SUA PERMANENZA — dillo ' +
-        'esplicitamente così, è un consenso a termine e si dà volentieri. NOMINA LE TRE COSE e chiedi ' +
-        'su quali: gli eventi di questi giorni, le offerte degli alloggi, le offerte e promozioni del ' +
-        'territorio. Registra con save_push_consent SOLO i topics che ha davvero nominato — un "sì" ' +
-        'generico non è un sì a tutti e tre. Quando accetta, DILLO SEMPRE nella stessa risposta: che ' +
-        'può farli smettere quando vuole, BASTA CHE TE LO DICA. Dillo con parole tue, nella sua ' +
-        'lingua — non fargli scrivere una parola in inglese in mezzo a una conversazione ' +
-        '(Andrea, 2026-08-24). ' +
-        'Alla partenza gli chiederemo se vuole rinnovarlo → `consent`',
-    )
+    missing.push('consent')
   }
 
-  // Last, after the consent (Andrea's call, 2026-08-24). It is the one
-  // question whose answer is already in hand for widget guests, so it is
-  // skipped whenever the name is known from anywhere — the host's form, or an
-  // earlier turn where they mentioned it in passing.
-  //
-  // Not gated on `asked` alone: `knownName` is what makes it disappear for a
-  // guest who registered, without costing them a turn to say what they already
-  // typed.
+  // After the consent (Andrea's call, 2026-08-24), and skipped entirely when
+  // the name is already known — a widget guest typed it into the registration
+  // form seconds ago and must not be asked for it again.
   if (!knownName && !asked.has('name')) {
-    missing.push(
-      'come si chiama. Chiedilo con naturalezza, come ci si presenta — non "posso avere il suo nome" ' +
-        'ma "come ti chiami?". Salvalo SUBITO con il tool remember (key: name) e da lì in poi ' +
-        'usalo quando ti rivolgi a lui, senza esagerare → `name`',
-    )
+    missing.push('name')
   }
 
   // INTAKE GATE: the questions the guest must be asked before the assistant
@@ -1567,38 +1565,47 @@ export function formatStayBlock(
   // question is appended to every reply until it is answered or asked, so the
   // queue always advances instead of stalling.
   //
-  // `askedKeys` stays in the shape the caller expects, but now carries at most
-  // one key: only the question actually put to the guest is marked as asked.
-  // Marking the whole queue here is what would silently swallow the questions
-  // that were never pronounced.
-  const askedKey = missing.length > 0 ? keyOf(missing[0]) : null
+  // `askedKeys` carries at most one key: only the question actually put to the
+  // guest is marked as asked. Marking the whole queue is what would silently
+  // swallow the questions that were never pronounced.
+  const askedKey = missing[0] ?? null
   const askedKeys = askedKey ? [askedKey] : []
 
-  if (missing.length > 0) {
-    const remaining = missing.length - 1
+  // The question is DICTATED, not described.
+  //
+  // This block used to explain each question to the model and let it compose
+  // the sentence ("with whom — NAME THE THREE CATEGORIES…"). Describing invites
+  // composing, and composing is how three questions ended up in one numbered
+  // list on a first turn (Andrea, live, 2026-08-24: "una alla volta le
+  // domande"). The same lesson custom-demorobot learned: the code owns WHICH
+  // question and its WORDING, the model owns only the language it is said in.
+  const question = askedKey ? intakeQuestionFor(askedKey, settings) : null
+
+  if (askedKey && question) {
     lines.push(
       '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
       'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
       'davvero, con i fatti che hai, e SOLO DOPO aggiungi la domanda qui sotto.',
       '',
-      'LA DOMANDA DA FARE ADESSO — UNA SOLA, in coda alla tua risposta:',
-      `  ${missing[0]}`,
+      '## LA DOMANDA DA FARE ADESSO',
       '',
-      '🚨 UNA DOMANDA SOLA, NON DI PIÙ. Non anticipare le prossime, non elencarle, non chiedere due',
-      'cose nella stessa frase: il cliente risponde a una per volta e le altre arrivano da sé nei turni',
-      'successivi. Una domanda in più viene tagliata via prima di arrivare al cliente.',
-      'Gli esempi che vedi dentro la domanda FANNO PARTE della domanda: pronunciali sempre. Senza,',
-      '"c\'è qualcosa che devo sapere?" si prende un "no" e non cava niente (Andrea, live).',
-      'Registrala in `asked` con save_stay nello stesso messaggio in cui la fai.',
-      'Non aggiungere una tua spiegazione del perché la chiedi: niente "cambia tutto quello che vi',
-      'consiglio". Chiedi e basta.',
-      ...(remaining > 0
-        ? [
-            `Dopo questa te ne restano altre ${remaining}: NON farle ora, le farai una per volta nei ` +
-              'prossimi messaggi.',
-          ]
-        : []),
+      'Questa istruzione ha la precedenza su qualsiasi altra cosa tu possa dedurre dalla',
+      'conversazione. Fai QUESTA domanda, alla lettera, tradotta nella lingua del cliente,',
+      'e nient\'altro:',
+      '',
+      question,
+      '',
+      'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
+      'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
+      `Quando risponde, registrala in \`asked\` con save_stay come: ${askedKey}`,
     )
+  } else if (askedKey && !question) {
+    // Configuration says nothing for this key, so nothing is asked. Silence
+    // beats an English sentence sent to a guest writing in Italian, and beats
+    // the model improvising a question of its own (CLAUDE.md §1A).
+    // eslint-disable-next-line no-console
+    console.error(`[demosappada][intake] no question configured for "${askedKey}" — skipped`)
+    lines.push('NON FARE DOMANDE sul suo soggiorno in questo messaggio.')
   } else {
     lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
   }
@@ -2212,7 +2219,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
   }
 
-  const stayBlock = formatStayBlock(stayProfile, now, returningGuest, knownName)
+  const stayBlock = formatStayBlock(stayProfile, now, returningGuest, knownName, settings)
 
   // Built once: it is part of the prompt AND part of what the reply may
   // quote. The local time and today's date live only here, so without it in

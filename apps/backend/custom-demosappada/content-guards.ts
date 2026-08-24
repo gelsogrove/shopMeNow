@@ -232,11 +232,77 @@ export function keepSingleQuestion(reply: string): ContentCheck {
 
   if (removed.length === 0) return { text: reply, removed: [] }
 
-  const text = kept
-    .join('')
+  const text = tidyAfterRemoval(kept.join(''))
+
+  return { text, removed }
+}
+
+/**
+ * Clear away what a removed question leaves behind.
+ *
+ * Dropping the sentences alone is not enough when the model wrote a numbered
+ * list, which is exactly what it does when it ignores "one question at a
+ * time": removing questions 2 and 3 from
+ *
+ *   Due cose al volo, così ti do consigli su misura:
+ *   1. Con chi sei? (adulti, bambini, anziani)
+ *   2. Fino a quando resti?
+ *   3. C'è qualcosa da tenere presente…?
+ *   Aspetto le tue risposte!
+ *
+ * used to leave the bare markers "2." and "3." standing, under a line
+ * announcing a list that is no longer there and above a plural "Aspetto le tue
+ * risposte" (Andrea, live, 2026-08-24). The guest read something visibly
+ * broken — worse than the two extra questions it was meant to prevent.
+ *
+ * Every rule here is shape-only: orphaned list markers, a colon-terminated
+ * line with nothing left under it, blank runs. Nothing reads WHAT was written,
+ * so it behaves the same in every language (CLAUDE.md §14).
+ */
+function tidyAfterRemoval(text: string): string {
+  const lines = text.split('\n')
+  const kept: string[] = []
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // A list marker with nothing after it: "2.", "3)", "-", "•".
+    if (/^(\d+[.)]|[-*•])\s*$/.test(trimmed)) continue
+
+    kept.push(line)
+  }
+
+  // Only ONE question survives this guard, so anything that framed the reply
+  // as a LIST of them is now describing something that is not there.
+  //
+  // Two shapes get dropped, both structural:
+  //  - a line ending in ':' that introduced the list ("Due cose al volo…:")
+  //  - a trailing line after the surviving question that closes the list
+  //    ("Aspetto le tue risposte!") — it is not a question, so the sentence
+  //    pass left it standing, and it reads as plural for a single question.
+  // Anywhere in the line, not just at its end: a question routinely carries a
+  // parenthetical after the mark — "Con chi sei? (adulti, bambini, anziani)" —
+  // and testing endsWith('?') failed to find it at all, so none of the cleanup
+  // below ran (Andrea, live, 2026-08-24).
+  const holdsQuestion = (line: string): boolean => line.includes('?')
+  const questionAt = kept.findIndex(holdsQuestion)
+
+  const cleaned = kept.filter((line, i) => {
+    const trimmed = line.trim()
+    if (trimmed.length === 0) return true
+    if (questionAt === -1) return true
+    // The introduction: a colon line ABOVE the surviving question.
+    if (i < questionAt && trimmed.endsWith(':')) return false
+    // The sign-off: any non-question line BELOW it.
+    if (i > questionAt && !holdsQuestion(trimmed)) return false
+    return true
+  })
+
+  return cleaned
+    .join('\n')
+    // A list marker is pointless once one item is left.
+    .replace(/^\s*(?:\d+[.)]|[-*•])\s+/gm, '')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
-
-  return { text, removed }
 }
