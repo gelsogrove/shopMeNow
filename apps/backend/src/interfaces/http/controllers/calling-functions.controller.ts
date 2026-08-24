@@ -28,7 +28,7 @@ const IMMUTABLE_KEYS = new Set(["functionName", "isSystemFunction", "workspaceId
 /**
  * Fields a module built-in does NOT allow to be changed, on top of IMMUTABLE_KEYS.
  *
- * A module built-in is schema + handler code: `save_stay`'s branch in the
+ * A module built-in is schema + handler code: `save_preferences`'s branch in the
  * module reads a dozen argument names, so an admin who edits `parameters` and
  * drops `asked` turns the intake into a loop that asks the same question every
  * turn — with no error anywhere. `executionType` is what routes the call back

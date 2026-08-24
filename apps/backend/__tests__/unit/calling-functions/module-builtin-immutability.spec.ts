@@ -9,7 +9,7 @@
  * whole point of moving them into the database.
  *
  * Refused: `parameters` and `executionType`, because the handler reads its
- * arguments by name — dropping `asked` from save_stay's schema turns the intake
+ * arguments by name — dropping `asked` from save_preferences's schema turns the intake
  * into a loop that asks the same question every turn, with nothing on screen
  * saying why. And DELETE, because switching a tool off achieves the same thing
  * reversibly (Andrea's call: "solo disattivare").
@@ -69,7 +69,7 @@ describe("module built-in immutability", () => {
     jest.clearAllMocks()
 
     mockWorkspaceFindUnique.mockResolvedValue({ customChatbotId: "demosappada" })
-    mockUpdate.mockResolvedValue({ functionName: "save_stay" })
+    mockUpdate.mockResolvedValue({ functionName: "save_preferences" })
     mockDelete.mockResolvedValue(undefined)
     mockCreate.mockResolvedValue({ functionName: "myTool" })
 
@@ -84,7 +84,7 @@ describe("module built-in immutability", () => {
 
   describe("editing a built-in", () => {
     beforeEach(() => {
-      mockFindByName.mockResolvedValue({ functionName: "save_stay", isSystemFunction: true })
+      mockFindByName.mockResolvedValue({ functionName: "save_preferences", isSystemFunction: true })
     })
 
     it("allows the description to be rewritten", async () => {
@@ -92,7 +92,7 @@ describe("module built-in immutability", () => {
       // when to call the tool is the tenant's to tune.
       const res = buildRes()
       await controller.updateFunction(
-        buildReq({ params: { functionName: "save_stay" }, body: { description: "New wording" } }),
+        buildReq({ params: { functionName: "save_preferences" }, body: { description: "New wording" } }),
         res
       )
 
@@ -103,7 +103,7 @@ describe("module built-in immutability", () => {
     it("allows the tool to be switched off", async () => {
       const res = buildRes()
       await controller.updateFunction(
-        buildReq({ params: { functionName: "save_stay" }, body: { isActive: false } }),
+        buildReq({ params: { functionName: "save_preferences" }, body: { isActive: false } }),
         res
       )
 
@@ -116,7 +116,7 @@ describe("module built-in immutability", () => {
       const res = buildRes()
       await controller.updateFunction(
         buildReq({
-          params: { functionName: "save_stay" },
+          params: { functionName: "save_preferences" },
           body: { parameters: { type: "object", properties: {} } },
         }),
         res
@@ -133,7 +133,7 @@ describe("module built-in immutability", () => {
       // executionType is what routes the call back into the module at all.
       const res = buildRes()
       await controller.updateFunction(
-        buildReq({ params: { functionName: "save_stay" }, body: { executionType: "WEBHOOK" } }),
+        buildReq({ params: { functionName: "save_preferences" }, body: { executionType: "WEBHOOK" } }),
         res
       )
 
@@ -144,7 +144,7 @@ describe("module built-in immutability", () => {
     it("refuses a rename, as it does for every function", async () => {
       const res = buildRes()
       await controller.updateFunction(
-        buildReq({ params: { functionName: "save_stay" }, body: { functionName: "salva_soggiorno" } }),
+        buildReq({ params: { functionName: "save_preferences" }, body: { functionName: "salva_soggiorno" } }),
         res
       )
 
@@ -174,10 +174,10 @@ describe("module built-in immutability", () => {
 
   describe("deleting", () => {
     it("refuses to delete a built-in", async () => {
-      mockFindByName.mockResolvedValue({ functionName: "save_stay", isSystemFunction: true })
+      mockFindByName.mockResolvedValue({ functionName: "save_preferences", isSystemFunction: true })
 
       const res = buildRes()
-      await controller.deleteFunction(buildReq({ params: { functionName: "save_stay" } }), res)
+      await controller.deleteFunction(buildReq({ params: { functionName: "save_preferences" } }), res)
 
       expect(res.status).toHaveBeenCalledWith(403)
       expect(mockDelete).not.toHaveBeenCalled()
@@ -196,13 +196,13 @@ describe("module built-in immutability", () => {
   describe("creating", () => {
     it("refuses a name the module already dispatches", async () => {
       // The module matches on the name BEFORE reaching tenant tools, so a
-      // webhook called save_stay would look installed and never fire.
+      // webhook called save_preferences would look installed and never fire.
       mockFindByName.mockResolvedValue(null)
 
       const res = buildRes()
       await controller.createFunction(
         buildReq({
-          body: { functionName: "save_stay", description: "mine", executionType: "WEBHOOK" },
+          body: { functionName: "save_preferences", description: "mine", executionType: "WEBHOOK" },
         }),
         res
       )
@@ -232,12 +232,12 @@ describe("module built-in immutability", () => {
       // A workspace with no custom chatbot has no built-ins, so nothing here
       // should narrow what its admin can do.
       mockWorkspaceFindUnique.mockResolvedValue({ customChatbotId: null })
-      mockFindByName.mockResolvedValue({ functionName: "save_stay", isSystemFunction: true })
+      mockFindByName.mockResolvedValue({ functionName: "save_preferences", isSystemFunction: true })
 
       const res = buildRes()
       await controller.updateFunction(
         buildReq({
-          params: { functionName: "save_stay" },
+          params: { functionName: "save_preferences" },
           body: { parameters: { type: "object" } },
         }),
         res

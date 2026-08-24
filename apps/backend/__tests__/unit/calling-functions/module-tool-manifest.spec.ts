@@ -7,7 +7,7 @@
  * database — so the Settings page could show them but never switch one off.
  *
  * They are now rows, seeded from `tools.manifest.ts`. What did NOT move is the
- * code that executes them: `save_stay` still writes StayProfile inside the
+ * code that executes them: `save_preferences` still writes StayProfile inside the
  * module. The link between the row and that code is the `functionName`, and
  * nothing but a test can keep the two from drifting apart — a rename in
  * `agent.ts` would leave a tool the model can call and nothing answers to,
@@ -28,7 +28,7 @@ const EXPECTED_TOOLS = [
   "get_weather",
   "check_accommodation",
   "remember",
-  "save_stay",
+  "save_preferences",
   "save_itinerary",
   "save_push_consent",
   "save_feedback",

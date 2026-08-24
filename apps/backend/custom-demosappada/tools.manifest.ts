@@ -70,7 +70,7 @@ export const REMEMBER_TOOL = {
 export const SAVE_STAY_TOOL = {
   type: 'function',
   function: {
-    name: 'save_stay',
+    name: 'save_preferences',
     description:
       'Save what you have learned about this holiday. Call it the moment the customer tells you any of ' +
       'it — how many they are, how long they stay, where they come from, or something they have already ' +

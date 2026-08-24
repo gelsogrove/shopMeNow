@@ -1279,7 +1279,7 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
  *
  * A union rather than free strings: the key ties together the settings entry
  * that supplies the wording, the `asked` marker that retires it, and the
- * save_stay enum — a typo in any one of them would otherwise make a question
+ * save_preferences enum — a typo in any one of them would otherwise make a question
  * repeat forever or vanish silently.
  */
 export type IntakeKey =
@@ -1489,7 +1489,7 @@ export function formatStayBlock(
 
   lines.push(
     'Se il cliente CORREGGE o AGGIORNA uno di questi dati — partono prima, si è aggiunta una persona, ' +
-      'cambia l\'alloggio — richiama subito save_stay con il valore NUOVO: sovrascrive quello vecchio, ' +
+      'cambia l\'alloggio — richiama subito save_preferences con il valore NUOVO: sovrascrive quello vecchio, ' +
       'e da lì in poi i giorni rimanenti e i consigli si ricalcolano da soli.',
   )
 
@@ -1500,7 +1500,7 @@ export function formatStayBlock(
   }
   lines.push(
     'OGNI VOLTA che impari qualcosa di nuovo su di loro, insieme al campo giusto risalva anche `notes` ' +
-      'con save_stay: è la scheda che legge la Pro Loco, tutta la vacanza in un paragrafo — chi sono, ' +
+      'con save_preferences: è la scheda che legge la Pro Loco, tutta la vacanza in un paragrafo — chi sono, ' +
       'quando ci sono, da dove vengono, cosa li limita, cosa gli piace, cosa hanno già fatto. ' +
       'Riscrivila INTERA ogni volta, non aggiungere righe in fondo. Non è un messaggio per il cliente: ' +
       'non parlargliene mai.',
@@ -1679,7 +1679,7 @@ export function formatStayBlock(
       '',
       'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
       'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
-      `Quando risponde, registrala in \`asked\` con save_stay come: ${askedKeys.join(', ')}`,
+      `Quando risponde, registrala in \`asked\` con save_preferences come: ${askedKeys.join(', ')}`,
     )
   } else if (askedKey && !question) {
     // Configuration says nothing for this key, so nothing is asked. Silence
@@ -1735,7 +1735,7 @@ export function formatStayBlock(
       'Se il programma prevedeva qualcosa per IERI o per OGGI e non sai ancora com\'è andata, chiedilo ' +
         'in una riga, con naturalezza, in coda alla tua risposta: sapere se ci sono stati e se è ' +
         'piaciuto è quello che ti evita di riproporglielo. Quello che ti dicono va salvato subito con ' +
-        'save_stay in `doneAlready`. Non insistere se non rispondono.',
+        'save_preferences in `doneAlready`. Non insistere se non rispondono.',
     )
   }
 
@@ -2275,9 +2275,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // An admin can now switch a built-in off in the UI, and the handler stays
   // wired either way. Gating only on the handler meant the module went on
   // instructing the model to call a tool it could no longer see: the forced
-  // save below pushed "Chiama ORA save_stay", the model could not comply, and
+  // save below pushed "Chiama ORA save_preferences", the model could not comply, and
   // the hop was spent on nothing — a dead turn for the guest.
-  const stayToolAvailable = customToolsByName.has('save_stay')
+  const stayToolAvailable = customToolsByName.has('save_preferences')
   // Two switches, deliberately ANDed: the advanced-settings JSON flag and the
   // tool row. Either one off means off. Kept both rather than silently
   // retiring `weatherEnabled`, which is a working feature (Andrea, 2026-08-24).
@@ -2285,7 +2285,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
   // Says WHY the bot is about to behave less capably, at the one moment the
   // cause is knowable. Without it a disabled tool looks like a model failure.
-  const missingBuiltIns = ['save_stay', 'get_weather', 'remember'].filter(
+  const missingBuiltIns = ['save_preferences', 'get_weather', 'remember'].filter(
     (name) => !customToolsByName.has(name),
   )
   if (missingBuiltIns.length > 0) {
@@ -2383,7 +2383,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   const maxHops = settings.maxToolHops ?? MAX_TOOL_HOPS
 
   // Whether the guest's answer was actually recorded this turn. The prompt
-  // asks the model to call save_stay the moment it learns something, and the
+  // asks the model to call save_preferences the moment it learns something, and the
   // model regularly does not: it acknowledged "siamo in 4, due bambini di 7 e
   // 9 anni" in prose and saved nothing, so two turns later it asked again
   // (Andrea, 2026-08-23). An instruction cannot be the guarantee here.
@@ -2408,7 +2408,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // stay and nothing was written, spend one hop forcing the tool rather
       // than letting the fact evaporate — asking the same question twice is
       // what makes the assistant feel like a form.
-      // `stayToolAvailable` guards the whole retry: with save_stay switched off
+      // `stayToolAvailable` guards the whole retry: with save_preferences switched off
       // there is nothing to force, and spending a hop ordering an absent tool
       // is how the guest ends up with an empty reply.
       if (stayEnabled && stayToolAvailable && !stayWasSaved && !forcedSaveDone && mentionsStayFacts(userMessage)) {
@@ -2422,7 +2422,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           role: 'user',
           content:
             '[SYSTEM] Il cliente ti ha appena dato informazioni sul suo soggiorno e non le hai ancora ' +
-            'salvate. Chiama ORA save_stay con quello che hai imparato da questo messaggio (quante ' +
+            'salvate. Chiama ORA save_preferences con quello che hai imparato da questo messaggio (quante ' +
             'persone, bambini e le loro età, anziani, quanti giorni, da dove arrivano, esigenze ' +
             'particolari), e registra in `asked` le domande che hai fatto. Subito dopo il salvataggio ' +
             'scrivi al cliente la risposta: se resta una domanda da fare, falla; altrimenti conferma ' +
@@ -2755,7 +2755,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               'let the customer call. You take no bookings.',
           })
         }
-      } else if (name === 'save_stay') {
+      } else if (name === 'save_preferences') {
         if (!stayEnabled || !customerId) {
           toolOutput = JSON.stringify({ ok: false, error: 'no_customer' })
         } else {

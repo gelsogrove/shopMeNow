@@ -77,11 +77,11 @@ describe("demosappada tools come from the database", () => {
       // stayEnabled alone is derived from the HANDLER being wired, which stays
       // true even when the row is switched off — that mismatch is what made
       // the module order a tool the model could not see.
-      expect(AGENT_CODE).toMatch(/const stayToolAvailable = customToolsByName\.has\('save_stay'\)/)
+      expect(AGENT_CODE).toMatch(/const stayToolAvailable = customToolsByName\.has\('save_preferences'\)/)
     })
 
     it("guards the forced save with it", () => {
-      // The forced save pushes "[SYSTEM] Chiama ORA save_stay". With the tool
+      // The forced save pushes "[SYSTEM] Chiama ORA save_preferences". With the tool
       // absent the model cannot comply, the hop is spent, and the guest can be
       // left with an empty reply.
       const forcedSave = AGENT_CODE.match(/if \(stayEnabled &&[^)]*mentionsStayFacts\(userMessage\)\)/)?.[0]

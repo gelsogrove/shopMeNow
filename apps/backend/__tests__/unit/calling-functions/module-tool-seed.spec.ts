@@ -77,7 +77,7 @@ describe("syncModuleToolRows", () => {
         "get_weather",
         "check_accommodation",
         "remember",
-        "save_stay",
+        "save_preferences",
         "save_itinerary",
         "save_push_consent",
         "save_feedback",
