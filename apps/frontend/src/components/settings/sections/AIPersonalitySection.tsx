@@ -59,6 +59,7 @@ interface AIPersonalitySectionProps {
     toneOfVoice: "formal" | "friendly" | "professional" | "casual"
     channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     welcomeMessage: string
+    videoUrl: string
     /** Greeting for a returning customer we already know by name. */
     welcomeBackMessage?: string
     enableWelcomeMessage: boolean
@@ -426,7 +427,29 @@ export function AIPersonalitySection({
               />
             </div>
             <p className="text-xs text-gray-500">
-              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code>, <code>{"{{companyName}}"}</code> and <code>{"{{termsAndConditions}}"}</code>.
+              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code>, <code>{"{{companyName}}"}</code>, <code>{"{{termsAndConditions}}"}</code> and <code>{"{{videoUrl}}"}</code>.
+            </p>
+          </div>
+
+          {/* Video URL — the presentation video lives in ONE field and is
+              referenced from the copy above as {{videoUrl}}. Pasting the link
+              straight into the message is what produced it twice. */}
+          <div
+            className="space-y-2 mt-6"
+            onFocus={() => onFieldFocus?.("videoUrl")}
+            data-focus-key="videoUrl"
+          >
+            <Label htmlFor="videoUrl">Video URL</Label>
+            <Input
+              id="videoUrl"
+              type="url"
+              value={formData.videoUrl ?? ""}
+              onChange={(e) => onFieldChange("videoUrl", e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-gray-500">
+              Presentation video. Reference it in any message above as <code>{"{{videoUrl}}"}</code> — leave it empty and the placeholder resolves to nothing.
             </p>
           </div>
 

@@ -962,6 +962,7 @@ export class CustomClientChatbotService {
           operatorDeliveryMode: true,
           defaultLanguage: true,
           enabledLanguages: true,
+          videoUrl: true,
           audioOutput: true,
           audioVoices: true,
           welcomeMessage: true,

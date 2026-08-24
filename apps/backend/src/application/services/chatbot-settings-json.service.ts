@@ -140,6 +140,8 @@ export interface WorkspaceChatbotSource {
   hasHumanSupport?: boolean | null
   humanSupportMessage?: string | null
   termsAndConditions?: string | null
+  /** 📺 Presentation video, substituted into customer copy as {{videoUrl}}. */
+  videoUrl?: string | null
   // Free-form JSON for fields with no dedicated column (maxToolHops,
   // maxMessageChars, rateLimitedMessage, intakeQuestions, etc.). Merged onto
   // the file as-is; widget look & feel keys are stripped even if present.

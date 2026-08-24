@@ -84,6 +84,22 @@ interface Settings {
    * the backoffice) → this module's settings.json → nothing asked at all.
    */
   intakeQuestions?: Partial<Record<IntakeKey, string>>
+  /**
+   * Shown ONLY to a guest who accepts the push consent: how to turn it off
+   * again. Configuration, not a literal, so it can be reworded per tenant and
+   * the LLM renders it in the guest's language (CLAUDE.md §1A).
+   */
+  pushOptOutHint?: string
+  /**
+   * The exact words a guest may write to revoke the push consent.
+   *
+   * Configured next to `pushOptOutHint` on purpose: the hint PROMISES a
+   * command, and this is what makes it work — keeping them together is what
+   * stops the module promising "NO PUSH" while only listening for
+   * "unsubscribe" (Andrea, 2026-08-24). Matched alone on the line, so a
+   * sentence merely containing the words is still a question.
+   */
+  pushOptOutCommands?: string[]
   /** Tenant switch for the live-forecast tool. Off ⇒ the bot never claims weather. */
   weatherEnabled?: boolean
   audioOutput: boolean
@@ -604,6 +620,18 @@ function contentMediaAllowed(
   now: Date,
 ): boolean {
   if (presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) return false
+
+  // The welcome turn carries the greeting and the presentation — nothing else.
+  // The guest wrote "ciao": they have not asked about a place yet, so there is
+  // no detail answer for a photo or video to belong to, and attaching one puts
+  // a second link under a message that already has one (Andrea, 2026-08-24:
+  // "togli il link che c'è sotto").
+  //
+  // Gated on the GREETING, not on presentationVideoGoesOut above: once the
+  // video moved into the copy as {{videoUrl}}, `welcomeVideoUrl` went empty
+  // and that check stopped firing — silently taking this protection with it.
+  if (greeting === 'new') return false
+
   const daysLeft = daysLeftInStay(stayProfile ?? null, now)
   return daysLeft === null || daysLeft > 0
 }
@@ -1044,21 +1072,23 @@ function isBareIntakeQuestion(reply: string): boolean {
  * one is enough to show the question was opened up.
  */
 function intakeQuestionLacksExamples(reply: string, key: string | null): boolean {
-  if (key !== 'party' && key !== 'constraints') return false
+  // `party` used to be checked here too: its old wording ("con chi sei in
+  // vacanza") collapsed into a closed "siete entrambi adulti?" unless the
+  // model pronounced the categories, so a retry forced them back in.
+  //
+  // The question is now "In quanti siete e fino a quando vi fermate?" — a
+  // headcount and a date, open by construction, with nothing to enumerate.
+  // Keeping the guard made the model append "quanti adulti, bambini e anziani"
+  // to a question that never asked for them (Andrea, 2026-08-24).
+  if (key !== 'constraints') return false
   const text = reply.toLowerCase()
-  const groups =
-    key === 'party'
-      ? [
-          /bambin|bimb|figl|piccol|kinder|child|enfant|niñ|nen/,
-          /anzian|nonn|senior|älter|âgé|mayor|gran/,
-        ]
-      : [
-          /allerg|intoller|celiac|glutine|gluten|unverträg/,
-          /auto|macchina|patente|car|coche|voiture|wagen|piedi|fuß|walk|pied/,
-          /gravidanz|incinta|pregnan|embaraz|enceinte|schwanger/,
-          /cammin|deambul|carrozzin|mobilit|walk|gehen|silla|fauteuil/,
-          /cane|cagnolin|animal|dog|hund|perro|chien/,
-        ]
+  const groups = [
+    /allerg|intoller|celiac|glutine|gluten|unverträg/,
+    /auto|macchina|patente|car|coche|voiture|wagen|piedi|fuß|walk|pied/,
+    /gravidanz|incinta|pregnan|embaraz|enceinte|schwanger/,
+    /cammin|deambul|carrozzin|mobilit|walk|gehen|silla|fauteuil/,
+    /cane|cagnolin|animal|dog|hund|perro|chien/,
+  ]
   return !groups.some((re) => re.test(text))
 }
 
@@ -1255,6 +1285,7 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
 export type IntakeKey =
   | 'party'
   | 'stay'
+  | 'composition'
   | 'childrenAges'
   | 'constraints'
   | 'interests'
@@ -1267,6 +1298,12 @@ export interface StayBlock {
   askedKey: string | null
   /** Every intake key shown this turn. All of them get marked as asked. */
   askedKeys: string[]
+  /**
+   * The configured wording dictated this turn. Carried out so the
+   * one-question guard can tell OUR question — which may legitimately span
+   * several sentences — from questions the model added on its own.
+   */
+  askedQuestion: string | null
 }
 
 /**
@@ -1510,20 +1547,70 @@ export function formatStayBlock(
   // `party` is due both when nothing is known and when a guest said "siamo in
   // 3" without saying who: a headcount without the breakdown is guesswork, and
   // the assistant had started inventing children nobody mentioned.
-  if (stay.adults === undefined && stay.children === undefined && stay.seniors === undefined) {
-    if (!asked.has('party') || !stay.adults) missing.push('party')
+  // Asked ONCE. The re-queue that used to live here ("|| !stay.adults") was
+  // there because the old wording asked WHO was coming, so a bare headcount
+  // left the job half done. That job now belongs to `composition` below, and
+  // keeping the re-queue meant a guest who answered "siamo in 4 fino a
+  // domenica" — without the model writing the number into `adults` — was
+  // asked the very same question again, and `composition` never came up at
+  // all (Andrea, 2026-08-24).
+  if (!asked.has('party')) {
+    missing.push('party')
   }
 
   if (!stay.departureDate && !asked.has('stay')) {
     missing.push('stay')
   }
 
+  // SECOND: anything that changes what can be recommended at all — a coeliac,
+  // no car, a dog, difficulty walking (Andrea, 2026-08-24). Ahead of the
+  // party composition on purpose: the wording invites the guest to volunteer
+  // who they are ("siamo con due bambini e una celiaca"), and when they do,
+  // `composition` below is skipped as already answered. The reverse never
+  // happens — knowing there are children says nothing about allergies.
+  if (!stay.constraints && !asked.has('constraints')) {
+    missing.push('constraints')
+  }
+
+  // THIRD: who is actually in the party. The first question asks a headcount
+  // and the dates, not the categories, so a guest answering "siamo in 4 fino a
+  // domenica" leaves this unknown — and the walks, the ages question and the
+  // itinerary all depend on it.
+  //
+  // Skipped, never asked twice, when either is already known: "siamo in 2 con
+  // un bambino" answers it before it is put. `children`/`seniors` of 0 are
+  // real answers ("no, solo adulti"), so the test is `!== undefined` rather
+  // than truthiness.
+  const compositionKnown =
+    stay.children !== undefined || stay.seniors !== undefined
+  if (!compositionKnown && !asked.has('composition')) {
+    missing.push('composition')
+  }
+
+  // FOURTH: the push consent. It used to sit last, on the reasoning that a
+  // marketing ask needs trust built first — but by then the intake had run
+  // long enough that many guests never reached it. Asked here it still comes
+  // after three answered questions, and it is explicitly scoped to the stay,
+  // which is what makes it easy to say yes to (Andrea, 2026-08-24).
+  if (!stay.consentAsked) {
+    missing.push('consent')
+  }
+
   if (stay.children && stay.children > 0 && !stay.childrenAges && !asked.has('childrenAges')) {
     missing.push('childrenAges')
   }
 
-  if (!stay.constraints && !asked.has('constraints')) {
-    missing.push('constraints')
+  // FIFTH and last of the intake proper: their name, right after the consent
+  // (Andrea, 2026-08-24 — "ultima domanda, come ti chiami?"). It used to sit
+  // after `interests` and `itinerary`, so in practice the guest was asked what
+  // they felt like doing before being asked who they were.
+  //
+  // Skipped when the name is already known — a widget guest who typed it into
+  // the registration form must not be asked again. An anonymous visitor's
+  // "Visitor <id>" placeholder does NOT count as known: the host strips it
+  // before the module ever sees it (realCustomerName, widget-chat.controller).
+  if (!knownName && !asked.has('name')) {
+    missing.push('name')
   }
 
   // What they came here to DO — asked, not waited for. Knowing they want to
@@ -1541,18 +1628,6 @@ export function formatStayBlock(
     missing.push('itinerary')
   }
 
-  // Last: a marketing consent asked before any trust is built gets a no.
-  if (!stay.consentAsked) {
-    missing.push('consent')
-  }
-
-  // After the consent (Andrea's call, 2026-08-24), and skipped entirely when
-  // the name is already known — a widget guest typed it into the registration
-  // form seconds ago and must not be asked for it again.
-  if (!knownName && !asked.has('name')) {
-    missing.push('name')
-  }
-
   // INTAKE GATE: the questions the guest must be asked before the assistant
   // starts recommending. ONE question per turn (Andrea, 2026-08-24: "domande
   // che devi fare una alla volta..dopo il welcome").
@@ -1565,11 +1640,18 @@ export function formatStayBlock(
   // question is appended to every reply until it is answered or asked, so the
   // queue always advances instead of stalling.
   //
-  // `askedKeys` carries at most one key: only the question actually put to the
-  // guest is marked as asked. Marking the whole queue is what would silently
-  // swallow the questions that were never pronounced.
+  // `askedKeys` carries only the keys the guest was ACTUALLY asked about.
+  // Marking the whole queue is what would silently swallow the questions that
+  // were never pronounced.
+  //
+  // The one exception is `party`, whose wording asks two things at once ("in
+  // quanti siete e fino a quando vi fermate") — one sentence, because asking a
+  // guest their headcount and their dates in two separate turns reads like a
+  // form (Andrea, 2026-08-24). Both keys retire together: leaving `stay` open
+  // would make the assistant ask for the departure date the guest just gave.
   const askedKey = missing[0] ?? null
-  const askedKeys = askedKey ? [askedKey] : []
+  const askedKeys =
+    askedKey === 'party' ? ['party', 'stay'] : askedKey ? [askedKey] : []
 
   // The question is DICTATED, not described.
   //
@@ -1597,7 +1679,7 @@ export function formatStayBlock(
       '',
       'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
       'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
-      `Quando risponde, registrala in \`asked\` con save_stay come: ${askedKey}`,
+      `Quando risponde, registrala in \`asked\` con save_stay come: ${askedKeys.join(', ')}`,
     )
   } else if (askedKey && !question) {
     // Configuration says nothing for this key, so nothing is asked. Silence
@@ -1663,8 +1745,8 @@ export function formatStayBlock(
     lines.push('Vuole il programma: sei il suo pianificatore, porta avanti il piano.')
   }
 
-  if (lines.length === 0) return { text: '', askedKey, askedKeys }
-  return { text: ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n'), askedKey, askedKeys }
+  if (lines.length === 0) return { text: '', askedKey, askedKeys, askedQuestion: question }
+  return { text: ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n'), askedKey, askedKeys, askedQuestion: question }
 }
 
 /**
@@ -1679,22 +1761,34 @@ export function formatStayBlock(
  * model: the guest does not announce their departure, the calendar does.
  */
 /**
- * The word the guest was promised: writing it revokes the consent.
+ * The words the guest was promised: writing one revokes the consent.
  *
  * This is NOT phrase-based intent detection (CLAUDE.md §14) — nothing here
- * guesses what the guest meant. It is a COMMAND WORD we ourselves published
+ * guesses what the guest meant. These are COMMAND WORDS we ourselves published
  * to them when they opted in, in the same class as the numeric selection the
- * rule explicitly allows. Recognising it is honouring a promise, and the GDPR
- * right to withdraw cannot depend on the model noticing.
+ * rule explicitly allows. Recognising them is honouring a promise, and the
+ * GDPR right to withdraw cannot depend on the model noticing.
  *
- * Matched alone on the line, in any case, with optional punctuation: a
- * sentence that merely CONTAINS the word ("cosa vuol dire unsubscribe?") is a
- * question, not a revocation.
+ * They come from settings, NOT from a literal here: the tenant's own
+ * `pushOptOutHint` is what promises them, and a promise the code does not
+ * honour is worse than no promise at all. Before this, the hint said "scrivi
+ * NO PUSH" while the module only ever matched "unsubscribe" (Andrea,
+ * 2026-08-24). With nothing configured nothing is recognised — the tenant has
+ * promised nothing either.
+ *
+ * Matched alone on the line, in any case, with optional trailing punctuation
+ * and internal spacing normalised ("no  push." revokes): a sentence that
+ * merely CONTAINS the words ("cosa vuol dire unsubscribe?") is a question,
+ * not a revocation.
  */
-const UNSUBSCRIBE_RE = /^\s*unsubscribe[\s.!]*$/i
-
-function isUnsubscribeCommand(message: string): boolean {
-  return UNSUBSCRIBE_RE.test(message)
+function isUnsubscribeCommand(message: string, settings: Settings): boolean {
+  const commands = settings.pushOptOutCommands ?? []
+  const normalised = message.trim().replace(/[\s.!]+$/, '').replace(/\s+/g, ' ').toLowerCase()
+  if (!normalised) return false
+  return commands.some((cmd) => {
+    const candidate = cmd.trim().replace(/\s+/g, ' ').toLowerCase()
+    return candidate.length > 0 && candidate === normalised
+  })
 }
 
 /**
@@ -1919,9 +2013,11 @@ function formatRuntimeBlock(params: {
       'Anything of that kind you write is deleted before sending, and what remains is what the guest',
       'reads — so start your very first sentence with the substance.',
       '🚨 Do NOT assume what they want. "Ciao" is not a request for dinner, or for a walk, or for',
-      'anything else: it is a hello. When the message carries no request, say one true, useful thing',
-      'about right now — the weather, or which day of their stay is the good one — and ask the first',
-      'question from ANCORA DA CHIEDERE. Never invent the topic on their behalf.',
+      'anything else: it is a hello. When the message carries NO request, your whole reply is the first',
+      'question from ANCORA DA CHIEDERE — that sentence and NOTHING else. No opening remark, no comment',
+      'on the weather or the season, no "che bella giornata": the welcome above already greeted them,',
+      'and a line like "Oggi è una giornata ideale per esplorare Sappada!" is filler in front of the',
+      'only thing you were asked to say (Andrea, 2026-08-24). Never invent the topic on their behalf.',
       'On this first turn, when they asked something whose answer depends on WHO they are — what to do',
       'today, where to eat, which walk, a plan for the days — do NOT hand over a full set of',
       'recommendations and then ask who they are: ask FIRST, in one short line, joining the two things',
@@ -2063,7 +2159,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // be turned away by a rate limit or a session cap, and must not depend on
   // the model choosing to call a tool. Deterministic code, because this is
   // the promise made when the consent was taken (CLAUDE.md §16 iron rule 1).
-  if (isUnsubscribeCommand(userMessage) && customerId) {
+  if (isUnsubscribeCommand(userMessage, settings) && customerId) {
     if (input.config.handlers?.savePushConsent) {
       await input.config.handlers.savePushConsent({
         workspaceId: input.config.workspaceId,
@@ -2254,6 +2350,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // this holds at most one, and it is the ONLY one marked as asked: marking a
   // question that was never pronounced would silently drop it from the queue.
   const questionsShown = stayBlock.askedKeys
+  // The dictated wording, so the one-question guard does not cut a configured
+  // question that spans several sentences.
+  const dictatedQuestion = stayBlock.askedQuestion
 
   const trimmedHistory = history.slice(-(settings.maxHistoryMessages ?? 30))
   const messages: Message[] = [
@@ -2372,7 +2471,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // prompt asks for one; this is what makes it true when the model
       // anticipates the next ones anyway.
       if (questionShown) {
-        const single = keepSingleQuestion(checked.text)
+        const single = keepSingleQuestion(checked.text, dictatedQuestion)
         if (single.removed.length > 0) {
           // eslint-disable-next-line no-console
           console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
@@ -2429,14 +2528,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         messages.push({
           role: 'user',
           content:
-            strippedKey === 'party'
-              ? '[SYSTEM] Hai chiesto con chi è senza nominare le categorie, e una domanda chiusa come ' +
-                '"siete entrambi adulti?" si porta via bambini e anziani in un colpo solo. Riscrivi la ' +
-                'risposta tenendo tutto il resto com\'è: la domanda deve nominare adulti, bambini e anziani.'
-              : '[SYSTEM] Hai chiesto se c\'è qualcosa da sapere senza dare gli esempi, e a una domanda ' +
-                'generica si risponde "no". Riscrivi la risposta tenendo tutto il resto com\'è: la domanda ' +
-                'deve nominare qualche esempio concreto — allergie o intolleranze, se sono senza auto, una ' +
-                'gravidanza, difficoltà a camminare, un cane, o al contrario qualcosa che gli piace.',
+            '[SYSTEM] Hai chiesto se c\'è qualcosa da sapere senza dare gli esempi, e a una domanda ' +
+            'generica si risponde "no". Riscrivi la risposta tenendo tutto il resto com\'è: la domanda ' +
+            'deve nominare qualche esempio concreto — allergie o intolleranze, se sono senza auto, una ' +
+            'gravidanza, difficoltà a camminare, un cane, o al contrario qualcosa che gli piace.',
         })
         continue
       }
@@ -2452,9 +2547,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         }
       }
 
-      // The question the block showed this turn is recorded as ASKED, whether
-      // or not the model remembered to do it and whether or not the guest
-      // answered. It was put to them; asking again would be the failure.
+      // The question the block showed this turn is recorded as ASKED once it
+      // has REACHED the guest — see the reachedGuest check below — and then
+      // whether or not they answer it. It was put to them; asking again would
+      // be the failure.
+      //
+      // Marking it unconditionally is what made `consent` disappear: dictated
+      // on a turn where the model wrote its own question instead, it was
+      // retired without anyone ever reading it (Andrea, 2026-08-24). A
+      // question the guest never saw is not a question that was asked.
       //
       // `consent` and `itinerary` are marked HERE too, not only inside their
       // tools. They used to rely on save_push_consent / save_itinerary firing
@@ -2464,7 +2565,73 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // message, for the rest of the holiday (Andrea, 2026-08-23: "solo la
       // prima volta … questo deve andare sì o sì"). Their tools still record
       // the ANSWER; this records that it was PUT.
-      if (questionShown && stayEnabled && customerId && input.config.handlers?.saveStayProfile) {
+      // Did the dictated question actually reach the guest? Measured on the
+      // reply that is about to be sent, by looking for the question's own
+      // longest sentence — the model translates, so a full-string match would
+      // only work in Italian, while a sentence it reproduced verbatim proves
+      // it did not silently drop the question. With no wording configured
+      // there is nothing to check and nothing to mark.
+      let reachedGuest = ((): boolean => {
+        if (!dictatedQuestion) return false
+        const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
+        const haystack = normalise(checked.text)
+        const sentences = (dictatedQuestion.match(/[^.!?\n]+[.!?]*/g) ?? [])
+          .map(normalise)
+          .filter((s) => s.length > 0)
+          .sort((a, b) => b.length - a.length)
+        const longest = sentences[0]
+        if (!longest) return false
+        return haystack.includes(longest)
+      })()
+
+      // The model was told to ask it and wrote its own question instead — or
+      // no question at all. Rather than lose the turn, the dictated wording is
+      // appended verbatim: the guest reads the question the code chose, which
+      // is the whole point of dictating it (iron rule 1 — when an instruction
+      // keeps losing, the fix is code, not a firmer instruction).
+      //
+      // A question the model invented is REPLACED, not joined: leaving both
+      // would put two questions to the guest, which is what the whole
+      // one-question-per-turn machinery exists to prevent. Ours is the one
+      // that was chosen, so its is the one that goes.
+      if (questionShown && !reachedGuest && dictatedQuestion && checked.text.trim()) {
+        // Drop the model's own trailing question, if any. Sentence-shaped and
+        // language-independent: a line ending in "?" that is not a URL (an
+        // embedded "…com/watch?v=" is not a question, and stripping it would
+        // break the link).
+        const lines = checked.text.trimEnd().split('\n')
+        while (lines.length > 0) {
+          const last = lines[lines.length - 1].trim()
+          const isQuestionLine = last.endsWith('?') && !/https?:\/\//.test(last)
+          if (!isQuestionLine) break
+          lines.pop()
+        }
+        const body = lines.join('\n').trimEnd()
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][intake-append] re-attached "${questionShown}"`)
+        checked.text = body ? `${body}\n\n${dictatedQuestion}` : dictatedQuestion
+        reachedGuest = true
+      }
+
+      // The escape hatch. `reachedGuest` looks for the question's wording in
+      // the reply, so a model that TRANSLATES it (which it is told to do, in
+      // the guest's language) reads as a miss. Retrying forever would pin the
+      // queue on one question for the rest of the holiday — the exact failure
+      // the unconditional marking was protecting against. Two attempts, then
+      // it is retired regardless: a question put twice has been put.
+      const missedBefore = getState(sessionId).intakeMisses?.[questionShown ?? ''] ?? 0
+      if (questionShown && !reachedGuest) {
+        const misses = { ...(getState(sessionId).intakeMisses ?? {}) }
+        misses[questionShown] = missedBefore + 1
+        updateState(sessionId, { intakeMisses: misses }, { mirror: false })
+        // eslint-disable-next-line no-console
+        console.error(
+          `[demosappada][intake-miss] "${questionShown}" dictated but not asked (${missedBefore + 1})`
+        )
+      }
+      const retireAnyway = missedBefore >= 1
+
+      if (questionShown && (reachedGuest || retireAnyway) && stayEnabled && customerId && input.config.handlers?.saveStayProfile) {
         const already = new Set(stayProfile?.asked ?? [])
         const profile: StayProfile = {}
         const before = already.size
@@ -2648,10 +2815,27 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
           // Accumulated, never replaced: each call reports the question just
           // asked, and the set is what stops it being asked again tomorrow.
+          //
+          // FILTERED to the keys actually put to the guest this turn. The model
+          // was retiring questions it had never pronounced: told to record
+          // `composition`, it wrote ["composition", "consent"] and the push
+          // consent — the very next question in the queue — vanished without
+          // ever being asked (Andrea, 2026-08-24). A question the guest never
+          // read cannot be marked as answered, so the decision is not the
+          // model's to make: `questionsShown` is what the code dictated, and
+          // nothing outside it is accepted.
+          const dictatedThisTurn = new Set(questionsShown)
           const nowAsked = Array.isArray(args.asked) ? (args.asked as unknown[]) : []
           const askedSet = new Set(stayProfile?.asked ?? [])
           for (const item of nowAsked) {
-            if (typeof item === 'string' && item.trim()) askedSet.add(item.trim())
+            if (typeof item !== 'string' || !item.trim()) continue
+            const key = item.trim()
+            if (!dictatedThisTurn.has(key)) {
+              // eslint-disable-next-line no-console
+              console.error(`[demosappada][asked-guard] refused "${key}" — never put to the guest`)
+              continue
+            }
+            askedSet.add(key)
           }
           if (askedSet.size > (stayProfile?.asked?.length ?? 0)) {
             profile.asked = Array.from(askedSet)
@@ -2736,8 +2920,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
           toolOutput = JSON.stringify({
             ok: saved,
+            // A guest who says yes is told how to say no later — the opt-out
+            // is part of the consent, not an afterthought. The wording comes
+            // from settings so it stays configurable and translatable; with
+            // nothing configured, nothing is claimed (CLAUDE.md §1A).
             instruction: granted
-              ? 'Consent recorded. Thank them in one short line and move on — do not oversell it.'
+              ? settings.pushOptOutHint?.trim()
+                ? `Consent recorded. Reply with exactly this line, translated into the guest's ` +
+                  `language, and nothing else about the consent: "${settings.pushOptOutHint.trim()}"`
+                : 'Consent recorded. Thank them in one short line and move on — do not oversell it.'
               : 'Refusal recorded. Accept it without insisting, and never ask again.',
           })
         }
@@ -2839,7 +3030,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
     if (questionShown) {
-      const single = keepSingleQuestion(checked.text)
+      const single = keepSingleQuestion(checked.text, dictatedQuestion)
       if (single.removed.length > 0) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)

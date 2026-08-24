@@ -19,17 +19,23 @@
   "rateLimitedMessage": "Stai scrivendo un po' troppo in fretta — aspetta qualche secondo e riprova.",
   "unsubscribedMessage": "Grazie, è tutto a posto: non riceverai più nostri messaggi promozionali. Se cambi idea puoi riscrivermi quando vuoi.",
   "sessionTooLongMessage": "Questa conversazione è andata avanti parecchio. Per informazioni più approfondite puoi contattare l'InfoPoint di Sappada allo 0435 469131.",
-  "welcomeVideoUrl": "https://www.youtube.com/watch?v=d0n2ElZp7aM",
+  "welcomeVideoUrl": "",
   "intakeQuestions": {
-    "name": "Come ti chiami?",
-    "party": "Con chi sei in vacanza — adulti, bambini, anziani?",
+    "name": "Ultima domanda: come ti chiami?",
+    "party": "In quanti siete e fino a quando vi fermate?",
     "stay": "Fino a quando resti a Sappada?",
+    "constraints": "C'è qualcosa di particolare che vuoi segnalarci? C'è qualcuno celiaco? Sarete senza macchina? Ci sono altri dettagli o esigenze particolari che dovremmo sapere, così da potervi dare informazioni e consigli ad hoc?",
+    "composition": "Ci sono bambini o anziani?",
+    "consent": "Possiamo inviarti push su meteo, eventi, news, offerte di Sappada solo durante la vostra permanenza?",
     "childrenAges": "Che età hanno i bambini?",
-    "constraints": "C'è qualcosa che devo sapere per consigliarti bene — allergie o intolleranze, se siete senza auto, difficoltà a camminare, un cane?",
     "interests": "Cosa ti piacerebbe fare in questi giorni?",
-    "itinerary": "Vuoi che ti prepari un programma giorno per giorno?",
-    "consent": "Posso mandarti notizie solo per i giorni che resti — gli eventi di questi giorni, le offerte degli alloggi, le promozioni del territorio? Su quali?"
+    "itinerary": "Vuoi che ti prepari un programma giorno per giorno?"
   },
+  "pushOptOutHint": "Perfetto, quando vuoi basta scrivere NO PUSH.",
+  "pushOptOutCommands": [
+    "NO PUSH",
+    "unsubscribe"
+  ],
   "weatherEnabled": true,
   "audioOutput": false,
   "audioVoices": {}

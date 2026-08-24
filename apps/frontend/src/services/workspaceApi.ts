@@ -61,6 +61,7 @@ export interface Workspace {
   frustrationTriggers?: string
   translateCustomerMessages?: boolean
   termsAndConditions?: string
+  videoUrl?: string // 📺 Presentation video, usable in customer copy as {{videoUrl}}
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string
@@ -215,6 +216,7 @@ export interface UpdateWorkspaceData {
   frustrationTriggers?: string
   translateCustomerMessages?: boolean
   termsAndConditions?: string
+  videoUrl?: string // 📺 Presentation video, usable in customer copy as {{videoUrl}}
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string

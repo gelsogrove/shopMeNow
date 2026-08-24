@@ -5,6 +5,7 @@ export interface WorkspaceCopySource {
   name?: string | null
   chatbotName?: string | null
   termsAndConditions?: string | null
+  videoUrl?: string | null
 }
 
 /**
@@ -37,4 +38,8 @@ export function renderWorkspaceCopy(
     .replace(/\{\{\s*chatbotName\s*\}\}/gi, workspace.chatbotName?.trim() || VARIABLE_DEFAULTS.chatbotName || "")
     .replace(/\{\{\s*companyName\s*\}\}/gi, workspace.name?.trim() || VARIABLE_DEFAULTS.companyName || "")
     .replace(/\{\{\s*termsAndConditions\s*\}\}/gi, workspace.termsAndConditions?.trim() || "")
+    // 📺 The presentation video, so the link is edited in ONE field instead of
+    // being pasted into the copy. An unset videoUrl resolves to "" — the line
+    // that held it collapses rather than shipping a broken placeholder.
+    .replace(/\{\{\s*videoUrl\s*\}\}/gi, workspace.videoUrl?.trim() || "")
 }

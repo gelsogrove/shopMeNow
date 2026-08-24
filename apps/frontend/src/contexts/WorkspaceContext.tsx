@@ -63,6 +63,7 @@ export interface Workspace {
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   speechToTextEnabled?: boolean // Widget composer shows a microphone; voice notes are transcribed to text
+  videoUrl?: string // 📺 Presentation video, usable in customer copy as {{videoUrl}}
   hasProductCatalog?: boolean
   hasCart?: boolean
   hasOrderTracking?: boolean

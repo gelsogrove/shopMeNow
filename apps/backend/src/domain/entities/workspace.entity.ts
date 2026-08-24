@@ -55,6 +55,8 @@ export interface WorkspaceProps {
   wipMessage?: any
   securityBlockedMessage?: string | null // Courtesy reply when the final security check blocks a response
   termsAndConditions?: string | null
+  /** 📺 Presentation video, referenced from customer copy as {{videoUrl}}. */
+  videoUrl?: string | null
   afterRegistrationMessages?: any
   debugMode: boolean
   adminEmail?: string | null
@@ -335,6 +337,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get wipMessage(): any {
     return this.props.wipMessage
+  }
+
+  get videoUrl(): string | null | undefined {
+    return this.props.videoUrl
   }
 
   get termsAndConditions(): string | null | undefined {

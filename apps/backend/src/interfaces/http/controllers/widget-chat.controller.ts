@@ -51,6 +51,20 @@ const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
  * - Origin/Referer is mandatory when any domain is configured.
  * - Accept exact host or subdomains.
  */
+/**
+ * The "Visitor <id>" stand-in given to a widget visitor who never typed a name
+ * (the registration form asks only for a phone and a first message).
+ *
+ * It is a database placeholder, not something the guest calls themselves — so
+ * it must not travel to the chatbot as a KNOWN name: a module that asks "come
+ * ti chiami?" once and skips it when the name is known skipped it forever,
+ * because every anonymous visitor arrived already "named" (Andrea, 2026-08-24).
+ */
+function realCustomerName(name: string | null | undefined): string {
+  const trimmed = name?.trim() ?? ""
+  return /^Visitor [A-Za-z0-9_-]{4,}$/.test(trimmed) ? "" : trimmed
+}
+
 function isOriginAllowed(
   req: Request,
   websiteUrl?: string | null,
@@ -1156,7 +1170,7 @@ export class WidgetChatController {
           workspaceId: resolvedWorkspaceId,
           customChatbotId: workspace.customChatbotId,
           userMessage: firstMessage,
-          userName: customer.name,
+          userName: realCustomerName(customer.name),
           channel: isPlayground ? "playground" : "widget",
           welcomeMessage: typeof workspace.welcomeMessage === "string" ? workspace.welcomeMessage : "",
           wipMessage: wipRegMessageStr,
@@ -2324,7 +2338,7 @@ export class WidgetChatController {
           workspaceId: resolvedWorkspaceId,
           customChatbotId: workspace.customChatbotId,
           userMessage: message,
-          userName: customer.name,
+          userName: realCustomerName(customer.name),
           channel: isPlayground ? "playground" : "widget",
           welcomeMessage: typeof workspace.welcomeMessage === "string" ? workspace.welcomeMessage : "",
           wipMessage: wipMessageStr,

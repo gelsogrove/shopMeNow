@@ -25,6 +25,12 @@ export interface SessionState {
   // True once the presentation video has been sent in this session. The video
   // belongs to the first turn only; a second one is spam.
   videoSent?: boolean
+
+  // How many turns in a row an intake question was dictated without the model
+  // actually putting it to the guest. A question is only retired once it has
+  // reached them, so this is the escape hatch: after two failed attempts it is
+  // retired anyway, rather than blocking the queue for the rest of the stay.
+  intakeMisses?: Record<string, number>
 }
 
 export type PatchKey = 'name' | 'language' | 'phone'

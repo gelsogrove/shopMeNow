@@ -208,17 +208,46 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
  * Trailing questions are dropped from the END, because the intake question is
  * appended last: what precedes it is the answer to the guest, which must
  * survive intact.
+ *
+ * `dictated` is the configured wording of the question being put this turn.
+ * One configured question may legitimately span several sentences — the
+ * `constraints` question asks "c'è qualcuno celiaco? sarete senza macchina?
+ * altri dettagli?" in one breath — and counting those as separate questions
+ * mutilated it down to its first line (Andrea, 2026-08-24). Its sentences are
+ * therefore exempt: they are ONE question as far as the guest is concerned.
+ * Everything the model adds of its own is still cut.
  */
-export function keepSingleQuestion(reply: string): ContentCheck {
+export function keepSingleQuestion(reply: string, dictated?: string | null): ContentCheck {
   // Split after ? ! . or a newline, keeping the delimiter with its sentence.
   const parts = reply.match(/[^.!?\n]*(?:[.!?]+|\n+|$)/g)?.filter((p) => p.length > 0) ?? []
-  const isQuestion = (part: string): boolean => part.trimEnd().endsWith('?')
+  // A URL is not a question: "youtube.com/watch?v=..." ends a segment with "?"
+  // when the splitter cuts on "." — and the guard was reporting "com/watch?"
+  // as an extra question to strip (Andrea, 2026-08-24).
+  const isQuestion = (part: string): boolean =>
+    part.trimEnd().endsWith('?') && !/https?:\/\//.test(part)
+
+  // The dictated question's own sentences, normalised for comparison. Compared
+  // as whole sentences, never by keyword: the model translates the question
+  // into the guest's language, so a match here means it was reproduced
+  // verbatim — in any other language the exemption simply does not apply and
+  // the old one-question rule holds.
+  const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
+  const dictatedParts = new Set(
+    (dictated?.match(/[^.!?\n]*(?:[.!?]+|\n+|$)/g) ?? [])
+      .map(normalise)
+      .filter((p) => p.length > 0)
+  )
 
   let seen = 0
   const kept: string[] = []
   const removed: string[] = []
   for (const part of parts) {
     if (isQuestion(part)) {
+      // Part of the question we asked for: not a second question at all.
+      if (dictatedParts.has(normalise(part))) {
+        kept.push(part)
+        continue
+      }
       seen++
       // The FIRST question is the one the guest is meant to answer.
       if (seen > 1) {

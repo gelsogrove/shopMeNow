@@ -109,6 +109,7 @@ interface FormData {
   sessionResetTimeout: number // E0b (seconds, 0 = never)
   wipMessage: string
   termsAndConditions: string
+  videoUrl: string
   // Security
   allowedExternalLinks: string
   securityBlockedMessage: string
@@ -273,6 +274,7 @@ export function SettingsPage() {
     sessionResetTimeout: 3600,
     wipMessage: defaultWipMessage,
     termsAndConditions: "",
+    videoUrl: "",
     allowedExternalLinks: "",
     securityBlockedMessage: "",
     hasHumanSupport: true,
@@ -383,6 +385,7 @@ export function SettingsPage() {
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
         wipMessage: currentWorkspace.wipMessage || defaultWipMessage,
         termsAndConditions: currentWorkspace.termsAndConditions || "",
+        videoUrl: (currentWorkspace as any).videoUrl || "",
         allowedExternalLinks: Array.isArray(currentWorkspace.allowedExternalLinks)
           ? currentWorkspace.allowedExternalLinks.join(", ")
           : currentWorkspace.allowedExternalLinks || "",
@@ -818,6 +821,7 @@ export function SettingsPage() {
               customChatbotModel: formData.customChatbotModel,
               customChatbotTemperature: formData.customChatbotTemperature,
               customChatbotMaxTokens: formData.customChatbotMaxTokens,
+              videoUrl: formData.videoUrl,
               speechToTextEnabled: formData.speechToTextEnabled,
               audioOutput: formData.audioOutput,
               audioVoices: formData.audioVoices,
