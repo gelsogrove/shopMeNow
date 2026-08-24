@@ -16,6 +16,17 @@ export interface CallingFunction {
     attachedFlowKey?: string | null
     /** When true, auto-add this function to the Router's availableFunctions on create */
     addToRouter?: boolean
+    /**
+     * True when this row is a tool the chatbot module ships with, declared in
+     * its tools.manifest.ts. Computed server-side, not stored.
+     *
+     * These can be switched off and re-described, but their name, parameters
+     * and execution type are the contract with the handler in the module's
+     * code — the API rejects changes to them, and they cannot be deleted.
+     */
+    moduleBuiltIn?: boolean
+    /** What the guest loses if this built-in is switched off. */
+    moduleImpact?: string | null
 }
 
 export const callingFunctionsApi = {

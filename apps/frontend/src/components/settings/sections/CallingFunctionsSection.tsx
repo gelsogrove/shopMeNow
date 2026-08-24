@@ -61,57 +61,6 @@ const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNo
 }
 
 
-/**
- * Tools that live in the chatbot module's own code, keyed by customChatbotId.
- *
- * They are NOT rows in workspace_calling_functions and cannot be created or
- * deleted here: an internal tool needs an implementation, and a UI that let
- * someone "add" one would only produce a name nothing answers to. They are
- * listed read-only so this page answers the question it looks like it answers
- * — "which tools can this bot call?" — instead of showing half the picture.
- *
- * The on/off switch is a key in AI Personality → Advanced Settings (JSON),
- * which the module reads from its settings.json.
- */
-const BUILT_IN_TOOLS: Record<string, Array<{ name: string; description: string; toggleKey?: string }>> = {
-    demosappada: [
-        {
-            name: "get_weather",
-            description:
-                "Live weather and 3-day forecast for Sappada (Open-Meteo). The model cannot know the weather without it — without this tool it would invent a plausible forecast.",
-            toggleKey: "weatherEnabled",
-        },
-        {
-            name: "check_accommodation",
-            description:
-                "Accommodation the Pro Loco keeps on file, with contacts. Reports contacts only, never availability. Appears automatically when the workspace has catalogue rows.",
-        },
-        {
-            name: "remember",
-            description: "Saves the customer's name to their profile when they mention it.",
-        },
-        {
-            name: "save_stay",
-            description:
-                "Records who the guest is and how long they stay — party, dates, origin, constraints, interests — so every later turn is answered knowing them.",
-        },
-        {
-            name: "save_itinerary",
-            description:
-                "Stores the day-by-day plan agreed with the guest, so a returning conversation carries it on instead of starting over.",
-        },
-        {
-            name: "save_push_consent",
-            description:
-                "Records consent to promotional messages and which topics were accepted, as interest tags used to target campaigns.",
-        },
-        {
-            name: "save_feedback",
-            description:
-                "Saves the end-of-stay feedback (rating and comment) onto the customer card.",
-        },
-    ],
-}
 
 interface CallingFunctionsSectionProps {
     workspaceId: string
@@ -129,8 +78,6 @@ interface CallingFunctionsSectionProps {
      * model (Andrea, 2026-08-23).
      */
     isCustomChatbot?: boolean
-    /** workspace.customChatbotId — selects which built-in tools to list. */
-    customChatbotId?: string | null
     onFieldChange?: (field: string, value: any) => void
     onFieldFocus?: (fieldKey: string) => void
 }
@@ -139,7 +86,6 @@ export function CallingFunctionsSection({
     workspaceId,
     canEdit,
     isCustomChatbot = false,
-    customChatbotId,
 }: CallingFunctionsSectionProps) {
     // F50 — Andrea 2026-05-13: the Visual Flow Builder ("Agent Configuration"
     // graph with sub-LLM per node) is deprecated. It caused unacceptable
@@ -148,8 +94,6 @@ export function CallingFunctionsSection({
     // The CTA below is permanently hidden until physical removal in a
     // dedicated cleanup session. The underlying page (/agents) redirects
     // to /chat at the route layer (see App.tsx).
-    const builtInTools = (customChatbotId && BUILT_IN_TOOLS[customChatbotId]) || []
-
     const [functions, setFunctions] = useState<CallingFunction[]>([])
     const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
     const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
@@ -162,6 +106,8 @@ export function CallingFunctionsSection({
     const [isSaving, setIsSaving] = useState(false)
     // Delete confirmation dialog
     const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; functionName: string | null }>({ open: false, functionName: null })
+    // Confirmation before switching a built-in OFF — see requestBuiltInToggle.
+    const [disableConfirm, setDisableConfirm] = useState<{ open: boolean; fn: CallingFunction | null }>({ open: false, fn: null })
     // Help panel visibility
     const [showHelp, setShowHelp] = useState(false)
 
@@ -290,7 +236,7 @@ export function CallingFunctionsSection({
             }
 
             // ✅ CRITICAL: Filter payload to only include MUTABLE fields (no id, workspaceId, functionName, isSystemFunction, createdAt)
-            const payload = {
+            const payload: Record<string, unknown> = {
                 description: editingFunction.description,
                 executionType: editingFunction.executionType,
                 isActive: editingFunction.isActive ?? true,
@@ -299,6 +245,15 @@ export function CallingFunctionsSection({
                 parameters: parsedParams,
                 attachedLlm: editingFunction.attachedLlm || null,
                 credentialsMapping: parsedCredentialsMapping
+            }
+
+            // A built-in's parameters and execution type belong to the module's
+            // code, and the API rejects them outright. Sending them unchanged
+            // would turn every description edit into a 403 — a backend-looking
+            // failure with a frontend cause.
+            if (editingFunction.moduleBuiltIn) {
+                delete payload.parameters
+                delete payload.executionType
             }
 
             if (editingFunction.id) {
@@ -362,6 +317,24 @@ export function CallingFunctionsSection({
         }
     }
 
+    /**
+     * Switching a built-in OFF takes a capability away from the chatbot, and the
+     * loss is invisible until a guest hits it — so the consequence is stated
+     * first. Switching one back ON needs no warning.
+     */
+    const requestBuiltInToggle = (fn: CallingFunction) => {
+        if (fn.isActive && fn.moduleImpact) {
+            setDisableConfirm({ open: true, fn })
+            return
+        }
+        toggleFunctionStatus(fn)
+    }
+
+    // The module's own tools and the tenant's are the same kind of row and are
+    // edited the same way; they are split here only so each lands in its own card.
+    const builtInFunctions = functions.filter(f => f.moduleBuiltIn)
+    const customFunctions = functions.filter(f => !f.moduleBuiltIn)
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -378,9 +351,10 @@ export function CallingFunctionsSection({
                 {/* F50: Agent Configuration CTA permanently hidden (Visual Flow Builder deprecated). */}
             </div>
 
-            {/* Built-in tools — code-defined, listed read-only so this page answers
-                "which tools can this bot call?" rather than only showing the webhook ones. */}
-            {builtInTools.length > 0 && (
+            {/* Built-in tools — the chatbot module's own, seeded as editable rows
+                from its tools.manifest.ts. Switchable and re-describable here;
+                their name and parameters belong to the module's code. */}
+            {builtInFunctions.length > 0 && (
                 <Card>
                     <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
                         <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -388,28 +362,55 @@ export function CallingFunctionsSection({
                             Built-in Tools
                         </CardTitle>
                         <p className="text-sm text-gray-500">
-                            Shipped with this chatbot module. They cannot be created or deleted here —
-                            switch them on or off in AI Personality → Advanced Settings (JSON).
+                            Shipped with this chatbot module. Switch them on or off and edit what they tell
+                            the AI — their name and parameters are fixed by the module's code.
                         </p>
                     </CardHeader>
                     <CardContent className="p-0 divide-y">
-                        {builtInTools.map((tool) => (
-                            <div key={tool.name} className="p-4 flex items-start gap-3">
-                                <div className="mt-1 p-2 rounded-lg bg-slate-100 text-slate-500">
-                                    <Wrench className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <code className="text-sm font-semibold text-gray-900">{tool.name}</code>
-                                        <Badge variant="outline" className="text-xs">In code</Badge>
-                                        {tool.toggleKey && (
-                                            <Badge variant="outline" className="text-xs font-mono">
-                                                {tool.toggleKey}
-                                            </Badge>
-                                        )}
+                        {builtInFunctions.map((fn) => (
+                            <div key={fn.id} className="p-4 flex items-start justify-between gap-3 group hover:bg-slate-50 transition-colors">
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className={cn(
+                                        "mt-1 p-2 rounded-lg",
+                                        fn.isActive ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"
+                                    )}>
+                                        <Wrench className="h-4 w-4" />
                                     </div>
-                                    <p className="text-sm text-gray-500 mt-1">{tool.description}</p>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <code className="text-sm font-semibold text-gray-900">{fn.functionName}</code>
+                                            <Badge variant="outline" className="text-xs">Built-in</Badge>
+                                            {!fn.isActive && (
+                                                <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Off</span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-gray-500 mt-1">{fn.description}</p>
+                                    </div>
                                 </div>
+                                {canEdit && (
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <Switch
+                                            checked={fn.isActive}
+                                            onCheckedChange={() => requestBuiltInToggle(fn)}
+                                            className="scale-75"
+                                        />
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
+                                            <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleReinstall(fn.functionName)} className="text-teal-500 hover:text-teal-700 hover:bg-teal-50">
+                                                        <RefreshCw className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="left">
+                                                    <p>Restore the module's original description</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </CardContent>
@@ -441,7 +442,7 @@ export function CallingFunctionsSection({
                             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                             Loading tools...
                         </div>
-                    ) : functions.length === 0 ? (
+                    ) : customFunctions.length === 0 ? (
                         <div className="p-12 text-center text-slate-400">
                             <Code className="h-12 w-12 mx-auto mb-4 opacity-20" />
                             <p>No custom tools defined yet.</p>
@@ -449,7 +450,7 @@ export function CallingFunctionsSection({
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {[...functions]
+                            {[...customFunctions]
                                 .sort((a, b) => {
                                     const order: Record<string, number> = { DELEGATE_TO_AGENT: 0, INTERNAL: 1, WEBHOOK: 2 }
                                     return (order[a.executionType] ?? 2) - (order[b.executionType] ?? 2)
@@ -793,6 +794,7 @@ Credentials Mapping: {
                                 <Select
                                     value={editingFunction?.executionType}
                                     onValueChange={(val: any) => setEditingFunction(prev => ({ ...prev, executionType: val }))}
+                                    disabled={!!editingFunction?.moduleBuiltIn}
                                 >
                                     <SelectTrigger id="exType">
                                         <SelectValue />
@@ -838,6 +840,12 @@ Credentials Mapping: {
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Parameters Schema (JSON Schema)</Label>
+                                {editingFunction?.moduleBuiltIn && (
+                                    <p className="text-xs text-slate-500">
+                                        Parameters are fixed by the chatbot module — the code that runs this
+                                        tool reads them by name.
+                                    </p>
+                                )}
                                 <div className="border rounded-md overflow-hidden bg-white">
                                     <Editor
                                         height="200px"
@@ -851,6 +859,7 @@ Credentials Mapping: {
                                         lineNumbers: "on",
                                         scrollBeyondLastLine: false,
                                         automaticLayout: true,
+                                        readOnly: !!editingFunction?.moduleBuiltIn,
                                     }}
                                 />
                             </div>
@@ -999,6 +1008,45 @@ Credentials Mapping: {
                         <Button variant="destructive" onClick={confirmDelete}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Switching a built-in off removes a capability. The consequence is
+                stated before it happens, not discovered later from a degraded bot. */}
+            <Dialog
+                open={disableConfirm.open}
+                onOpenChange={(open) => !open && setDisableConfirm({ open: false, fn: null })}
+            >
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Switch off this tool?</DialogTitle>
+                        <DialogDescription>
+                            <span className="font-mono font-bold">{disableConfirm.fn?.functionName}</span>{" "}
+                            will no longer be available to the chatbot.
+                            {disableConfirm.fn?.moduleImpact && (
+                                <span className="block mt-2 text-slate-600">{disableConfirm.fn.moduleImpact}</span>
+                            )}
+                            <span className="block mt-2">You can switch it back on at any time.</span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setDisableConfirm({ open: false, fn: null })}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                const target = disableConfirm.fn
+                                setDisableConfirm({ open: false, fn: null })
+                                if (target) toggleFunctionStatus(target)
+                            }}
+                        >
+                            Switch off
                         </Button>
                     </DialogFooter>
                 </DialogContent>

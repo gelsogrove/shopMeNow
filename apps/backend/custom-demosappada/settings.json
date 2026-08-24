@@ -1,5 +1,5 @@
 {
-  "model": "anthropic/claude-haiku-4.5",
+  "model": "openai/gpt-4o-mini",
   "temperature": 0.3,
   "maxTokens": 2500,
   "maxToolHops": 4,

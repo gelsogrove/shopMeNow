@@ -21,6 +21,7 @@ import {
   APPOINTMENT_FUNCTIONS,
   SystemFunctionDef,
 } from "../../constants/system-functions"
+import { loadModuleToolManifest } from "./module-tool-manifest.service"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
@@ -881,6 +882,7 @@ For privacy inquiries, please contact our support team.`
           logger.info(`✅ Allowing settings edit for FREE_TRIAL user (not changing channel toggles)`)
           const updated = await this.repository.update(id, data)
           invalidateWorkspaceConfig(id)
+          await this.syncModuleToolRows(id)
           await this.syncChatbotSettingsJson(id)
           return updated
         }
@@ -921,6 +923,7 @@ For privacy inquiries, please contact our support team.`
 
     const updated = await this.repository.update(id, data)
     invalidateWorkspaceConfig(id)
+    await this.syncModuleToolRows(id)
     await this.syncChatbotSettingsJson(id)
     return updated
   }
@@ -977,6 +980,82 @@ For privacy inquiries, please contact our support team.`
       if (w?.customChatbotId) await writeChatbotSettingsJson(w)
     } catch (err) {
       logger.warn("[Workspace] settings.json sync skipped:", err)
+    }
+  }
+
+  /**
+   * Seeds one editable `WorkspaceCallingFunction` row per tool the workspace's
+   * chatbot module declares in its `tools.manifest.ts`.
+   *
+   * Hung off the settings-save path rather than workspace creation because
+   * `customChatbotId` is not set at creation — it is only ever written by
+   * `update()`. That makes this one hook cover all three cases: a workspace
+   * that has just been given a module, a module that has been swapped, and —
+   * the important one — every workspace created BEFORE the module declared a
+   * manifest, which is backfilled the first time anyone saves Settings.
+   *
+   * Never throws: like the settings.json sync above, a failure here must not
+   * fail the user's save.
+   */
+  private async syncModuleToolRows(id: string): Promise<void> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id },
+        select: { customChatbotId: true },
+      })
+      if (!workspace?.customChatbotId) return
+
+      const manifest = await loadModuleToolManifest(workspace.customChatbotId)
+      if (!manifest || manifest.length === 0) return
+
+      for (const tool of manifest) {
+        const row = await this.prisma.workspaceCallingFunction.upsert({
+          where: {
+            workspaceId_functionName: { workspaceId: id, functionName: tool.functionName },
+          },
+          // 🚨 EMPTY ON PURPOSE. From the first seed on, the DATABASE is
+          // authoritative: a description the admin edited in the UI must
+          // survive every later save. Restoring the manifest's text is what
+          // the /reinstall endpoint is for.
+          update: {},
+          create: {
+            workspaceId: id,
+            functionName: tool.functionName,
+            description: tool.description,
+            responseInstructions: tool.responseInstructions ?? null,
+            parameters: tool.parameters as never,
+            isSystemFunction: true,
+            // INTERNAL is the only executionType that both passes
+            // getCustomTools' filter and, if the module's dispatch branch ever
+            // disappears, lands in executeInternalTool's `default` — an honest
+            // refusal instead of a silent success.
+            executionType: "INTERNAL",
+            isActive: true,
+          },
+        })
+
+        // Deactivate the platform functions this tool replaces, so the model is
+        // not offered two tools for one job. Deactivated, never deleted, and
+        // ONLY on the turn the superseding row is created: doing it on every
+        // save would make it impossible for an admin to switch one back on.
+        const justCreated = row.createdAt.getTime() === row.updatedAt.getTime()
+        if (justCreated && tool.supersedes?.length) {
+          await this.prisma.workspaceCallingFunction.updateMany({
+            where: {
+              workspaceId: id,
+              functionName: { in: tool.supersedes },
+              isSystemFunction: true,
+            },
+            data: { isActive: false },
+          })
+        }
+      }
+
+      logger.info(
+        `[Workspace] Synced ${manifest.length} module tool rows for workspace ${id} (${workspace.customChatbotId})`
+      )
+    } catch (err) {
+      logger.warn("[Workspace] module tool sync skipped:", err)
     }
   }
 

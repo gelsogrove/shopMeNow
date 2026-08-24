@@ -88,6 +88,46 @@ so the next reader knows it was a decision and not an oversight.
 exactly how the 8 hardcoded translations and the tenant-specific serial format
 got in — each looked harmless on its own.
 
+#### 1D. `custom-*/settings.json` is GENERATED — never edit it, never "fix" its diff (🚨 Andrea, 2026-08-24)
+
+**The database is the source of truth. `custom-<module>/settings.json` is
+build output.** Every save in the Settings UI writes the workspace row and then
+re-renders the file from it (`chatbot-settings-json.service.ts` →
+`regenerateChatbotSettingsJson` → `writeFile`).
+
+**To change a chatbot's model, temperature, prompt, rate limits, audio flags —
+change the Workspace column, then ask Andrea to save from the backoffice.**
+Editing the JSON by hand is pointless: the next save overwrites it.
+
+✅ The mapping for the values that come up most:
+
+| settings.json key | Workspace column |
+|---|---|
+| `model` | `customChatbotModel` |
+| `temperature` | `customChatbotTemperature` |
+| `maxTokens` | `customChatbotMaxTokens` |
+| `mainPrompt` | `customChatbotSystemPrompt` (variables pre-substituted) |
+| `audioOutput` | `audioOutput` (Voice Replies) |
+| `speechToTextEnabled` | `speechToTextEnabled` (Speech to Text) |
+| keys with no column | `customChatbotAdvancedSettings` (raw JSON) |
+
+Anything absent from both falls back to what is already on disk — the generator
+**merges onto** the current file, it never rewrites it from scratch.
+
+🚨 **A modification to `settings.json` in `git status` is almost never a hand
+edit.** It is the app having regenerated the file after a save. Do NOT report it
+as "an uncommitted local change", do NOT revert it to "fix" a bug, and do NOT
+assume Andrea typed it. Read the corresponding DB column first — that is what
+actually drives the runtime.
+
+Real example (2026-08-24): demosappada's settings.json showed
+`claude-haiku-4.5` → `gpt-4o-mini` in the diff. The assistant reported it as an
+uncommitted manual edit and a likely bug cause. Both wrong: a backoffice save
+had written `customChatbotModel = 'openai/gpt-4o-mini'` to the DB and
+regenerated the file — it was Andrea's deliberate model choice, working as
+designed. **A generated file's diff is not evidence of a mistake.** Read the DB
+column and ask before treating it as one.
+
 ### 2. Workspace Isolation
 
 - **EVERY** database query MUST filter by `workspaceId`

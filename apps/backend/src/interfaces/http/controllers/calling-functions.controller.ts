@@ -6,6 +6,10 @@ import { WebhookDispatchService } from "../../../services/webhook-dispatch.servi
 import { FlowSyncService } from "../../../application/services/flow-sync.service"
 import { SYSTEM_FUNCTIONS_BY_NAME, SystemFunctionDef } from "../../../constants/system-functions"
 import { getValidAgentTypesForMode } from "../../../utils/template-path.helper"
+import {
+    loadModuleToolManifest,
+    ModuleToolManifestEntry,
+} from "../../../application/services/module-tool-manifest.service"
 
 /**
  * Agent types that handle infrastructure tasks and are NOT valid targets
@@ -20,6 +24,20 @@ const NON_DISPATCH_AGENTS = new Set(["ROUTER", "SECURITY", "TRANSLATION", "SUMMA
  * prevents privilege escalation, and workspaceId/id/createdAt are DB-managed.
  */
 const IMMUTABLE_KEYS = new Set(["functionName", "isSystemFunction", "workspaceId", "id", "createdAt"])
+
+/**
+ * Fields a module built-in does NOT allow to be changed, on top of IMMUTABLE_KEYS.
+ *
+ * A module built-in is schema + handler code: `save_stay`'s branch in the
+ * module reads a dozen argument names, so an admin who edits `parameters` and
+ * drops `asked` turns the intake into a loop that asks the same question every
+ * turn — with no error anywhere. `executionType` is what routes the call back
+ * into the module at all.
+ *
+ * `description`, `responseInstructions` and `isActive` stay editable: that is
+ * exactly the control Andrea asked for (2026-08-24).
+ */
+const MODULE_BUILTIN_IMMUTABLE_KEYS = new Set(["parameters", "executionType"])
 
 /**
  * Calling Functions Controller
@@ -124,7 +142,21 @@ export class CallingFunctionsController {
                 return true
             })
 
-            return res.status(200).json({ functions: filteredFunctions })
+            // `moduleBuiltIn` tells the UI which rows are the chatbot module's own
+            // tools, so it can group them and lock the fields the module owns.
+            // Computed here rather than stored: the manifest is the authority on
+            // what a module ships, and a column would be a second copy to keep
+            // in sync with it.
+            const builtIns = await this.moduleBuiltInsFor(workspaceId)
+            const withOrigin = filteredFunctions.map(f => ({
+                ...f,
+                moduleBuiltIn: builtIns.has(f.functionName),
+                // What the admin loses by switching it off — shown in the
+                // confirmation dialog rather than discovered from a degraded bot.
+                moduleImpact: builtIns.get(f.functionName)?.impact ?? null,
+            }))
+
+            return res.status(200).json({ functions: withOrigin })
         } catch (error) {
             logger.error("❌ Failed to get calling functions:", error)
             return res.status(500).json({ error: "Internal server error" })
@@ -147,6 +179,18 @@ export class CallingFunctionsController {
             const existing = await this.repository.findByName(workspaceId, functionName)
             if (existing) {
                 return res.status(409).json({ error: "Function already exists with this name" })
+            }
+
+            // Names the chatbot module dispatches itself are reserved. The module
+            // matches on the name BEFORE reaching custom tools, so a webhook
+            // created under one of these names would never be called — it would
+            // look installed and silently never run.
+            const builtIns = await this.moduleBuiltInsFor(workspaceId)
+            if (builtIns.has(functionName)) {
+                return res.status(409).json({
+                    error: "Reserved function name",
+                    message: `"${functionName}" is built into the chatbot module. Choose a different name.`
+                })
             }
 
             const newFunction = await this.repository.create({
@@ -184,8 +228,24 @@ export class CallingFunctionsController {
     }
 
     /**
+     * The tools the workspace's chatbot module ships with, keyed by name.
+     *
+     * Empty for workspaces without a code-based module, or whose module
+     * declares no manifest — which is every module but demosappada today.
+     */
+    private async moduleBuiltInsFor(workspaceId: string): Promise<Map<string, ModuleToolManifestEntry>> {
+        const workspace = await this.prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { customChatbotId: true },
+        })
+        const manifest = await loadModuleToolManifest(workspace?.customChatbotId)
+        return new Map((manifest ?? []).map(entry => [entry.functionName, entry]))
+    }
+
+    /**
      * Update a function.
      * `functionName` and `isSystemFunction` are immutable and cannot be changed on any function.
+     * Module built-ins additionally reject `parameters` and `executionType`.
      * All other fields are editable for both system and custom functions.
      */
     async updateFunction(req: Request, res: Response) {
@@ -208,6 +268,19 @@ export class CallingFunctionsController {
                 })
             }
 
+            // A module built-in's schema is the contract with the handler that
+            // executes it, and that handler lives in the module's code.
+            const builtIns = await this.moduleBuiltInsFor(workspaceId)
+            if (builtIns.has(functionName)) {
+                const blockedForBuiltIn = Object.keys(data).filter(k => MODULE_BUILTIN_IMMUTABLE_KEYS.has(k))
+                if (blockedForBuiltIn.length > 0) {
+                    return res.status(403).json({
+                        error: "Cannot modify immutable fields",
+                        message: `These fields are fixed by the chatbot module and cannot be changed: ${blockedForBuiltIn.join(', ')}`
+                    })
+                }
+            }
+
             const updated = await this.repository.update(workspaceId, functionName, data)
             logger.info(`✅ Function updated: ${functionName} for workspace ${workspaceId}`)
             return res.status(200).json(updated)
@@ -220,6 +293,7 @@ export class CallingFunctionsController {
     /**
      * Delete a function (system or custom).
      * Hard delete — no soft delete.
+     * Module built-ins cannot be deleted: they are switched off instead.
      */
     async deleteFunction(req: Request, res: Response) {
         try {
@@ -229,6 +303,17 @@ export class CallingFunctionsController {
             const existing = await this.repository.findByName(workspaceId, functionName)
             if (!existing) {
                 return res.status(404).json({ error: "Function not found" })
+            }
+
+            // Disabling achieves what deleting would, and is reversible. Deleting
+            // a tool the module's code still dispatches leaves the chatbot quietly
+            // degraded with nothing on screen saying why (Andrea's call, 2026-08-24).
+            const builtIns = await this.moduleBuiltInsFor(workspaceId)
+            if (builtIns.has(functionName)) {
+                return res.status(403).json({
+                    error: "Cannot delete a built-in tool",
+                    message: `"${functionName}" is built into the chatbot module. Switch it off instead of deleting it.`
+                })
             }
 
             await this.repository.delete(workspaceId, functionName)
@@ -335,18 +420,34 @@ export class CallingFunctionsController {
             const { functionName } = req.params
 
             const fnDef = SYSTEM_FUNCTIONS_BY_NAME.get(functionName)
-            if (!fnDef) {
+
+            // A module built-in is not in SYSTEM_FUNCTIONS_BY_NAME — its factory
+            // defaults live in the module's own manifest. Reinstall is how an
+            // admin undoes a description they edited badly.
+            const builtIn = fnDef ? undefined : (await this.moduleBuiltInsFor(workspaceId)).get(functionName)
+
+            if (!fnDef && !builtIn) {
                 return res.status(400).json({
                     error: "Not a valid system function",
                     message: `"${functionName}" is not a known system function`
                 })
             }
 
+            const defaults = fnDef ?? {
+                functionName: builtIn!.functionName,
+                description: builtIn!.description,
+                responseInstructions: builtIn!.responseInstructions ?? null,
+                parameters: builtIn!.parameters as never,
+                isSystemFunction: true,
+                executionType: "INTERNAL",
+                isActive: true,
+            }
+
             // Upsert: create if missing, restore to defaults if modified
             const result = await this.prisma.workspaceCallingFunction.upsert({
                 where: { workspaceId_functionName: { workspaceId, functionName } },
-                update: { ...fnDef, workspaceId },
-                create: { ...fnDef, workspaceId },
+                update: { ...defaults, workspaceId },
+                create: { ...defaults, workspaceId },
             })
 
             logger.info(`✅ Reinstalled system function "${functionName}" for workspace ${workspaceId}`)

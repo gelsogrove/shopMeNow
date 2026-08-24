@@ -39,7 +39,7 @@ import {
   updateState,
 } from './state.js'
 import { keepSingleQuestion, stripUnverifiableContacts } from './content-guards.js'
-import { getSappadaWeather, TIMEZONE, WEATHER_TOOL, type WeatherReport } from './weather.js'
+import { getSappadaWeather, TIMEZONE, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WEATHER_CACHE_MS, WELCOME_BACK_STALE_MS } from './bounds.js'
 
 // ── Settings ──────────────────────────────────────────────────────────────
@@ -288,6 +288,16 @@ export interface StayProfile {
    * yesterday beyond the current conversation, and a holiday spans several.
    */
   doneAlready?: string
+  /**
+   * The holiday in prose, for the Pro Loco's customer card.
+   *
+   * Derived from the structured fields, never the reverse (see the note on
+   * this interface): the days remaining are still computed from
+   * `departureDate`, and nothing is ever parsed back out of here. What it
+   * buys is a card a human can read at a glance instead of a row of fields
+   * — the whole intake in one paragraph (Andrea, 2026-08-24: "il risultato
+   * deve andare tutto dentro note").
+   */
   notes?: string
 }
 
@@ -385,156 +395,27 @@ export interface ChatbotOutput {
 
 // ── Tools ─────────────────────────────────────────────────────────────────
 
-const REMEMBER_TOOL = {
-  type: 'function',
-  function: {
-    name: 'remember',
-    description:
-      'Save a fact the customer told you about themselves, so it survives the conversation. Call it the ' +
-      'moment they mention their name — even in passing.',
-    parameters: {
-      type: 'object',
-      properties: {
-        key: { type: 'string', enum: ['name'] },
-        value: { type: 'string' },
-      },
-      required: ['key', 'value'],
-      additionalProperties: false,
-    },
-  },
-} as const
+// The seven schemas live in tools.manifest.ts, which the backend reads to seed
+// one editable row per tool. Imported from there rather than declared here so
+// there is exactly one copy of each schema (CLAUDE.md §1) and no import cycle:
+// weather.ts → tools.manifest.ts → agent.ts.
+import {
+  ACCOMMODATION_TOOL,
+  REMEMBER_TOOL,
+  SAVE_CONSENT_TOOL,
+  SAVE_FEEDBACK_TOOL,
+  SAVE_ITINERARY_TOOL,
+  SAVE_STAY_TOOL,
+} from './tools.manifest.js'
 
-const SAVE_STAY_TOOL = {
-  type: 'function',
-  function: {
-    name: 'save_stay',
-    description:
-      'Save what you have learned about this holiday. Call it the moment the customer tells you any of ' +
-      'it — how many they are, how long they stay, where they come from, or something they have already ' +
-      'done. Send ONLY the fields you actually learned; the rest is preserved.',
-    parameters: {
-      type: 'object',
-      properties: {
-        adults: { type: 'integer', description: 'How many adults.' },
-        children: { type: 'integer', description: 'How many children.' },
-        childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },
-        constraints: { type: 'string', description: 'Anything that limits what suits them: coeliac or another intolerance, no car, a pregnancy, limited walking, a dog, a wheelchair. Append to what is already there rather than replacing it.' },
-        interests: { type: 'string', description: 'What they said they enjoy: nature, food, history, quiet, walking, local culture. A preference, NOT a limitation — anything that rules an option out belongs in constraints. Append to what is already there rather than replacing it.' },
-        seniors: { type: 'integer', description: 'How many elderly people.' },
-        arrivalDate: { type: 'string', description: 'YYYY-MM-DD, the day they arrived.' },
-        departureDate: { type: 'string', description: 'YYYY-MM-DD, the day they leave. Compute it from "we stay 5 days" using today\'s date in RUNTIME.' },
-        origin: { type: 'string', description: 'Where they travelled from (city or country).' },
-        doneAlready: {
-          type: 'string',
-          description:
-            'Something they have now done or seen, in a few words, so it is not proposed again. ' +
-            'When they say HOW it went, put that in the same line — "Cascatelle (piaciute molto)", ' +
-            '"Malga Tuglia (troppo faticosa coi bambini)", "cena da X (deludente)". What they did ' +
-            'stops you repeating it; what they thought of it tells you what to propose next.',
-        },
-        asked: {
-          type: 'array',
-          description:
-            'Which intake questions you have now PUT to the guest, whether or not they answered. Send it ' +
-            'in the same call as the question you just asked, so it is never asked twice.',
-          items: { type: 'string', enum: ['party', 'stay', 'origin', 'childrenAges', 'constraints', 'interests'] },
-        },
-        itinerary: {
-          type: 'string',
-          description:
-            "Their answer about wanting a day-by-day plan: 'yes' or 'no'. Send it as soon as they answer.",
-          enum: ['yes', 'no'],
-        },
-      },
-      additionalProperties: false,
-    },
-  },
-} as const
-
-const SAVE_ITINERARY_TOOL = {
-  type: 'function',
-  function: {
-    name: 'save_itinerary',
-    description:
-      'Save the day-by-day plan the customer ACCEPTED, so it survives the conversation and you can pick ' +
-      'it up tomorrow. Call it right after they agree to a plan, and again — with the FULL updated plan ' +
-      '— every time something changes it: the weather turns, they do something else, they leave earlier.',
-    parameters: {
-      type: 'object',
-      properties: {
-        plan: {
-          type: 'string',
-          description:
-            'The whole plan, one line per day, starting with the ISO date: "2026-08-24: mattina ' +
-            'Cascatelle, pomeriggio museo". Short lines — this is your own note, not the message you ' +
-            'send the customer. Build it in this order: what they SAID THEY WANT (interests) first, ' +
-            'then the season in RUNTIME, then the weather per day, then who they are and their ' +
-            'constraints, and never repeat what is already in GIÀ FATTO. A plan that ignores their ' +
-            'interests is a generic list and is worse than no plan.',
-        },
-      },
-      required: ['plan'],
-      additionalProperties: false,
-    },
-  },
-} as const
-
-const SAVE_CONSENT_TOOL = {
-  type: 'function',
-  function: {
-    name: 'save_push_consent',
-    description:
-      'Record whether the customer agrees to receive messages about the area, and WHAT about: events, ' +
-      'accommodation, general offers, or any combination. Call it ONLY after they answered clearly, with their actual answer ' +
-      '— never assume a yes, and never assume both topics when they named one. Call it again at the end ' +
-      'of the holiday if you re-confirm it.',
-    parameters: {
-      type: 'object',
-      properties: {
-        granted: { type: 'boolean' },
-        topics: {
-          type: 'array',
-          description:
-            'What they agreed to hear about. Send only what they actually said yes to — never all ' +
-            'three because they said a general yes.',
-          items: { type: 'string', enum: ['events', 'lodging', 'offers'] },
-        },
-      },
-      required: ['granted'],
-      additionalProperties: false,
-    },
-  },
-} as const
-
-const SAVE_FEEDBACK_TOOL = {
-  type: 'function',
-  function: {
-    name: 'save_feedback',
-    description:
-      'Save the end-of-stay feedback: what went well, what did not, and a 1-5 rating if they gave one. ' +
-      'Call it once, when the holiday is ending and they have told you how it went.',
-    parameters: {
-      type: 'object',
-      properties: {
-        rating: { type: 'integer', minimum: 1, maximum: 5 },
-        comment: { type: 'string', description: 'What went well and what did not, in their own words.' },
-      },
-      additionalProperties: false,
-    },
-  },
-} as const
-
-const ACCOMMODATION_TOOL = {
-  type: 'function',
-  function: {
-    name: 'check_accommodation',
-    description:
-      'List the accommodation the Pro Loco keeps on file, with contacts. Call it whenever the customer ' +
-      'asks where to sleep, or about a rifugio, hotel, B&B, apartment or campsite. It does NOT report ' +
-      'whether rooms are free — only the structure knows that.',
-    parameters: { type: 'object', properties: {}, additionalProperties: false },
-  },
-} as const
+export {
+  ACCOMMODATION_TOOL,
+  REMEMBER_TOOL,
+  SAVE_CONSENT_TOOL,
+  SAVE_FEEDBACK_TOOL,
+  SAVE_ITINERARY_TOOL,
+  SAVE_STAY_TOOL,
+}
 
 /**
  * Wrap a tenant-defined tool in the OpenAI function shape. The schema is
@@ -555,18 +436,22 @@ function customToolSchema(tool: CustomToolDefinition) {
   }
 }
 
-function buildTools(
-  weatherEnabled: boolean,
-  accommodationEnabled: boolean,
-  stayEnabled: boolean,
-  customTools: CustomToolDefinition[],
-) {
-  const tools: unknown[] = [REMEMBER_TOOL]
-  if (weatherEnabled) tools.unshift(WEATHER_TOOL)
-  if (accommodationEnabled) tools.push(ACCOMMODATION_TOOL)
-  if (stayEnabled) tools.push(SAVE_STAY_TOOL, SAVE_ITINERARY_TOOL, SAVE_CONSENT_TOOL, SAVE_FEEDBACK_TOOL)
-  for (const tool of customTools) tools.push(customToolSchema(tool))
-  return tools
+/**
+ * Every tool offered this turn, in the order the host supplied them.
+ *
+ * The module's own seven built-ins used to be hardcoded here and gated on
+ * three booleans. They are now DB rows — seeded from `tools.manifest.ts` and
+ * switchable in Settings → Custom Tools — and reach this function through the
+ * same `customTools` list as a tenant's webhooks. What executes them is still
+ * the dispatch branch in this file, matched on `functionName`; the row is the
+ * declaration, the code is the handler.
+ *
+ * A tool an admin switched off is simply absent: the model is never told it
+ * exists, which is the honest failure. Nothing is substituted for it here —
+ * a fallback would be exactly the invented default CLAUDE.md §1 forbids.
+ */
+function buildTools(customTools: CustomToolDefinition[]) {
+  return customTools.map(customToolSchema)
 }
 
 /**
@@ -1362,6 +1247,13 @@ export function formatStayBlock(
   profile: StayProfile | null,
   now: Date,
   returningGuest = false,
+  /**
+   * The guest's name, when the host already knows it (widget registration
+   * form) or the `remember` tool has captured it. Passed in so the intake can
+   * skip a question we already have the answer to — on WhatsApp there is no
+   * form, and without asking, the assistant never learns it at all.
+   */
+  knownName?: string,
 ): StayBlock {
   // A guest with no saved profile is precisely the one everything still has to
   // be asked of. Returning early here meant the FIRST message — the only turn
@@ -1495,7 +1387,7 @@ export function formatStayBlock(
             'non è qui, e un rinnovo più leggero si ottiene molto più facilmente. Chiedi su quale ' +
             'delle due, o entrambe, e registra con save_push_consent indicando SOLO i topics che ' +
             'hanno nominato — mai `offers` in questo momento. Ricorda anche qui, in una riga, che ' +
-            'possono togliere il consenso quando vogliono scrivendo UNSUBSCRIBE. ' +
+            'possono farli smettere quando vogliono, basta che ce lo dicano. ' +
             'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
             'dato all\'arrivo.',
           '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
@@ -1518,6 +1410,19 @@ export function formatStayBlock(
     'Se il cliente CORREGGE o AGGIORNA uno di questi dati — partono prima, si è aggiunta una persona, ' +
       'cambia l\'alloggio — richiama subito save_stay con il valore NUOVO: sovrascrive quello vecchio, ' +
       'e da lì in poi i giorni rimanenti e i consigli si ricalcolano da soli.',
+  )
+
+  // The card the Pro Loco reads. Shown back to the model so it rewrites the
+  // paragraph it already wrote instead of starting a new one each time.
+  if (stay.notes) {
+    lines.push(`SCHEDA (come l'hai scritta finora): ${stay.notes}`)
+  }
+  lines.push(
+    'OGNI VOLTA che impari qualcosa di nuovo su di loro, insieme al campo giusto risalva anche `notes` ' +
+      'con save_stay: è la scheda che legge la Pro Loco, tutta la vacanza in un paragrafo — chi sono, ' +
+      'quando ci sono, da dove vengono, cosa li limita, cosa gli piace, cosa hanno già fatto. ' +
+      'Riscrivila INTERA ogni volta, non aggiungere righe in fondo. Non è un messaggio per il cliente: ' +
+      'non parlargliene mai.',
   )
 
   if (stay.doneAlready) {
@@ -1579,10 +1484,6 @@ export function formatStayBlock(
     missing.push('fino a quando resta → `stay`')
   }
 
-  if (!stay.origin && !asked.has('origin')) {
-    missing.push('da dove arriva → `origin`')
-  }
-
   if (stay.children && stay.children > 0 && !stay.childrenAges && !asked.has('childrenAges')) {
     missing.push("che età hanno i bambini — così gli proponi cose adatte a loro → `childrenAges`")
   }
@@ -1631,52 +1532,72 @@ export function formatStayBlock(
         'su quali: gli eventi di questi giorni, le offerte degli alloggi, le offerte e promozioni del ' +
         'territorio. Registra con save_push_consent SOLO i topics che ha davvero nominato — un "sì" ' +
         'generico non è un sì a tutti e tre. Quando accetta, DILLO SEMPRE nella stessa risposta: che ' +
-        'può togliere il consenso quando vuole scrivendo UNSUBSCRIBE. ' +
+        'può farli smettere quando vuole, BASTA CHE TE LO DICA. Dillo con parole tue, nella sua ' +
+        'lingua — non fargli scrivere una parola in inglese in mezzo a una conversazione ' +
+        '(Andrea, 2026-08-24). ' +
         'Alla partenza gli chiederemo se vuole rinnovarlo → `consent`',
     )
   }
 
+  // Last, after the consent (Andrea's call, 2026-08-24). It is the one
+  // question whose answer is already in hand for widget guests, so it is
+  // skipped whenever the name is known from anywhere — the host's form, or an
+  // earlier turn where they mentioned it in passing.
+  //
+  // Not gated on `asked` alone: `knownName` is what makes it disappear for a
+  // guest who registered, without costing them a turn to say what they already
+  // typed.
+  if (!knownName && !asked.has('name')) {
+    missing.push(
+      'come si chiama. Chiedilo con naturalezza, come ci si presenta — non "posso avere il suo nome" ' +
+        'ma "come ti chiami?". Salvalo SUBITO con il tool remember (key: name) e da lì in poi ' +
+        'usalo quando ti rivolgi a lui, senza esagerare → `name`',
+    )
+  }
+
   // INTAKE GATE: the questions the guest must be asked before the assistant
-  // starts recommending. They go out TOGETHER, in one turn, not one per turn.
+  // starts recommending. ONE question per turn (Andrea, 2026-08-24: "domande
+  // che devi fare una alla volta..dopo il welcome").
   //
-  // One-per-turn produced a nine-turn interrogation in which nothing about
-  // Sappada was ever said, and the last questions in the queue — origin,
-  // constraints, and the push consent — were never reached at all (Andrea,
-  // live, 2026-08-23: "non mi hai fatto la domanda del consenso dei push",
-  // "non possiamo iniziare nessun dialogo se non abbiamo questo flusso").
+  // The grouped version this replaces sent all of them in a single message,
+  // which read as a form to fill in. The known cost of going back to one per
+  // turn is that the intake takes several turns to complete, and the last
+  // questions in the queue (interests, itinerary, consent) are reached late.
+  // What keeps them from being reached NEVER is the gate below: the pending
+  // question is appended to every reply until it is answered or asked, so the
+  // queue always advances instead of stalling.
   //
-  // `askedKeys` is every key put in front of the model this turn; they are all
-  // marked as asked afterwards, so none of them comes round again.
-  const askedKeys = missing.map(keyOf).filter((k): k is string => k !== null)
-  const askedKey = askedKeys[0] ?? null
+  // `askedKeys` stays in the shape the caller expects, but now carries at most
+  // one key: only the question actually put to the guest is marked as asked.
+  // Marking the whole queue here is what would silently swallow the questions
+  // that were never pronounced.
+  const askedKey = missing.length > 0 ? keyOf(missing[0]) : null
+  const askedKeys = askedKey ? [askedKey] : []
 
   if (missing.length > 0) {
-    // ALL open questions go out together, in ONE turn. The intake is a gate:
-    // until it is done the assistant does not start recommending (Andrea,
-    // 2026-08-23: "non possiamo iniziare nessun dialogo se non abbiamo questo
-    // flusso").
-    //
-    // One-per-turn was tried and produced a nine-turn interrogation with no
-    // information about Sappada in it, and origin / constraints / consent were
-    // never reached ("non mi hai fatto la domanda del consenso dei push").
-    // keepSingleQuestion is disabled for these turns — see runTurn.
-    const numbered = missing.map((q, i) => `  ${i + 1}. ${q}`)
+    const remaining = missing.length - 1
     lines.push(
       '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
       'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
-      'davvero, con i fatti che hai, e SOLO DOPO aggiungi le domande qui sotto.',
+      'davvero, con i fatti che hai, e SOLO DOPO aggiungi la domanda qui sotto.',
       '',
-      'LE DOMANDE DA FARE — TUTTE, IN QUESTO STESSO MESSAGGIO, in un unico blocco in fondo:',
-      ...numbered,
+      'LA DOMANDA DA FARE ADESSO — UNA SOLA, in coda alla tua risposta:',
+      `  ${missing[0]}`,
       '',
-      'Falle tutte adesso: sono poche e servono a non doverlo interrompere più dopo. Presentale come',
-      'un breve elenco, non come un interrogatorio: una riga di introduzione ("Due cose al volo, così',
-      'ti do consigli su misura:") e poi le domande, ciascuna sulla sua riga.',
-      'Gli esempi che vedi dentro una domanda FANNO PARTE della domanda: pronunciali sempre. Senza,',
+      '🚨 UNA DOMANDA SOLA, NON DI PIÙ. Non anticipare le prossime, non elencarle, non chiedere due',
+      'cose nella stessa frase: il cliente risponde a una per volta e le altre arrivano da sé nei turni',
+      'successivi. Una domanda in più viene tagliata via prima di arrivare al cliente.',
+      'Gli esempi che vedi dentro la domanda FANNO PARTE della domanda: pronunciali sempre. Senza,',
       '"c\'è qualcosa che devo sapere?" si prende un "no" e non cava niente (Andrea, live).',
-      'Registrale TUTTE in `asked` con save_stay nello stesso messaggio in cui le fai.',
-      'Non aggiungere una tua spiegazione del perché le chiedi: niente "cambia tutto quello che vi',
+      'Registrala in `asked` con save_stay nello stesso messaggio in cui la fai.',
+      'Non aggiungere una tua spiegazione del perché la chiedi: niente "cambia tutto quello che vi',
       'consiglio". Chiedi e basta.',
+      ...(remaining > 0
+        ? [
+            `Dopo questa te ne restano altre ${remaining}: NON farle ora, le farai una per volta nei ` +
+              'prossimi messaggi.',
+          ]
+        : []),
     )
   } else {
     lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
@@ -1699,6 +1620,18 @@ export function formatStayBlock(
         'alla partenza, e lì riguarda il rinnovo per la prossima volta (eventi dell\'anno e alloggi).',
     )
   }
+
+  // The switch, always live. Not tied to consentAsked: someone can ask to be
+  // left alone before anyone has asked them anything, and the request must be
+  // honoured the moment it is made.
+  lines.push(
+    'SE IN QUALSIASI MOMENTO ti dicono che non vogliono più ricevere messaggi — anche solo "basta ' +
+      'notifiche", "non scriveteci più" — chiama SUBITO save_push_consent con granted=false, ' +
+      'confermaglielo in una riga e non tornarci sopra. Se invece chiedono di ricevere di nuovo ' +
+      'qualcosa, chiama save_push_consent con granted=true e SOLO i topics che hanno nominato ' +
+      '(eventi, alloggi, offerte del territorio). Non chiedere loro di scrivere UNSUBSCRIBE: ' +
+      'basta che te lo dicano a parole.',
+  )
 
   if (stay.itineraryPlan) {
     lines.push(
@@ -2223,15 +2156,39 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     : []
 
   const faqBlock = formatFaqBlock(faqs)
-  const weatherEnabled = settings.weatherEnabled !== false
   const accommodationEnabled = !!input.config.handlers?.getCatalogue
 
-  // Tenant-defined webhook tools (Settings → Custom Tools). Absent handler or
-  // an empty list simply means this workspace defined none.
+  // Every tool offered this turn: the module's own built-ins (seeded as rows
+  // from tools.manifest.ts and switchable in Settings → Custom Tools) plus any
+  // webhook the tenant defined. An absent handler or an empty list means this
+  // workspace has none.
   const customTools = input.config.handlers?.getCustomTools
     ? await input.config.handlers.getCustomTools({ workspaceId: input.config.workspaceId })
     : []
   const customToolsByName = new Map(customTools.map((t) => [t.name, t]))
+
+  // 🚨 Derived from the tools ACTUALLY offered, not from handler presence alone.
+  //
+  // An admin can now switch a built-in off in the UI, and the handler stays
+  // wired either way. Gating only on the handler meant the module went on
+  // instructing the model to call a tool it could no longer see: the forced
+  // save below pushed "Chiama ORA save_stay", the model could not comply, and
+  // the hop was spent on nothing — a dead turn for the guest.
+  const stayToolAvailable = customToolsByName.has('save_stay')
+  // Two switches, deliberately ANDed: the advanced-settings JSON flag and the
+  // tool row. Either one off means off. Kept both rather than silently
+  // retiring `weatherEnabled`, which is a working feature (Andrea, 2026-08-24).
+  const weatherEnabled = settings.weatherEnabled !== false && customToolsByName.has('get_weather')
+
+  // Says WHY the bot is about to behave less capably, at the one moment the
+  // cause is knowable. Without it a disabled tool looks like a model failure.
+  const missingBuiltIns = ['save_stay', 'get_weather', 'remember'].filter(
+    (name) => !customToolsByName.has(name),
+  )
+  if (missingBuiltIns.length > 0) {
+    // eslint-disable-next-line no-console
+    console.error(`[demosappada][tools-off] not offered this turn: ${missingBuiltIns.join(', ')}`)
+  }
 
 
   // INLOCO is kept in sync by CODE, every turn, from the stay dates. It is the
@@ -2255,7 +2212,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
   }
 
-  const stayBlock = formatStayBlock(stayProfile, now, returningGuest)
+  const stayBlock = formatStayBlock(stayProfile, now, returningGuest, knownName)
 
   // Built once: it is part of the prompt AND part of what the reply may
   // quote. The local time and today's date live only here, so without it in
@@ -2286,9 +2243,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // Carried on the block itself, not read back from module state: the pending
   // question belongs to THIS turn's guest.
   const questionShown = stayBlock.askedKey
-  // Every key shown this turn. The reply carries the whole intake block, so
-  // all of them are marked as asked — marking only the first is what let
-  // origin / constraints / consent come round again forever.
+  // The keys actually put to the guest this turn. With one question per turn
+  // this holds at most one, and it is the ONLY one marked as asked: marking a
+  // question that was never pronounced would silently drop it from the queue.
   const questionsShown = stayBlock.askedKeys
 
   const trimmedHistory = history.slice(-(settings.maxHistoryMessages ?? 30))
@@ -2336,7 +2293,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     const result = await callLLM(
       messages,
       settings,
-      buildTools(weatherEnabled, accommodationEnabled, stayEnabled, customTools),
+      buildTools(customTools),
     )
     tokensUsed += result.tokensUsed
 
@@ -2345,7 +2302,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // stay and nothing was written, spend one hop forcing the tool rather
       // than letting the fact evaporate — asking the same question twice is
       // what makes the assistant feel like a form.
-      if (stayEnabled && !stayWasSaved && !forcedSaveDone && mentionsStayFacts(userMessage)) {
+      // `stayToolAvailable` guards the whole retry: with save_stay switched off
+      // there is nothing to force, and spending a hop ordering an absent tool
+      // is how the guest ends up with an empty reply.
+      if (stayEnabled && stayToolAvailable && !stayWasSaved && !forcedSaveDone && mentionsStayFacts(userMessage)) {
         forcedSaveDone = true
         // Keep what the model already wrote: the extra hop is for the save,
         // not for a better answer, and if the hop budget runs out afterwards
@@ -2400,11 +2360,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // Only while an intake question is pending: with the intake closed a
       // second question is the model talking to the guest normally, and
       // trimming it would cut a real conversation short.
-      if (questionShown && questionsShown.length <= 1) {
-        // Only when a SINGLE intake question is pending. During the grouped
-      // intake the reply is meant to carry several questions, and trimming
-      // them here would put the one-per-turn interrogation straight back.
-      const single = keepSingleQuestion(checked.text)
+      //
+      // While it IS pending, exactly one question reaches the guest. The
+      // prompt asks for one; this is what makes it true when the model
+      // anticipates the next ones anyway.
+      if (questionShown) {
+        const single = keepSingleQuestion(checked.text)
         if (single.removed.length > 0) {
           // eslint-disable-next-line no-console
           console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
@@ -2446,10 +2407,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // "in one line" the model kept the question and dropped the list, which
       // is how "c'è qualcosa che devo tenere presente?" reached a guest
       // (Andrea, live, 2026-08-23). One hop to put them back.
-      // Checked for EVERY key shown this turn, not just the first: in the
-      // grouped intake `constraints` travels with the others, and it is the
-      // one that collapses into "c'è qualcosa che devo sapere?" (Andrea,
-      // live, 2026-08-23: "ma che domande").
+      // `constraints` is the question that collapses into a bare "c'è qualcosa
+      // che devo sapere?" and gets a "no" (Andrea, live, 2026-08-23: "ma che
+      // domande"). Kept a find over the keys shown rather than a single check,
+      // so it still holds if a turn ever carries more than one again.
       const strippedKey =
         questionsShown.find((k) => intakeQuestionLacksExamples(checked.text, k)) ?? null
       if (!missingExamplesRetryDone && strippedKey) {
@@ -2673,6 +2634,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             profile.itinerary = itineraryAnswer
           }
 
+          // Overwritten whole, unlike doneAlready: the card is one paragraph
+          // rewritten as the picture changes, and appending would turn it into
+          // the log it is explicitly not.
+          profile.notes = str(args.notes)
+
           // Accumulated, never replaced: each call reports the question just
           // asked, and the set is what stops it being asked again tomorrow.
           const nowAsked = Array.isArray(args.asked) ? (args.asked as unknown[]) : []
@@ -2865,10 +2831,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
-    if (questionShown && questionsShown.length <= 1) {
-      // Only when a SINGLE intake question is pending. During the grouped
-      // intake the reply is meant to carry several questions, and trimming
-      // them here would put the one-per-turn interrogation straight back.
+    if (questionShown) {
       const single = keepSingleQuestion(checked.text)
       if (single.removed.length > 0) {
         // eslint-disable-next-line no-console

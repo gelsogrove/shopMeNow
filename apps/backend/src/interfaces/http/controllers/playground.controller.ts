@@ -593,6 +593,20 @@ export class PlaygroundController {
         return res.status(400).json({ error: "audio file is required" })
       }
       const workspaceId = await resolveWorkspaceId(req)
+
+      // 🎤 Speech to Text governs voice INPUT, on every channel — the widget
+      // enforces the same check. With it off there is no microphone and an
+      // inbound voice note is refused. How the bot ANSWERS is a separate flag
+      // (Voice Replies / audioOutput), applied further down in sendChat.
+      const sttWorkspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { speechToTextEnabled: true },
+      })
+      if (sttWorkspace?.speechToTextEnabled !== true) {
+        cleanup()
+        return res.status(403).json({ error: "Speech to text is disabled for this workspace" })
+      }
+
       const sessionId = req.body?.sessionId
       if (!sessionId) {
         cleanup()

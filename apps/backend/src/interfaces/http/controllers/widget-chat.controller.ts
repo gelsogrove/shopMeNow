@@ -1533,8 +1533,14 @@ export class WidgetChatController {
       }
       const { workspaceId } = req.params
 
-      // 🎤 Settings → Human Support toggle: voice input is off by default.
-      // Demo workspaces (customChatbotId) bypass it, same as the other widget gates.
+      // 🎤 Speech to Text governs voice INPUT only: with it off the workspace
+      // has no microphone and an inbound voice note is refused. It says nothing
+      // about how the bot answers — that is Voice Replies (audioOutput), gated
+      // separately below. The two flags are independent by design (Andrea).
+      //
+      // No demo exemption: customChatbotId used to bypass this, which made the
+      // flag a no-op on every custom-chatbot workspace. The flag commands on
+      // all chatbots.
       const workspaceFlags = await prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: { speechToTextEnabled: true, customChatbotId: true, audioOutput: true },
@@ -1543,7 +1549,7 @@ export class WidgetChatController {
         cleanup()
         return res.status(404).json({ error: "Workspace not found" })
       }
-      if (workspaceFlags.speechToTextEnabled !== true && !workspaceFlags.customChatbotId) {
+      if (workspaceFlags.speechToTextEnabled !== true) {
         cleanup()
         return res.status(403).json({ error: "Speech to text is disabled for this workspace" })
       }

@@ -2860,10 +2860,13 @@ export function ChatWidget({
                     )}
                   </div>
                   {/* Right round button (WhatsApp-style): mic when the field is
-                      empty, send when there's text. Mic in the live demo composer
-                      or when the workspace enables Speech to Text (Settings →
-                      Human Support), never while waiting for an operator. */}
-                  {(instantChat || workspaceConfig?.speechToTextEnabled === true) &&
+                      empty, send when there's text. The mic appears only where
+                      the workspace enables Speech to Text (Settings → Human
+                      Support) — demo composers included, the flag commands on
+                      every chatbot — and never while waiting for an operator.
+                      Voice Replies (audioOutput) is a separate flag: it decides
+                      whether the ANSWER is spoken, not whether the mic exists. */}
+                  {workspaceConfig?.speechToTextEnabled === true &&
                   !(botDisabled && !operatorHasReplied) &&
                   inputValue.trim().length === 0 ? (
                     <button
