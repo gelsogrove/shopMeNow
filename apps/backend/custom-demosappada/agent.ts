@@ -2624,17 +2624,35 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // only work in Italian, while a sentence it reproduced verbatim proves
       // it did not silently drop the question. With no wording configured
       // there is nothing to check and nothing to mark.
+      const askLangForCheck = lang
+        ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
+        : getState(sessionId).language
+      const sourceLangForCheck = (settings.defaultLanguage || 'it').toLowerCase()
+      // Compared against the question in the language the reply is written in.
+      // Checking only the configured (Italian) wording marked every correctly
+      // TRANSLATED question as missing, so the append fired and pasted the
+      // Italian one under an English reply (Andrea, 2026-08-25).
+      const dictatedForCheck =
+        dictatedQuestion && askLangForCheck && askLangForCheck.toLowerCase() !== sourceLangForCheck
+          ? await translateWelcome(dictatedQuestion, askLangForCheck, settings)
+          : dictatedQuestion
+
       let reachedGuest = ((): boolean => {
         if (!dictatedQuestion) return false
         const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
         const haystack = normalise(checked.text)
-        const sentences = (dictatedQuestion.match(/[^.!?\n]+[.!?]*/g) ?? [])
-          .map(normalise)
-          .filter((s) => s.length > 0)
-          .sort((a, b) => b.length - a.length)
-        const longest = sentences[0]
-        if (!longest) return false
-        return haystack.includes(longest)
+        const longestOf = (text: string): string | undefined =>
+          (text.match(/[^.!?\n]+[.!?]*/g) ?? [])
+            .map(normalise)
+            .filter((x) => x.length > 0)
+            .sort((a, b) => b.length - a.length)[0]
+        // Either form counts: the model may reproduce the configured wording
+        // verbatim (same-language turn) or its translation.
+        for (const candidate of [dictatedForCheck, dictatedQuestion]) {
+          const longest = candidate ? longestOf(candidate) : undefined
+          if (longest && haystack.includes(longest)) return true
+        }
+        return false
       })()
 
       // The model was told to ask it and wrote its own question instead — or
@@ -2660,9 +2678,18 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           lines.pop()
         }
         const body = lines.join('\n').trimEnd()
+        // Translated before it is attached. The configured wording is in the
+        // tenant's own language (Italian here), and pasting it verbatim under
+        // an English reply put two languages in one message — the guest read a
+        // welcome and an answer in English, then a question in Italian
+        // (Andrea, 2026-08-25). Cached per language, so a fixed question costs
+        // one call in the life of the process.
+        // Already resolved for the reachedGuest check above — same language,
+        // same cached translation.
+        const askText = dictatedForCheck ?? dictatedQuestion
         // eslint-disable-next-line no-console
-        console.error(`[demosappada][intake-append] re-attached "${questionShown}"`)
-        checked.text = body ? `${body}\n\n${dictatedQuestion}` : dictatedQuestion
+        console.error(`[demosappada][intake-append] re-attached "${questionShown}" (${askLangForCheck})`)
+        checked.text = body ? `${body}\n\n${askText}` : askText
         reachedGuest = true
       }
 
@@ -2735,11 +2762,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           ? settings.welcomeMessage
           : settings.welcomeBackMessage || settings.welcomeMessage
         const sendVideo = isNew && !getState(sessionId).videoSent && !stayProfile?.videoSent
+        // 🌍 The greeting is translated into the language the model ACTUALLY
+        // replied in (⟦LANG:xx⟧, committed just above), never into the seeded
+        // one. The seed comes from the browser's Accept-Language, and a guest
+        // reaching an English browser and typing "Ciao" got the welcome in
+        // English stapled on top of an Italian reply — two languages in one
+        // message (Andrea, 2026-08-25).
+        //
+        // `lang` is this turn's declaration; the state is the fallback for a
+        // turn where the model emitted no marker at all.
+        const replyLang = lang
+          ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
+          : getState(sessionId).language
         finalReply = await withWelcome(
           finalReply,
           welcomeText,
           sendVideo ? settings.welcomeVideoUrl : undefined,
-          getState(sessionId).language,
+          replyLang,
           settings,
           knownName,
         )
