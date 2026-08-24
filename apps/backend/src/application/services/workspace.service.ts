@@ -1009,7 +1009,18 @@ For privacy inquiries, please contact our support team.`
       if (!manifest || manifest.length === 0) return
 
       for (const tool of manifest) {
-        const row = await this.prisma.workspaceCallingFunction.upsert({
+        // Asked BEFORE the upsert, not inferred from timestamps afterwards.
+        // `createdAt === updatedAt` looked like "just created" but an upsert
+        // whose `update` is empty touches nothing, so updatedAt never moves and
+        // the row reads as new forever — which re-disabled a superseded
+        // function on every save, behind an admin who had turned it back on
+        // (found live, 2026-08-24).
+        const alreadySeeded = await this.prisma.workspaceCallingFunction.findFirst({
+          where: { workspaceId: id, functionName: tool.functionName },
+          select: { id: true },
+        })
+
+        await this.prisma.workspaceCallingFunction.upsert({
           where: {
             workspaceId_functionName: { workspaceId: id, functionName: tool.functionName },
           },
@@ -1038,8 +1049,7 @@ For privacy inquiries, please contact our support team.`
         // not offered two tools for one job. Deactivated, never deleted, and
         // ONLY on the turn the superseding row is created: doing it on every
         // save would make it impossible for an admin to switch one back on.
-        const justCreated = row.createdAt.getTime() === row.updatedAt.getTime()
-        if (justCreated && tool.supersedes?.length) {
+        if (!alreadySeeded && tool.supersedes?.length) {
           await this.prisma.workspaceCallingFunction.updateMany({
             where: {
               workspaceId: id,

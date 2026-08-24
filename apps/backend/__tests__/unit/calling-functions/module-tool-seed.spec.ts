@@ -20,24 +20,25 @@
 const mockUpsert = jest.fn()
 const mockUpdateMany = jest.fn()
 const mockFindUnique = jest.fn()
+const mockFindFirst = jest.fn()
 
 jest.mock("@echatbot/database", () => ({
   PrismaClient: jest.fn(),
 }))
 
-/** A row as Prisma returns it. Equal timestamps == just created. */
-function rowCreatedNow() {
-  const now = new Date("2026-08-24T10:00:00Z")
-  return { createdAt: now, updatedAt: now }
-}
-
-/** A row that already existed: updatedAt has moved on since creation. */
-function rowThatExisted() {
-  return {
-    createdAt: new Date("2026-08-20T10:00:00Z"),
-    updatedAt: new Date("2026-08-24T10:00:00Z"),
-  }
-}
+/**
+ * Whether the row was already in the table is asked with a findFirst BEFORE
+ * the upsert, so that is what these helpers control.
+ *
+ * An earlier version of this suite mocked an upsert RESULT and let the service
+ * infer "just created" from `createdAt === updatedAt`. Both the code and the
+ * test agreed and both were wrong: an upsert whose `update` is empty touches
+ * nothing, so updatedAt never moves and every row reads as newly created
+ * forever. The bug only surfaced against a real database (2026-08-24) — the
+ * mock had been asserting the fiction rather than Prisma's behaviour.
+ */
+const NOT_SEEDED_YET = null
+const ALREADY_SEEDED = { id: "row-1" }
 
 describe("syncModuleToolRows", () => {
   let service: any
@@ -47,9 +48,10 @@ describe("syncModuleToolRows", () => {
     jest.clearAllMocks()
     jest.resetModules()
 
-    mockUpsert.mockResolvedValue(rowCreatedNow())
+    mockUpsert.mockResolvedValue({})
     mockUpdateMany.mockResolvedValue({ count: 1 })
     mockFindUnique.mockResolvedValue({ customChatbotId: "demosappada" })
+    mockFindFirst.mockResolvedValue(NOT_SEEDED_YET)
 
     const { WorkspaceService } = require("../../../src/application/services/workspace.service")
     service = new WorkspaceService()
@@ -57,7 +59,11 @@ describe("syncModuleToolRows", () => {
     // method touches are stubbed.
     service.prisma = {
       workspace: { findUnique: mockFindUnique },
-      workspaceCallingFunction: { upsert: mockUpsert, updateMany: mockUpdateMany },
+      workspaceCallingFunction: {
+        upsert: mockUpsert,
+        updateMany: mockUpdateMany,
+        findFirst: mockFindFirst,
+      },
     }
   })
 
@@ -116,7 +122,7 @@ describe("syncModuleToolRows", () => {
     })
 
     it("writes nothing different on a second run", async () => {
-      mockUpsert.mockResolvedValue(rowThatExisted())
+      mockFindFirst.mockResolvedValue(ALREADY_SEEDED)
 
       await service.syncModuleToolRows(WORKSPACE_ID)
       const firstRun = mockUpsert.mock.calls.length
@@ -142,7 +148,7 @@ describe("syncModuleToolRows", () => {
     it("leaves it alone once the row already exists", async () => {
       // An admin who deliberately switched manageNotifications back on must
       // not have it switched off again by the next Settings save.
-      mockUpsert.mockResolvedValue(rowThatExisted())
+      mockFindFirst.mockResolvedValue(ALREADY_SEEDED)
 
       await service.syncModuleToolRows(WORKSPACE_ID)
 
@@ -155,6 +161,22 @@ describe("syncModuleToolRows", () => {
       await service.syncModuleToolRows(WORKSPACE_ID)
 
       expect(mockUpdateMany.mock.calls.every(([a]) => a.data.isActive === false)).toBe(true)
+    })
+
+    it("does not re-disable it on the saves that follow", async () => {
+      // The regression this file exists for. Seed once (deactivating it), then
+      // save Settings twice more as an admin would after switching it back on.
+      // The service must not touch it again — and asking Prisma "was this row
+      // already there?" is what makes that true, since the row's timestamps
+      // cannot answer it.
+      await service.syncModuleToolRows(WORKSPACE_ID)
+      expect(mockUpdateMany).toHaveBeenCalledTimes(1)
+
+      mockFindFirst.mockResolvedValue(ALREADY_SEEDED)
+      await service.syncModuleToolRows(WORKSPACE_ID)
+      await service.syncModuleToolRows(WORKSPACE_ID)
+
+      expect(mockUpdateMany).toHaveBeenCalledTimes(1)
     })
   })
 
