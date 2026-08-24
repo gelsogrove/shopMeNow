@@ -722,6 +722,15 @@ const SUPPORT_MIN_RATIO = 1.5
  */
 const LIST_NAMED_PLACES = 2
 
+/**
+ * How strongly a place must feature before it counts toward the list test.
+ *
+ * Above SUBJECT_MIN_SCORE on purpose: passing landmarks clear the lower bar
+ * (they are named, with their distinctive words) without the reply being
+ * about them.
+ */
+const LIST_PLACE_SCORE = 0.8
+
 function withFaqMedia(
   reply: string,
   faqs: FaqEntry[],
@@ -737,7 +746,16 @@ function withFaqMedia(
   // Cascatelle in passing; the waterfall video is the only one in the set, so
   // it was being attached to an answer that was not about waterfalls
   // (Andrea, 2026-08-23). Media belong to a detail answer, never to a list.
-  const namedPlaces = faqs.filter((faq) => subjectScore(faq, reply, faqs) >= SUBJECT_MIN_SCORE).length
+  // Counted on a HIGHER bar than the winner has to clear. A detail answer
+  // legitimately names its landmarks — the Cascatelle entry gives the wooden
+  // bridge, the Piccolo Museo della Grande Guerra and the InfoPoint as the
+  // way to get there — and counting those as "places named" made the answer
+  // look like a list, so the waterfall video was suppressed on the very turn
+  // the guest asked for the waterfall (Andrea, live, 2026-08-23: "ti avevo
+  // chiesto di mostrare il video ma non lo fai quando si chiede il
+  // dettaglio"). A real list has several places each carrying the reply, not
+  // one subject plus its directions.
+  const namedPlaces = faqs.filter((faq) => subjectScore(faq, reply, faqs) >= LIST_PLACE_SCORE).length
   if (namedPlaces > LIST_NAMED_PLACES) return reply
 
   // The reply is the stronger signal: it spells the place out in full, while
@@ -1330,6 +1348,8 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
 export interface StayBlock {
   text: string
   askedKey: string | null
+  /** Every intake key shown this turn. All of them get marked as asked. */
+  askedKeys: string[]
 }
 
 /** Extract the `key` marker from a question line ("… → `party`"). */
@@ -1616,43 +1636,48 @@ export function formatStayBlock(
     )
   }
 
-  const askedKey = missing.length > 0 ? keyOf(missing[0]) : null
+  // INTAKE GATE: the questions the guest must be asked before the assistant
+  // starts recommending. They go out TOGETHER, in one turn, not one per turn.
+  //
+  // One-per-turn produced a nine-turn interrogation in which nothing about
+  // Sappada was ever said, and the last questions in the queue — origin,
+  // constraints, and the push consent — were never reached at all (Andrea,
+  // live, 2026-08-23: "non mi hai fatto la domanda del consenso dei push",
+  // "non possiamo iniziare nessun dialogo se non abbiamo questo flusso").
+  //
+  // `askedKeys` is every key put in front of the model this turn; they are all
+  // marked as asked afterwards, so none of them comes round again.
+  const askedKeys = missing.map(keyOf).filter((k): k is string => k !== null)
+  const askedKey = askedKeys[0] ?? null
 
   if (missing.length > 0) {
-    // ONE question is shown, not the list. Given the list the model merges
-    // them — "siete in quanti, e quanto vi fermate?" — which is two questions
-    // in one breath and reads like a form (Andrea, 2026-08-23). What it
-    // cannot see, it cannot ask.
+    // ALL open questions go out together, in ONE turn. The intake is a gate:
+    // until it is done the assistant does not start recommending (Andrea,
+    // 2026-08-23: "non possiamo iniziare nessun dialogo se non abbiamo questo
+    // flusso").
     //
-    // The key is marked by CODE after the turn (see markAskedKey below), not
-    // left to the model: asked "siete a piedi?" and answered "veniamo da
-    // Trieste", it saved the origin and forgot it had ever asked — so the
-    // question came round again.
+    // One-per-turn was tried and produced a nine-turn interrogation with no
+    // information about Sappada in it, and origin / constraints / consent were
+    // never reached ("non mi hai fatto la domanda del consenso dei push").
+    // keepSingleQuestion is disabled for these turns — see runTurn.
+    const numbered = missing.map((q, i) => `  ${i + 1}. ${q}`)
     lines.push(
       '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
       'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
-      '(o di\' onestamente che non lo sai e dove trovarlo), e SOLO DOPO, in coda, aggiungi la domanda',
-      'qui sotto. Ignorare la domanda del cliente per fargliene una tua è il modo più veloce per farlo',
-      'smettere di scrivere.',
+      'davvero, con i fatti che hai, e SOLO DOPO aggiungi le domande qui sotto.',
       '',
-      'LA PROSSIMA DOMANDA DA FARE — questa e SOLO questa, una per messaggio, MAI due insieme:',
-      `  ${missing[0]}`,
-      'Non chiedere nient\'altro sul suo soggiorno in questo messaggio: le altre verranno dopo, una',
-      'alla volta. Registrala in `asked` con save_stay nello stesso momento in cui la fai.',
-      // Given only the bare field the model justified the question on its own
-      // — "Cambia tutto quello che vi consiglio" — which reads as pressure on
-      // the guest, and as if nothing could be suggested without an answer
-      // (Andrea, live, 2026-08-23). The reason now travels WITH the question
-      // above, phrased as what the guest gets out of it.
-      'La domanda qui sopra arriva già con il suo motivo e, dove ci sono, con i suoi esempi: usa gli',
-      'uni e gli altri. Gli esempi FANNO PARTE della domanda — pronunciali, sono il motivo per cui il',
-      'cliente capisce cosa gli stai chiedendo; senza, la domanda diventa generica e si prende un "no".',
-      'Resta comunque breve: quello che NON devi aggiungere è una tua spiegazione del perché la stai',
-      'chiedendo — non dire che senza la risposta non puoi consigliare nulla, non dire che cambia tutto.',
+      'LE DOMANDE DA FARE — TUTTE, IN QUESTO STESSO MESSAGGIO, in un unico blocco in fondo:',
+      ...numbered,
+      '',
+      'Falle tutte adesso: sono poche e servono a non doverlo interrompere più dopo. Presentale come',
+      'un breve elenco, non come un interrogatorio: una riga di introduzione ("Due cose al volo, così',
+      'ti do consigli su misura:") e poi le domande, ciascuna sulla sua riga.',
+      'Gli esempi che vedi dentro una domanda FANNO PARTE della domanda: pronunciali sempre. Senza,',
+      '"c\'è qualcosa che devo sapere?" si prende un "no" e non cava niente (Andrea, live).',
+      'Registrale TUTTE in `asked` con save_stay nello stesso messaggio in cui le fai.',
+      'Non aggiungere una tua spiegazione del perché le chiedi: niente "cambia tutto quello che vi',
+      'consiglio". Chiedi e basta.',
     )
-    if (missing.length > 1) {
-      lines.push(`  (dopo questa ne restano ${missing.length - 1}, ma NON anticiparle ora)`)
-    }
   } else {
     lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
   }
@@ -1698,8 +1723,8 @@ export function formatStayBlock(
     lines.push('Vuole il programma: sei il suo pianificatore, porta avanti il piano.')
   }
 
-  if (lines.length === 0) return { text: '', askedKey }
-  return { text: ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n'), askedKey }
+  if (lines.length === 0) return { text: '', askedKey, askedKeys }
+  return { text: ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n'), askedKey, askedKeys }
 }
 
 /**
@@ -2232,6 +2257,18 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
   const stayBlock = formatStayBlock(stayProfile, now, returningGuest)
 
+  // Built once: it is part of the prompt AND part of what the reply may
+  // quote. The local time and today's date live only here, so without it in
+  // approvedContent the time guard deleted them — a guest was told "stasera
+  // sono le e il tramonto è attorno alle" (Andrea, live, 2026-08-23).
+  const runtimeBlock = formatRuntimeBlock({
+    now,
+    channel: input.channel,
+    greeting,
+    settings,
+    customerName: knownName,
+  })
+
   const systemPrompt = [
     settings.mainPrompt?.trim() || '',
     '',
@@ -2239,7 +2276,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     '',
     faqBlock,
     '',
-    formatRuntimeBlock({ now, channel: input.channel, greeting, settings, customerName: knownName }),
+    runtimeBlock,
     stayBlock.text,
     formatStateForPrompt(getState(sessionId)),
   ]
@@ -2249,6 +2286,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // Carried on the block itself, not read back from module state: the pending
   // question belongs to THIS turn's guest.
   const questionShown = stayBlock.askedKey
+  // Every key shown this turn. The reply carries the whole intake block, so
+  // all of them are marked as asked — marking only the first is what let
+  // origin / constraints / consent come round again forever.
+  const questionsShown = stayBlock.askedKeys
 
   const trimmedHistory = history.slice(-(settings.maxHistoryMessages ?? 30))
   const messages: Message[] = [
@@ -2265,7 +2306,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // the FAQ block, and without it the guard stripped the very link the welcome
   // had just announced — leaving "here is a short presentation 👇" followed by
   // nothing (live run, 2026-08-22).
-  let approvedContent = [faqBlock, settings.welcomeVideoUrl ?? '', settings.privacyPolicyUrl ?? '']
+  let approvedContent = [
+    faqBlock,
+    runtimeBlock,
+    settings.welcomeVideoUrl ?? '',
+    settings.privacyPolicyUrl ?? '',
+  ]
     .filter(Boolean)
     .join('\n')
   let tokensUsed = 0
@@ -2354,8 +2400,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // Only while an intake question is pending: with the intake closed a
       // second question is the model talking to the guest normally, and
       // trimming it would cut a real conversation short.
-      if (questionShown) {
-        const single = keepSingleQuestion(checked.text)
+      if (questionShown && questionsShown.length <= 1) {
+        // Only when a SINGLE intake question is pending. During the grouped
+      // intake the reply is meant to carry several questions, and trimming
+      // them here would put the one-per-turn interrogation straight back.
+      const single = keepSingleQuestion(checked.text)
         if (single.removed.length > 0) {
           // eslint-disable-next-line no-console
           console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
@@ -2397,19 +2446,22 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // "in one line" the model kept the question and dropped the list, which
       // is how "c'è qualcosa che devo tenere presente?" reached a guest
       // (Andrea, live, 2026-08-23). One hop to put them back.
-      if (
-        !missingExamplesRetryDone &&
-        intakeQuestionLacksExamples(checked.text, questionShown)
-      ) {
+      // Checked for EVERY key shown this turn, not just the first: in the
+      // grouped intake `constraints` travels with the others, and it is the
+      // one that collapses into "c'è qualcosa che devo sapere?" (Andrea,
+      // live, 2026-08-23: "ma che domande").
+      const strippedKey =
+        questionsShown.find((k) => intakeQuestionLacksExamples(checked.text, k)) ?? null
+      if (!missingExamplesRetryDone && strippedKey) {
         missingExamplesRetryDone = true
         // eslint-disable-next-line no-console
-        console.error(`[demosappada][guard] intake question without examples (${questionShown}) — retrying`)
+        console.error(`[demosappada][guard] intake question without examples (${strippedKey}) — retrying`)
         pendingReply = result.content || pendingReply
         messages.push({ role: 'assistant', content: result.content || null })
         messages.push({
           role: 'user',
           content:
-            questionShown === 'party'
+            strippedKey === 'party'
               ? '[SYSTEM] Hai chiesto con chi è senza nominare le categorie, e una domanda chiusa come ' +
                 '"siete entrambi adulti?" si porta via bambini e anziani in un colpo solo. Riscrivi la ' +
                 'risposta tenendo tutto il resto com\'è: la domanda deve nominare adulti, bambini e anziani.'
@@ -2447,14 +2499,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (questionShown && stayEnabled && customerId && input.config.handlers?.saveStayProfile) {
         const already = new Set(stayProfile?.asked ?? [])
         const profile: StayProfile = {}
-        if (!already.has(questionShown)) {
-          already.add(questionShown)
+        const before = already.size
+        for (const key of questionsShown) already.add(key)
+        if (already.size > before) {
           profile.asked = Array.from(already)
         }
-        if (questionShown === 'consent' && !stayProfile?.consentAsked) {
+        if (questionsShown.includes('consent') && !stayProfile?.consentAsked) {
           profile.consentAsked = true
         }
-        if (questionShown === 'itinerary' && !stayProfile?.itinerary) {
+        if (questionsShown.includes('itinerary') && !stayProfile?.itinerary) {
           // 'asked' rather than yes/no: the answer, when it comes, overwrites
           // this with what they actually chose.
           profile.itinerary = 'asked'
@@ -2812,7 +2865,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
-    if (questionShown) {
+    if (questionShown && questionsShown.length <= 1) {
+      // Only when a SINGLE intake question is pending. During the grouped
+      // intake the reply is meant to carry several questions, and trimming
+      // them here would put the one-per-turn interrogation straight back.
       const single = keepSingleQuestion(checked.text)
       if (single.removed.length > 0) {
         // eslint-disable-next-line no-console
