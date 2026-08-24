@@ -248,8 +248,20 @@ export function keepSingleQuestion(reply: string, dictated?: string | null): Con
         kept.push(part)
         continue
       }
+      // When WE dictated a question this turn, it is the only one the guest
+      // may be asked — every question the model added of its own goes, not
+      // just the ones after the first. Keeping the first invented question
+      // (and exempting ours) put two to the guest at once: "Oggi che tempo
+      // fa? … C'è qualcosa di particolare che vuoi segnalarci?" (Andrea,
+      // 2026-08-25).
+      if (dictatedParts.size > 0) {
+        const trimmedOut = part.trim()
+        if (trimmedOut.length > 0) removed.push(trimmedOut)
+        continue
+      }
       seen++
-      // The FIRST question is the one the guest is meant to answer.
+      // With nothing dictated the old rule applies: the FIRST question is the
+      // one the guest is meant to answer.
       if (seen > 1) {
         const trimmed = part.trim()
         if (trimmed.length > 0) removed.push(trimmed)

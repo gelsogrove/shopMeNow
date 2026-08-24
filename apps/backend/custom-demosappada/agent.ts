@@ -2523,14 +2523,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // While it IS pending, exactly one question reaches the guest. The
       // prompt asks for one; this is what makes it true when the model
       // anticipates the next ones anyway.
-      if (questionShown) {
-        const single = keepSingleQuestion(checked.text, dictatedQuestion)
-        if (single.removed.length > 0) {
-          // eslint-disable-next-line no-console
-          console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
-          checked.text = single.text
-        }
-      }
+      // The one-question trim runs AFTER the dictated question is resolved and
+      // possibly re-attached — see below. Running it here compared the reply
+      // against the ITALIAN wording only, so a correctly translated question
+      // was not recognised as ours.
 
       if (lang) {
         const resolved = resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
@@ -2666,18 +2662,37 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // one-question-per-turn machinery exists to prevent. Ours is the one
       // that was chosen, so its is the one that goes.
       if (questionShown && !reachedGuest && dictatedQuestion && checked.text.trim()) {
-        // Drop the model's own trailing question, if any. Sentence-shaped and
-        // language-independent: a line ending in "?" that is not a URL (an
-        // embedded "…com/watch?v=" is not a question, and stripping it would
-        // break the link).
-        const lines = checked.text.trimEnd().split('\n')
-        while (lines.length > 0) {
-          const last = lines[lines.length - 1].trim()
-          const isQuestionLine = last.endsWith('?') && !/https?:\/\//.test(last)
-          if (!isQuestionLine) break
-          lines.pop()
-        }
-        const body = lines.join('\n').trimEnd()
+        // Drop EVERY question the model asked of its own, wherever it sits —
+        // not just the trailing ones. Trimming only the tail left an invented
+        // question standing in the middle of the reply with ours appended
+        // underneath, so the guest was asked two things at once: "Ti va di
+        // fare una passeggiata con i bambini? … In quanti siete e fino a
+        // quando vi fermate?" (Andrea, 2026-08-25).
+        //
+        // Sentence-shaped and language-independent: a line ending in "?" that
+        // is not a URL (an embedded "…com/watch?v=" is not a question, and
+        // stripping it would break the link).
+        // Split into SENTENCES, not lines: the invented question shared its
+        // line with the rest of the paragraph ("Ti va di fare una passeggiata
+        // con i bambini? Potresti visitare le Cascatelle."), so a per-line
+        // filter left it standing untouched.
+        const body = checked.text
+          .trimEnd()
+          .split('\n')
+          .map((line) => {
+            if (!line.includes('?')) return line
+            if (/https?:\/\//.test(line)) return line
+            const kept = (line.match(/[^.!?]+[.!?]*/g) ?? [line])
+              .filter((sentence) => !sentence.trim().endsWith('?'))
+              .join('')
+              .replace(/\s{2,}/g, ' ')
+              .trim()
+            return kept
+          })
+          .filter((line, i, all) => line.trim() !== '' || (all[i - 1]?.trim() ?? '') !== '')
+          .join('\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trimEnd()
         // Translated before it is attached. The configured wording is in the
         // tenant's own language (Italian here), and pasting it verbatim under
         // an English reply put two languages in one message — the guest read a
@@ -2691,6 +2706,20 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         console.error(`[demosappada][intake-append] re-attached "${questionShown}" (${askLangForCheck})`)
         checked.text = body ? `${body}\n\n${askText}` : askText
         reachedGuest = true
+      }
+
+      // Exactly ONE question reaches the guest while the intake is pending.
+      // Compared against BOTH forms of our question — the configured wording
+      // and its translation — so the model's own additions are the only thing
+      // that goes.
+      if (questionShown) {
+        const ours = [dictatedForCheck, dictatedQuestion].filter(Boolean).join('\n')
+        const single = keepSingleQuestion(checked.text, ours || dictatedQuestion)
+        if (single.removed.length > 0) {
+          // eslint-disable-next-line no-console
+          console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
+          checked.text = single.text
+        }
       }
 
       // 🔔 The opt-out line, prepended by CODE on the turn the guest accepts.
