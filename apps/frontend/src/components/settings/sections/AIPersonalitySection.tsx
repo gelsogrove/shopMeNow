@@ -427,7 +427,7 @@ export function AIPersonalitySection({
               />
             </div>
             <p className="text-xs text-gray-500">
-              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code>, <code>{"{{companyName}}"}</code>, <code>{"{{termsAndConditions}}"}</code> and <code>{"{{videoUrl}}"}</code>.
+              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code>, <code>{"{{companyName}}"}</code>, <code>{"{{termsAndConditions}}"}</code>, <code>{"{{videoUrl}}"}</code> and <code>{"{{firstQuestion}}"}</code> (the first intake question, placed where you put it).
             </p>
           </div>
 

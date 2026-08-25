@@ -39,6 +39,11 @@ import {
   updateState,
 } from './state.js'
 import { stripUnverifiableContacts } from './content-guards.js'
+import {
+  isIntakeStepOpen,
+  nextIntakeStep,
+  type IntakeContext,
+} from './intake-machine.js'
 import { getSappadaWeather, TIMEZONE, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WEATHER_CACHE_MS, WELCOME_BACK_STALE_MS } from './bounds.js'
 
@@ -1219,34 +1224,6 @@ interface IntakeTurnResult {
   dropped: string[]
 }
 
-/**
- * Has the pending intake question been answered during THIS turn?
- *
- * The question is chosen from the profile as it stands at the top of the turn.
- * When the guest's message answers it and the model saves that answer mid-turn
- * ("ci sono 2 bambini"), asking it anyway means asking something they just
- * said (Andrea, 2026-08-25). Checked per key against the refreshed profile.
- */
-function intakeAnswerLanded(key: string | null, profile: StayProfile | null | undefined): boolean {
-  if (!key || !profile) return false
-  switch (key) {
-    case 'composition':
-      return profile.children !== undefined || profile.seniors !== undefined
-    case 'childrenAges':
-      return !!profile.childrenAges
-    case 'constraints':
-      return !!profile.constraints
-    case 'interests':
-      return !!profile.interests
-    case 'party':
-      return profile.adults !== undefined
-    case 'stay':
-      return !!profile.departureDate
-    default:
-      return false
-  }
-}
-
 function composeIntakeTurn(input: IntakeTurnInput): IntakeTurnResult {
   const { reply, key, question, guestAsked, closingLine } = input
   const ask = (input.questionTranslated ?? question ?? '').trim()
@@ -1310,6 +1287,16 @@ async function withWelcome(
   language: string | undefined,
   settings: Settings,
   customerName: string | undefined,
+  /**
+   * The intake question due on this turn, already in the guest's language.
+   *
+   * The welcome may place it with {{firstQuestion}}, so the whole opening
+   * message — greeting, video, first question — is edited in ONE field in the
+   * backoffice (Andrea, 2026-08-25). It is still the machine that decides
+   * WHICH question that is, so it stays tracked as asked; the tenant only
+   * decides where it sits.
+   */
+  firstQuestion?: string,
 ): Promise<string> {
   const welcome = substitutePlaceholders(welcomeText?.trim() ?? '', customerName)
   if (!welcome) return reply
@@ -1328,8 +1315,19 @@ async function withWelcome(
 
   const lang = (language || settings.defaultLanguage || 'it').toLowerCase()
   const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
-  const greeting =
+  const translated =
     lang === sourceLang ? welcome : await translateWelcome(welcome, lang, settings)
+
+  // {{firstQuestion}} — the tenant decides WHERE the opening question sits;
+  // the intake machine decides WHICH one it is. With no question due (a
+  // returning guest whose profile is complete) the placeholder collapses,
+  // taking its blank line with it rather than leaving a hole.
+  const QUESTION_SLOT = /\n?[ \t]*\{\{\s*firstQuestion\s*\}\}[ \t]*/gi
+  const hasSlot = QUESTION_SLOT.test(translated)
+  QUESTION_SLOT.lastIndex = 0
+  const greeting = hasSlot
+    ? translated.replace(QUESTION_SLOT, firstQuestion?.trim() ? `\n${firstQuestion.trim()}` : '')
+    : translated
 
   const parts = [greeting]
   const video = videoUrl?.trim()
@@ -1733,126 +1731,14 @@ export function formatStayBlock(
   // is exactly what it gets wrong, re-asking a question the guest ignored.
   const asked = new Set(stay.asked ?? [])
 
-  // Which question is DUE — the key only. The wording is dictated from
-  // settings further down, never composed here and never composed by the model.
-  const missing: IntakeKey[] = []
+  // WHICH question comes next is decided by the intake machine — one
+  // declarative table, in intake-machine.ts, that is also consulted after the
+  // model saves the guest's answer. Two callers, one authority: that is what
+  // stops the queue and the guards from disagreeing (Andrea, 2026-08-25).
+  const intakeCtx: IntakeContext = { profile: stay, asked, knownName }
+  const nextStep = nextIntakeStep(intakeCtx)
 
-  // Order matters: this is a conversation, not a form. The easy, sociable
-  // questions come first and the personal ones last — "da dove arrivate" was
-  // sixth, after allergies and a marketing consent, which is not how anyone
-  // talks to a guest (Andrea, 2026-08-23).
-  //
-  // `party` is due both when nothing is known and when a guest said "siamo in
-  // 3" without saying who: a headcount without the breakdown is guesswork, and
-  // the assistant had started inventing children nobody mentioned.
-  // Asked ONCE. The re-queue that used to live here ("|| !stay.adults") was
-  // there because the old wording asked WHO was coming, so a bare headcount
-  // left the job half done. That job now belongs to `composition` below, and
-  // keeping the re-queue meant a guest who answered "siamo in 4 fino a
-  // domenica" — without the model writing the number into `adults` — was
-  // asked the very same question again, and `composition` never came up at
-  // all (Andrea, 2026-08-24).
-  if (!asked.has('party')) {
-    missing.push('party')
-  }
-
-  if (!stay.departureDate && !asked.has('stay')) {
-    missing.push('stay')
-  }
-
-  // SECOND: anything that changes what can be recommended at all — a coeliac,
-  // no car, a dog, difficulty walking (Andrea, 2026-08-24). Ahead of the
-  // party composition on purpose: the wording invites the guest to volunteer
-  // who they are ("siamo con due bambini e una celiaca"), and when they do,
-  // `composition` below is skipped as already answered. The reverse never
-  // happens — knowing there are children says nothing about allergies.
-  if (!stay.constraints && !asked.has('constraints')) {
-    missing.push('constraints')
-  }
-
-  // THIRD: who is actually in the party. The first question asks a headcount
-  // and the dates, not the categories, so a guest answering "siamo in 4 fino a
-  // domenica" leaves this unknown — and the walks, the ages question and the
-  // itinerary all depend on it.
-  //
-  // Skipped, never asked twice, when either is already known: "siamo in 2 con
-  // un bambino" answers it before it is put. `children`/`seniors` of 0 are
-  // real answers ("no, solo adulti"), so the test is `!== undefined` rather
-  // than truthiness.
-  const compositionKnown =
-    stay.children !== undefined || stay.seniors !== undefined
-  if (!compositionKnown && !asked.has('composition')) {
-    missing.push('composition')
-  }
-
-  // FOURTH: what they came here to DO — asked, not waited for. Knowing they
-  // want the mountains, or local food, or sport, is what turns an answer into
-  // a plan (Andrea, 2026-08-23: "altrimenti è uguale a ChatGPT").
-  //
-  // Ahead of the push consent (Andrea, 2026-08-24): it is a question about
-  // their holiday, and asking it before the marketing ask keeps the intake on
-  // the guest's side of the conversation for one more turn. The answer lands
-  // in `interests` on the profile and from there into the card the assistant
-  // reads on every later turn.
-  if (!stay.interests && !asked.has('interests')) {
-    missing.push('interests')
-  }
-
-  // FOURTH: the push consent. It used to sit last, on the reasoning that a
-  // marketing ask needs trust built first — but by then the intake had run
-  // long enough that many guests never reached it. Asked here it still comes
-  // after three answered questions, and it is explicitly scoped to the stay,
-  // which is what makes it easy to say yes to (Andrea, 2026-08-24).
-  if (!stay.consentAsked) {
-    missing.push('consent')
-  }
-
-  if (stay.children && stay.children > 0 && !stay.childrenAges && !asked.has('childrenAges')) {
-    missing.push('childrenAges')
-  }
-
-  // FIFTH and last of the intake proper: their name, right after the consent
-  // (Andrea, 2026-08-24 — "ultima domanda, come ti chiami?"). It used to sit
-  // after `interests` and `itinerary`, so in practice the guest was asked what
-  // they felt like doing before being asked who they were.
-  //
-  // Skipped when the name is already known — a widget guest who typed it into
-  // the registration form must not be asked again. An anonymous visitor's
-  // "Visitor <id>" placeholder does NOT count as known: the host strips it
-  // before the module ever sees it (realCustomerName, widget-chat.controller).
-  if (!knownName && !asked.has('name')) {
-    missing.push('name')
-  }
-
-  // Before the itinerary, never after: a nine-day plan built without knowing
-  // they were on foot had to be rewritten from scratch, and the guest read
-  // the same wall of text twice (Andrea, 2026-08-23).
-  if (!stay.itinerary) {
-    missing.push('itinerary')
-  }
-
-  // INTAKE GATE: the questions the guest must be asked before the assistant
-  // starts recommending. ONE question per turn (Andrea, 2026-08-24: "domande
-  // che devi fare una alla volta..dopo il welcome").
-  //
-  // The grouped version this replaces sent all of them in a single message,
-  // which read as a form to fill in. The known cost of going back to one per
-  // turn is that the intake takes several turns to complete, and the last
-  // questions in the queue (interests, itinerary, consent) are reached late.
-  // What keeps them from being reached NEVER is the gate below: the pending
-  // question is appended to every reply until it is answered or asked, so the
-  // queue always advances instead of stalling.
-  //
-  // `askedKeys` carries only the keys the guest was ACTUALLY asked about.
-  // Marking the whole queue is what would silently swallow the questions that
-  // were never pronounced.
-  //
-  // The one exception is `party`, whose wording asks two things at once ("in
-  // quanti siete e fino a quando vi fermate") — one sentence, because asking a
-  // guest their headcount and their dates in two separate turns reads like a
-  // form (Andrea, 2026-08-24). Both keys retire together: leaving `stay` open
-  // would make the assistant ask for the departure date the guest just gave.
-  const askedKey = missing[0] ?? null
+  const askedKey = nextStep?.key ?? null
   const askedKeys =
     askedKey === 'party' ? ['party', 'stay'] : askedKey ? [askedKey] : []
 
@@ -2905,13 +2791,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       //
       // Re-checked per key against the refreshed profile, so only a question
       // that is genuinely still open reaches the guest.
-      // Only when the guest actually SAID something this turn. From a bare
-      // "Ciao" the model invented adults:1 and a departure date, the guard read
-      // that as "party answered" and the very first question was skipped
-      // (found while testing, 2026-08-25). A greeting is not an answer.
-      const guestSaidSomething = userMessage.trim().split(/\s+/).length >= 2
+      // Re-asked of the SAME authority, against the profile as it stands now:
+      // the guest may have answered mid-turn ("ci sono 2 bambini") and the
+      // model saved it after the question was chosen.
       const answeredMeanwhile =
-        stayWasSaved && guestSaidSomething && intakeAnswerLanded(questionShown, stayProfile)
+        stayWasSaved &&
+        !isIntakeStepOpen(questionShown, { profile: stayProfile, asked: new Set(), knownName })
       if (answeredMeanwhile) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][already-answered] "${questionShown}" — not asking`)
@@ -3041,6 +2926,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         const replyLang = lang
           ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
           : getState(sessionId).language
+        // When the welcome hosts {{firstQuestion}}, the question belongs THERE
+        // and must not also trail the reply: the tenant placed it, so this
+        // strips the copy the turn had already appended.
+        const questionForWelcome = (questionTranslated ?? dictatedQuestion ?? '').trim()
+        const welcomeHostsQuestion =
+          !!welcomeText && /\{\{\s*firstQuestion\s*\}\}/i.test(welcomeText)
+        if (welcomeHostsQuestion && questionForWelcome) {
+          finalReply = finalReply.split(questionForWelcome).join('').replace(/\n{3,}/g, '\n\n').trim()
+        }
+
         finalReply = await withWelcome(
           finalReply,
           welcomeText,
@@ -3048,6 +2943,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           replyLang,
           settings,
           knownName,
+          questionForWelcome,
         )
         if (sendVideo) {
           updateState(sessionId, { videoSent: true }, { mirror: false })
@@ -3136,8 +3032,25 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         } else {
           const args = safeParseArgs(call.function.arguments)
           const profile: StayProfile = {}
-          const num = (v: unknown) => (typeof v === 'number' && v >= 0 ? Math.round(v) : undefined)
-          const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
+
+          // 🚨 Facts come from the GUEST, never from the model's imagination.
+          //
+          // Asked nothing more than "Ciao", the model called save_preferences
+          // with adults:1 and a departure date it had made up — and everything
+          // downstream believed it: the intake skipped its first question, and
+          // the card the Pro Loco reads described a holiday nobody had
+          // described (Andrea, 2026-08-25).
+          //
+          // A greeting carries no facts. Measured on LENGTH alone — one or two
+          // words cannot state a party size and a date — so nothing here reads
+          // WHAT was written and it holds in every language (CLAUDE.md §14).
+          // Fields the guest cannot state in passing are refused; the ones the
+          // code itself owns (`asked`, `notes`) are unaffected.
+          const guestStatedFacts = userMessage.trim().split(/\s+/).length >= 2
+          const num = (v: unknown) =>
+            guestStatedFacts && typeof v === 'number' && v >= 0 ? Math.round(v) : undefined
+          const str = (v: unknown) =>
+            guestStatedFacts && typeof v === 'string' && v.trim() ? v.trim() : undefined
 
           profile.adults = num(args.adults)
           profile.children = num(args.children)
@@ -3450,8 +3363,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         // Same check as the normal path: a question answered mid-turn is not asked.
         key:
           stayWasSaved &&
-          userMessage.trim().split(/\s+/).length >= 2 &&
-          intakeAnswerLanded(questionShown, stayProfile)
+          !isIntakeStepOpen(questionShown, { profile: stayProfile, asked: new Set(), knownName })
             ? null
             : questionShown,
         question: dictatedQuestion,
