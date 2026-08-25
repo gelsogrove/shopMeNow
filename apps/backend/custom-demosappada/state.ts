@@ -31,6 +31,13 @@ export interface SessionState {
   // reached them, so this is the escape hatch: after two failed attempts it is
   // retired anyway, rather than blocking the queue for the rest of the stay.
   intakeMisses?: Record<string, number>
+
+  // The intake question the guest LAST saw — set when it goes out. The
+  // answer-capture writes the guest's words into a field only when the
+  // pending question is this one: capturing into whatever happened to be
+  // dictated NEXT filed "2 bambini di 8 e 10 anni" under `constraints`
+  // (2026-08-25).
+  lastAskedKey?: string
 }
 
 export type PatchKey = 'name' | 'language' | 'phone'

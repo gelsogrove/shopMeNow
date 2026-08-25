@@ -231,6 +231,9 @@ export const sendWidgetMessage = async ({
     activeChatbot: data.activeChatbot as boolean | undefined,
     // 🔊 Optional TTS reply (audioOutput tenants): URL of the spoken reply MP3.
     audioUrl: data.audioUrl as string | undefined,
+    // 🔬 debugMode only: the guest's stay-state after this turn, for the
+    // widget's live state strip.
+    debugState: data.debugState as Record<string, unknown> | undefined,
     // 📎 Flow-step media (flow builder Assets, url/type/title) served with this
     // reply — must pass through or the widget never sees the node's image/doc.
     attachments: Array.isArray(data.attachments)

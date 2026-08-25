@@ -48,10 +48,27 @@ export interface IntakeStep {
  */
 export const INTAKE_STEPS: readonly IntakeStep[] = [
   {
-    // Headcount and dates in one sentence — asking them separately reads
-    // like a form (Andrea, 2026-08-24).
+    // Headcount and dates in ONE sentence — separately they read like a form
+    // (Andrea, 2026-08-24). Retired as soon as EITHER arrives: from then on
+    // only the missing HALF is asked, by `headcount` or `stay` below, never
+    // the whole question again ("ho detto fino a domenica!", 2026-08-25).
     key: 'party',
-    satisfiedBy: ({ profile }) => profile?.adults !== undefined && !!profile?.departureDate,
+    satisfiedBy: ({ profile }) => profile?.adults !== undefined || !!profile?.departureDate,
+  },
+  {
+    // The guest gave the dates but not the number ("siamo qui fino a
+    // domenica"): only the headcount is asked.
+    key: 'headcount',
+    satisfiedBy: ({ profile }) => profile?.adults !== undefined,
+    relevantWhen: ({ profile, asked }) => asked.has('party') || !!profile?.departureDate,
+  },
+  {
+    // The mirror half: number given, dates missing ("siamo due adulti").
+    // Gated on `asked`/fields, not on the top-of-turn profile alone: the step
+    // is chosen before this turn's answer is saved (2026-08-25).
+    key: 'stay',
+    satisfiedBy: ({ profile }) => !!profile?.departureDate,
+    relevantWhen: ({ profile, asked }) => asked.has('party') || profile?.adults !== undefined,
   },
   {
     // Anything that changes what can be recommended at all: a coeliac, no

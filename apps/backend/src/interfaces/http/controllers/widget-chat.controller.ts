@@ -1177,7 +1177,16 @@ export class WidgetChatController {
           channelActive: workspace.channelStatus !== false,
           debugChannel: workspace.debugMode === true,
           isPlayground: isPlayground || false,
-          language: normalizedLanguage,
+          // 🌍 A customer we already know keeps the language ON THEIR PROFILE:
+          // it is what they actually wrote to us in, while `normalizedLanguage`
+          // is the browser's Accept-Language and follows the device, not the
+          // person (contratto.md: "se è un utente già esistente guardare la
+          // lingua del profilo"). A brand-new customer has nothing on file, so
+          // the browser hint is the best opening guess — the module then
+          // detects the real language from the message and patches it back.
+          language: isNewCustomer
+            ? normalizedLanguage
+            : this.normalizeLanguage(customer.language) || normalizedLanguage,
           sessionId: chatSession.id,
           customerId: customer.id,
           phoneNumber: normalizedPhone,
@@ -2562,6 +2571,20 @@ export class WidgetChatController {
               phone: customer.phone,
               isActive: customer.isActive,
             },
+            // 🔬 debugMode only: the guest's live stay state, re-read AFTER the
+            // turn so the panel under the widget header shows exactly what
+            // this message wrote (Andrea, 2026-08-25: "fammi vedere lo state
+            // così capisco come si comporta"). Never sent in production mode.
+            ...(workspace.debugMode === true
+              ? {
+                  debugState: (
+                    await prisma.customers.findFirst({
+                      where: { id: customer.id, workspaceId: resolvedWorkspaceId },
+                      select: { stayProfile: true },
+                    })
+                  )?.stayProfile ?? null,
+                }
+              : {}),
           })
         }
       } catch (customClientError) {

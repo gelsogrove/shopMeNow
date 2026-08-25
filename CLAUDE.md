@@ -280,6 +280,22 @@ column and ask before treating it as one.
   the full suite runs ONCE, at the end, with approval. If the previous log
   shows HTTP 402 / insufficient credits: STOP and say so, never relaunch.
 
+### 16B. custom-demosappada — IL CONTRATTO È LEGGE (🚨 Andrea, 2026-08-25)
+
+- **`apps/backend/custom-demosappada/contratto.md` è la specifica vincolante
+  del chatbot della Pro Loco di Sappada. Leggilo PRIMA di toccare il modulo e
+  verifica ogni modifica contro le sue regole.**
+- 🚨 **MAI modificarlo, per nessun motivo.** Lo scrive Andrea, ed è la sua
+  voce: riscriverlo — anche solo per riordinarlo, aggiungere lo stato di
+  implementazione o segnare cosa manca — sostituisce le sue parole con le mie.
+  Successo il 2026-08-25: gliel'ho ristrutturato in 321 righe e ha dovuto
+  sovrascriverlo, aggiungendo in fondo "non cambiare mai questo file!".
+- **Se una regola confligge con il codice**: dillo in chat e lascia decidere
+  Andrea. Non risolvere il conflitto da solo e non scriverlo nel contratto.
+- Se serve documentare COME una regola è implementata, va in
+  `custom-demosappada/docs/architecture.md`, mai nel contratto.
+- Stesso regime di `custom-demoam/CONTRACT.md` (§16A rule 34).
+
 ### 17. F50 — Visual Flow Builder DEPRECATED (2026-05-13)
 
 - ❌ `FlowAgentLLM`, `FlowWorkspaceStrategy`, `AgentConfigRepository`, `agent-config.controller` — marked `@deprecated`, do NOT extend

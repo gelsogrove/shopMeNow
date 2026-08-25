@@ -23,7 +23,8 @@
   "intakeQuestions": {
     "name": "Ultima domanda: come ti chiami?",
     "party": "In quanti siete e fino a quando vi fermate?",
-    "stay": "Fino a quando resti a Sappada?",
+    "headcount": "Perfetto. E in quanti siete?",
+    "stay": "Perfetto. E fino a quando vi fermate?",
     "constraints": "C'è qualcosa di particolare che vuoi segnalarci? C'è qualcuno celiaco? Sarete senza macchina? Ci sono altri dettagli o esigenze particolari che dovremmo sapere, così da potervi dare informazioni e consigli ad hoc?",
     "composition": "Ci sono bambini o anziani?",
     "interests": "Cosa ti piacerebbe fare in questi giorni? Visitare Sappada, andare in montagna, provare i prodotti tipici, fare sport...",

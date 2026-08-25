@@ -15,9 +15,3 @@ export const WELCOME_BACK_STALE_MS = 2 * 60 * 60 * 1000
  */
 export const MAX_TOOL_HOPS = 4
 
-/**
- * How long a fetched forecast stays usable within a session. Weather does not
- * change minute to minute, and a customer asking three follow-ups about the
- * same afternoon should not trigger three HTTP calls.
- */
-export const WEATHER_CACHE_MS = 30 * 60 * 1000

@@ -1282,11 +1282,39 @@ export class CustomClientChatbotService {
       })
       const profile = customer?.stayProfile
       const manual = extractManualNotes(customer?.notes)
+
+      // Has this customer written to us BEFORE this conversation?
+      //
+      // A module greets a returning guest differently, and "returning" cannot
+      // be read from the current session's history: widget sessions and
+      // WhatsApp threads start fresh constantly. Nor from the stay profile —
+      // a guest who chatted without ever stating dates has none, and 20 of
+      // this tenant's 115 customers were in exactly that position, receiving
+      // the full welcome and the presentation video again (Andrea,
+      // 2026-08-25: "il primo check è sapere se l'utente esiste o no").
+      //
+      // Counted on the customer, which is the durable record. Capped: we only
+      // need to know whether it is more than zero.
+      const priorMessages = await defaultPrisma.conversationMessage.count({
+        where: {
+          customerId: p.customerId,
+          workspaceId: p.workspaceId,
+          role: { in: ["user", "assistant"] },
+        },
+      })
+      const hasHistory = priorMessages > 0 ? { hasWrittenBefore: true } : {}
+
       if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
         // Even with no stay on record, an operator's note is worth carrying.
-        return manual ? ({ operatorNotes: manual } as StayProfile) : null
+        return manual || priorMessages > 0
+          ? ({ ...(manual ? { operatorNotes: manual } : {}), ...hasHistory } as StayProfile)
+          : null
       }
-      return { ...(profile as StayProfile), ...(manual ? { operatorNotes: manual } : {}) }
+      return {
+        ...(profile as StayProfile),
+        ...(manual ? { operatorNotes: manual } : {}),
+        ...hasHistory,
+      }
     } catch (error) {
       logger.error("[CustomClientChatbotService] getStayProfile failed", {
         workspaceId: p.workspaceId,

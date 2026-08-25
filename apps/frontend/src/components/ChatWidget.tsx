@@ -662,6 +662,11 @@ export function ChatWidget({
   const [customerId, setCustomerId] = useState<string | null>(null)
   // Operator handoff: when chatbot is disabled, poll for operator replies
   const [botDisabled, setBotDisabled] = useState(false)
+  // 🔬 debugMode: the guest's stay-state as the LAST reply left it, straight
+  // from the backend (debugState). Rendered as a slim strip under the header
+  // so Andrea can watch each message update the state (2026-08-25: "mostramelo
+  // così vedo se si aggiorna").
+  const [debugState, setDebugState] = useState<Record<string, unknown> | null>(null)
   // operatorHasReplied: true when operator sent at least one message — unlocks input so customer can reply
   const [operatorHasReplied, setOperatorHasReplied] = useState(false)
   const lastOperatorMsgAt = useRef<string>(new Date().toISOString())
@@ -1178,6 +1183,8 @@ export function ChatWidget({
       if (typeof replyLang === "string" && replyLang) {
         conversationLangRef.current = replyLang
       }
+
+      if (data.debugState !== undefined) setDebugState(data.debugState as Record<string, unknown> | null)
 
       // Add bot message. The welcome presentation video is rendered at display
       // time on the FIRST bot message (see `displayMessages`), so it works even
@@ -2194,6 +2201,9 @@ export function ChatWidget({
                 )}
               </div>
             <div className="flex items-center gap-2">
+              {workspaceConfig?.debugMode === true && debugState && (
+                <span className="sr-only">debug state attached below</span>
+              )}
               {!instantChat && workspaceConfig?.debugMode === true && (
                 <button
                   onClick={() => setIsDebugPanelOpen(true)}
@@ -2234,6 +2244,38 @@ export function ChatWidget({
               </button>
             </div>
           </div>
+
+          {/* 🔬 Live stay-state strip (debugMode only): what the LAST reply
+              wrote, key by key — so each message visibly updates the state. */}
+          {workspaceConfig?.debugMode === true && debugState && (
+            <div className="bg-slate-900 text-emerald-300 font-mono text-[11px] leading-relaxed px-3 py-1.5 flex flex-wrap gap-x-3 gap-y-0.5 border-b border-slate-700">
+              {(() => {
+                const d = debugState as Record<string, unknown>
+                const keys = ['adults','children','seniors','departureDate','constraints','interests','childrenAges','consentAsked','itinerary'] as const
+                const chips = keys
+                  .filter((k) => d[k] !== undefined && d[k] !== null && d[k] !== '')
+                  .map((k) => (
+                    <span key={k}>
+                      <span className="text-slate-400">{k}=</span>
+                      {String(d[k]).slice(0, 40)}
+                    </span>
+                  ))
+                const asked = Array.isArray(d.asked) ? (d.asked as string[]).join(',') : null
+                return (
+                  <>
+                    <span className="text-amber-300">📊 STATE</span>
+                    {chips.length > 0 ? chips : <span className="text-slate-500">(vuoto)</span>}
+                    {asked && (
+                      <span>
+                        <span className="text-slate-400">asked=</span>
+                        {asked}
+                      </span>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
 
           {showRegistrationForm ? (
             /* ── Registration Form ── */

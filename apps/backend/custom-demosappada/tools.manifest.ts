@@ -86,6 +86,14 @@ export const SAVE_STAY_TOOL = {
         seniors: { type: 'integer', description: 'How many elderly people.' },
         arrivalDate: { type: 'string', description: 'YYYY-MM-DD, the day they arrived.' },
         departureDate: { type: 'string', description: 'YYYY-MM-DD, the day they leave. Compute it from "we stay 5 days" using today\'s date in RUNTIME.' },
+        dateSaidAs: {
+          type: 'string',
+          description:
+            "The customer's EXACT words stating the dates, copied verbatim from their latest " +
+            'message — e.g. "fino a domenica", "5 giorni", "dal 20 al 26". REQUIRED whenever ' +
+            'arrivalDate or departureDate is sent: dates arriving without it, or with words the ' +
+            'customer never wrote, are DISCARDED. Never paraphrase it.',
+        },
         origin: { type: 'string', description: 'Where they travelled from (city or country). Never ask for this — it is not part of the intake (Andrea, 2026-08-24: "lo possiamo togliere, non importa"). Save it only if they volunteer it.' },
         doneAlready: {
           type: 'string',
