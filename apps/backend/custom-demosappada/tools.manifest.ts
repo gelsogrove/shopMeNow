@@ -114,7 +114,8 @@ export const SAVE_STAY_TOOL = {
             'The whole holiday summed up in prose, for the person at the Pro Loco who opens this ' +
             "guest's card. Rewrite it IN FULL every time you learn something new — it is one " +
             'paragraph, not a log. Say who they are, when they are here, where from, what limits ' +
-            'them, what they enjoy, and what they have already done: "Coppia da Vienna con un bimbo ' +
+            'them, WHAT THEY SAID THEY WANT TO DO (never leave this out: the recommendations are '  +
+            'built on it), and what they have already done: "Coppia da Vienna con un bimbo ' +
             'di 6, 22-26 agosto, senza auto, la mamma è celiaca. Amano camminare. Fatte le ' +
             'Cascatelle (piaciute)." Written for a colleague to read in five seconds, not for the ' +
             'guest.',

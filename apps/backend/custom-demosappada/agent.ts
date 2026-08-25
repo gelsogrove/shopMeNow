@@ -38,7 +38,7 @@ import {
   seedLanguageIfNeeded,
   updateState,
 } from './state.js'
-import { keepSingleQuestion, stripUnverifiableContacts } from './content-guards.js'
+import { stripUnverifiableContacts } from './content-guards.js'
 import { getSappadaWeather, TIMEZONE, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WEATHER_CACHE_MS, WELCOME_BACK_STALE_MS } from './bounds.js'
 
@@ -89,6 +89,14 @@ interface Settings {
    * again. Configuration, not a literal, so it can be reworded per tenant and
    * the LLM renders it in the guest's language (CLAUDE.md §1A).
    */
+  /**
+   * How the intake-closing message ends, after the itinerary question.
+   *
+   * Configuration, not a literal: the model was writing its own sign-off
+   * ("Se vi va, posso darvi informazioni sui ristoranti per la cena. Che ne
+   * pensi?"), which offers something nobody asked for. Andrea, 2026-08-25.
+   */
+  closingLine?: string
   pushOptOutHint?: string
   /**
    * The exact words a guest may write to revoke the push consent.
@@ -263,6 +271,15 @@ export interface StayProfile {
   asked?: string[]
   /** True once the consent question has been put, whatever the answer was. */
   consentAsked?: boolean
+  /**
+   * True once the guest has been told HOW to opt out ("scrivi NO PUSH").
+   *
+   * On the customer, not on the turn: a per-turn flag sent it again whenever
+   * the model called save_push_consent a second time, so the same guest read
+   * it twice, two turns apart (Andrea, 2026-08-25). It is a promise made
+   * once — repeating it reads like nagging.
+   */
+  pushOptOutHintSent?: boolean
   /**
    * Set by the `startNewStay` tool when the guest SAYS they are back.
    *
@@ -730,6 +747,20 @@ function withFaqMedia(
     if (topSupport <= rivalSupport * SUPPORT_MIN_RATIO) return reply
   }
 
+  // The winning entry must actually be NAMED in the reply. Scoring alone put
+  // the Villaggio degli Gnomi's video under a list of three restaurants — it
+  // won on topic overlap ("bambini", "Sappada") without being mentioned once
+  // (Andrea, 2026-08-25: "villaggio gnomi qui non ha senso, non è neanche un
+  // ristorante").
+  //
+  // Checked on the entry's own distinctive words, the same measurement used
+  // for scoring, so nothing here reads phrasing or intent: at least one of
+  // them has to appear verbatim in the reply the guest is about to read.
+  const topTerms = distinctiveTerms(top.faq.question)
+  const replyLower = reply.toLowerCase()
+  const named = topTerms.some((term) => term.length >= 4 && replyLower.includes(term))
+  if (!named) return reply
+
   const links = mediaLinksIn(top.faq.answer).filter((l) => !skip.has(l))
   if (links.length === 0) return reply
   return [reply, '', links[0]].join('\n')
@@ -970,6 +1001,55 @@ function stripLeadingGreeting(reply: string): string {
  * so a wrong guess costs one translation call, never a wrong answer. Nothing
  * here routes the conversation (CLAUDE.md §14): it checks output, not intent.
  */
+/**
+ * The language of an opening greeting, when it is unmistakable.
+ *
+ * The widget sends the BROWSER's language, and a guest whose browser is in
+ * English typed "Ciao" and was answered in English — the one thing that tells
+ * someone nobody read what they wrote (Andrea, 2026-08-25). The prompt already
+ * says to detect the language from the message; the model followed the seed
+ * anyway, so the decision is taken here instead (iron rule 1).
+ *
+ * NOT phrase-based intent detection (CLAUDE.md §14): nothing here reads what
+ * the guest WANTS. It answers one question — which language is this word — on
+ * a closed list of greetings, the same job a language detector does.
+ *
+ * Deliberately narrow. Only words that belong to ONE language and are spelled
+ * the same nowhere else: "hola" is Spanish, "ciao" is Italian, but "ok" and
+ * "hi" are international and are left to the seed.
+ */
+const GREETING_LANGUAGES: Record<string, string> = {
+  ciao: 'it', salve: 'it', buongiorno: 'it', buonasera: 'it',
+  hola: 'es', buenas: 'es',
+  bonjour: 'fr', salut: 'fr', bonsoir: 'fr',
+  hallo: 'de', guten: 'de', servus: 'de', moin: 'de',
+  hello: 'en', hey: 'en',
+  ola: 'pt',
+  hej: 'da',
+  hoi: 'nl', goedendag: 'nl',
+}
+
+/**
+ * The language of a short opening message, or null when it carries no signal.
+ *
+ * Only consulted for the FIRST message of a conversation, and only when it is
+ * short enough to be a greeting and nothing else: a real sentence is left to
+ * the model, which reads it better than a word list can.
+ */
+function greetingLanguage(message: string): string | null {
+  const words = message
+    .toLowerCase()
+    .replace(/[^\p{L}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+  if (words.length === 0 || words.length > 3) return null
+  for (const word of words) {
+    const lang = GREETING_LANGUAGES[word]
+    if (lang) return lang
+  }
+  return null
+}
+
 const LANGUAGE_MARKERS: Record<string, RegExp> = {
   it: /\b(il|la|le|gli|di|che|per|sono|siete|questo|quanto|giorno|oggi)\b/gi,
   es: /\b(el|la|los|las|de|que|para|est[aá]|sois|cu[aá]nto|d[ií]a|hoy|hola)\b/gi,
@@ -1099,6 +1179,130 @@ function substitutePlaceholders(text: string, customerName: string | undefined):
     .trim()
 }
 
+/**
+ * Compose the reply for a turn where an intake question is pending.
+ *
+ * ONE place, one order — replacing six guards that had grown on top of each
+ * other and fought (Andrea, 2026-08-25: "orchestra bene, pulisci il codice,
+ * non voglio accrocchi"). Each step below states what it guarantees:
+ *
+ *   1. our question is the one the guest reads, in their language;
+ *   2. it is the ONLY question in the message;
+ *   3. on a turn where the guest asked nothing, it is the WHOLE message —
+ *      except the closing turn, which carries the greeting and the weather;
+ *   4. the closing turn ends with the configured closing line.
+ *
+ * Everything the model added of its own is dropped, not merged: the code owns
+ * WHICH question is asked and HOW the turn is shaped, the model owns the
+ * language and the content of the recommendation (iron rule 1).
+ */
+interface IntakeTurnInput {
+  /** The reply the model produced, already stripped of unverifiable facts. */
+  reply: string
+  /** The intake key dictated this turn, or null when none is pending. */
+  key: string | null
+  /** The configured wording, in the tenant's language. */
+  question: string | null
+  /** The same wording in the language the model replied in. */
+  questionTranslated: string | null
+  /** Did the guest ask something of their own this turn? */
+  guestAsked: boolean
+  /** The line that ends the intake-closing turn, when configured. */
+  closingLine?: string
+}
+
+interface IntakeTurnResult {
+  text: string
+  /** True when the question reached the guest — the caller retires it only then. */
+  asked: boolean
+  /** What was dropped, for the log. */
+  dropped: string[]
+}
+
+/**
+ * Has the pending intake question been answered during THIS turn?
+ *
+ * The question is chosen from the profile as it stands at the top of the turn.
+ * When the guest's message answers it and the model saves that answer mid-turn
+ * ("ci sono 2 bambini"), asking it anyway means asking something they just
+ * said (Andrea, 2026-08-25). Checked per key against the refreshed profile.
+ */
+function intakeAnswerLanded(key: string | null, profile: StayProfile | null | undefined): boolean {
+  if (!key || !profile) return false
+  switch (key) {
+    case 'composition':
+      return profile.children !== undefined || profile.seniors !== undefined
+    case 'childrenAges':
+      return !!profile.childrenAges
+    case 'constraints':
+      return !!profile.constraints
+    case 'interests':
+      return !!profile.interests
+    case 'party':
+      return profile.adults !== undefined
+    case 'stay':
+      return !!profile.departureDate
+    default:
+      return false
+  }
+}
+
+function composeIntakeTurn(input: IntakeTurnInput): IntakeTurnResult {
+  const { reply, key, question, guestAsked, closingLine } = input
+  const ask = (input.questionTranslated ?? question ?? '').trim()
+  if (!key || !ask) return { text: reply, asked: false, dropped: [] }
+
+  const dropped: string[] = []
+  const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
+
+  // The closing turn is the only one that keeps the model's prose: it carries
+  // the greeting by name, the weather and one suggestion before the question.
+  const isClosingTurn = key === 'itinerary'
+
+  // Step 3 — a turn where the guest asked nothing IS the question, nothing else.
+  if (!guestAsked && !isClosingTurn) {
+    if (normalise(reply) !== normalise(ask)) dropped.push(reply.trim())
+    return { text: ask, asked: true, dropped }
+  }
+
+  // Step 1+2 — keep the model's answer, strip every question it invented, and
+  // make sure ours is there exactly once, at the end.
+  const withoutQuestions = reply
+    .split('\n')
+    .map((line) => {
+      if (!line.includes('?') || /https?:\/\//.test(line)) return line
+      const kept = (line.match(/[^.!?]+[.!?]*/g) ?? [line])
+        .filter((sentence) => {
+          const isQuestion = sentence.trim().endsWith('?')
+          if (!isQuestion) return true
+          if (normalise(sentence).includes(normalise(ask))) return true
+          dropped.push(sentence.trim())
+          return false
+        })
+        .join('')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+      return kept
+    })
+    .filter((line, i, all) => line.trim() !== '' || (all[i - 1]?.trim() ?? '') !== '')
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  const alreadyThere = normalise(withoutQuestions).includes(normalise(ask))
+  const body = alreadyThere
+    ? withoutQuestions
+    : [withoutQuestions, ask].filter((p) => p.length > 0).join('\n\n')
+
+  // Step 4 — the closing turn signs off with the configured line.
+  const closing = closingLine?.trim()
+  if (isClosingTurn && closing && !normalise(body).endsWith(normalise(closing))) {
+    return { text: `${body}\n\n${closing}`, asked: true, dropped }
+  }
+
+  return { text: body, asked: true, dropped }
+}
+
 async function withWelcome(
   reply: string,
   welcomeText: string | undefined,
@@ -1199,6 +1403,9 @@ function rolloverStay(profile: StayProfile): StayProfile {
     seniors: profile.seniors,
     origin: profile.origin,
     consentAsked: profile.consentAsked,
+    // Told once, remembered for good: a returning guest already knows how to
+    // opt out, and hearing it again on a new holiday reads like nagging.
+    pushOptOutHintSent: profile.pushOptOutHintSent,
     // Written by a person at the Pro Loco, never by this module. Wiping it
     // would delete someone else's work.
     operatorNotes: profile.operatorNotes,
@@ -1368,8 +1575,12 @@ export function formatStayBlock(
   if (stay.origin) lines.push(`Arrivano da: ${stay.origin}`)
   if (stay.interests) {
     lines.push(
-      `Gli interessa: ${stay.interests}. Dai la precedenza a queste cose quando scegli cosa proporre, ` +
-        'ma non escludere il resto: è una preferenza, non un vincolo.',
+      `🚨 GLI INTERESSA: ${stay.interests}. Te l'hanno detto loro, rispondendo a una domanda ` +
+        'esplicita: il PRIMO consiglio che dai deve essere di questo tipo. Un guest che ha ' +
+        'risposto "sport" e si è sentito proporre il museo ha capito che la domanda era finta ' +
+        '(Andrea, 2026-08-25). Se il meteo o un vincolo rendono impraticabile quello che vogliono, ' +
+        'dillo e proponi la cosa più vicina — non cambiare argomento in silenzio. Il resto lo ' +
+        'proponi dopo, se serve.',
     )
   }
 
@@ -1711,8 +1922,11 @@ export function formatStayBlock(
         '2. Com\'è il meteo a Sappada (il dato VERO da get_weather, mai stimato).',
         '3. UN consiglio solo, coerente con quel meteo e con la sua scheda.',
         '4. La domanda qui sopra, alla lettera, da sola in fondo.',
+        ...(settings.closingLine?.trim()
+          ? [`5. E per chiudere, esattamente questa riga: "${settings.closingLine.trim()}"`]
+          : []),
         'Niente elenchi numerati di posti, niente riepilogo di quello che ti ha detto,',
-        'niente altre domande.',
+        'niente altre domande, e NON offrire nulla che non ti abbia chiesto.',
       )
     }
   } else if (askedKey && !question) {
@@ -2182,7 +2396,28 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     updateState(sessionId, { name: knownName }, { mirror: false })
   }
 
-  seedLanguageIfNeeded(sessionId, input.config.language, settings.enabledLanguages, settings.defaultLanguage)
+  // 🌍 What the guest WROTE beats what their browser says. The widget passes
+  // the browser's Accept-Language, and "Ciao" from an English browser was
+  // being answered in English (Andrea, 2026-08-25). Only for an opening
+  // greeting whose language is unmistakable; anything else still seeds from
+  // the host and is then decided by the model.
+  const greetingLang = greetingLanguage(userMessage)
+  const languageSeed =
+    greetingLang && (settings.enabledLanguages ?? []).includes(greetingLang)
+      ? greetingLang
+      : input.config.language
+  const seeded = seedLanguageIfNeeded(
+    sessionId,
+    languageSeed,
+    settings.enabledLanguages,
+    settings.defaultLanguage,
+  )
+  // A language read off the guest's own greeting is not a hint to be second
+  // guessed: commit it, so the prompt says "the conversation language IS x"
+  // rather than "the profile suggests x".
+  if (greetingLang && seeded === greetingLang) {
+    commitLanguageFromReply(sessionId, greetingLang)
+  }
 
   const lastTimestamp = history.length > 0 ? history[history.length - 1]?.timestamp : undefined
   // The stay tools need a customer to write to: in the playground there is
@@ -2642,188 +2877,60 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // only work in Italian, while a sentence it reproduced verbatim proves
       // it did not silently drop the question. With no wording configured
       // there is nothing to check and nothing to mark.
+      // The intake turn is composed in ONE place — see composeIntakeTurn.
       const askLangForCheck = lang
         ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
         : getState(sessionId).language
       const sourceLangForCheck = (settings.defaultLanguage || 'it').toLowerCase()
-      // Compared against the question in the language the reply is written in.
-      // Checking only the configured (Italian) wording marked every correctly
-      // TRANSLATED question as missing, so the append fired and pasted the
-      // Italian one under an English reply (Andrea, 2026-08-25).
-      const dictatedForCheck =
+      const questionTranslated =
         dictatedQuestion && askLangForCheck && askLangForCheck.toLowerCase() !== sourceLangForCheck
           ? await translateWelcome(dictatedQuestion, askLangForCheck, settings)
           : dictatedQuestion
 
-      let reachedGuest = ((): boolean => {
-        if (!dictatedQuestion) return false
-        const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
-        const haystack = normalise(checked.text)
-        const longestOf = (text: string): string | undefined =>
-          (text.match(/[^.!?\n]+[.!?]*/g) ?? [])
-            .map(normalise)
-            .filter((x) => x.length > 0)
-            .sort((a, b) => b.length - a.length)[0]
-        // Either form counts: the model may reproduce the configured wording
-        // verbatim (same-language turn) or its translation.
-        for (const candidate of [dictatedForCheck, dictatedQuestion]) {
-          const longest = candidate ? longestOf(candidate) : undefined
-          if (longest && haystack.includes(longest)) return true
-        }
-        return false
-      })()
+      // Every fixed line the code inserts travels through the same translation
+      // as the question: the closing line went out in Italian under an English
+      // conversation (Andrea, 2026-08-25: "scrive in due lingue").
+      const needsTranslation =
+        !!askLangForCheck && askLangForCheck.toLowerCase() !== sourceLangForCheck
+      const closingTranslated =
+        settings.closingLine?.trim() && needsTranslation
+          ? await translateWelcome(settings.closingLine.trim(), askLangForCheck, settings)
+          : settings.closingLine
 
-      // The model was told to ask it and wrote its own question instead — or
-      // no question at all. Rather than lose the turn, the dictated wording is
-      // appended verbatim: the guest reads the question the code chose, which
-      // is the whole point of dictating it (iron rule 1 — when an instruction
-      // keeps losing, the fix is code, not a firmer instruction).
+      // 🚨 The question was chosen at the TOP of the turn, from the profile as
+      // it was then. If the guest's message answered it — and the model saved
+      // that answer during this very turn — asking it now is asking something
+      // they just told us (Andrea, 2026-08-25: "ma come mi chiedi se ci sono
+      // bambini? hai uno storico? uno state?").
       //
-      // A question the model invented is REPLACED, not joined: leaving both
-      // would put two questions to the guest, which is what the whole
-      // one-question-per-turn machinery exists to prevent. Ours is the one
-      // that was chosen, so its is the one that goes.
-      if (questionShown && !reachedGuest && dictatedQuestion && checked.text.trim()) {
-        // Drop EVERY question the model asked of its own, wherever it sits —
-        // not just the trailing ones. Trimming only the tail left an invented
-        // question standing in the middle of the reply with ours appended
-        // underneath, so the guest was asked two things at once: "Ti va di
-        // fare una passeggiata con i bambini? … In quanti siete e fino a
-        // quando vi fermate?" (Andrea, 2026-08-25).
-        //
-        // Sentence-shaped and language-independent: a line ending in "?" that
-        // is not a URL (an embedded "…com/watch?v=" is not a question, and
-        // stripping it would break the link).
-        // Split into SENTENCES, not lines: the invented question shared its
-        // line with the rest of the paragraph ("Ti va di fare una passeggiata
-        // con i bambini? Potresti visitare le Cascatelle."), so a per-line
-        // filter left it standing untouched.
-        const body = checked.text
-          .trimEnd()
-          .split('\n')
-          .map((line) => {
-            if (!line.includes('?')) return line
-            if (/https?:\/\//.test(line)) return line
-            const kept = (line.match(/[^.!?]+[.!?]*/g) ?? [line])
-              .filter((sentence) => !sentence.trim().endsWith('?'))
-              .join('')
-              .replace(/\s{2,}/g, ' ')
-              .trim()
-            return kept
-          })
-          .filter((line, i, all) => line.trim() !== '' || (all[i - 1]?.trim() ?? '') !== '')
-          .join('\n')
-          .replace(/\n{3,}/g, '\n\n')
-          .trimEnd()
-        // Translated before it is attached. The configured wording is in the
-        // tenant's own language (Italian here), and pasting it verbatim under
-        // an English reply put two languages in one message — the guest read a
-        // welcome and an answer in English, then a question in Italian
-        // (Andrea, 2026-08-25). Cached per language, so a fixed question costs
-        // one call in the life of the process.
-        // Already resolved for the reachedGuest check above — same language,
-        // same cached translation.
-        const askText = dictatedForCheck ?? dictatedQuestion
+      // Re-checked per key against the refreshed profile, so only a question
+      // that is genuinely still open reaches the guest.
+      // Only when the guest actually SAID something this turn. From a bare
+      // "Ciao" the model invented adults:1 and a departure date, the guard read
+      // that as "party answered" and the very first question was skipped
+      // (found while testing, 2026-08-25). A greeting is not an answer.
+      const guestSaidSomething = userMessage.trim().split(/\s+/).length >= 2
+      const answeredMeanwhile =
+        stayWasSaved && guestSaidSomething && intakeAnswerLanded(questionShown, stayProfile)
+      if (answeredMeanwhile) {
         // eslint-disable-next-line no-console
-        console.error(`[demosappada][intake-append] re-attached "${questionShown}" (${askLangForCheck})`)
-        checked.text = body ? `${body}\n\n${askText}` : askText
-        reachedGuest = true
+        console.error(`[demosappada][already-answered] "${questionShown}" — not asking`)
       }
 
-      // Exactly ONE question reaches the guest while the intake is pending.
-      // Compared against BOTH forms of our question — the configured wording
-      // and its translation — so the model's own additions are the only thing
-      // that goes.
-      if (questionShown) {
-        // Our question in the language this reply is written in — used by both
-        // guards below (bare-question trim and preamble removal).
-        const askedText = (dictatedForCheck ?? dictatedQuestion ?? '').trim()
-        const ours = [dictatedForCheck, dictatedQuestion].filter(Boolean).join('\n')
-        const single = keepSingleQuestion(checked.text, ours || dictatedQuestion)
-        if (single.removed.length > 0) {
-          // eslint-disable-next-line no-console
-          console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
-          checked.text = single.text
-        }
-
-        // 🚨 During the intake, an answer to nothing is just the question.
-        //
-        // The guest replied "2 e stiamo fino a mercoledì" — they asked for
-        // nothing — and got three museums with addresses, an offer of more
-        // detail and a link, with the question at the bottom. Andrea,
-        // 2026-08-25: "devono essere domande secche una dopo l'altra".
-        //
-        // Only when they asked NOTHING: a guest who did ask still gets their
-        // answer first (that guard is right above), and the recommendations
-        // come back in full the moment the intake is over.
-        // The reply becomes the question, FULL STOP — not "the paragraph that
-        // contains it". Trimming by paragraph left the model's opener sitting
-        // on the same line as the question: "Oggi a Sappada il meteo è
-        // variabile. C'è qualcosa di particolare che vuoi segnalarci? …"
-        // (Andrea, 2026-08-25: "lascia stare il meteo, ora devi solo fare la
-        // domanda"). There is nothing to preserve: the guest asked nothing,
-        // so anything besides the question is the model filling space.
-        // `itinerary` is the one intake turn that is NOT a bare question: it
-        // closes the intake and Andrea asked for a greeting by name, the
-        // weather and one suggestion before the question (2026-08-24).
-        const bareTurn = questionShown !== 'itinerary'
-        if (bareTurn && !guestAskedSomething(userMessage) && askedText) {
-          if (checked.text.trim() !== askedText) {
-            // eslint-disable-next-line no-console
-            console.error(
-              `[demosappada][intake-bare] replaced reply with the question alone ` +
-                `(dropped ${checked.text.trim().length - askedText.length} chars)`
-            )
-            checked.text = askedText
-          }
-        }
-
-        // The model announces the question in prose before asking it: "fammi
-        // sapere se ci sono vincoli particolari, come allergie o intolleranze,
-        // se siete senza auto…" and then the dictated question says the same
-        // thing again, properly. The guest reads it twice (Andrea,
-        // 2026-08-25: "troppo lunga, frasi più corte").
-        //
-        // The prompt already forbids it ("NON anticipare le prossime", "non
-        // aggiungere spiegazioni sul perché la fai") and the model does it
-        // anyway, so it is cut here instead of asked for again (iron rule 1).
-        //
-        // Shape, not keywords: a sentence is a preamble when it sits
-        // immediately above our question and shares most of its distinctive
-        // words with it. Measured by overlap, so it holds in every language.
-        if (askedText) {
-          const words = (t: string): Set<string> =>
-            new Set(
-              t
-                .toLowerCase()
-                .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-                .split(/\s+/)
-                .filter((w) => w.length > 3)
-            )
-          const askWords = words(askedText)
-          const paragraphs = checked.text.split('\n\n')
-          const questionIdx = paragraphs.findIndex((para) => para.includes(askedText.split('\n')[0]))
-          if (questionIdx > 0 && askWords.size >= 4) {
-            const previous = paragraphs[questionIdx - 1]
-            const prevWords = words(previous)
-            let shared = 0
-            for (const w of prevWords) if (askWords.has(w)) shared++
-            // Three distinctive words in common is the separator, measured on
-            // real replies: a preamble that rehearses the question shares 5
-            // ("consigli", "particolari", "auto", "sapere", "esigenze") while
-            // a genuine recommendation before it shares 0 or 1 (a weather line
-            // plus three museums scored 1). A ratio does not separate them —
-            // the preamble is long, so its overlap ratio stays low.
-            if (shared >= 3) {
-              // eslint-disable-next-line no-console
-              console.error(`[demosappada][preamble] dropped "${previous.trim().slice(0, 60)}…"`)
-              paragraphs.splice(questionIdx - 1, 1)
-              checked.text = paragraphs.join('\n\n').replace(/\n{3,}/g, '\n\n').trim()
-            }
-          }
-        }
+      const turn = composeIntakeTurn({
+        reply: checked.text,
+        key: answeredMeanwhile ? null : questionShown,
+        question: dictatedQuestion,
+        questionTranslated,
+        guestAsked: guestAskedSomething(userMessage),
+        closingLine: closingTranslated,
+      })
+      checked.text = turn.text
+      let reachedGuest = turn.asked
+      if (turn.dropped.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][intake-turn] dropped: ${turn.dropped.join(' | ').slice(0, 200)}`)
       }
-
       // 🔔 The opt-out line, prepended by CODE on the turn the guest accepts.
       //
       // It used to be an instruction inside save_push_consent's tool output,
@@ -2832,12 +2939,41 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // belongs to (Andrea, 2026-08-24). The promise of how to opt out has to
       // travel with the yes, so it is written here and not requested.
       //
-      // Guarded on `consentJustGranted`, set where the tool ran this turn, so
-      // it appears exactly once in the guest's life.
-      if (consentJustGranted && settings.pushOptOutHint?.trim() && checked.text.trim()) {
-        const hint = settings.pushOptOutHint.trim()
+      // Sent ONCE in the guest's life, tracked on the customer record.
+      //
+      // `consentJustGranted` alone was not enough: it is a per-turn flag, and
+      // the model called save_push_consent again a couple of turns later, so
+      // the line went out a second time (Andrea, 2026-08-25: "quante volte mi
+      // dici di mettere NO PUSH?"). Comparing the reply's text was no help
+      // either — the wording had been edited in between, so the old sentence
+      // no longer matched the new one.
+      if (
+        consentJustGranted &&
+        !stayProfile?.pushOptOutHintSent &&
+        settings.pushOptOutHint?.trim() &&
+        checked.text.trim()
+      ) {
+        // Translated like every other fixed line: it was the one Italian
+        // sentence in an otherwise English conversation (Andrea, 2026-08-25).
+        // The command word inside it ("NO PUSH") is what the guest must type,
+        // so the translation is asked to leave it alone — and pushOptOutCommands
+        // is matched case-insensitively either way.
+        const hintSource = settings.pushOptOutHint.trim()
+        const hint =
+          askLangForCheck && askLangForCheck.toLowerCase() !== sourceLangForCheck
+            ? await translateWelcome(hintSource, askLangForCheck, settings)
+            : hintSource
         const already = checked.text.toLowerCase().includes(hint.toLowerCase())
         if (!already) checked.text = `${hint}\n\n${checked.text.trimStart()}`
+        // Remembered on the customer, so it survives the session.
+        if (customerId && input.config.handlers?.saveStayProfile) {
+          await input.config.handlers.saveStayProfile({
+            workspaceId: input.config.workspaceId,
+            customerId,
+            profile: { pushOptOutHintSent: true },
+          })
+        }
+        if (stayProfile) stayProfile.pushOptOutHintSent = true
       }
 
       // The escape hatch. `reachedGuest` looks for the question's wording in
@@ -3042,9 +3178,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             profile.doneAlready = previous && !previous.includes(done) ? `${previous}; ${done}` : done
           }
 
+          // An ANSWER to the itinerary question is only accepted once that
+          // question has actually been put. The model was writing
+          // itinerary:'yes' while answering the PUSH consent — one "si" in the
+          // conversation, attributed to the wrong question — and the itinerary
+          // was then treated as accepted and never asked at all (Andrea,
+          // 2026-08-25: "non mi hai chiesto di fare l'itinerario?").
+          //
+          // Same rule as `asked` above: the model reports answers, the code
+          // decides which questions exist.
           const itineraryAnswer = str(args.itinerary)
-          if (itineraryAnswer === 'yes' || itineraryAnswer === 'no') {
+          const itineraryWasPut =
+            stayProfile?.itinerary === 'asked' || questionsShown.includes('itinerary')
+          if ((itineraryAnswer === 'yes' || itineraryAnswer === 'no') && itineraryWasPut) {
             profile.itinerary = itineraryAnswer
+          } else if (itineraryAnswer) {
+            // eslint-disable-next-line no-console
+            console.error(`[demosappada][itinerary-guard] refused "${itineraryAnswer}" — never asked`)
           }
 
           // Overwritten whole, unlike doneAlready: the card is one paragraph
@@ -3086,6 +3236,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             profile,
           })
           if (saved) stayWasSaved = true
+
+          // 🚨 Keep the in-memory profile in step with what was just written.
+          //
+          // `stayProfile` is loaded once at the top of the turn, and every
+          // guard downstream reads it — including the one that decides whether
+          // to ask about children. A guest who answered "ci sono 2 bambini"
+          // had that saved HERE, but the guard was still looking at the stale
+          // copy and asked "ci sono bambini o anziani?" in the very next
+          // breath (Andrea, 2026-08-25: "ma come mi chiedi se ci sono
+          // bambini? hai uno storico? uno state?").
+          //
+          // Merged, not replaced: `profile` carries only the fields this call
+          // touched, and the rest of what we know must survive.
+          if (saved) {
+            stayProfile = { ...(stayProfile ?? {}), ...profile }
+          }
+
           toolOutput = JSON.stringify({
             ok: saved,
             instruction: done
@@ -3267,12 +3434,35 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now, !!questionShown)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
+    // Same composition as the normal path: a turn that ran out of hops must
+    // not be shaped by different rules than one that did not.
     if (questionShown) {
-      const single = keepSingleQuestion(checked.text, dictatedQuestion)
-      if (single.removed.length > 0) {
+      const fallbackLang = lang
+        ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
+        : getState(sessionId).language
+      const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
+      const translated =
+        dictatedQuestion && fallbackLang && fallbackLang.toLowerCase() !== sourceLang
+          ? await translateWelcome(dictatedQuestion, fallbackLang, settings)
+          : dictatedQuestion
+      const turn = composeIntakeTurn({
+        reply: checked.text,
+        // Same check as the normal path: a question answered mid-turn is not asked.
+        key:
+          stayWasSaved &&
+          userMessage.trim().split(/\s+/).length >= 2 &&
+          intakeAnswerLanded(questionShown, stayProfile)
+            ? null
+            : questionShown,
+        question: dictatedQuestion,
+        questionTranslated: translated,
+        guestAsked: guestAskedSomething(userMessage),
+        closingLine: settings.closingLine,
+      })
+      checked.text = turn.text
+      if (turn.dropped.length > 0) {
         // eslint-disable-next-line no-console
-        console.error(`[demosappada][extra-question] ${single.removed.join(' | ')}`)
-        checked.text = single.text
+        console.error(`[demosappada][intake-turn] dropped: ${turn.dropped.join(' | ').slice(0, 200)}`)
       }
     }
     if (lang) {

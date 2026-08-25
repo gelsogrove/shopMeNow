@@ -19,11 +19,18 @@ import { YouTubePlayerModal } from "@/components/shared/YouTubePlayerModal"
 
 interface WelcomeVideoCardProps {
   url: string
-  /** Show a "DEMO" badge over the thumbnail (placeholder video). Default true. */
+  /**
+   * Show a "DEMO" badge over the thumbnail. Default FALSE.
+   *
+   * It marked the presentation video as a placeholder back when it was one.
+   * The video now comes from the workspace's own `videoUrl`, so the badge sat
+   * on a real company video and read like the whole chat was a mock-up
+   * (Andrea, 2026-08-25).
+   */
   demoBadge?: boolean
 }
 
-export function WelcomeVideoCard({ url, demoBadge = true }: WelcomeVideoCardProps) {
+export function WelcomeVideoCard({ url, demoBadge = false }: WelcomeVideoCardProps) {
   const [videoId, setVideoId] = useState<string | null>(null)
   if (!url) return null
 
@@ -32,8 +39,7 @@ export function WelcomeVideoCard({ url, demoBadge = true }: WelcomeVideoCardProp
   return (
     <div className="my-3 flex flex-col items-start gap-2" data-testid="welcome-video-card">
       <div className="relative w-full max-w-[280px]">
-        {/* "DEMO" badge — the presentation video is a placeholder. Hide by
-            passing demoBadge={false} once a real company video is set. */}
+        {/* Opt-in badge for a placeholder video: pass demoBadge to show it. */}
         {demoBadge && (
           <span className="absolute left-2 top-2 z-10 rounded bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 shadow">
             Demo

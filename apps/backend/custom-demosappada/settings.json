@@ -26,12 +26,12 @@
     "stay": "Fino a quando resti a Sappada?",
     "constraints": "C'è qualcosa di particolare che vuoi segnalarci? C'è qualcuno celiaco? Sarete senza macchina? Ci sono altri dettagli o esigenze particolari che dovremmo sapere, così da potervi dare informazioni e consigli ad hoc?",
     "composition": "Ci sono bambini o anziani?",
-    "interests": "Cosa ti piacerebbe fare in questi giorni? Andare in montagna, provare i prodotti tipici, fare sport...",
-    "consent": "Possiamo inviarti push su meteo, eventi, news, offerte di Sappada solo durante la vostra permanenza?",
+    "interests": "Cosa ti piacerebbe fare in questi giorni? Visitare Sappada, andare in montagna, provare i prodotti tipici, fare sport...",
+    "consent": "Perfetto grazie. Possiamo inviarti notifiche su meteo, eventi, news e offerte di Sappada solo durante la vostra permanenza?",
     "childrenAges": "Che età hanno i bambini?",
-    "itinerary": "Vuoi che ti faccia un piano in base al meteo?"
+    "itinerary": "Vuoi che ti faccia un itinerario sulle cose da vedere a Sappada in base al tempo della tua permanenza, oppure c'è altro che posso fare per te?"
   },
-  "pushOptOutHint": "Perfetto, quando vuoi basta scrivere NO PUSH.",
+  "pushOptOutHint": "Perfetto, quando vuoi smettere di ricevere le notifiche basta scrivere NO PUSH.",
   "pushOptOutCommands": [
     "NO PUSH",
     "unsubscribe"
