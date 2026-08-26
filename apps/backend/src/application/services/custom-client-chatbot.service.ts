@@ -970,6 +970,12 @@ export class CustomClientChatbotService {
           hasHumanSupport: true,
           humanSupportMessage: true,
           termsAndConditions: true,
+          // Without this the runtime resolves intakeQuestions & co. from the
+          // settings.json on disk alone — stale on a Heroku dyno, whose file
+          // resets to the deployed slug. The save path selects it; the
+          // runtime forgetting it is how a DB edit stayed invisible in
+          // production (Andrea, 2026-08-26).
+          customChatbotAdvancedSettings: true,
         },
       })
       if (!workspace) return null

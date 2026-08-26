@@ -2,7 +2,7 @@
 
 - il chatbot prima deve riconoscere la lingua e poi rispondere con la lignua del ciente, se e' un utente gia' esistente guardare la lingua del profilo, se 'e un utente nuovo aggiorna con call function la lingua dell'utente ovviamente la varibiale langialge o simile deve passare al main prompt
 
-- dopo il welcome message chiediamo quanti siete e quanto vi fermate
+- dopo il welcome message chiediamo quanto vi fermate
   domanda che non e' dentro il welcome mesage dvi fare tu un moisto
 
 - se utente dice siamo due adullti devi capire che non ha ancora risposto alla domanda quando vi fermate quindi devi chiedere quanto vi fermate?
