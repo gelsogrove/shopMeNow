@@ -49,3 +49,9 @@
 - ricordati che lo scopo di questo chatbot e' di assistire l'utente durante la sua permanenza a sappada eventualmente inviando anche push pubblicitari e poi quando l'itente non e' a sappada inviare offerte eventi per una prossima vacanza
 
 - attieniiti al contratto e fai un bel lavoro ! il dialogo deve essere fluido e naturale.
+
+- le liste (piatti, ristoranti, punti di interesse) mostrano il nome in bold su una riga, poi la descrizione a capo — stesso formato degli itinerari
+
+- abbiamo uno state fino a che non e' chiaro e pieno devi far domande
+  per esempio abbiamo bambini? ok ma quant ianni? se lo state non c'e' questo dato lo chiedaiamo
+  e cosi via per gli altri in modo intelligente e fluido chuediamo info fino a che lo state nnnon e' chiaro quando e' chiaro losalviamo e chiediamo della push notification e poi chiediamo dell'intinerari se lo vuole fare incronciando dati di meteo preferenze e eventi

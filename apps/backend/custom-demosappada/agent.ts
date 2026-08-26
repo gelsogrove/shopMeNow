@@ -3316,6 +3316,34 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             const days = Math.min(60, parseInt(n[0], 10))
             captured.departureDate = new Date(now.getTime() + days * 86_400_000).toISOString().slice(0, 10)
           }
+        } else if (captureKey === 'composition') {
+          // "Ci sono bambini o anziani?" asks about TWO categories in one
+          // breath. A number-bearing answer ("2 bambini") is unambiguous and
+          // parseParty reads it below like it does for headcount/party. A
+          // bare confirmation ("yes", "sì") is NOT an answer: it says
+          // something exists but not which of the two, so nothing is
+          // captured and the step stays unsatisfied (intake-machine.ts:83-86)
+          // — the guest gets asked again, this time with the settings-owned
+          // "quanti e di che tipo" follow-up, instead of the fact silently
+          // vanishing (Andrea, 2026-08-26: "ho detto yes ma non sai se
+          // anziani o bambini ..... come si fa?").
+          const party = parseParty(userMessage)
+          if (party.children !== undefined) {
+            captured.children = Math.min(30, party.children)
+          }
+          if (party.seniors !== undefined) {
+            captured.seniors = Math.min(30, party.seniors)
+          }
+          // An explicit negative ("no", "solo noi due") is a real answer:
+          // adults-only.
+          if (
+            party.children === undefined &&
+            party.seniors === undefined &&
+            /^(no|nein|non|nope|niente|nessuno)\b/i.test(verbatim)
+          ) {
+            captured.children = 0
+            captured.seniors = 0
+          }
         } else if (captureKey === 'headcount' || captureKey === 'party') {
           const party = parseParty(userMessage)
           if (party.adults !== undefined && stayProfile?.adults === undefined) {
