@@ -38,9 +38,14 @@ console.info(
   `[ENV] OPENROUTER_API_KEY loaded: ${openRouterKeyLength > 0} (length=${openRouterKeyLength})`
 )
 
-if (process.env.NODE_ENV === "production") {
-  // Map tsconfig-style aliases at runtime for compiled JS (e.g. @shared/*).
-  // Use explicit paths so it works even when cwd is the monorepo root.
+// Map tsconfig-style aliases at runtime for compiled JS (e.g. @shared/*).
+// Needed whenever this runs as compiled dist/src/index.js — `npm run start`
+// locally included, not just production — since tsx/tsconfig-paths (which
+// cover it in `npm run dev`) are not in play there. Gated on NODE_ENV alone
+// left `npm run start` broken locally with NODE_ENV=development (Andrea,
+// 2026-08-26: "Cannot find module '@shared/pricing'").
+// Use explicit paths so it works even when cwd is the monorepo root.
+{
   const path = require("path")
   const moduleAlias = require("module-alias")
   moduleAlias.addAliases({

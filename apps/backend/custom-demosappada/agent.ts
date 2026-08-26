@@ -3299,7 +3299,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // someone who had already answered it (2026-08-25, twice). No
           // splitting, no reading (§14): the guest's whole sentence is the
           // value, the LLM extracts the meaning when it recommends.
-          const rich = verbatim.split(/\s+/).length >= 4
+          //
+          // Threshold at 3, not 4: "voglio vedere rifugi" is 3 words and was
+          // falling under the old bar, so the guest's own answer to
+          // `constraints` never reached `interests` — the intake asked the
+          // same thing again later in the same conversation (Andrea,
+          // 2026-08-26: "non sei lineare nel dialogo"). Left above 2 on
+          // purpose: a bare "no" or "senza auto" is a real, narrow
+          // `constraints` answer and should not double as an interest guess.
+          const rich = verbatim.split(/\s+/).length >= 3
           if (!stayProfile?.constraints && (captureKey === 'constraints' || rich)) {
             captured.constraints = verbatim
           }
@@ -4121,6 +4129,20 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
     if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now, !!questionShown)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
+    }
+    // Same repair as the normal path (§3128): a heavy turn — an itinerary is
+    // the prime example, several tool hops before any text — is exactly the
+    // one most likely to exhaust the hop budget and land HERE, so skipping
+    // the language check on this path is skipping it on the turns that need
+    // it most. Missing here let a Spanish-opened itinerary finish in Italian
+    // (Andrea, 2026-08-26: "apri in spagnolo e finisci in italiano").
+    if (lang) {
+      const fallbackTarget = resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
+      if (checked.text && looksLikeWrongLanguage(checked.text, fallbackTarget)) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][lang-fix] (fallback) declared=${fallbackTarget} but reply was not`)
+        checked.text = await translateText(checked.text, fallbackTarget, settings)
+      }
     }
     // Same composition as the normal path: a turn that ran out of hops must
     // not be shaped by different rules than one that did not.
