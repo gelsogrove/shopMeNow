@@ -3882,7 +3882,29 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         } else {
           const args = safeParseArgs(call.function.arguments)
           const plan = typeof args.plan === 'string' ? args.plan.trim() : ''
-          if (!plan) {
+          // A multi-day plan built without ever checking get_weather is a plan
+          // built on guesses — the one thing this bot's itinerary is FOR
+          // (§ "L'itinerario" of the main prompt: "il meteo sta DENTRO la
+          // frase, come motivo del consiglio"). The prompt already says so at
+          // length, and the model still shipped four dry days with no
+          // forecast in any of them (Andrea, 2026-08-26: "hai incrociato
+          // tempo e eventi e preferenze?"). A guard here is deterministic
+          // proof instead of one more sentence to ignore (iron rule 1): the
+          // weather cache is keyed per session and fresh within the clock
+          // hour (see fetchWeather above), so an empty/stale entry means
+          // get_weather was never actually called for this guest THIS turn.
+          const weatherChecked =
+            !weatherEnabled ||
+            weatherCache.get(sessionId)?.hourKey === sappadaHourKey(now)
+          if (plan && !weatherChecked) {
+            toolOutput = JSON.stringify({
+              ok: false,
+              error: 'weather_not_checked',
+              instruction:
+                'Call get_weather FIRST, then rebuild the plan around what it actually says for each day, ' +
+                'and call save_itinerary again. Do not save a plan that never consulted the forecast.',
+            })
+          } else if (!plan) {
             toolOutput = JSON.stringify({ ok: false, error: 'empty_plan' })
           } else {
             const saved = await input.config.handlers!.saveStayProfile!({
