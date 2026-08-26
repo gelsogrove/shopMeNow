@@ -26,8 +26,16 @@
   "sessionTooLongMessage": "Questa conversazione è andata avanti parecchio. Per informazioni più approfondite puoi contattare l'InfoPoint di Sappada allo 0435 469131.",
   "welcomeVideoUrl": "",
   "intakeQuestions": {
+    "name": "Ultima domanda: come ti chiami?",
+    "stay": "Perfetto. E fino a quando vi fermate?",
     "party": "Fino a quando vi fermate?",
-    "constraints": "C'è qualcosa di particolare che vuoi segnalarci? Sarete senza macchina? Ci sono bambini o anziani o esigenze particolari che dovremmo sapere, così da potervi dare informazioni e consigli ad hoc?"
+    "consent": "Perfetto grazie. Possiamo inviarti notifiche su meteo, eventi, news e offerte di Sappada solo durante la vostra permanenza?",
+    "headcount": "Perfetto. E in quanti siete?",
+    "interests": "Cosa ti piacerebbe fare in questi giorni? Visitare Sappada, andare in montagna, provare i prodotti tipici, fare sport...",
+    "itinerary": "Vuoi che ti faccia un itinerario sulle cose da vedere a Sappada in base al tempo della tua permanenza, oppure c'è altro che posso fare per te?",
+    "composition": "Ci sono bambini o anziani?",
+    "constraints": "C'è qualcosa di particolare che vuoi segnalarci? Sarete senza macchina? Ci sono bambini o anziani o esigenze particolari che dovremmo sapere, così da potervi dare informazioni e consigli ad hoc?",
+    "childrenAges": "Che età hanno i bambini?"
   },
   "pushOptOutHint": "Perfetto, quando vuoi smettere di ricevere le notifiche basta scrivere NO PUSH.",
   "pushOptOutCommands": [

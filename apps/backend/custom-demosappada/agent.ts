@@ -3300,14 +3300,19 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // splitting, no reading (§14): the guest's whole sentence is the
           // value, the LLM extracts the meaning when it recommends.
           //
-          // Threshold at 3, not 4: "voglio vedere rifugi" is 3 words and was
-          // falling under the old bar, so the guest's own answer to
-          // `constraints` never reached `interests` — the intake asked the
-          // same thing again later in the same conversation (Andrea,
-          // 2026-08-26: "non sei lineare nel dialogo"). Left above 2 on
-          // purpose: a bare "no" or "senza auto" is a real, narrow
-          // `constraints` answer and should not double as an interest guess.
-          const rich = verbatim.split(/\s+/).length >= 3
+          // No word-count threshold: a fixed cutoff is exactly as arbitrary
+          // whether it is 4 or 3 — "voglio vedere rifugi" (3 words) missed
+          // the old bar of 4, and "voglio rifugi" (2) would have missed a
+          // lower one too. The guest answered `interests` before it was ever
+          // asked, and the intake asked it again later in the same
+          // conversation (Andrea, 2026-08-26: "non sei lineare nel
+          // dialogo" / "continua a chiedere fino a che non hai lo state
+          // completo"). The only real signal for "this carries no interest"
+          // is a bare yes/no/confirmation — CLAUDE.md §14's own example of an
+          // allowed non-phrase-detection pattern — everything else is a
+          // sentence worth trying.
+          const bareConfirmation = /^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(verbatim)
+          const rich = !bareConfirmation
           if (!stayProfile?.constraints && (captureKey === 'constraints' || rich)) {
             captured.constraints = verbatim
           }
