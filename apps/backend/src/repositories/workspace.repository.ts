@@ -594,6 +594,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         delete dbData.id
       }
 
+      // A save that carries no advanced-settings JSON must not WIPE the stored
+      // one: the backoffice posts null whenever its field is empty, and that
+      // null erased the tenant's intakeQuestions three times in one day
+      // (demosappada, 2026-08-26/27). null or absent = leave the column
+      // alone; an explicit {} still clears it on purpose.
+      if (dbData.customChatbotAdvancedSettings == null) {
+        delete dbData.customChatbotAdvancedSettings
+      }
+
       // Handle both whatsappApiToken (old) and whatsappApiKey (new) fields
       if (dbData.whatsappApiToken !== undefined) {
         dbData.whatsappApiKey = dbData.whatsappApiToken

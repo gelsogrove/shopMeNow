@@ -42,6 +42,7 @@ import { stripUnverifiableContacts } from './content-guards.js'
 import { nextIntakeStep, type IntakeContext } from './intake-machine.js'
 import { getSappadaWeather, TIMEZONE, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WELCOME_BACK_STALE_MS } from './bounds.js'
+import { isCurrentlyInTown, TAG_IN_LOCO } from '@shared/stay-inloco'
 
 // ── Settings ──────────────────────────────────────────────────────────────
 // Every value comes from the DB via chatbot-settings-json.service.ts, which
@@ -270,6 +271,17 @@ export interface StayProfile {
    * volta dopo il welcome").
    */
   asked?: string[]
+  /**
+   * Where this guest stands with Sappada (contratto.md, 2026-08-27):
+   * `in_loco` = in town now, `planned` = holiday booked but not started
+   * (both run the standard intake), `remote` = asking from home with no
+   * stay — every stay question is skipped for them. Saved by the model via
+   * save_preferences (it reads the nuance); a bare sì/no to the location
+   * question is captured deterministically as backstop.
+   */
+  presence?: 'in_loco' | 'remote' | 'planned'
+  /** True once the remote prospect's needs question has been put. */
+  remoteNeedsAsked?: boolean
   /** True once the consent question has been put, whatever the answer was. */
   consentAsked?: boolean
   /**
@@ -1707,6 +1719,8 @@ function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
  * repeat forever or vanish silently.
  */
 export type IntakeKey =
+  | 'location'
+  | 'remoteNeeds'
   | 'party'
   | 'headcount'
   | 'stay'
@@ -1804,6 +1818,22 @@ export function formatStayBlock(
   if (stay.seniors) party.push(`${stay.seniors} anziani`)
   if (party.length > 0) lines.push(`In vacanza: ${party.join(', ')}`)
   if (stay.origin) lines.push(`Arrivano da: ${stay.origin}`)
+  if (stay.presence === 'remote') {
+    lines.push(
+      '🚨 NON È A SAPPADA e non ha una vacanza in programma: è un contatto che scrive da casa. ' +
+        'NIENTE domande sul soggiorno (quanti siete, cosa vi piace, fino a quando…): aiutalo su ' +
+        'alloggi, eventi e informazioni con i fatti delle schede. Se dice che verrà o che sta ' +
+        "programmando una vacanza, salva SUBITO save_preferences presence='planned' (o 'in_loco' " +
+        'se è appena arrivato): da lì riparte il flusso normale.',
+    )
+  } else if (stay.presence === 'planned') {
+    lines.push(
+      'HA UNA VACANZA IN PROGRAMMA ma non è ancora a Sappada: trattalo come un ospite futuro — ' +
+        "date, con chi viene e interessi valgono per quando arriverà, e l'itinerario glielo puoi " +
+        'proporre per quelle date. Quando ti dice che è arrivato, salva ' +
+        "save_preferences presence='in_loco'.",
+    )
+  }
   if (stay.interests) {
     lines.push(
       `🚨 GLI INTERESSA: ${stay.interests}. Te l'hanno detto loro, rispondendo a una domanda ` +
@@ -1988,7 +2018,7 @@ export function formatStayBlock(
   // list on a first turn (Andrea, live, 2026-08-24: "una alla volta le
   // domande"). The same lesson custom-demorobot learned: the code owns WHICH
   // question and its WORDING, the model owns only the language it is said in.
-  const question = askedKey ? intakeQuestionFor(askedKey, settings) : null
+  const question = askedKey ? intakeQuestionFor(askedKey as IntakeKey, settings) : null
 
   if (askedKey && question) {
     lines.push(
@@ -2021,6 +2051,21 @@ export function formatStayBlock(
       'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
       'NON toccare il campo `asked` di save_preferences: lo registra il sistema.',
     )
+
+    // The branch question needs its reading key: the answer decides which of
+    // the three flows this guest gets, and the model is the one reading the
+    // nuance (contratto.md, 2026-08-27: "devi essere intelligente... in tutti
+    // i casi il sistema deve rispondere bene").
+    if (askedKey === 'location') {
+      lines.push(
+        '',
+        'La risposta ti dice DOVE si trova, e va salvata SUBITO con save_preferences:',
+        "- è già a Sappada («sì», «siamo qui», «arrivati ieri») → presence='in_loco'",
+        "- la vacanza è decisa ma non è ancora qui («veniamo il prossimo mese», «arriviamo sabato») → presence='planned', e salva anche le date che nomina",
+        "- non è qui e non ha piani («no», «cerco solo informazioni») → presence='remote'",
+        'Se la risposta non chiarisce nulla, non salvare niente: la domanda resta aperta.',
+      )
+    }
 
     // The turn that closes the intake. Every question has been answered, the
     // guest has just given their name, and this is the first message where the
@@ -2065,8 +2110,12 @@ export function formatStayBlock(
   }
 
   if (asked.size > 0 || stay.consentAsked || stay.itinerary) {
+    // The key being dictated THIS turn must not also sit in the "never ask
+    // again" list — since the second intake pass (intake-machine.ts) a
+    // still-unanswered question CAN be dictated a second time, and listing
+    // it here as forbidden would have the prompt contradict itself.
     const done = [
-      ...Array.from(asked),
+      ...Array.from(asked).filter((k) => k !== askedKey),
       ...(stay.consentAsked ? ['consent'] : []),
       ...(stay.itinerary ? ['itinerary'] : []),
     ]
@@ -2182,7 +2231,6 @@ function seasonOf(now: Date): string {
   return 'autunno — stagione di mezzo: impianti chiusi, molti rifugi chiusi, verifica sempre'
 }
 
-const TAG_IN_LOCO = 'INLOCO'
 /**
  * Renewed consent for the NEXT holiday, given on the way home.
  *
@@ -2191,41 +2239,21 @@ const TAG_IN_LOCO = 'INLOCO'
  * and is set only when the guest says yes to the renewal (contratto.md).
  */
 const TAG_NOT_IN_LOCO = 'NO-INLOCO'
+/**
+ * A prospect writing from home, with no stay at all (contratto.md,
+ * 2026-08-27). Deliberately NOT `NO-INLOCO`: that one records a CONSENT (the
+ * renewal for the next holiday) and reusing it here would drop people who
+ * never agreed to anything into a consented campaign segment. This tag only
+ * says who they are; any push to them still needs its own consent.
+ */
+const TAG_REMOTE_PROSPECT = 'NO-A-SAPPADA'
 const TAG_INTEREST_EVENTS = 'INTERESSE-EVENTI'
 const TAG_INTEREST_LODGING = 'INTERESSE-ALLOGGI'
 const TAG_INTEREST_OFFERS = 'INTERESSE-OFFERTE'
 
-/**
- * Is this guest in town right now, according to the dates they gave us?
- * Returns null when we cannot tell — an unknown stay must not remove a tag
- * someone set by hand.
- */
-function isCurrentlyInTown(profile: StayProfile | null, now: Date): boolean | null {
-  const departure = profile?.departureDate
-
-  // No dates yet. Someone writing to a destination assistant is almost always
-  // standing in the destination — that is what the QR code on the wall is for
-  // — so they count as in town until a departure date says otherwise. Waiting
-  // for the dates meant a guest who never answered that question was never
-  // tagged, and never reached by a single campaign.
-  if (!departure) {
-    const arrival = profile?.arrivalDate
-    if (!arrival) return true
-    const arrivalMs = Date.parse(`${arrival}T00:00:00`)
-    return Number.isNaN(arrivalMs) ? true : now.getTime() >= arrivalMs
-  }
-
-  const departureMs = Date.parse(`${departure}T23:59:59`)
-  if (Number.isNaN(departureMs)) return null
-  if (now.getTime() > departureMs) return false
-
-  const arrival = profile?.arrivalDate
-  if (arrival) {
-    const arrivalMs = Date.parse(`${arrival}T00:00:00`)
-    if (!Number.isNaN(arrivalMs) && now.getTime() < arrivalMs) return false
-  }
-  return true
-}
+// isCurrentlyInTown and TAG_IN_LOCO moved to shared/stay-inloco.ts: the
+// scheduler's stale-inloco-cleanup job needs the SAME derivation for guests
+// who departed and never wrote again. One authority, imported by both.
 
 /** Render the structures for the model: who they are, how to reach them. */
 function formatCatalogue(entries: CatalogueEntry[]): string {
@@ -2805,6 +2833,24 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         remove: [TAG_IN_LOCO],
       })
     }
+    // Same code-owned sync for the remote-prospect segment: the tag follows
+    // `presence`, and leaves the moment the prospect becomes a guest (they
+    // book, they arrive) — a stale NO-A-SAPPADA on someone in town would
+    // route the wrong campaigns at them.
+    if (stayProfile?.presence === 'remote') {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        add: [TAG_REMOTE_PROSPECT],
+        remove: [TAG_IN_LOCO],
+      })
+    } else if (stayProfile?.presence === 'in_loco' || stayProfile?.presence === 'planned') {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        remove: [TAG_REMOTE_PROSPECT],
+      })
+    }
   }
 
   const stayBlock = formatStayBlock(stayProfile, now, returningGuest, knownName, settings)
@@ -2906,12 +2952,143 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // question that spans several sentences.
   const dictatedQuestion = stayBlock.askedQuestion
 
+  const nextWeekdayDate = (msg: string): string | undefined => {
+    const DAY: Record<string, number> = {
+      dome: 0, sund: 0, sonn: 0, dima: 0, domi: 0, zond: 0, sond: 0,
+      lune: 1, mond: 1, mont: 1, lund: 1, maan: 1, mand: 1, segu: 1,
+      mart: 2, tues: 2, dien: 2, mard: 2, dins: 2, tirs: 2, terc: 2,
+      merc: 3, wedn: 3, mitt: 3, mier: 3, woen: 3, onsd: 3, quar: 3,
+      giov: 4, thur: 4, donn: 4, jeud: 4, juev: 4, dond: 4, tors: 4, quin: 4,
+      vene: 5, frid: 5, frei: 5, vend: 5, vier: 5, vrij: 5, fred: 5, sext: 5,
+      saba: 6, satu: 6, sams: 6, same: 6, zate: 6, lord: 6,
+    }
+    for (const t of msg.toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/)) {
+      if (t.length < 4) continue
+      const d = DAY[t.slice(0, 4)]
+      if (d !== undefined) {
+        const cur = new Date(now)
+        let add = (d - cur.getDay() + 7) % 7
+        if (add === 0) add = 7
+        return new Date(cur.getTime() + add * 86_400_000).toISOString().slice(0, 10)
+      }
+    }
+    return undefined
+  }
+
+  // On the very first turn nothing has been asked yet, but the opening
+  // message often volunteers everything ("siamo due adulti e stiamo fino a
+  // domenica"): the dictated first question stands in as the capture key,
+  // or those facts were lost and the composition question came back at
+  // someone who had just said "adulti" (2026-08-25).
+  // Number words and party categories — closed vocabularies (§14 lists
+  // word-numbers alongside digits). "siamo DUE adulti e DUE bambini" gave
+  // the machine nothing, because capture read only \d (2026-08-25). A
+  // number (digit or word) followed by a category word assigns that
+  // category; a lone number falls back to adults.
+  const parseParty = (msg: string): { adults?: number; children?: number; seniors?: number; days?: number } => {
+    const WORD_NUM: Record<string, number> = {
+      un: 1, uno: 1, una: 1, one: 1, eins: 1, deux: 2, due: 2, dos: 2, dois: 2, two: 2, zwei: 2, twee: 2, to: 2,
+      tre: 3, three: 3, drei: 3, trois: 3, tres: 3, drie: 3,
+      quattro: 4, four: 4, vier: 4, quatre: 4, cuatro: 4, quatro: 4, fire: 4,
+      cinque: 5, five: 5, cinq: 5, cinco: 5, vijf: 5, fem: 5,
+      sei: 6, six: 6, sechs: 6, seis: 6, zes: 6, seks: 6,
+      sette: 7, seven: 7, sieben: 7, sept: 7, siete: 7, sete: 7, zeven: 7, syv: 7,
+      otto: 8, eight: 8, acht: 8, huit: 8, ocho: 8, oito: 8, otte: 8,
+      nove: 9, nine: 9, neun: 9, neuf: 9, nueve: 9, negen: 9, ni: 9,
+      dieci: 10, ten: 10, zehn: 10, dix: 10, diez: 10, dez: 10, tien: 10, ti: 10,
+    }
+    const isDayWord = (t: string): boolean =>
+      /^(giorn|nott|day|nigh|tag|naech|nacht|jour|nuit|dia|noch|dag|naet)/.test(t)
+    const cat = (t: string): 'children' | 'adults' | 'seniors' | null =>
+      /^(bamb|bimb|figl|kind|child|enfant|nin|crian|born)/.test(t)
+        ? 'children'
+        : /^(adul|erwa|volw|voks)/.test(t)
+          ? 'adults'
+          : /^(anzi|senio|nonn|aelt|alte[rn])/.test(t)
+            ? 'seniors'
+            : null
+    const toks = msg
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+    const out: { adults?: number; children?: number; seniors?: number; days?: number } = {}
+    let loose: number | undefined
+    for (let i = 0; i < toks.length; i++) {
+      const n = /^\d+$/.test(toks[i]) ? parseInt(toks[i], 10) : WORD_NUM[toks[i]]
+      if (n === undefined || n < 1 || n > 30) continue
+      const nextTok = toks[i + 1]
+      const c = nextTok ? cat(nextTok) : null
+      if (c) out[c] = n
+      // "3 giorni" / "2 notti": a number is a DURATION only when its own
+      // next word says so — the positional "second number = days" guess
+      // read the 2 of "2 adulti" as two days and invented a departure
+      // date nobody stated (2026-08-25, live).
+      else if (nextTok && isDayWord(nextTok)) out.days = n
+      else if (loose === undefined) loose = n
+    }
+    if (out.adults === undefined && loose !== undefined) out.adults = loose
+    return out
+  }
+
+  // The guest wrote a sentence that answers NOTHING we asked — no number,
+  // no weekday, not a yes/no. "dove si butta la spazzatura" typed with a
+  // stray key instead of the question mark is the live example (Andrea,
+  // 2026-08-26 — the night the design was nearly thrown out over it):
+  // gating everything on "?" alone let the composer replace the model's
+  // correct answer with the bare intake question. This flag joins the
+  // question mark everywhere "did they ask us something" is decided —
+  // the dropped-reply guard below AND composeIntakeTurn's keep-the-prose
+  // path. A real answer ("siamo in 3", "fino a domenica", "no") never
+  // trips it.
+  // Only questions whose answer has a SHAPE (a number, a date, a yes/no) can
+  // tell "answer" from "aside" this way. For the free-text questions —
+  // location, constraints, interests, the remote prospect's needs — any
+  // sentence IS a legitimate answer ("no ma veniamo a dicembre" answers the
+  // location question), and flagging it as an aside would tell the model the
+  // opposite of the truth.
+  const STRUCTURED_ANSWER_KEYS = new Set([
+    'party',
+    'headcount',
+    'stay',
+    'composition',
+    'childrenAges',
+    'consent',
+  ])
+  const probe = parseParty(userMessage)
+  const guestSaidAside =
+    !!questionShown &&
+    STRUCTURED_ANSWER_KEYS.has(questionShown) &&
+    probe.adults === undefined &&
+    probe.children === undefined &&
+    probe.seniors === undefined &&
+    !/\d/.test(userMessage) &&
+    nextWeekdayDate(userMessage) === undefined &&
+    !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim()) &&
+    userMessage.trim().split(/\s+/).length >= 3
+
   const trimmedHistory = history.slice(-(settings.maxHistoryMessages ?? 30))
   const messages: Message[] = [
     { role: 'system', content: systemPrompt },
     ...trimmedHistory.map((h) => ({ role: h.role, content: h.content }) as Message),
     { role: 'user', content: userMessage },
   ]
+
+  // Told UPFRONT, deterministically, when the guest's message answers nothing
+  // we asked: without this the model read "dove si butta la spazzatura" as
+  // information received — "Grazie per l'informazione!" — instead of a
+  // request to serve (live, 2026-08-26). The flag is shape-only (§14): no
+  // number, no weekday, no yes/no, three words or more.
+  if (guestSaidAside && questionShown && dictatedQuestion) {
+    messages.push({
+      role: 'user',
+      content:
+        '[SYSTEM] Il messaggio del cliente NON risponde alla domanda che avevi in sospeso: è una ' +
+        'richiesta o un\'osservazione a sé. PRIMA rispondigli davvero, con i fatti delle schede — se ' +
+        'il dato non c\'è, dillo apertamente e indica l\'InfoPoint (0435 469131) — e SOLO DOPO, in ' +
+        'coda e da sola, rifai la domanda in sospeso.',
+    })
+  }
 
   // `approvedContent` is everything the reply may legitimately quote: the FAQ
   // block, the tenant's own presentation video, and anything a tool returns
@@ -3071,29 +3248,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         commitLanguageFromReply(sessionId, resolved)
       }
 
-      // GUARD: the guest asked something and got only our intake question back.
-      // Their question was dropped — the one failure that makes people stop
-      // writing. One more hop, spent answering them.
-      if (
-        !droppedQuestionRetryDone &&
-        guestAskedSomething(userMessage) &&
-        isBareIntakeQuestion(checked.text)
-      ) {
-        droppedQuestionRetryDone = true
-        // eslint-disable-next-line no-console
-        console.error('[demosappada][guard] guest question ignored — retrying')
-        pendingReply = result.content || pendingReply
-        messages.push({ role: 'assistant', content: result.content || null })
-        messages.push({
-          role: 'user',
-          content:
-            '[SYSTEM] Hai risposto solo con una tua domanda, ignorando quello che il cliente ti ha ' +
-            'chiesto. Riscrivi la risposta: PRIMA rispondi alla sua domanda — se non hai il dato, dillo ' +
-            'apertamente e indica dove trovarlo (InfoPoint 0435 469131 o il sito ufficiale) — e SOLO ' +
-            'DOPO, in coda, rimetti la tua domanda in una riga.',
-        })
-        continue
-      }
+      // (The dropped-question guard now lives AFTER parseParty/nextWeekdayDate
+      // below: it needs them to tell "they answered my question" from "they
+      // said something else entirely", and both are declared later in this
+      // block. See [guard] guest message ignored.)
 
       // GUARD: the intake question went out stripped of its examples. The
       // prompt lists them and says to pronounce them; asked for six examples
@@ -3201,88 +3359,33 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // capture stands down.
       const answersWithFacts = /(https?:\/\/|(?:\+39[ .]?)?\d(?:[ .]?\d){5,})/.test(checked.text)
 
-      // Weekday → next date. A closed calendar vocabulary, the same class as
-      // numbers and yes/no (§14) and as the published NO PUSH command word:
-      // "fino a domenica" states a date as surely as "fino al 30". Matched on
-      // the first four letters so "domenic" (typo) still lands; the 4-char
-      // prefixes are unique across the eight enabled languages.
-      const nextWeekdayDate = (msg: string): string | undefined => {
-        const DAY: Record<string, number> = {
-          dome: 0, sund: 0, sonn: 0, dima: 0, domi: 0, zond: 0, sond: 0,
-          lune: 1, mond: 1, mont: 1, lund: 1, maan: 1, mand: 1, segu: 1,
-          mart: 2, tues: 2, dien: 2, mard: 2, dins: 2, tirs: 2, terc: 2,
-          merc: 3, wedn: 3, mitt: 3, mier: 3, woen: 3, onsd: 3, quar: 3,
-          giov: 4, thur: 4, donn: 4, jeud: 4, juev: 4, dond: 4, tors: 4, quin: 4,
-          vene: 5, frid: 5, frei: 5, vend: 5, vier: 5, vrij: 5, fred: 5, sext: 5,
-          saba: 6, satu: 6, sams: 6, same: 6, zate: 6, lord: 6,
-        }
-        for (const t of msg.toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/)) {
-          if (t.length < 4) continue
-          const d = DAY[t.slice(0, 4)]
-          if (d !== undefined) {
-            const cur = new Date(now)
-            let add = (d - cur.getDay() + 7) % 7
-            if (add === 0) add = 7
-            return new Date(cur.getTime() + add * 86_400_000).toISOString().slice(0, 10)
-          }
-        }
-        return undefined
-      }
+      // (nextWeekdayDate, parseParty and guestSaidAside are declared at turn
+      // scope, above the hop loop: the aside flag now steers the SYSTEM hint
+      // injected before the first model call, not only the after-the-fact
+      // guards here.)
 
-      // On the very first turn nothing has been asked yet, but the opening
-      // message often volunteers everything ("siamo due adulti e stiamo fino a
-      // domenica"): the dictated first question stands in as the capture key,
-      // or those facts were lost and the composition question came back at
-      // someone who had just said "adulti" (2026-08-25).
-      // Number words and party categories — closed vocabularies (§14 lists
-      // word-numbers alongside digits). "siamo DUE adulti e DUE bambini" gave
-      // the machine nothing, because capture read only \d (2026-08-25). A
-      // number (digit or word) followed by a category word assigns that
-      // category; a lone number falls back to adults.
-      const parseParty = (msg: string): { adults?: number; children?: number; seniors?: number } => {
-        const WORD_NUM: Record<string, number> = {
-          un: 1, uno: 1, una: 1, one: 1, eins: 1, deux: 2, due: 2, dos: 2, dois: 2, two: 2, zwei: 2, twee: 2, to: 2,
-          tre: 3, three: 3, drei: 3, trois: 3, tres: 3, drie: 3,
-          quattro: 4, four: 4, vier: 4, quatre: 4, cuatro: 4, quatro: 4, fire: 4,
-          cinque: 5, five: 5, cinq: 5, cinco: 5, vijf: 5, fem: 5,
-          sei: 6, six: 6, sechs: 6, seis: 6, zes: 6, seks: 6,
-          sette: 7, seven: 7, sieben: 7, sept: 7, siete: 7, sete: 7, zeven: 7, syv: 7,
-          otto: 8, eight: 8, acht: 8, huit: 8, ocho: 8, oito: 8, otte: 8,
-          nove: 9, nine: 9, neun: 9, neuf: 9, nueve: 9, negen: 9, ni: 9,
-          dieci: 10, ten: 10, zehn: 10, dix: 10, diez: 10, dez: 10, tien: 10, ti: 10,
-        }
-        const isDayWord = (t: string): boolean =>
-          /^(giorn|nott|day|nigh|tag|naech|nacht|jour|nuit|dia|noch|dag|naet)/.test(t)
-        const cat = (t: string): 'children' | 'adults' | 'seniors' | null =>
-          /^(bamb|bimb|figl|kind|child|enfant|nin|crian|born)/.test(t)
-            ? 'children'
-            : /^(adul|erwa|volw|voks)/.test(t)
-              ? 'adults'
-              : /^(anzi|senio|nonn|aelt|alte[rn])/.test(t)
-                ? 'seniors'
-                : null
-        const toks = msg
-          .toLowerCase()
-          .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-          .split(/\s+/)
-          .filter(Boolean)
-        const out: { adults?: number; children?: number; seniors?: number; days?: number } = {}
-        let loose: number | undefined
-        for (let i = 0; i < toks.length; i++) {
-          const n = /^\d+$/.test(toks[i]) ? parseInt(toks[i], 10) : WORD_NUM[toks[i]]
-          if (n === undefined || n < 1 || n > 30) continue
-          const nextTok = toks[i + 1]
-          const c = nextTok ? cat(nextTok) : null
-          if (c) out[c] = n
-          // "3 giorni" / "2 notti": a number is a DURATION only when its own
-          // next word says so — the positional "second number = days" guess
-          // read the 2 of "2 adulti" as two days and invented a departure
-          // date nobody stated (2026-08-25, live).
-          else if (nextTok && isDayWord(nextTok)) out.days = n
-          else if (loose === undefined) loose = n
-        }
-        if (out.adults === undefined && loose !== undefined) out.adults = loose
-        return out
+      // GUARD: the guest said something and got ONLY our intake question back.
+      // Their words were dropped — the one failure that makes people stop
+      // writing. One more hop, spent answering them.
+      if (
+        !droppedQuestionRetryDone &&
+        (guestAskedSomething(userMessage) || guestSaidAside) &&
+        isBareIntakeQuestion(checked.text)
+      ) {
+        droppedQuestionRetryDone = true
+        // eslint-disable-next-line no-console
+        console.error('[demosappada][guard] guest message ignored — retrying')
+        pendingReply = result.content || pendingReply
+        messages.push({ role: 'assistant', content: result.content || null })
+        messages.push({
+          role: 'user',
+          content:
+            '[SYSTEM] Hai risposto solo con una tua domanda, ignorando quello che il cliente ha ' +
+            'scritto. Riscrivi la risposta: PRIMA rispondi a quello che ha detto o chiesto — se non ' +
+            'hai il dato, dillo apertamente e indica dove trovarlo (InfoPoint 0435 469131 o il sito ' +
+            'ufficiale) — e SOLO DOPO, in coda, rimetti la tua domanda in una riga.',
+        })
+        continue
       }
 
       const captureKey = getState(sessionId).lastAskedKey ?? questionShown ?? undefined
@@ -3290,7 +3393,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (stayEnabled && customerId && guestReplied && captureKey && input.config.handlers?.saveStayProfile) {
         const captured: StayProfile = {}
         const verbatim = userMessage.trim().slice(0, 200)
-        if ((captureKey === 'constraints' || captureKey === 'interests') && !detailAnswer && !answersWithFacts) {
+        if (captureKey === 'location') {
+          // Only the unmistakable answers are captured in code: a bare yes is
+          // "we are here", a bare no is "we are not". Anything richer — "no
+          // ma veniamo a dicembre" — is the model's to read, and it saves
+          // `presence` (in_loco / planned / remote) via save_preferences.
+          if (/^(s[iì]|yes|ja)\.?$/i.test(verbatim)) captured.presence = 'in_loco'
+          else if (/^(no|nein)\.?$/i.test(verbatim)) captured.presence = 'remote'
+        } else if ((captureKey === 'constraints' || captureKey === 'interests') && !detailAnswer && !answersWithFacts) {
           // A rich answer often carries BOTH facts: "siamo a piedi e voglio
           // vedere sappada" states the constraint AND the interest in one
           // breath. The two free-text fields are filled INDEPENDENTLY — the
@@ -3395,7 +3505,6 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           ) {
             captured.interests = verbatim
           }
-          const nums = userMessage.match(/\d+/g) ?? []
           // A weekday the guest wrote beats whatever date the model computed:
           // "fino a domenica" was stored as a Friday (2026-08-25). Calendar
           // arithmetic is code's job (iron rule 1).
@@ -3466,7 +3575,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         key: effectiveKey,
         question: effectiveQuestion,
         questionTranslated,
-        guestAsked: guestAskedSomething(userMessage) || detailAnswer || answersWithFacts,
+        guestAsked: guestAskedSomething(userMessage) || guestSaidAside || detailAnswer || answersWithFacts,
         closingLine: closingTranslated,
         intakeOpen: !!freshStep,
       })
@@ -3557,6 +3666,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         }
         if (effectiveKey === 'consent' && !stayProfile?.consentAsked) {
           profile.consentAsked = true
+        }
+        // Same put-marks-it rule as consent: the remote prospect's needs
+        // question is conversation-opening, not data-collecting — once it has
+        // reached them the intake is over for this guest.
+        if (effectiveKey === 'remoteNeeds' && !stayProfile?.remoteNeedsAsked) {
+          profile.remoteNeedsAsked = true
         }
         if (effectiveKey === 'itinerary' && !stayProfile?.itinerary) {
           // 'asked' rather than yes/no: the answer, when it comes, overwrites
@@ -3723,6 +3838,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           profile.adults = num(args.adults)
           profile.children = num(args.children)
           profile.childrenAges = str(args.childrenAges)
+
+          // Where the guest stands with Sappada — the branch the whole intake
+          // hangs on (contratto.md, 2026-08-27). A closed enum: anything else
+          // the model invents is dropped, and the location question simply
+          // stays open.
+          if (
+            typeof args.presence === 'string' &&
+            ['in_loco', 'remote', 'planned'].includes(args.presence)
+          ) {
+            profile.presence = args.presence as StayProfile['presence']
+          }
 
           // Appended: constraints arrive one at a time over a conversation
           // ("she's coeliac"… later "and we're on foot"), and a replacing
@@ -4176,7 +4302,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         key: fallbackKey,
         question: fallbackQuestion,
         questionTranslated: translated,
-        guestAsked: guestAskedSomething(userMessage),
+        // The full aside probe (parseParty/nextWeekdayDate) lives inside the
+        // hop loop and is out of scope here; this reduced shape errs toward
+        // KEEPING the model's prose — on this exhausted-budget path a kept
+        // answer is always safer than a discarded one.
+        guestAsked:
+          guestAskedSomething(userMessage) ||
+          (userMessage.trim().split(/\s+/).length >= 3 &&
+            !/\d/.test(userMessage) &&
+            !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim())),
         closingLine: settings.closingLine,
         intakeOpen: !!freshStep,
       })

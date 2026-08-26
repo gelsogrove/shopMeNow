@@ -178,7 +178,8 @@ const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
 // 📣 A simulated promotional push (demo only). Rendered as a rich card: bold
 // badge, body text, optional big image, optional link/CTA.
 export interface PushDemoCase {
-  badge: string // e.g. "📣 PROMO · DemoWash"
+  badge?: string // e.g. "📣 PROMO · DemoWash" — omitted for ad cards that open with the title
+  title?: string // bold headline under the badge (e.g. the advertised venue's name)
   body: string // promo text (may contain newlines)
   image?: string // optional image URL (served from the frontend origin)
   link?: string // optional URL
@@ -308,6 +309,14 @@ interface ChatWidgetProps {
   // next push (inject card + beep; when the chat is closed, a clickable
   // notification appears above the launcher icon).
   pushTrigger?: number
+  // 📣 When true, each push picks a RANDOM case (never the same one twice in a
+  // row) instead of cycling in order. Demosappada: pushes are paid venue ads,
+  // so every push must surface a different advertiser.
+  pushRandom?: boolean
+  // 📣 Language for pushes fired BEFORE the conversation has one (the visitor
+  // has not written yet, so the bot's reply language is unknown). Falls back to
+  // the widget language, then English. Demo pages pass their page language.
+  pushFallbackLang?: string
 }
 
 // Determine API URL based on environment
@@ -481,6 +490,8 @@ export function ChatWidget({
   pushDemoCases,
   pushDemoCasesByLang,
   pushTrigger,
+  pushRandom = false,
+  pushFallbackLang,
 }: ChatWidgetProps) {
   // 🌍 Get language from LanguageContext (header dropdown)
   const { language: headerLanguage } = useLanguage()
@@ -1053,20 +1064,30 @@ export function ChatWidget({
   const firePushDemo = () => {
     // Pick the push set in the language the bot is actually replying in (falls
     // back to the widget language, then English, then the legacy flat list).
-    const lang = (conversationLangRef.current || resolvedLanguage || "en")
+    const lang = (conversationLangRef.current || pushFallbackLang || resolvedLanguage || "en")
       .slice(0, 2)
       .toLowerCase()
     const cases =
       (pushDemoCasesByLang && (pushDemoCasesByLang[lang] || pushDemoCasesByLang.en)) ||
       pushDemoCases
     if (!cases || cases.length === 0) return
-    const idx = pushDemoIndexRef.current % cases.length
-    pushDemoIndexRef.current = idx + 1
+    let idx: number
+    if (pushRandom && cases.length > 1) {
+      // Random advertiser, but never the same one twice in a row — a repeat
+      // would read as a broken demo when the visitor clicks "Push" twice.
+      do {
+        idx = Math.floor(Math.random() * cases.length)
+      } while (idx === pushDemoIndexRef.current - 1)
+      pushDemoIndexRef.current = idx + 1
+    } else {
+      idx = pushDemoIndexRef.current % cases.length
+      pushDemoIndexRef.current = idx + 1
+    }
     const card = cases[idx]
     const pushMessage: Message = {
       role: "bot",
       // Plain-text fallback (used for persistence / if the card renderer is bypassed).
-      content: `${card.badge}\n${card.body}`,
+      content: [card.badge, card.title, card.body].filter(Boolean).join("\n"),
       pushCard: card,
       timestamp: new Date().toISOString(),
       serverId: `demo-push-${Date.now()}`,
@@ -2085,7 +2106,7 @@ export function ChatWidget({
                 <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-red-500" />
                 <div className="min-w-0">
                   <div className="truncate text-[12.5px] font-bold text-slate-800">
-                    {pushNotif.badge}
+                    {pushNotif.badge || pushNotif.title}
                   </div>
                   <div className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-600">
                     {pushNotif.body.replace(/\n/g, " ")}
@@ -2507,9 +2528,16 @@ export function ChatWidget({
                   renderContent={(msg) =>
                     msg.pushCard ? (
                       <div className="flex flex-col gap-2 py-0.5">
-                        <div className="text-[13.5px] font-bold leading-snug text-slate-800">
-                          {msg.pushCard.badge}
-                        </div>
+                        {msg.pushCard.badge && (
+                          <div className="text-[13.5px] font-bold leading-snug text-slate-800">
+                            {msg.pushCard.badge}
+                          </div>
+                        )}
+                        {msg.pushCard.title && (
+                          <div className="text-[16px] font-bold leading-snug text-slate-900">
+                            {msg.pushCard.title}
+                          </div>
+                        )}
                         <div className="whitespace-pre-wrap text-[14.5px] leading-snug text-slate-800">
                           {msg.pushCard.body}
                         </div>

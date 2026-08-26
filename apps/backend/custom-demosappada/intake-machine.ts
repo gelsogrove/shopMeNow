@@ -46,7 +46,36 @@ export interface IntakeStep {
 /**
  * The intake, in order. Read it top to bottom: that is the conversation.
  */
+/**
+ * The guest is not in Sappada and is not planning to be: a prospect asking
+ * questions from home. Every stay question is irrelevant to them (contratto.md,
+ * 2026-08-27: "se non sono a Sappada dobbiamo evitare tutte le domande di
+ * quanti siete cosa volete fare"). `planned` guests — coming next month — go
+ * through the standard flow: their holiday is real, only not started yet.
+ */
+const isRemote = ({ profile }: IntakeContext): boolean => profile?.presence === 'remote'
+
 export const INTAKE_STEPS: readonly IntakeStep[] = [
+  {
+    // THE branch question, before everything: in town, planning to come, or
+    // just asking from home? (contratto.md, 2026-08-27: "Siete già a
+    // Sappada?"). The nuanced reading is the model's — it saves `presence`
+    // via save_preferences — with a deterministic yes/no backstop in the
+    // capture. A profile that already carries dates has answered it
+    // implicitly: those guests joined before this question existed, and the
+    // old flow only ever collected dates from people engaged with a stay.
+    key: 'location',
+    satisfiedBy: ({ profile }) => profile?.presence !== undefined || !!profile?.departureDate,
+  },
+  {
+    // The remote prospect's ONE question — lodging, an event, information —
+    // put once and then out of the way: from there the conversation is free
+    // Q&A, not an intake. Satisfied on being PUT (like `consent`), so it can
+    // never loop.
+    key: 'remoteNeeds',
+    satisfiedBy: ({ profile }) => profile?.remoteNeedsAsked === true,
+    relevantWhen: isRemote,
+  },
   {
     // Headcount and dates in ONE sentence — separately they read like a form
     // (Andrea, 2026-08-24). Retired as soon as EITHER arrives: from then on
@@ -54,13 +83,15 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
     // the whole question again ("ho detto fino a domenica!", 2026-08-25).
     key: 'party',
     satisfiedBy: ({ profile }) => profile?.adults !== undefined || !!profile?.departureDate,
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
     // The guest gave the dates but not the number ("siamo qui fino a
     // domenica"): only the headcount is asked.
     key: 'headcount',
     satisfiedBy: ({ profile }) => profile?.adults !== undefined,
-    relevantWhen: ({ profile, asked }) => asked.has('party') || !!profile?.departureDate,
+    relevantWhen: (ctx) =>
+      !isRemote(ctx) && (ctx.asked.has('party') || !!ctx.profile?.departureDate),
   },
   {
     // The mirror half: number given, dates missing ("siamo due adulti").
@@ -68,7 +99,8 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
     // is chosen before this turn's answer is saved (2026-08-25).
     key: 'stay',
     satisfiedBy: ({ profile }) => !!profile?.departureDate,
-    relevantWhen: ({ profile, asked }) => asked.has('party') || profile?.adults !== undefined,
+    relevantWhen: (ctx) =>
+      !isRemote(ctx) && (ctx.asked.has('party') || ctx.profile?.adults !== undefined),
   },
   {
     // Anything that changes what can be recommended at all: a coeliac, no
@@ -76,6 +108,7 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
     // the guest to volunteer who they are, which then retires the next step.
     key: 'constraints',
     satisfiedBy: ({ profile }) => !!profile?.constraints,
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
     // Who is in the party. `children`/`seniors` of 0 are real answers ("no,
@@ -83,35 +116,44 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
     key: 'composition',
     satisfiedBy: ({ profile }) =>
       profile?.children !== undefined || profile?.seniors !== undefined,
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
     // Only for a party that has children, and only until we know their ages.
     key: 'childrenAges',
     satisfiedBy: ({ profile }) => !!profile?.childrenAges,
-    relevantWhen: ({ profile }) => (profile?.children ?? 0) > 0,
+    relevantWhen: (ctx) => !isRemote(ctx) && (ctx.profile?.children ?? 0) > 0,
   },
   {
     // What they came here to DO — asked, not waited for: it is what turns an
     // answer into a plan (Andrea, 2026-08-23).
     key: 'interests',
     satisfiedBy: ({ profile }) => !!profile?.interests,
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
-    // The push consent, before the name: it is still about their stay.
+    // The push consent, before the name: it is still about their stay. The
+    // strict pipeline in nextIntakeStep guarantees the contract's order
+    // ("quando è chiaro lo salviamo e chiediamo della push notification",
+    // Andrea, 2026-08-26): this step cannot be reached while any data step
+    // above is still unanswered.
     key: 'consent',
     satisfiedBy: ({ profile }) => profile?.consentAsked === true,
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
     // Last: their name. Skipped when the host already knows it — a widget
     // guest typed it into the registration form seconds ago.
     key: 'name',
     satisfiedBy: ({ knownName }) => !!knownName?.trim(),
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
     // Closes the intake: offers the itinerary. `itinerary` is set to 'asked'
     // when put and to yes/no when answered, so any value retires it.
     key: 'itinerary',
     satisfiedBy: ({ profile }) => !!profile?.itinerary,
+    relevantWhen: (ctx) => !isRemote(ctx),
   },
 ]
 
@@ -124,10 +166,21 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
  * disagreeing about what is still open.
  */
 export function nextIntakeStep(ctx: IntakeContext): IntakeStep | null {
+  // A strict pipeline: the FIRST step the profile does not answer is the
+  // question of the turn, and it STAYS the question until it is answered.
+  // `asked` no longer retires a step — "asked once, never again" was written
+  // against nagging, but it buried every question the guest happened not to
+  // answer (they asked about the rubbish instead, the machine moved on, and
+  // the intake closed with holes). The contract now says the opposite in as
+  // many words (Andrea, 2026-08-26: "abbiamo uno state: fino a che non è
+  // chiaro e pieno devi far domande... continua a chiedere fino a che non
+  // hai lo state completo"). Steps that satisfy themselves on being PUT
+  // (`consent`, `itinerary`) cannot loop; the strict order also guarantees
+  // the contract's sequence by construction — consent is unreachable until
+  // every data step before it is answered.
   for (const step of INTAKE_STEPS) {
     if (step.relevantWhen && !step.relevantWhen(ctx)) continue
     if (step.satisfiedBy(ctx)) continue
-    if (ctx.asked.has(step.key)) continue
     return step
   }
   return null

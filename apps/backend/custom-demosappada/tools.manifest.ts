@@ -78,6 +78,17 @@ export const SAVE_STAY_TOOL = {
     parameters: {
       type: 'object',
       properties: {
+        presence: {
+          type: 'string',
+          enum: ['in_loco', 'remote', 'planned'],
+          description:
+            "Where the customer stands with Sappada. 'in_loco' = they are in town right now. " +
+            "'planned' = a holiday is booked or decided but not started ('veniamo il prossimo mese') " +
+            "— treat them like a future guest: dates, party, interests all apply. 'remote' = they are " +
+            'not coming as far as you know: asking about lodging, an event or information from home. ' +
+            'Save it the moment their answer to "Siete già a Sappada?" — or anything they volunteer — ' +
+            'makes it clear.',
+        },
         adults: { type: 'integer', description: 'How many adults.' },
         children: { type: 'integer', description: 'How many children.' },
         childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },

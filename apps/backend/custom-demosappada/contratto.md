@@ -55,3 +55,15 @@
 - abbiamo uno state fino a che non e' chiaro e pieno devi far domande
   per esempio abbiamo bambini? ok ma quant ianni? se lo state non c'e' questo dato lo chiedaiamo
   e cosi via per gli altri in modo intelligente e fluido chuediamo info fino a che lo state nnnon e' chiaro quando e' chiaro losalviamo e chiediamo della push notification e poi chiediamo dell'intinerari se lo vuole fare incronciando dati di meteo preferenze e eventi
+
+- bisonga fare un altra domanda iniziare , Siete gia' a Sappada ?
+  se si fino a quando vi fermate ? e proseguiamo con il flusso standard che abbiamo fino ad ora
+  Se invece noon sono a sappada, dobbiamo evitare tutte le domande di quanti siete cosa volete fare etc..etc..e chiederli solo
+  e proporgli ,
+  Stai cercadno un alloggio un evento ? o hai bisongo di qualche informazioni di specitifo , come possiamo aituarti
+  ovviamente dobbiamo aggiornare lo state se non e' a sappada e se vuoi s elo reputi corretto mettere un tag "NO A SAPPADA" cosi poi potremo mandadare puah
+  c'e' anche un altro caso...che utente non e' a sappada ma ha pianificcato una vacanza quindi se ti dice veniamo a sappada PRoss
+  imo mese allora dovremo comportrci come il caso di quanto vi fermate
+  insomma devi essere intelligente utente puo' eseere a sappada puop cercare informzioni puo aver pianificato una vacanza in tutti i casi il sistema deve rispodenre bene aggiornare i tag i dati e capire se e' il caso di
+  fare inteinerareio ggiornare lo state devi essere bravo tu qui a orchestrare bene questi caso
+  obbuettivo: dialogo naturale il chatbot risponde sempre ma tende sempre l'utente a portarlo nellan nostra strada per riempiere lo statea

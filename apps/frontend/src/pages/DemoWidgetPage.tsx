@@ -81,6 +81,10 @@ interface BrandTheme {
   // URL slug (demorobot resolves to the "demoam" workspace since 2026-08-06,
   // when the old demorobot workspace was deleted).
   chatbotId?: string
+  // When true, the demo push cases are picked at RANDOM instead of cycling in
+  // order. Used by demosappada: its pushes are paid ads for individual venues,
+  // and every push must surface a different advertiser.
+  pushRandom?: boolean
   // Optional widget-config override. When present, the page does NOT render the
   // React <ChatWidget>: it loads the REAL production embed snippet instead
   // (window.eChatbotConfig + /widget.js), exactly as a customer's website
@@ -155,6 +159,7 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
     pageLang: "it",
+    pushRandom: true,
   },
   // Demobeauty — beauty-center franchise. Same WhatsApp-green branding; only the
   // wordmark ("beauty") and monogram ("DB") differ.
@@ -534,7 +539,228 @@ function resolveDemoItems(slug: string, lang: string): string[] {
 const WASH_BADGE = "📣 PROMO · DemoWash"
 const RE_BADGE = "📣 PROMO · DemoRealEstate"
 const BEAUTY_BADGE = "📣 PROMO · Demobeauty"
-const SAPPADA_BADGE = "📣 PROMO · Visit Sappada"
+
+// 📣 Sappada pushes are PAID ADVERTISING slots — the business model for this
+// tenant: a venue pays to be promoted, so each push is a full ad card for ONE
+// real place (photo, name, phone, location, offer line, CTA to the venue's own
+// website). Venue data mirrors the tenant's dining FAQ; the offer lines are
+// demo copy. Picked at RANDOM on every push (brand.pushRandom), so each click
+// shows a different advertiser.
+interface SappadaVenue {
+  name: string
+  where: string
+  phone: string
+  image: string
+  link: string
+  desc: { it: string; en: string; de: string }
+  offers: { it: string; en: string; de: string }
+}
+
+const SAPPADA_VENUES: SappadaVenue[] = [
+  {
+    name: "Ristorante Laite",
+    where: "Borgata Hoffe 10 · Sappada Vecchia",
+    phone: "0435 469070",
+    image: "/sappada/laite.jpg",
+    link: "https://www.ristorantelaite.com/",
+    desc: {
+      it: "Una stella Michelin: due stube in legno del Sei-Settecento, pochi coperti, cucina di montagna d'autore con le erbe raccolte nei boschi qui davanti.",
+      en: "One Michelin star: two wooden stube rooms from the 1600-1700s, few tables, signature mountain cuisine with herbs picked in the woods just outside.",
+      de: "Ein Michelin-Stern: zwei Holzstuben aus dem 17.-18. Jahrhundert, wenige Plätze, kreative Bergküche mit Kräutern aus den Wäldern direkt vor der Tür.",
+    },
+    offers: {
+      it: "Menù degustazione d'autunno da questa settimana: prenota il tuo tavolo!",
+      en: "Autumn tasting menu starts this week: book your table!",
+      de: "Herbst-Degustationsmenü ab dieser Woche: jetzt Tisch reservieren!",
+    },
+  },
+  {
+    name: "Ristorante Pizzeria Karl Keller",
+    where: "Borgata Bach 21 · Centro",
+    phone: "0435 469265",
+    image: "/sappada/karl-keller.jpg",
+    link: "https://ristorantepizzeriakarlkeller.com",
+    desc: {
+      it: "Ristorante e pizzeria nel cuore del centro, a due passi dall'InfoPoint: pizze dal forno e piatti per tutta la famiglia, anche da asporto.",
+      en: "Restaurant and pizzeria in the heart of downtown, next to the InfoPoint: oven-fresh pizzas and dishes for the whole family, takeaway too.",
+      de: "Restaurant und Pizzeria mitten im Zentrum, direkt beim InfoPoint: ofenfrische Pizzen und Gerichte für die ganze Familie, auch zum Mitnehmen.",
+    },
+    offers: {
+      it: "Weekend: pizza + bibita a 12 €, in centro a due passi dall'InfoPoint.",
+      en: "This weekend: pizza + drink for €12, downtown next to the InfoPoint.",
+      de: "Am Wochenende: Pizza + Getränk für 12 €, im Zentrum beim InfoPoint.",
+    },
+  },
+  {
+    name: "Pizzeria da Renato",
+    where: "Borgata Fontana 55 · Sappada Vecchia",
+    phone: "351 5354495",
+    image: "/sappada/da-renato.jpg",
+    link: "https://www.pizzeriadarenato.it/",
+    desc: {
+      it: "La pizzeria di Sappada Vecchia: ambiente informale, pizze generose e prezzi onesti — perfetta dopo una giornata sui sentieri o sulle piste.",
+      en: "The pizzeria of Sappada Vecchia: informal atmosphere, generous pizzas and honest prices — perfect after a day on the trails or the slopes.",
+      de: "Die Pizzeria von Sappada Vecchia: lockere Atmosphäre, großzügige Pizzen und faire Preise — perfekt nach einem Tag auf den Wegen oder Pisten.",
+    },
+    offers: {
+      it: "Martedì sera 2x1: due pizze al prezzo di una!",
+      en: "Tuesday night 2-for-1: two pizzas for the price of one!",
+      de: "Dienstagabend 2-für-1: zwei Pizzen zum Preis von einer!",
+    },
+  },
+  {
+    name: "Braceria Kluit",
+    where: "Borgata Fontana 44 · Sappada Vecchia",
+    phone: "0435 469909",
+    image: "/sappada/kluit.jpg",
+    link: "https://www.kluit.it/",
+    desc: {
+      it: "La braceria di Sappada: carne alla griglia in ambiente rustico di montagna. La scelta giusta quando la fame è vera — piace molto anche ai ragazzi.",
+      en: "Sappada's grill house: barbecued meat in a rustic mountain setting. The right choice when you are truly hungry — kids and teens love it too.",
+      de: "Die Braceria von Sappada: Fleisch vom Grill in rustikalem Bergambiente. Die richtige Wahl bei echtem Hunger — auch bei Jugendlichen sehr beliebt.",
+    },
+    offers: {
+      it: "Grigliata mista per due a 39 € per tutta la settimana.",
+      en: "Mixed grill for two, €39 all week.",
+      de: "Gemischter Grillteller für zwei, 39 € die ganze Woche.",
+    },
+  },
+  {
+    name: "Ristorante Mondschein",
+    where: "Borgata Palù 96 · Centro",
+    phone: "347 2600424",
+    image: "/sappada/mondschein.jpg",
+    link: "https://www.ristorantemondschein.it/",
+    desc: {
+      it: "Cucina tipica sappadina in Borgata Palù: cjarsons, canederli e piatti del territorio serviti in un ambiente caldo e familiare.",
+      en: "Typical Sappada cuisine in Borgata Palù: cjarsons, canederli and local dishes served in a warm, family-run atmosphere.",
+      de: "Typische Sappadiner Küche in Borgata Palù: Cjarsons, Knödel und Gerichte der Region in warmer, familiärer Atmosphäre.",
+    },
+    offers: {
+      it: "Menù del giorno a 18 € con i piatti tipici sappadini.",
+      en: "Daily menu €18 with typical Sappada dishes.",
+      de: "Tagesmenü 18 € mit typischen Sappadiner Gerichten.",
+    },
+  },
+  {
+    name: "Ristorante Edelweiss",
+    where: "Borgata Palù 23 · Centro",
+    phone: "335 6452540",
+    image: "/sappada/edelweiss.jpg",
+    link: "https://www.edelweisstube.it/",
+    desc: {
+      it: "Stube accogliente tutta in legno: piatti della tradizione, selvaggina e dolci fatti in casa, a due passi dal centro.",
+      en: "Cosy all-wood stube: traditional dishes, game and homemade desserts, a short walk from the centre.",
+      de: "Gemütliche Stube ganz aus Holz: traditionelle Gerichte, Wild und hausgemachte Desserts, wenige Schritte vom Zentrum.",
+    },
+    offers: {
+      it: "Cjarsons fatti in casa: stasera dolce della casa in omaggio.",
+      en: "Homemade cjarsons: free house dessert tonight.",
+      de: "Hausgemachte Cjarsons: heute Abend Dessert des Hauses gratis.",
+    },
+  },
+  {
+    name: "Baita Pista Nera",
+    where: "Borgata Palù 98 · Centro",
+    phone: "0435 469760",
+    image: "/sappada/pista-nera.jpg",
+    link: "https://www.baitapistanera.com",
+    desc: {
+      it: "Baita-ristorante proprio accanto alle piste: taglieri, piatti caldi e terrazza al sole. Comodissima d'inverno senza togliere gli scarponi.",
+      en: "Mountain-hut restaurant right next to the slopes: platters, hot dishes and a sunny terrace. Super handy in winter, ski boots on.",
+      de: "Hütten-Restaurant direkt an den Pisten: Brettljausen, warme Gerichte und Sonnenterrasse. Im Winter ideal — die Skischuhe bleiben an.",
+    },
+    offers: {
+      it: "Après-ski in baita: vin brulé offerto con ogni piatto del giorno.",
+      en: "Après-ski in the hut: free mulled wine with every dish of the day.",
+      de: "Après-Ski in der Hütte: Glühwein gratis zu jedem Tagesgericht.",
+    },
+  },
+  {
+    name: "Bach Boutique Hotel",
+    where: "Borgata Bach 26 · Centro",
+    phone: "0435 581870",
+    image: "/sappada/bach-boutique-hotel.jpg",
+    link: "https://www.bachboutiquehotel.com",
+    desc: {
+      it: "Boutique hotel nel cuore di Sappada: camere di design in legno, spa e bistrot gourmet, a due passi dall'InfoPoint.",
+      en: "Boutique hotel in the heart of Sappada: wooden design rooms, spa and gourmet bistro, right next to the InfoPoint.",
+      de: "Boutique-Hotel im Herzen von Sappada: Design-Zimmer aus Holz, Spa und Gourmet-Bistro, direkt beim InfoPoint.",
+    },
+    offers: {
+      it: "Offerta ponte: 3 notti al prezzo di 2 con colazione inclusa. Prenota ora!",
+      en: "Long-weekend offer: 3 nights for the price of 2, breakfast included. Book now!",
+      de: "Angebot langes Wochenende: 3 Nächte zum Preis von 2, Frühstück inklusive. Jetzt buchen!",
+    },
+  },
+  {
+    name: "Hotel Posta",
+    where: "Borgata Palù 22 · Centro",
+    phone: "0435 469116",
+    image: "/sappada/hotel-posta.jpg",
+    link: "https://www.hotelpostasappada.it",
+    desc: {
+      it: "Storico albergo a gestione familiare nel cuore del paese: cucina curata, bar e centro benessere.",
+      en: "Historic family-run hotel in the heart of the village: fine kitchen, bar and wellness centre.",
+      de: "Historisches familiengeführtes Hotel im Herzen des Dorfes: gepflegte Küche, Bar und Wellnessbereich.",
+    },
+    offers: {
+      it: "Mezza pensione da 75 € a persona con ingresso alla spa incluso.",
+      en: "Half board from €75 per person, spa entry included.",
+      de: "Halbpension ab 75 € pro Person, Spa-Eintritt inklusive.",
+    },
+  },
+  {
+    name: "Hotel Haus Michaela",
+    where: "Borgata Fontana 40 · Sappada Vecchia",
+    phone: "0435 469377",
+    image: "/sappada/hotel-haus-michaela.jpg",
+    link: "https://www.hotelmichaela.com",
+    desc: {
+      it: "Hotel con piscina, idromassaggio e sauna nelle borgate antiche: relax con vista sulle Dolomiti.",
+      en: "Hotel with pool, jacuzzi and sauna in the old hamlets: relaxation with a view of the Dolomites.",
+      de: "Hotel mit Pool, Whirlpool und Sauna in den alten Weilern: Entspannung mit Blick auf die Dolomiten.",
+    },
+    offers: {
+      it: "Settimana bianca: 7 notti al prezzo di 6 con piscina e sauna incluse.",
+      en: "Ski week: 7 nights for the price of 6, pool and sauna included.",
+      de: "Skiwoche: 7 Nächte zum Preis von 6, Pool und Sauna inklusive.",
+    },
+  },
+  {
+    name: "Latteria di Sappada Plodarkelder",
+    where: "Borgata Fontana 1 · Sappada Vecchia",
+    phone: "0435 469833",
+    image: "/sappada/latteria-plodarkelder.jpg",
+    link: "https://www.latteriasappada.it/",
+    desc: {
+      it: "Latteria con ristoro: formaggi, burro e ricotta di produzione propria. Si vede anche come si lavora il latte — i bambini ne vanno matti.",
+      en: "Dairy with a tasting room: own-made cheeses, butter and ricotta. You can watch the milk being worked — kids absolutely love it.",
+      de: "Sennerei mit Einkehr: Käse, Butter und Ricotta aus eigener Herstellung. Man sieht, wie die Milch verarbeitet wird — Kinder lieben es.",
+    },
+    offers: {
+      it: "Degustazione di formaggi di malga a 8 €, anche da asporto.",
+      en: "Alpine cheese tasting for €8, also to take away.",
+      de: "Almkäse-Verkostung für 8 €, auch zum Mitnehmen.",
+    },
+  },
+]
+
+const SAPPADA_PUSH_CTA: Record<"it" | "en" | "de", string> = {
+  it: "Clicca qui",
+  en: "Click here",
+  de: "Hier klicken",
+}
+
+function sappadaPushCases(lang: "it" | "en" | "de"): PushDemoCase[] {
+  return SAPPADA_VENUES.map((v) => ({
+    title: v.name,
+    body: `${v.desc[lang]}\n📍 ${v.where}\nTel. ${v.phone}\n${v.offers[lang]}`,
+    image: v.image,
+    link: v.link,
+    cta: SAPPADA_PUSH_CTA[lang],
+  }))
+}
 
 const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
   demowash: {
@@ -672,27 +898,9 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
   // Visit Sappada Dolomiti — seasonal tourism promos. it/en/de only, matching
   // the languages custom-demosappada/settings.json declares as enabled.
   demosappada: {
-    it: [
-      { badge: SAPPADA_BADGE, body: "❄️ Impianti aperti questo weekend! Skipass giornaliero a 38 €." },
-      { badge: SAPPADA_BADGE, body: "🍽️ Sagra dei piatti tipici sabato in centro: cjarsons e frico dalle 12." },
-      { badge: SAPPADA_BADGE, body: "🏔️ Ciaspolata guidata al tramonto, giovedì alle 16:30. Posti limitati!" },
-      { badge: SAPPADA_BADGE, body: "🏨 Ultime camere libere per il ponte: vuoi che ti mostri le disponibilità?" },
-      { badge: SAPPADA_BADGE, body: "☀️ Bel tempo previsto nel fine settimana: perfetto per i sentieri in quota." },
-    ],
-    en: [
-      { badge: SAPPADA_BADGE, body: "❄️ Lifts open this weekend! Day skipass €38." },
-      { badge: SAPPADA_BADGE, body: "🍽️ Traditional food festival Saturday downtown: cjarsons and frico from noon." },
-      { badge: SAPPADA_BADGE, body: "🏔️ Guided snowshoe hike at sunset, Thursday 4:30pm. Limited spots!" },
-      { badge: SAPPADA_BADGE, body: "🏨 Last rooms free for the long weekend: want me to show you what's available?" },
-      { badge: SAPPADA_BADGE, body: "☀️ Fine weather forecast for the weekend: perfect for the high trails." },
-    ],
-    de: [
-      { badge: SAPPADA_BADGE, body: "❄️ Lifte an diesem Wochenende geöffnet! Tagesskipass 38 €." },
-      { badge: SAPPADA_BADGE, body: "🍽️ Fest der typischen Gerichte am Samstag im Zentrum: Cjarsons und Frico ab 12 Uhr." },
-      { badge: SAPPADA_BADGE, body: "🏔️ Geführte Schneeschuhwanderung bei Sonnenuntergang, Donnerstag 16:30. Begrenzte Plätze!" },
-      { badge: SAPPADA_BADGE, body: "🏨 Letzte freie Zimmer für das lange Wochenende: soll ich dir die Verfügbarkeiten zeigen?" },
-      { badge: SAPPADA_BADGE, body: "☀️ Schönes Wetter am Wochenende: perfekt für die Höhenwege." },
-    ],
+    it: sappadaPushCases("it"),
+    en: sappadaPushCases("en"),
+    de: sappadaPushCases("de"),
   },
 }
 
@@ -1461,7 +1669,6 @@ export function DemoWidgetPage() {
           hideWorkspaceName
           plainWhatsappNumber
           whatsappBadge
-          feedbackBoardSlug={slug}
           icon="whatsapp"
           monogram={brand.monogram}
           title={`${brand.titleA}${brand.titleB}`}
@@ -1470,6 +1677,8 @@ export function DemoWidgetPage() {
           pushDemoCases={pushCases}
           pushDemoCasesByLang={pushCasesByLang}
           pushTrigger={pushTrigger}
+          pushRandom={!!brand.pushRandom}
+          pushFallbackLang={brand.pageLang}
         />
       )}
     </div>

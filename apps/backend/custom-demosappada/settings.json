@@ -19,7 +19,7 @@
     "pt",
     "nl"
   ],
-  "welcomeMessage": "Benvenuto a Sappada!  👋 Siamo la Pro Loco: da qui ti diamo una mano per tutta la vacanza.\n\nChiedimi pure cosa fare oggi, dove mangiare, dove dormire, che sentieri fare, come muoverti o un numero utile.\n\nPrima di iniziare, ecco una breve presentazione 👇\n\n\n\n{{firstQuestion}}",
+  "welcomeMessage": "Benvenuto a Sappada!  👋 Siamo la Pro Loco: da qui ti diamo una mano per tutta la vacanza.\n\nChiedimi pure cosa fare oggi, dove mangiare, dove dormire, che sentieri fare, come muoverti o un numero utile.\n\nPrima di iniziare, ecco una breve presentazione 👇\n\n",
   "welcomeBackMessage": "Bentornato {{customerName}}! 👋 Come va la vacanza a Sappada? Dimmi pure cosa ti serve.",
   "rateLimitedMessage": "Stai scrivendo un po' troppo in fretta — aspetta qualche secondo e riprova.",
   "unsubscribedMessage": "Grazie, è tutto a posto: non riceverai più nostri messaggi promozionali. Se cambi idea puoi riscrivermi quando vuoi.",
@@ -27,14 +27,16 @@
   "welcomeVideoUrl": "",
   "intakeQuestions": {
     "name": "Ultima domanda: come ti chiami?",
-    "stay": "Perfetto. E fino a quando vi fermate?",
+    "stay": "E fino a quando vi fermate?",
     "party": "Fino a quando vi fermate?",
     "consent": "Perfetto grazie. Possiamo inviarti notifiche su meteo, eventi, news e offerte di Sappada solo durante la vostra permanenza?",
-    "headcount": "Perfetto. E in quanti siete?",
+    "location": "Siete già a Sappada?",
+    "headcount": "E in quanti siete?",
     "interests": "Cosa ti piacerebbe fare in questi giorni? Visitare Sappada, andare in montagna, provare i prodotti tipici, fare sport...",
     "itinerary": "Vuoi che ti faccia un itinerario sulle cose da vedere a Sappada in base al tempo della tua permanenza, oppure c'è altro che posso fare per te?",
     "composition": "Ci sono bambini o anziani?",
     "constraints": "C'è qualcosa di particolare che vuoi segnalarci? Sarete senza macchina? Ci sono bambini o anziani o esigenze particolari che dovremmo sapere, così da potervi dare informazioni e consigli ad hoc?",
+    "remoteNeeds": "Stai cercando un alloggio o un evento? O hai bisogno di qualche informazione specifica? Dimmi pure come possiamo aiutarti.",
     "childrenAges": "Che età hanno i bambini?"
   },
   "pushOptOutHint": "Perfetto, quando vuoi smettere di ricevere le notifiche basta scrivere NO PUSH.",
