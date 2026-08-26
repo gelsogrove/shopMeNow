@@ -1369,6 +1369,64 @@ function renderPromptVariables(prompt: string, values: Record<string, string>): 
  * model DID quote elsewhere carries the weather. Matching is on OUR output,
  * never the guest's words (§14 untouched).
  */
+/**
+ * Strip LISTS whose items do not exist in the approved content.
+ *
+ * The model served a coeliac guest a complete invented restaurant menu —
+ * antipasti, primi, dolci — none of it anywhere in the FAQ block (2026-08-25:
+ * "NON DEVI INVENTARE!"). Phones and prices were already verified; itemized
+ * prose was not. Same principle, extended: a block of 3+ short list lines
+ * whose distinctive words never appear in the approved content is fabricated,
+ * and it goes.
+ *
+ * Shape-only detection (markers, line length, consecutiveness) plus overlap
+ * against OUR approved text — never the guest's words (§14). Legit lists
+ * survive because their items are QUOTED from the FAQ block: "Casunziei",
+ * "Keisn Osteria" are right there in the haystack.
+ */
+function stripInventedLists(reply: string, approvedContent: string): { text: string; removed: string[] } {
+  const haystack = approvedContent.toLowerCase()
+  const lines = reply.split('\n')
+  const isItem = (l: string): boolean =>
+    /^\s*(?:[-•*]\s|\d+[.)]\s|\*\*[^*]{2,60}\*\*\s*:?\s*$)/.test(l) && l.trim().length <= 90
+  const verified = (l: string): boolean => {
+    const toks = l
+      .toLowerCase()
+      .replace(/[^\p{L}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 5)
+    if (toks.length === 0) return true
+    return toks.some((t) => haystack.includes(t))
+  }
+  const removed: string[] = []
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (!isItem(lines[i])) {
+      out.push(lines[i])
+      i++
+      continue
+    }
+    // Collect a consecutive item block (blank lines allowed inside).
+    const block: number[] = []
+    let j = i
+    while (j < lines.length && (isItem(lines[j]) || lines[j].trim() === '')) {
+      if (isItem(lines[j])) block.push(j)
+      j++
+    }
+    const unverified = block.filter((k) => !verified(lines[k]))
+    if (block.length >= 3 && unverified.length * 3 >= block.length * 2) {
+      // Fabricated block: drop it, and the intro line ending in ':' above it.
+      if (out.length > 0 && /:\s*$/.test(out[out.length - 1])) removed.push(out.pop() as string)
+      for (const k of block) removed.push(lines[k])
+    } else {
+      for (let k = i; k < j; k++) out.push(lines[k])
+    }
+    i = j
+  }
+  return { text: out.join('\n').replace(/\n{3,}/g, '\n\n').trim(), removed }
+}
+
 function stripWeatherHedges(reply: string): string {
   const HEDGES =
     /(?:se|si|if|wenn|falls)\s+(?:il\s+tempo|el\s+tiempo|le\s+temps|the\s+weather|das\s+wetter|het\s+weer|vejret)\s+(?:lo\s+(?:consente|permette|regge)|(?:è|es|est|is|ist)\s+(?:buono|bello|clemente|bueno|beau|good|nice|gut|goed|godt)|(?:lo\s+)?permite|le\s+permet|permitting|es\s+zul[aä]sst|zulässt|tillader)[,]?\s*/gi
@@ -2976,6 +3034,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
       const checked: { text: string; removed: string[] } = stripUnverifiableContacts(reply, approvedContent)
       checked.text = stripWeatherHedges(checked.text)
+      {
+        const inv = stripInventedLists(checked.text, approvedContent)
+        if (inv.removed.length > 0) {
+          // eslint-disable-next-line no-console
+          console.error(`[demosappada][invented-list] dropped ${inv.removed.length} fabricated line(s)`)
+          checked.text = inv.text
+        }
+      }
       if (checked.removed.length > 0) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][stripped] ${checked.removed.join(' | ')}`)
@@ -3118,6 +3184,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // the counts, plain date arithmetic for "3 giorni" (§14: numbers and
       // form only, no reading of meaning). Fired only when the model left the
       // field empty.
+      // A detail exchange is NOT an intake answer. "mandami il menu della
+      // Rustica" (no question mark) was captured as the guest's constraints,
+      // and the coeliac question would never have been asked again
+      // (2026-08-25). When the model's reply is a detail about a place the
+      // guest named, their message was a REQUEST — the free-text capture
+      // stands down.
+      const detailAnswer = replyIsDetailAnswer(checked.text, userMessage, faqs)
+      // A reply still carrying a VERIFIED phone or URL (they survived
+      // stripUnverifiableContacts, so they exist in the approved content) is
+      // answering a request — "non ho il menu, chiama lo 0435 469830". The
+      // guest asked for something without a question mark ("mandami il menu")
+      // and the bare-intake rule replaced the answer with the consent
+      // question, while the capture filed the request as their constraints
+      // (2026-08-25). Facts in the reply = request being served: prose stays,
+      // capture stands down.
+      const answersWithFacts = /(https?:\/\/|(?:\+39[ .]?)?\d(?:[ .]?\d){5,})/.test(checked.text)
+
       // Weekday → next date. A closed calendar vocabulary, the same class as
       // numbers and yes/no (§14) and as the published NO PUSH command word:
       // "fino a domenica" states a date as surely as "fino al 30". Matched on
@@ -3207,7 +3290,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (stayEnabled && customerId && guestReplied && captureKey && input.config.handlers?.saveStayProfile) {
         const captured: StayProfile = {}
         const verbatim = userMessage.trim().slice(0, 200)
-        if (captureKey === 'constraints' || captureKey === 'interests') {
+        if ((captureKey === 'constraints' || captureKey === 'interests') && !detailAnswer && !answersWithFacts) {
           // A rich answer often carries BOTH facts: "siamo a piedi e voglio
           // vedere sappada" states the constraint AND the interest in one
           // breath. The two free-text fields are filled INDEPENDENTLY — the
@@ -3334,7 +3417,6 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // A detail answer earns its media even mid-intake, and survives the
       // bare-question rule: the guest picked a place, the reply about it IS
       // the answer, with the pending question queued at the end.
-      const detailAnswer = replyIsDetailAnswer(checked.text, userMessage, faqs)
       if (detailAnswer && contentMediaAllowed(greeting, sessionId, stayProfile, settings, now, false)) {
         checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
       }
@@ -3343,7 +3425,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         key: effectiveKey,
         question: effectiveQuestion,
         questionTranslated,
-        guestAsked: guestAskedSomething(userMessage) || detailAnswer,
+        guestAsked: guestAskedSomething(userMessage) || detailAnswer || answersWithFacts,
         closingLine: closingTranslated,
         intakeOpen: !!freshStep,
       })
@@ -3979,6 +4061,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
     checked.text = stripWeatherHedges(checked.text)
+    {
+      const inv = stripInventedLists(checked.text, approvedContent)
+      if (inv.removed.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][invented-list] dropped ${inv.removed.length} fabricated line(s)`)
+        checked.text = inv.text
+      }
+    }
     if (contentMediaAllowed(greeting, sessionId, stayProfile, settings, now, !!questionShown)) {
       checked.text = withFaqMedia(checked.text, faqs, userMessage, [settings.welcomeVideoUrl ?? ''])
     }
