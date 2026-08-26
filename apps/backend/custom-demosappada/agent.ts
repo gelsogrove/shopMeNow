@@ -629,12 +629,22 @@ function seasonOf(now: Date): string {
   return 'autunno — stagione di mezzo: impianti chiusi, molti rifugi chiusi, verifica sempre'
 }
 
-/** Render the structures for the model: who they are, how to reach them. */
+/**
+ * Render the structures for the model: who they are, how to reach them.
+ *
+ * Deliberately WITHOUT the price — same decision as the availability count on
+ * CatalogueEntry (2026-08-22). The DB's `price` fed "prezzo indicativo da €70"
+ * into every accommodation list, and nobody keeps those numbers fresh: a rate
+ * that is wrong the day the guest calls reads as invented (Andrea, live,
+ * 2026-08-27: "NON METTERE PREZZO INDICATIVO! QUI STAI INVENTANDO"). Dropping
+ * it here also drops it from approvedContent, so a price the model invents for
+ * a structure is now stripped by the content guard instead of approved by it.
+ * The structure quotes its own rates when the guest calls.
+ */
 function formatCatalogue(entries: CatalogueEntry[]): string {
   const lines = entries.map((e) => {
     const bits = [e.type ? `[${e.type}]` : '', e.name].filter(Boolean)
     const detail: string[] = []
-    if (e.price && e.price > 0) detail.push(`prezzo indicativo da €${e.price}`)
     if (e.link) detail.push(e.link)
     if (e.description) detail.push(e.description)
     return `- ${bits.join(' ')} — ${detail.join(' · ')}`
@@ -1382,6 +1392,26 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   let consentJustGranted = false
   /** True when save_itinerary stored a plan on THIS turn — the delivery turn. */
   let itineraryJustSaved = false
+  /** Accommodation names check_accommodation rendered for the model THIS turn. */
+  const accommodationOffered: string[] = []
+
+  // A structure counts as SHOWN only when its name is in the reply the guest
+  // actually reads — the tool may render ten entries while the model lists
+  // four, and marking all ten would wrongly exhaust the catalogue. Matched on
+  // the name verbatim, the same way withFaqMedia requires the winner to be
+  // named: nothing here reads phrasing or intent (§14).
+  const recordShownAccommodations = (finalText: string): void => {
+    if (accommodationOffered.length === 0 || !finalText.trim()) return
+    const lower = finalText.toLowerCase()
+    const shownNow = accommodationOffered.filter((n) => lower.includes(n.toLowerCase()))
+    if (shownNow.length === 0) return
+    const already = getState(sessionId).accommodationShown ?? []
+    updateState(
+      sessionId,
+      { accommodationShown: [...new Set([...already, ...shownNow])] },
+      { mirror: false },
+    )
+  }
   /** Last free-text answer the model produced, kept as a fallback. */
   let pendingReply = ''
   let emptyRetryDone = false
@@ -2070,6 +2100,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         }
       }
 
+      recordShownAccommodations(finalReply)
+
       return {
         reply: finalReply || null,
         language: getState(sessionId).language,
@@ -2119,6 +2151,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         const entries = accommodationEnabled
           ? await input.config.handlers!.getCatalogue!({ workspaceId: input.config.workspaceId })
           : []
+        // Only the structures the guest has NOT already been given. The tool
+        // used to return the full catalogue on every call, so "altri hotel?"
+        // got the same three structures reshuffled (Andrea, live, 2026-08-27:
+        // "chiedo altri hotel e mi ridai gli stessi"). The session remembers
+        // what actually reached the guest (recordShownAccommodations below);
+        // here the repeat is simply not offered — the model cannot re-list
+        // what it was never given (iron rule 1).
+        const shownBefore = new Set(
+          (getState(sessionId).accommodationShown ?? []).map((n) => n.toLowerCase()),
+        )
+        const fresh = entries.filter((e) => !shownBefore.has(e.name.toLowerCase()))
         if (entries.length === 0) {
           toolOutput = JSON.stringify({
             ok: false,
@@ -2126,8 +2169,18 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               'No accommodation is on file. Do NOT invent any. Point the customer to the official ' +
               'accommodation page and the InfoPoint named in the FAQ block.',
           })
+        } else if (fresh.length === 0) {
+          toolOutput = JSON.stringify({
+            ok: false,
+            instruction:
+              'Every structure on file has ALREADY been given to this guest. Do NOT repeat the same ' +
+              'list and do NOT invent new structures: say plainly that these are all the ones on file, ' +
+              'and point them to the official accommodation page in the FAQ block for the full, ' +
+              'up-to-date list.',
+          })
         } else {
-          const rendered = formatCatalogue(entries)
+          const rendered = formatCatalogue(fresh)
+          accommodationOffered.push(...fresh.map((e) => e.name))
           approvedContent += `\n${rendered}`
           toolOutput = JSON.stringify({
             ok: true,
@@ -2136,7 +2189,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               'Written in Italian as the source language — translate it. These are contacts, NOT ' +
               'availability: you have no idea whether any of them has a room free. Never say a structure ' +
               'is full, never say one has space, never say Sappada is booked out. Give the contact and ' +
-              'let the customer call. You take no bookings.',
+              'let the customer call. You take no bookings. You have NO prices for any structure: never ' +
+              'state, estimate or hint at a rate — the structure quotes its own when the guest calls.',
           })
         }
       } else if (name === 'save_preferences') {
@@ -2730,6 +2784,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       )
     }
     if (checked.text.trim()) {
+      recordShownAccommodations(checked.text)
       return {
         reply: checked.text,
         language: getState(sessionId).language,

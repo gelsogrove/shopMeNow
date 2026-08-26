@@ -1,0 +1,77 @@
+/**
+ * demosappada — the contact guard (content-guards.ts)
+ *
+ * WHAT: contratto.md, verbatim: "non inventare risposte! le risposte devono
+ * arrivare dal db". Every URL the reply cites must appear in the approved
+ * content (the FAQ block) or it is removed — and a markdown link is removed
+ * WHOLE, label included, never hollowed out to `[label]()`.
+ *
+ * WHY: a guest asking for photos of Sappada was sent
+ * "Ecco il link: [Sappada - Galleria Fotografica]()" — the model invented a
+ * gallery URL, the guard stripped the URL out of the parentheses and shipped
+ * the dead label as if it were a link (Andrea, live, 2026-08-27). The same
+ * husk arrives straight from the model too: told never to invent URLs, it
+ * writes `[label]()` with the parens already empty. A label without a
+ * destination is a promise the reply cannot keep, so the whole construct
+ * goes, and the tidy pass then sweeps the line it sat on if nothing else was
+ * there (CLAUDE.md §16 iron rule 1: deterministic code, not another prompt
+ * sentence).
+ */
+import { stripUnverifiableContacts } from "../../custom-demosappada/content-guards"
+
+// The FAQ block the reply must draw from: one real page, nothing about photos.
+const APPROVED =
+  "Q: C'è una webcam per vedere Sappada in diretta?\n" +
+  "A: Sì, sul sito ufficiale: https://www.visitsappada.it/webcam-sappada.php"
+
+describe("demosappada content guard — markdown links are stripped whole", () => {
+  it("removes an invented markdown link entirely, label included", () => {
+    // The live bug's shape: a plausible label around a URL the FAQ block
+    // never stated. Stripping only the URL is what produced `[label]()`.
+    const reply =
+      "Ecco il link per vedere le immagini: [Sappada - Galleria Fotografica](https://www.visitsappada.it/galleria.php)"
+    const { text, removed } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).not.toContain("[")
+    expect(text).not.toContain("]()")
+    expect(text).not.toContain("galleria.php")
+    expect(removed).toHaveLength(1)
+  })
+
+  it("removes a markdown link the model already emitted with empty parens", () => {
+    // The model self-censors into `[label]()` when it has no URL to cite.
+    // That husk must never reach the guest, even though no URL was stripped.
+    const reply = "Puoi guardare qui: [Sappada - Galleria Fotografica]()"
+    const { text, removed } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).not.toContain("Galleria Fotografica]")
+    expect(removed).toEqual(["[Sappada - Galleria Fotografica]()"])
+  })
+
+  it("keeps a markdown link whose URL the approved content states", () => {
+    // Removal is for INVENTED links only: a real page cited in markdown form
+    // must pass untouched, or the guard eats correct answers.
+    const reply = "Guarda le webcam: [Webcam Sappada](https://www.visitsappada.it/webcam-sappada.php)"
+    const { text, removed } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).toBe(reply)
+    expect(removed).toHaveLength(0)
+  })
+
+  it("still strips a bare invented URL and keeps a bare approved one", () => {
+    // Regression for the pre-existing behaviour: the markdown pass runs
+    // first and must not change what happens to plain URLs.
+    const reply =
+      "Webcam: https://www.visitsappada.it/webcam-sappada.php e foto su https://www.visitsappada.it/foto.php"
+    const { text, removed } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).toContain("webcam-sappada.php")
+    expect(text).not.toContain("foto.php")
+    expect(removed).toEqual(["https://www.visitsappada.it/foto.php"])
+  })
+
+  it("sweeps away a line that held nothing but the invented link", () => {
+    // The tidy pass exists so a strip never leaves a visibly amputated
+    // message: a line that only carried the link disappears with it.
+    const reply =
+      "Sappada è bellissima in ogni stagione.\n\n[Galleria](https://www.visitsappada.it/galleria.php)\n\nSe hai bisogno di altro, chiedi pure!"
+    const { text } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).toBe("Sappada è bellissima in ogni stagione.\n\nSe hai bisogno di altro, chiedi pure!")
+  })
+})

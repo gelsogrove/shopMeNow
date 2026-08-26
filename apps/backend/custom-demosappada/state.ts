@@ -46,6 +46,14 @@ export interface SessionState {
   // 2 volte?"). Set on the turn the repeat is held back, cleared on the turn
   // it goes out again, so held and asked turns alternate until answered.
   repeatCooldownKey?: string
+
+  // Accommodation names the guest has ALREADY been given, so "altri hotel?"
+  // serves the ones they have not seen — and, when none are left, an honest
+  // "that is every structure on file" instead of the same three again
+  // (Andrea, 2026-08-27 live: "chiedo altri hotel e mi ridai gli stessi").
+  // Recorded from the FINAL reply, not from what the tool rendered: only a
+  // name that actually reached the guest counts as shown.
+  accommodationShown?: string[]
 }
 
 export type PatchKey = 'name' | 'language' | 'phone'

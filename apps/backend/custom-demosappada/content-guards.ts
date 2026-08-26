@@ -16,6 +16,19 @@
 const URL_RE = /https?:\/\/[^\s<>()\[\]]+/gi
 
 /**
+ * Markdown links as a UNIT: `[label](url)`, with the url possibly absent.
+ *
+ * Stripping only the URL out of a markdown link left the dead label behind:
+ * a guest asking for photos was sent "[Sappada - Galleria Fotografica]()" —
+ * a link that goes nowhere, dressed up as an answer (Andrea, live,
+ * 2026-08-27). The empty-parens form also arrives straight from the model,
+ * which writes `[label]()` when it wants to cite a page it does not have.
+ * Either way the whole construct is removed: a label without a destination
+ * is a promise the reply cannot keep.
+ */
+const MD_LINK_RE = /\[([^\]\n]*)\]\(\s*(https?:\/\/[^\s)]*)?\s*\)/g
+
+/**
  * Italian phone numbers as a tourist would read them: an optional +39, then
  * 6-11 digits possibly broken by spaces, dots or dashes.
  *
@@ -31,6 +44,14 @@ const EMERGENCY_NUMBERS = new Set(['112', '113', '115', '116', '117', '118', '15
 
 function normalizeUrl(raw: string): string {
   return raw.replace(/[)\].,;:!?]+$/, '').toLowerCase()
+}
+
+/** Whether the source actually states this URL, tolerating scheme/slash drift. */
+function urlIsApproved(raw: string, haystack: string): boolean {
+  const url = normalizeUrl(raw)
+  if (haystack.includes(url)) return true
+  const withoutScheme = url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+  return withoutScheme.length > 0 && haystack.includes(withoutScheme)
 }
 
 function digitsOf(raw: string): string {
@@ -129,12 +150,17 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
   const approvedNumbers = standaloneNumbersIn(approvedContent)
   const removed: string[] = []
 
-  let text = reply.replace(URL_RE, (match) => {
-    const url = normalizeUrl(match)
-    if (haystack.includes(url)) return match
+  // Markdown links go FIRST, whole: once the bare-URL pass has hollowed one
+  // out, the `[label]()` husk no longer says which URL it carried.
+  let text = reply.replace(MD_LINK_RE, (match, _label, url: string | undefined) => {
+    if (url && urlIsApproved(url, haystack)) return match
+    removed.push(match)
+    return ''
+  })
+
+  text = text.replace(URL_RE, (match) => {
     // A URL may be cited with different trailing punctuation than the source.
-    const withoutScheme = url.replace(/^https?:\/\//, '').replace(/\/$/, '')
-    if (withoutScheme.length > 0 && haystack.includes(withoutScheme)) return match
+    if (urlIsApproved(match, haystack)) return match
     removed.push(match)
     return ''
   })
