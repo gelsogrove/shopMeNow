@@ -12,7 +12,8 @@ module.exports = {
   // .js extension; under ts-jest those resolve to the .ts source. Scoped to
   // those modules so the rest of the CJS codebase keeps its own resolution.
   moduleNameMapper: {
-    '^\\./(state|flow-machine|gate|content-guards|agent|index)\\.js$': './$1',
+    '^\\./(state|flow-machine|gate|content-guards|agent|index|bounds|weather|intake-machine|faq-media|language-guards|welcome|llm|intake-compose|stay|tools\\.manifest)\\.js$':
+      './$1',
   },
   testPathIgnorePatterns: [
     '/node_modules/',

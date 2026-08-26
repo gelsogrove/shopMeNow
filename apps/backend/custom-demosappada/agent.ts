@@ -39,10 +39,51 @@ import {
   updateState,
 } from './state.js'
 import { stripUnverifiableContacts } from './content-guards.js'
-import { nextIntakeStep, type IntakeContext } from './intake-machine.js'
+import { nextIntakeStep } from './intake-machine.js'
 import { getSappadaWeather, TIMEZONE, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WELCOME_BACK_STALE_MS } from './bounds.js'
 import { isCurrentlyInTown, TAG_IN_LOCO } from '@shared/stay-inloco'
+import { callLLM, LLM_DEBUG, safeParseArgs, type Message } from './llm.js'
+import {
+  contentMediaAllowed,
+  formatFaqBlock,
+  replyIsDetailAnswer,
+  selectRelevantFaqs,
+  withFaqMedia,
+} from './faq-media.js'
+import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
+import { translateText, translateWelcome, withWelcome } from './welcome.js'
+import {
+  composeIntakeTurn,
+  guestAskedSomething,
+  holdRepeatedQuestion,
+  intakeQuestionLacksExamples,
+  isBareIntakeQuestion,
+  renderPromptVariables,
+  stripInventedLists,
+  stripSaveAcknowledgment,
+  stripTrailingOffers,
+  stripWeatherHedges,
+} from './intake-compose.js'
+import {
+  daysLeftInStay,
+  formatStayBlock,
+  intakeQuestionFor,
+  isStayOverAndClosed,
+  rolloverStay,
+  TAG_INTEREST_EVENTS,
+  TAG_INTEREST_LODGING,
+  TAG_INTEREST_OFFERS,
+  TAG_NOT_IN_LOCO,
+  TAG_REMOTE_PROSPECT,
+  type IntakeKey,
+} from './stay.js'
+
+// Split out of this file on 2026-08-27 (it had reached 4,400 lines): the
+// helpers live beside the concern they serve, the public surface of the
+// module is unchanged — formatStayBlock and its types are re-exported below.
+export { formatStayBlock } from './stay.js'
+export type { IntakeKey, StayBlock } from './stay.js'
 
 // ── Settings ──────────────────────────────────────────────────────────────
 // Every value comes from the DB via chatbot-settings-json.service.ts, which
@@ -50,7 +91,7 @@ import { isCurrentlyInTown, TAG_IN_LOCO } from '@shared/stay-inloco'
 // a missing key never crashes a turn — never so a tenant string lives in code
 // (CLAUDE.md §1A).
 
-interface Settings {
+export interface Settings {
   /** workspace.customChatbotSystemPrompt with {{faqs}} already substituted. */
   mainPrompt?: string
   model: string
@@ -99,6 +140,16 @@ interface Settings {
    * pensi?"), which offers something nobody asked for. Andrea, 2026-08-25.
    */
   closingLine?: string
+  /**
+   * How the itinerary-delivery message ends, after the plan — e.g. "Vuoi
+   * consigli su dove andare a mangiare prodotti tipici locali?".
+   *
+   * Appended by CODE on the turn save_itinerary first succeeds, once per
+   * stay; the model's own trailing offers ("se avete domande, fatemelo
+   * sapere") are stripped on the same turn (Andrea, 2026-08-27). Configuration,
+   * not a literal (§1A): with nothing configured, nothing is appended.
+   */
+  itineraryClosingQuestion?: string
   pushOptOutHint?: string
   /**
    * The exact words a guest may write to revoke the push consent.
@@ -131,10 +182,6 @@ const DEFAULT_SETTINGS: Settings = {
   audioOutput: false,
   audioVoices: {},
 }
-
-const API_KEY = process.env.OPENROUTER_API_KEY
-const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
-const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 
 function stripEmpty(o: Partial<Settings>): Partial<Settings> {
   const out: Record<string, unknown> = {}
@@ -313,6 +360,14 @@ export interface StayProfile {
   restartRequested?: boolean
   /** 'yes' | 'no' — whether they wanted an itinerary. Asked once. */
   itinerary?: string
+  /**
+   * True once the configured itinerary closing question has been appended to
+   * a delivered plan. Once per stay, like pushOptOutHintSent: the model
+   * re-saves the plan on every change, and re-appending the question each
+   * time would read like a script. Cleared by the rollover with the rest of
+   * the stay.
+   */
+  closingQuestionAsked?: boolean
   /**
    * The plan they accepted, one line per day ("2026-08-24: Cascatelle al
    * mattino, museo il pomeriggio").
@@ -525,1663 +580,6 @@ function buildTools(customTools: CustomToolDefinition[]) {
 }
 
 /**
- * Prepend the welcome (and, on a brand-new conversation, the presentation
- * video) to a reply that does not already carry it.
- *
- * This is CODE, not another sentence in the prompt, because the prompt lost.
- * The model can hold "greet on the first turn", "call get_weather" and "answer
- * with real proposals" — but not all three at once: reinforcing any one of
- * them made it drop another, turn after turn (Andrea, 2026-08-23: "al welcome
- * non lo vedo"). The greeting is a fixed string in a fixed place, so it
- * belongs to the mechanism; only the ANSWER needs a model.
- *
- * The intro line before the video is written here in the reply's own language,
- * so a message never mixes two languages.
- */
-const VIDEO_INTRO: Record<string, string> = {
-  it: 'Prima di iniziare, ecco una breve presentazione 👇',
-  en: 'Before we start, here is a short presentation 👇',
-  de: 'Bevor wir beginnen, hier eine kurze Vorstellung 👇',
-  es: 'Antes de empezar, aquí tienes una breve presentación 👇',
-  fr: 'Avant de commencer, voici une brève présentation 👇',
-}
-
-/**
- * Video links carried BY a FAQ entry, as opposed to the tenant's presentation
- * video. Two different things that the prompt used to call by one name: the
- * blanket "no video" of a mid-conversation turn made the model drop the FAQ's
- * own links too, so the guest asking about Malga Tuglia got neither of its two
- * videos — nor the GPX track and the trail description alongside them
- * (Andrea, 2026-08-23: "volevo un video una foto").
- *
- * Wording the prompt more carefully is half the fix; this is the other half,
- * because an instruction the model may still ignore is not a guarantee
- * (CLAUDE.md §16 iron rule 1).
- */
-const ANY_LINK_RE = /https?:\/\/[^\s<>()\[\]]+/gi
-const VIDEO_LINK_RE = /(?:youtube\.com|youtu\.be|vimeo\.com|\.mp4)/i
-const PHOTO_LINK_RE = /\.(?:jpg|jpeg|png|webp|gif)(?:$|[?#])/i
-
-/**
- * Every link a FAQ entry carries, richest first.
- *
- * Andrea's order, 2026-08-23: "preferisco sempre il video" — a video, else a
- * photo, else the page itself. One link goes out, so which one it is decides
- * what the guest sees: a detail answer about a rifugio should show the place,
- * and only fall back to a URL when there is nothing to show.
- *
- * Trailing sentence punctuation is trimmed: a link cited mid-sentence ends up
- * carrying the comma after it, and a comma inside a URL breaks the preview.
- */
-function mediaLinksIn(text: string): string[] {
-  const links = Array.from(new Set((text.match(ANY_LINK_RE) ?? []).map(trimUrlPunctuation)))
-  const rank = (link: string): number => {
-    if (VIDEO_LINK_RE.test(link)) return 0
-    if (PHOTO_LINK_RE.test(link)) return 1
-    return 2
-  }
-  return links.sort((a, b) => rank(a) - rank(b))
-}
-
-function trimUrlPunctuation(raw: string): string {
-  return raw.replace(/[)\].,;:!?]+$/, '')
-}
-
-/**
- * Append the media of the ONE place the reply is about.
- *
- * Andrea's rule, 2026-08-23: media belong to a detail answer, never to a list.
- * Asked "which mountain huts are there", the reply names ten of them — one
- * video each would be ten WhatsApp notifications and a chat nobody reads.
- *
- * The subject is the entry that WINS, not the only entry that matches. The
- * previous test — "no other FAQ may look like the reply" — sounded equivalent
- * and was not: a good detail answer about the Cascatelle also says
- * `passeggiata`, `adatta ai bambini`, `facile`, so the two generic
- * walks-with-children entries matched it too, three entries were counted and
- * the video was dropped. That is the bug Andrea hit live (2026-08-23:
- * "me lo devi dare subito, non se lo chiedo"), and it hit EVERY detail
- * answer, not just that one.
- *
- * So the entries are ranked by topic overlap and the top one must beat the
- * runner-up by a clear margin. One place described in depth wins outright;
- * ten huts listed side by side all score alike, no one wins, and the reply
- * stays text — which is the list rule, now enforced by the same measurement
- * instead of a second heuristic.
- *
- * At most ONE link is appended (Andrea, 2026-08-23: "testo e video o link o
- * foto"). Malga Tuglia carries two videos; sending both would be the ten
- * notifications again, in miniature.
- *
- * `excluded` keeps the presentation video out: it is prepended by withWelcome
- * and must not come back a second time as if it were content.
- */
-/**
- * Is the presentation video going out on THIS turn?
- *
- * On a brand-new conversation withWelcome prepends the tenant's presentation
- * video, and a FAQ video appended underneath makes it two videos in one
- * message — two WhatsApp previews, with the intake question wedged between
- * them (Andrea, 2026-08-23: "e dopo il welcome con le notizie?"). The
- * presentation goes first because it is sent once in the guest's life; the
- * place's own video is not lost, it arrives the moment they ask about it.
- */
-function presentationVideoGoesOut(
-  greeting: 'new' | 'returning' | 'none',
-  sessionId: string,
-  stayProfile: StayProfile | null | undefined,
-  settings: Settings,
-): boolean {
-  if (greeting !== 'new') return false
-  if (!settings.welcomeVideoUrl?.trim()) return false
-  return !getState(sessionId).videoSent && !stayProfile?.videoSent
-}
-
-/**
- * May a place's own photo or video go out on this turn at all?
- *
- * Two turns where the answer is no, for opposite reasons:
- *
- * - the presentation video is going out (see above) — one video per message;
- * - the holiday is OVER. The closing turns are feedback, the renewed consent
- *   and the goodbye, and the guest is on the motorway home. The prompt
- *   already says "non proporre più attività: non sono più in zona", yet a
- *   guest writing "ci sono piaciute le cascatelle" was sent the waterfall
- *   video underneath the feedback question — an advert for the place they
- *   have just left, stapled under the one thing they were meant to read
- *   (Andrea, 2026-08-23). A medium is sent when it serves the guest, not
- *   when a word matches.
- */
-function contentMediaAllowed(
-  greeting: 'new' | 'returning' | 'none',
-  sessionId: string,
-  stayProfile: StayProfile | null | undefined,
-  settings: Settings,
-  now: Date,
-  /** True while an intake question is pending this turn. */
-  intakePending = false,
-): boolean {
-  if (presentationVideoGoesOut(greeting, sessionId, stayProfile, settings)) return false
-
-  // While the intake is still running, the turn belongs to the question. A
-  // link or a video under it competes with the one thing the guest is being
-  // asked, and they were arriving on every single intake turn (Andrea,
-  // 2026-08-25: "non voglio il link"). Media come back the moment the
-  // questions are done and the conversation is about places again.
-  if (intakePending) return false
-
-  // The welcome turn carries the greeting and the presentation — nothing else.
-  // The guest wrote "ciao": they have not asked about a place yet, so there is
-  // no detail answer for a photo or video to belong to, and attaching one puts
-  // a second link under a message that already has one (Andrea, 2026-08-24:
-  // "togli il link che c'è sotto").
-  //
-  // Gated on the GREETING, not on presentationVideoGoesOut above: once the
-  // video moved into the copy as {{videoUrl}}, `welcomeVideoUrl` went empty
-  // and that check stopped firing — silently taking this protection with it.
-  if (greeting === 'new') return false
-
-  const daysLeft = daysLeftInStay(stayProfile ?? null, now)
-  return daysLeft === null || daysLeft > 0
-}
-
-const SUBJECT_MIN_SCORE = 0.6
-const SUBJECT_MIN_MARGIN = 0.2
-const SUPPORT_MIN_RATIO = 1.5
-
-/**
- * How many places a reply can name before it stops being ABOUT one of them.
- *
- * Two, because a detail answer legitimately brushes past a neighbour — the
- * Cascatelle entry names the museum by the bridge — while a list names four,
- * six, ten. Measured on the same score, so no phrase matching is involved.
- */
-const LIST_NAMED_PLACES = 2
-
-/**
- * How strongly a place must feature before it counts toward the list test.
- *
- * Above SUBJECT_MIN_SCORE on purpose: passing landmarks clear the lower bar
- * (they are named, with their distinctive words) without the reply being
- * about them.
- */
-const LIST_PLACE_SCORE = 0.8
-
-/**
- * Is this reply a DETAIL answer about one FAQ place?
- *
- * Same measurement withFaqMedia uses (subject overlap on the MODEL's output,
- * never the guest's words). Needed mid-intake: a guest who picks an offered
- * place ("si le cascatelle") asked for its detail, and replacing the answer
- * with the next intake question bulldozed the request (2026-08-25: "se ti
- * dico cascatelle è il punto che devi espandere").
- */
-function replyIsDetailAnswer(reply: string, userMessage: string, faqs: FaqEntry[]): boolean {
-  if (faqs.length === 0) return false
-  // A detail is about ONE place. Counted at the ordinary subject bar: the
-  // higher LIST_PLACE_SCORE bar let a four-item tour of the village pass as
-  // "detail" and a video landed under a list (R6.3 violated, 2026-08-25).
-  const subjects = faqs.filter((f) => subjectScore(f, reply, faqs) >= SUBJECT_MIN_SCORE)
-  if (subjects.length !== 1) return false
-  // And the GUEST named it — reply-only scoring fired on the model's own
-  // tangents (a stray restaurants line dragged its link into a date answer).
-  return subjectScore(subjects[0], userMessage, faqs) > 0
-}
-
-function withFaqMedia(
-  reply: string,
-  faqs: FaqEntry[],
-  userMessage: string,
-  excluded: string[],
-): string {
-  const skip = new Set([...mediaLinksIn(reply), ...excluded.filter(Boolean)])
-
-  // A reply that names several places is a LIST, even when only one of them
-  // happens to carry a video — and then that one wins by having no rival,
-  // which is exactly backwards. Asked "cosa faccio con i bambini", the reply
-  // offers the Gnomi, the Daini, the SapPark, Nevelandia and mentions the
-  // Cascatelle in passing; the waterfall video is the only one in the set, so
-  // it was being attached to an answer that was not about waterfalls
-  // (Andrea, 2026-08-23). Media belong to a detail answer, never to a list.
-  // Counted on a HIGHER bar than the winner has to clear. A detail answer
-  // legitimately names its landmarks — the Cascatelle entry gives the wooden
-  // bridge, the Piccolo Museo della Grande Guerra and the InfoPoint as the
-  // way to get there — and counting those as "places named" made the answer
-  // look like a list, so the waterfall video was suppressed on the very turn
-  // the guest asked for the waterfall (Andrea, live, 2026-08-23: "ti avevo
-  // chiesto di mostrare il video ma non lo fai quando si chiede il
-  // dettaglio"). A real list has several places each carrying the reply, not
-  // one subject plus its directions.
-  const namedPlaces = faqs.filter((faq) => subjectScore(faq, reply, faqs) >= LIST_PLACE_SCORE).length
-  if (namedPlaces > LIST_NAMED_PLACES) return reply
-
-  // The reply is the stronger signal: it spells the place out in full, while
-  // the guest writes "si le cascatelle" and never types the second half of
-  // the name. The question still counts, very slightly discounted, so that a
-  // place ASKED about beats one merely mentioned in passing.
-  const ranked = faqs
-    .map((faq) => ({
-      faq,
-      score: Math.max(
-        subjectScore(faq, reply, faqs),
-        subjectScore(faq, userMessage, faqs) * 0.99,
-      ),
-    }))
-    .sort((a, b) => b.score - a.score)
-
-  const top = ranked[0]
-  if (!top || top.score < SUBJECT_MIN_SCORE) return reply
-
-  // A tie is only fatal when the rival is a real rival. "C'è lo sci di fondo?"
-  // and "Cosa sono le Cascatelle?" both reduce to a single distinctive word,
-  // so the question alone cannot separate them — but their ANSWERS can: the
-  // waterfall entry describes the place the reply is describing, while the
-  // cross-country entry never mentions it. Comparing answers is what tells a
-  // homonym (`fondo`, the gravel underfoot) from the actual subject, and it
-  // is the same measurement, so it stays language-independent.
-  const runnerUp = ranked[1]
-  if (runnerUp && top.score - runnerUp.score < SUBJECT_MIN_MARGIN) {
-    const topSupport = answerOverlap(top.faq, reply, faqs)
-    const rivalSupport = answerOverlap(runnerUp.faq, reply, faqs)
-    // Compared as a RATIO, not a difference. A short reply covers only a
-    // sliver of a long FAQ answer, so both supports are small numbers
-    // (0.031 vs 0.016 for Malga Tuglia) and no absolute gap between them
-    // would ever clear a fixed threshold. What matters is not how much the
-    // winner covers, but that it covers decisively more than its rival.
-    if (topSupport <= rivalSupport * SUPPORT_MIN_RATIO) return reply
-  }
-
-  // The winning entry must actually be NAMED in the reply. Scoring alone put
-  // the Villaggio degli Gnomi's video under a list of three restaurants — it
-  // won on topic overlap ("bambini", "Sappada") without being mentioned once
-  // (Andrea, 2026-08-25: "villaggio gnomi qui non ha senso, non è neanche un
-  // ristorante").
-  //
-  // Checked on the entry's own distinctive words, the same measurement used
-  // for scoring, so nothing here reads phrasing or intent: at least one of
-  // them has to appear verbatim in the reply the guest is about to read.
-  const topTerms = distinctiveTerms(top.faq.question)
-  const replyLower = reply.toLowerCase()
-  const named = topTerms.some((term) => term.length >= 4 && replyLower.includes(term))
-  if (!named) return reply
-
-  const links = mediaLinksIn(top.faq.answer).filter((l) => !skip.has(l))
-  if (links.length === 0) return reply
-  return [reply, '', links[0]].join('\n')
-}
-
-/**
- * Whether `text` is substantially ABOUT this FAQ entry.
- *
- * Matching is on the entry's distinctive nouns — the words its question is
- * built from, minus the ones every tourism question shares. Nothing here reads
- * INTENT from phrasing (CLAUDE.md §14): it measures topic overlap, so it works
- * the same in Italian, German and English.
- */
-function subjectScore(faq: FaqEntry, text: string, faqs: FaqEntry[]): number {
-  const words = wordsOf(text)
-  const terms = distinctiveTerms(faq.question)
-  if (terms.length === 0) return 0
-
-  // Terms are weighted by how rare they are across THIS tenant's FAQ set.
-  // Weighting them equally was the bug: the Cascatelle entry is identified by
-  // `cascatelle` and `arrivo`, and a detail answer that never repeats the
-  // word "arrivo" scored 0.5 — the same as an unrelated entry that happened
-  // to share one common word. `cascatelle` appears in one question out of 72
-  // and `arrivo` in a dozen, so the name must carry the weight, and the
-  // service verb almost none.
-  //
-  // This is plain inverse document frequency: no phrase matching, no keyword
-  // list, and it behaves the same in every language (CLAUDE.md §14) —
-  // a German reply naming `Cascatelle` and `Mühlbach` still lands on the
-  // right entry.
-  let total = 0
-  let matched = 0
-  for (const term of terms) {
-    const weight = termWeight(term, faqs)
-    total += weight
-    if (words.has(term)) matched += weight
-  }
-  return total === 0 ? 0 : matched / total
-}
-
-/**
- * How much of the entry's ANSWER the reply actually covers.
- *
- * The tie-break of last resort: two entries whose questions score alike are
- * told apart by whether the reply talks about what the entry talks about.
- * Weighted the same way as the question, so a shared `sappada` counts for
- * almost nothing and a shared `mühlbach` counts for a lot.
- */
-function answerOverlap(faq: FaqEntry, reply: string, faqs: FaqEntry[]): number {
-  const words = wordsOf(reply)
-  const terms = distinctiveTerms(faq.answer)
-  if (terms.length === 0) return 0
-
-  let total = 0
-  let matched = 0
-  for (const term of terms) {
-    const weight = termWeight(term, faqs)
-    total += weight
-    if (words.has(term)) matched += weight
-  }
-  return total === 0 ? 0 : matched / total
-}
-
-/**
- * How much a term identifies ONE entry: 1 when it belongs to a single
- * question, falling towards 0 the more questions share it.
- *
- * Whole words, never substrings. `includes` scored "C'è lo sci di FONDO?" a
- * perfect 1.0 against an answer about waterfalls, because the trail
- * description said "il FONDO è ghiaioso" — same letters, opposite meaning
- * (2026-08-23).
- */
-function termWeight(term: string, faqs: FaqEntry[]): number {
-  let documents = 0
-  for (const faq of faqs) {
-    if (wordsOf(faq.question).has(term)) documents++
-  }
-  return documents <= 1 ? 1 : 1 / documents
-}
-
-function wordsOf(text: string): Set<string> {
-  return new Set(
-    text
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-      .split(/\s+/)
-      .filter(Boolean),
-  )
-}
-
-/**
- * Words too common across this tenant's FAQ set to identify an entry: every
- * question mentions the destination, and most are shaped "what is X, how do I
- * get there". Kept in code, not settings: this is a mechanism bound, not copy
- * a customer ever reads (CLAUDE.md §1B).
- */
-const GENERIC_QUESTION_WORDS = new Set([
-  'sappada', 'cosa', 'come', 'dove', 'quali', 'quando', 'quanto', 'sono', 'sono?', 'posso',
-  'arrivo', 'ci', 'si', 'che', 'per', 'del', 'della', 'delle', 'dei', 'con', 'una', 'uno',
-  'gli', 'le', 'la', 'il', 'lo', 'un', 'and', 'the', 'what', 'where', 'how', 'there',
-])
-
-function distinctiveTerms(question: string): string[] {
-  return Array.from(
-    new Set(
-      question
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-        .split(/\s+/)
-        .filter((w) => w.length > 3 && !GENERIC_QUESTION_WORDS.has(w)),
-    ),
-  )
-}
-
-/**
- * Translations of the tenant's welcome, keyed by `lang:text`.
- *
- * The welcome is authored once, in one language (CLAUDE.md §1A — no
- * pre-translated copy in code), but it is prepended by CODE, so nothing
- * translates it on the way out: an Austrian guest got the Italian welcome on
- * top of a German reply (live check, 2026-08-23). One isolated call fixes it,
- * and the cache means a tenant pays for it once per language for the life of
- * the process, not once per guest.
- */
-const welcomeTranslations = new Map<string, string>()
-
-async function translateWelcome(
-  text: string,
-  language: string,
-  settings: Settings,
-): Promise<string> {
-  const key = `${language}:${text}`
-  const cached = welcomeTranslations.get(key)
-  if (cached) return cached
-  const translated = await translateText(text, language, settings)
-  if (translated !== text) welcomeTranslations.set(key, translated)
-  return translated
-}
-
-/**
- * Translate a reply into the language the model itself declared.
- *
- * The model reliably KNOWS the language — it emits ⟦LANG:es⟧ correctly — and
- * then writes the answer in the workspace default anyway. Asking it more
- * firmly in the prompt did not change that (2026-08-23: a Spanish "hola qué
- * hago hoy" answered in Italian, tagged es). So the mismatch is repaired
- * afterwards, by code, instead of being hoped away.
- */
-async function translateText(
-  text: string,
-  language: string,
-  settings: Settings,
-): Promise<string> {
-  try {
-    const result = await callLLM(
-      [
-        {
-          role: 'system',
-          content:
-            `Translate the user message into the language with ISO 639-1 code "${language}". ` +
-            'Keep the tone, the emoji and the Markdown exactly as they are. If it is already in that ' +
-            'language, return it unchanged. Output ONLY the translation — no preamble, no quotes.',
-        },
-        { role: 'user', content: text },
-      ],
-      { ...settings, maxTokens: 600 },
-      [],
-    )
-    return result.content.trim() || text
-  } catch {
-    // A reply in the wrong language beats no reply at all.
-    return text
-  }
-}
-
-/**
- * Words a self-introduction opens with, in the languages this workspace
- * serves. Matching the SHAPE of a greeting, not any particular sentence:
- * the tenant's welcome is configuration and may say anything, while what the
- * model improvises is always some form of "hello, I am the assistant".
- */
-const GREETING_OPENERS =
-  /^(ciao|salve|buongiorno|buonasera|benvenut\w*|hi|hello|hey|welcome|good (morning|afternoon|evening)|hallo|guten (tag|morgen|abend)|willkommen|hola|bienvenid\w*|bonjour|bienvenue)\b/i
-
-/** Does this line introduce the assistant rather than answer anything? */
-const SELF_INTRODUCTION =
-  /(sono l'assistente|sono il tuo assistente|assistente (virtuale|digitale)|i am the|i'm the .*assistant|ich bin (der|die|dein)|soy el asistente|je suis l'assistant)/i
-
-/**
- * Drop an opening greeting the model wrote, keeping the answer under it.
- *
- * Conservative on purpose: only leading paragraphs are considered, and only
- * while they look like an introduction — the moment a paragraph carries real
- * content the rest is returned untouched. Cutting an answer would be a far
- * worse failure than leaving one greeting too many.
- */
-function stripLeadingGreeting(reply: string): string {
-  const paragraphs = reply.split(/\n{2,}/)
-  let start = 0
-  let sawGreeting = false
-
-  while (start < paragraphs.length) {
-    const paragraph = paragraphs[start].trim()
-    if (!paragraph) {
-      start++
-      continue
-    }
-
-    // Anything carrying a fact — a number, an hour, a price, a bullet list —
-    // is the answer, and the answer is never dropped.
-    if (/\d/.test(paragraph) || /^[-•*]/m.test(paragraph)) break
-
-    const opensAsGreeting = GREETING_OPENERS.test(paragraph) || SELF_INTRODUCTION.test(paragraph)
-
-    // The paragraphs that FOLLOW a greeting are still preamble while they only
-    // restate what the assistant can do ("I'm here to help you discover…",
-    // "how can I help?"). One greeting from the model was three paragraphs
-    // long, and cutting only the first left the rest under the real welcome.
-    const continuesPreamble =
-      sawGreeting &&
-      /(aiutart|aiutarl|posso aiutar|sono qui per|dimmi pure|come posso|scoprire il meglio|here to help|how can i help|tell me|wie kann ich|ich helfe|estoy aquí para)/i.test(
-        paragraph,
-      )
-
-    if (!opensAsGreeting && !continuesPreamble) break
-
-    sawGreeting = true
-    start++
-  }
-
-  return paragraphs.slice(start).join('\n\n').trim()
-}
-
-/**
- * Function words that identify a language cheaply, without an LLM call.
- *
- * Only used to answer "is this reply obviously NOT in the declared language",
- * so a wrong guess costs one translation call, never a wrong answer. Nothing
- * here routes the conversation (CLAUDE.md §14): it checks output, not intent.
- */
-/**
- * The language of an opening greeting, when it is unmistakable.
- *
- * The widget sends the BROWSER's language, and a guest whose browser is in
- * English typed "Ciao" and was answered in English — the one thing that tells
- * someone nobody read what they wrote (Andrea, 2026-08-25). The prompt already
- * says to detect the language from the message; the model followed the seed
- * anyway, so the decision is taken here instead (iron rule 1).
- *
- * NOT phrase-based intent detection (CLAUDE.md §14): nothing here reads what
- * the guest WANTS. It answers one question — which language is this word — on
- * a closed list of greetings, the same job a language detector does.
- *
- * Deliberately narrow. Only words that belong to ONE language and are spelled
- * the same nowhere else: "hola" is Spanish, "ciao" is Italian, but "ok" and
- * "hi" are international and are left to the seed.
- */
-const GREETING_LANGUAGES: Record<string, string> = {
-  ciao: 'it', salve: 'it', buongiorno: 'it', buonasera: 'it',
-  hola: 'es', buenas: 'es',
-  bonjour: 'fr', salut: 'fr', bonsoir: 'fr',
-  hallo: 'de', guten: 'de', servus: 'de', moin: 'de',
-  hello: 'en', hey: 'en',
-  ola: 'pt',
-  hej: 'da',
-  hoi: 'nl', goedendag: 'nl',
-}
-
-/**
- * The language of a short opening message, or null when it carries no signal.
- *
- * Only consulted for the FIRST message of a conversation, and only when it is
- * short enough to be a greeting and nothing else: a real sentence is left to
- * the model, which reads it better than a word list can.
- */
-function greetingLanguage(message: string): string | null {
-  const words = message
-    .toLowerCase()
-    .replace(/[^\p{L}\s]/gu, ' ')
-    .split(/\s+/)
-    .filter((w) => w.length > 0)
-  if (words.length === 0) return null
-
-  // A greeting we recognise settles it outright.
-  if (words.length <= 3) {
-    for (const word of words) {
-      const lang = GREETING_LANGUAGES[word]
-      if (lang) return lang
-    }
-  }
-
-  // Otherwise weigh the FUNCTION words of each language we serve. "ao voglio
-  // fae passeggiate" is Italian written badly — no greeting in it, and the
-  // guest was answered in English because the browser said so (Andrea,
-  // 2026-08-25: "non è in italiano?"). Function words survive typos: the
-  // misspelled nouns are ignored, "voglio" is not.
-  //
-  // Only when ONE language leads outright — a tie is left to the model, which
-  // reads a real sentence better than a word list can. "ok" and "sports"
-  // belong to no language here and keep the host's seed.
-  const scores = Object.entries(OPENING_LANGUAGE_MARKERS)
-    .map(([code, re]) => {
-      re.lastIndex = 0
-      return { code, hits: (message.match(re) || []).length }
-    })
-    .sort((a, b) => b.hits - a.hits)
-  const [best, second] = scores
-  if (best && best.hits >= 1 && best.hits > (second?.hits ?? 0)) return best.code
-  return null
-}
-
-/**
- * Function words that identify the language of an OPENING message.
- *
- * Separate from LANGUAGE_MARKERS below, which answers a different question
- * ("is this reply obviously NOT in the declared language") on long text and
- * must stay tuned for that. This list is wider on purpose — pronouns, verbs
- * and prepositions a guest uses in their very first line — because here a
- * single hit has to be enough.
- */
-const OPENING_LANGUAGE_MARKERS: Record<string, RegExp> = {
-  it: /\b(il|la|le|gli|di|che|per|sono|siete|questo|quanto|giorno|oggi|voglio|vorrei|dove|come|quando|con|una|un|non|mi|ci|se|ho|abbiamo|siamo|stiamo|fare|posso)\b/gi,
-  es: /\b(el|los|las|de|que|para|est[aá]|sois|cu[aá]nto|d[ií]a|hoy|quiero|d[oó]nde|con|una|un|no|estamos|somos|hacer|puedo)\b/gi,
-  en: /\b(the|and|for|you|are|this|how|many|day|today|want|where|with|have|we|is|to|my|can|there)\b/gi,
-  de: /\b(der|die|das|und|f[uü]r|sind|ihr|wie|viele|tag|heute|m[oö]chte|wo|mit|wir|haben|ist|kann)\b/gi,
-  fr: /\b(le|les|des|que|pour|vous|[eê]tes|combien|jour|aujourd|veux|o[uù]|avec|nous|avons|puis)\b/gi,
-  pt: /\b(os|as|de|que|para|est[aã]o|quantos|dia|hoje|quero|onde|com|temos|posso)\b/gi,
-  nl: /\b(de|het|een|en|voor|zijn|hoeveel|dag|vandaag|wil|waar|met|hebben|kan)\b/gi,
-  da: /\b(og|det|den|for|er|hvor|mange|dag|vil|med|har|kan)\b/gi,
-}
-
-const LANGUAGE_MARKERS: Record<string, RegExp> = {
-  it: /\b(il|la|le|gli|di|che|per|sono|siete|questo|quanto|giorno|oggi)\b/gi,
-  es: /\b(el|la|los|las|de|que|para|est[aá]|sois|cu[aá]nto|d[ií]a|hoy|hola)\b/gi,
-  en: /\b(the|and|for|you|are|this|how|many|day|today)\b/gi,
-  de: /\b(der|die|das|und|f[uü]r|sind|ihr|wie|viele|tag|heute)\b/gi,
-  fr: /\b(le|la|les|des|que|pour|vous|[eê]tes|combien|jour|aujourd)\b/gi,
-  pt: /\b(o|os|as|de|que|para|est[aã]o|quantos|dia|hoje)\b/gi,
-  nl: /\b(de|het|een|en|voor|zijn|hoeveel|dag|vandaag)\b/gi,
-  da: /\b(og|det|den|for|er|hvor|mange|dag|i dag)\b/gi,
-}
-
-function countMarkers(text: string, language: string): number {
-  const re = LANGUAGE_MARKERS[language]
-  if (!re) return 0
-  return (text.match(re) || []).length
-}
-
-/**
- * Does the text look like it is NOT in `language`, while clearly being in
- * another one we know? Conservative: only returns true when some other
- * language scores clearly higher, so an ambiguous short reply is left alone.
- */
-function looksLikeWrongLanguage(text: string, language: string): boolean {
-  const words = text.split(/\s+/).length
-  if (words < 8) return false // too short to judge
-
-  const declared = countMarkers(text, language)
-  let best = declared
-  let bestLang = language
-  for (const other of Object.keys(LANGUAGE_MARKERS)) {
-    if (other === language) continue
-    const score = countMarkers(text, other)
-    if (score > best) {
-      best = score
-      bestLang = other
-    }
-  }
-  return bestLang !== language && best >= declared + 3
-}
-
-/**
- * Did the guest actually ask something?
- *
- * A question mark, or one of the shapes a request takes without one ("dimmi
- * dove", "vorrei sapere", "quanto costa"). Used only to decide whether a
- * reply that consists of nothing but our own intake question is acceptable —
- * it never picks an answer or routes anything (CLAUDE.md §14).
- */
-function guestAskedSomething(message: string): boolean {
-  // The question mark, nothing else. The keyword list this replaces was
-  // phrase detection on user text (§14) and misfired exactly as the rule
-  // predicts: "ci sono 2 bambini" — a statement — matched "ci sono", the
-  // model's prose was kept, and the guest got a list of playgrounds in the
-  // middle of the intake (2026-08-25). A guest who asks without a question
-  // mark gets their answer one turn later, when the intake is done — the
-  // lesser failure.
-  return message.includes('?')
-}
-
-/**
- * Is this reply nothing but our own intake question?
- *
- * Short, ends in a question mark, and carries no fact of its own. When the
- * guest asked something and gets this back, their question was dropped —
- * which happened the moment "one question at a time" was made strict: asked
- * the price of a cable car, the assistant replied "until when are you
- * staying?" and nothing else (Andrea, 2026-08-23).
- */
-function isBareIntakeQuestion(reply: string): boolean {
-  const text = reply.trim()
-  if (!text.endsWith('?')) return false
-  if (text.length > 180) return false
-  // A reply carrying a number, a name in bold or a list is doing real work.
-  if (/\d/.test(text) || /\*\*/.test(text) || /^[-•*]/m.test(text)) return false
-  return true
-}
-
-/**
- * Did the intake question reach the guest WITHOUT the examples that make it
- * answerable?
- *
- * Two questions carry examples, and both collapse without them. "C'è qualcosa
- * che devo tenere presente?" gets a "no"; "siete entrambi adulti?" is a closed
- * question that takes children and seniors off the table in one move (Andrea,
- * live, 2026-08-23). The prompt now says to pronounce them, but an instruction
- * is a request — this is the check.
- *
- * Only the presence of the categories is tested, never how they are worded:
- * the model owns the phrasing and the language, and the guest may be reading
- * in any of them. A reply that names none of the alternatives is the failure;
- * one is enough to show the question was opened up.
- */
-function intakeQuestionLacksExamples(reply: string, key: string | null): boolean {
-  // `party` used to be checked here too: its old wording ("con chi sei in
-  // vacanza") collapsed into a closed "siete entrambi adulti?" unless the
-  // model pronounced the categories, so a retry forced them back in.
-  //
-  // The question is now "In quanti siete e fino a quando vi fermate?" — a
-  // headcount and a date, open by construction, with nothing to enumerate.
-  // Keeping the guard made the model append "quanti adulti, bambini e anziani"
-  // to a question that never asked for them (Andrea, 2026-08-24).
-  if (key !== 'constraints') return false
-  const text = reply.toLowerCase()
-  const groups = [
-    /allerg|intoller|celiac|glutine|gluten|unverträg/,
-    /auto|macchina|patente|car|coche|voiture|wagen|piedi|fuß|walk|pied/,
-    /gravidanz|incinta|pregnan|embaraz|enceinte|schwanger/,
-    /cammin|deambul|carrozzin|mobilit|walk|gehen|silla|fauteuil/,
-    /cane|cagnolin|animal|dog|hund|perro|chien/,
-  ]
-  return !groups.some((re) => re.test(text))
-}
-
-/**
- * Substitute the per-customer placeholders in tenant copy.
- *
- * The host does this for the strings IT sends, but the greeting is prepended
- * by this module, so nothing had resolved it: "Bentornato {{customerName}}!"
- * reached a guest verbatim (live check, 2026-08-23). With no name known the
- * placeholder is removed rather than left or filled with a stand-in — a
- * greeting addressed to nobody still reads fine, one addressed to
- * "{{customerName}}" does not.
- */
-function substitutePlaceholders(text: string, customerName: string | undefined): string {
-  const name = customerName?.trim()
-  if (name) return text.replace(/\{\{\s*customerName\s*\}\}/gi, name)
-  return text
-    .replace(/[ \t]*\{\{\s*customerName\s*\}\}[ \t]*/gi, ' ')
-    .replace(/\s+([,!?.])/g, '$1')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
-}
-
-/**
- * Compose the reply for a turn where an intake question is pending.
- *
- * ONE place, one order — replacing six guards that had grown on top of each
- * other and fought (Andrea, 2026-08-25: "orchestra bene, pulisci il codice,
- * non voglio accrocchi"). Each step below states what it guarantees:
- *
- *   1. our question is the one the guest reads, in their language;
- *   2. it is the ONLY question in the message;
- *   3. on a turn where the guest asked nothing, it is the WHOLE message —
- *      except the closing turn, which carries the greeting and the weather;
- *   4. the closing turn ends with the configured closing line.
- *
- * Everything the model added of its own is dropped, not merged: the code owns
- * WHICH question is asked and HOW the turn is shaped, the model owns the
- * language and the content of the recommendation (iron rule 1).
- */
-interface IntakeTurnInput {
-  /** The reply the model produced, already stripped of unverifiable facts. */
-  reply: string
-  /** The intake key dictated this turn, or null when none is pending. */
-  key: string | null
-  /** The configured wording, in the tenant's language. */
-  question: string | null
-  /** The same wording in the language the model replied in. */
-  questionTranslated: string | null
-  /** Did the guest ask something of their own this turn? */
-  guestAsked: boolean
-  /** The line that ends the intake-closing turn, when configured. */
-  closingLine?: string
-  /**
-   * True while the intake still has questions left, even when none is due on
-   * THIS turn (the guest just answered the pending one).
-   *
-   * The model fills that gap with a question of its own — "Ci sono altre
-   * esigenze o preferenze da considerare?" one turn after the guest had
-   * already answered exactly that (Andrea, 2026-08-25: "ma lo abbiamo già
-   * chiesto no?"). While the code owns the questions, the model asks none.
-   */
-  intakeOpen?: boolean
-}
-
-interface IntakeTurnResult {
-  text: string
-  /** True when the question reached the guest — the caller retires it only then. */
-  asked: boolean
-  /** What was dropped, for the log. */
-  dropped: string[]
-}
-
-/**
- * Substitute {{variables}} into the tenant's main prompt.
- *
- * A line whose ONLY content is an empty variable disappears, label and all: a
- * bare "VINCOLI:" with nothing under it invites the model to fill the gap with
- * something nobody told it. A line that also carries other text keeps it, with
- * the placeholder resolved to nothing.
- *
- * Unknown placeholders are left ALONE, never blanked: the tenant may be using
- * a variable the host substitutes ({{chatbotName}}, {{companyName}}), and
- * wiping it here would delete a value that was about to arrive.
- */
-function renderPromptVariables(prompt: string, values: Record<string, string>): string {
-  if (!prompt) return ''
-  const known = new RegExp(`\\{\\{\\s*(${Object.keys(values).join('|')})\\s*\\}\\}`, 'gi')
-
-  return prompt
-    .split('\n')
-    .filter((line) => {
-      const matches = [...line.matchAll(known)]
-      if (matches.length === 0) return true
-      const allEmpty = matches.every((m) => !values[m[1]] && !values[m[1].toLowerCase()])
-      if (!allEmpty) return true
-      // Every variable on the line is empty. What is left is either a LABEL
-      // for them ("VINCOLI:", "- Interessi:") — which must go with them — or a
-      // real sentence that happens to mention one, which must stay.
-      //
-      // A label is short and ends in a colon or a dash: it introduces a value
-      // that is not coming. Shape only, so it holds in every language.
-      const rest = line.replace(known, '').trim()
-      if (rest.length === 0) return false
-      const looksLikeLabel = rest.length <= 40 && /[:\-–—]\s*$/.test(rest)
-      return !looksLikeLabel
-    })
-    .map((line) =>
-      line
-        .replace(known, (_full, name: string) => values[name] ?? values[name.toLowerCase()] ?? '')
-        .replace(/[ \t]{2,}/g, ' ')
-        .trimEnd()
-    )
-    .filter((line, i, all) => line.trim() !== '' || (all[i - 1]?.trim() ?? '') !== '')
-    .join('\n')
-    .trim()
-}
-
-/**
- * Remove every question the MODEL wrote, keeping the one the code dictated.
- *
- * Sentence-shaped and language-independent: a sentence ending in "?" that is
- * not a URL ("…com/watch?v=" is a link, not a question). `ours`, when given,
- * is exempt — it is the question the guest is meant to answer.
- */
-/**
- * Remove empty weather hedges from the MODEL's prose.
- *
- * "Se il tempo lo consente, nel pomeriggio..." — written three times in one
- * itinerary while the 7-day forecast sat in the prompt (2026-08-25: "il meteo
- * lo sai, se fai la chiamata!"). The rule in the prompt is ignored, so the
- * clause is deleted here: what remains states the plan, and the forecast the
- * model DID quote elsewhere carries the weather. Matching is on OUR output,
- * never the guest's words (§14 untouched).
- */
-/**
- * Strip LISTS whose items do not exist in the approved content.
- *
- * The model served a coeliac guest a complete invented restaurant menu —
- * antipasti, primi, dolci — none of it anywhere in the FAQ block (2026-08-25:
- * "NON DEVI INVENTARE!"). Phones and prices were already verified; itemized
- * prose was not. Same principle, extended: a block of 3+ short list lines
- * whose distinctive words never appear in the approved content is fabricated,
- * and it goes.
- *
- * Shape-only detection (markers, line length, consecutiveness) plus overlap
- * against OUR approved text — never the guest's words (§14). Legit lists
- * survive because their items are QUOTED from the FAQ block: "Casunziei",
- * "Keisn Osteria" are right there in the haystack.
- */
-function stripInventedLists(reply: string, approvedContent: string): { text: string; removed: string[] } {
-  const haystack = approvedContent.toLowerCase()
-  const lines = reply.split('\n')
-  const isItem = (l: string): boolean =>
-    /^\s*(?:[-•*]\s|\d+[.)]\s|\*\*[^*]{2,60}\*\*\s*:?\s*$)/.test(l) && l.trim().length <= 90
-  const verified = (l: string): boolean => {
-    const toks = l
-      .toLowerCase()
-      .replace(/[^\p{L}\s]/gu, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length >= 5)
-    if (toks.length === 0) return true
-    return toks.some((t) => haystack.includes(t))
-  }
-  const removed: string[] = []
-  const out: string[] = []
-  let i = 0
-  while (i < lines.length) {
-    if (!isItem(lines[i])) {
-      out.push(lines[i])
-      i++
-      continue
-    }
-    // Collect a consecutive item block (blank lines allowed inside).
-    const block: number[] = []
-    let j = i
-    while (j < lines.length && (isItem(lines[j]) || lines[j].trim() === '')) {
-      if (isItem(lines[j])) block.push(j)
-      j++
-    }
-    const unverified = block.filter((k) => !verified(lines[k]))
-    if (block.length >= 3 && unverified.length * 3 >= block.length * 2) {
-      // Fabricated block: drop it, and the intro line ending in ':' above it.
-      if (out.length > 0 && /:\s*$/.test(out[out.length - 1])) removed.push(out.pop() as string)
-      for (const k of block) removed.push(lines[k])
-    } else {
-      for (let k = i; k < j; k++) out.push(lines[k])
-    }
-    i = j
-  }
-  return { text: out.join('\n').replace(/\n{3,}/g, '\n\n').trim(), removed }
-}
-
-function stripWeatherHedges(reply: string): string {
-  const HEDGES =
-    /(?:se|si|if|wenn|falls)\s+(?:il\s+tempo|el\s+tiempo|le\s+temps|the\s+weather|das\s+wetter|het\s+weer|vejret)\s+(?:lo\s+(?:consente|permette|regge)|(?:è|es|est|is|ist)\s+(?:buono|bello|clemente|bueno|beau|good|nice|gut|goed|godt)|(?:lo\s+)?permite|le\s+permet|permitting|es\s+zul[aä]sst|zulässt|tillader)[,]?\s*/gi
-  let out = reply.replace(HEDGES, '')
-  out = out.replace(/(^|[.!?]\s+)([a-zàèéìòù])/g, (_m, pre: string, ch: string) => pre + ch.toUpperCase())
-  return out.replace(/[ \t]{2,}/g, ' ')
-}
-
-function stripModelQuestions(reply: string, ours: string | null, dropped: string[]): string {
-  const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
-  const keep = ours ? normalise(ours) : null
-  return reply
-    .split('\n')
-    .map((line) => {
-      if (!line.includes('?') || /https?:\/\//.test(line)) return line
-      return (line.match(/[^.!?]+[.!?]*/g) ?? [line])
-        .filter((sentence) => {
-          if (!sentence.trim().endsWith('?')) return true
-          if (keep && normalise(sentence).includes(keep)) return true
-          dropped.push(sentence.trim())
-          return false
-        })
-        .join('')
-        .replace(/\s{2,}/g, ' ')
-        .trim()
-    })
-    .filter((line, i, all) => line.trim() !== '' || (all[i - 1]?.trim() ?? '') !== '')
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-function composeIntakeTurn(input: IntakeTurnInput): IntakeTurnResult {
-  const { reply, key, question, guestAsked, closingLine, intakeOpen } = input
-  const ask = (input.questionTranslated ?? question ?? '').trim()
-  const dropped: string[] = []
-
-  // No question due this turn. With the intake still running the model must
-  // not invent one of its own, so its questions are stripped and nothing is
-  // put in their place; once the intake is over it converses freely again.
-  if (!key || !ask) {
-    if (!intakeOpen) return { text: reply, asked: false, dropped: [] }
-    return { text: stripModelQuestions(reply, null, dropped), asked: false, dropped }
-  }
-
-  const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
-
-  // The closing turn is the only one that keeps the model's prose: it carries
-  // the greeting by name, the weather and one suggestion before the question.
-  const isClosingTurn = key === 'itinerary'
-
-  // Step 3 — a turn where the guest asked nothing IS the question, nothing else.
-  if (!guestAsked && !isClosingTurn) {
-    if (normalise(reply) !== normalise(ask)) dropped.push(reply.trim())
-    return { text: ask, asked: true, dropped }
-  }
-
-  // Step 1+2 — keep the model's answer, strip every question it invented, and
-  // make sure ours is there exactly once, at the end.
-  const withoutQuestions = stripModelQuestions(reply, ask, dropped)
-
-  const alreadyThere = normalise(withoutQuestions).includes(normalise(ask))
-  const body = alreadyThere
-    ? withoutQuestions
-    : [withoutQuestions, ask].filter((p) => p.length > 0).join('\n\n')
-
-  // Step 4 — the closing turn signs off with the configured line.
-  const closing = closingLine?.trim()
-  if (isClosingTurn && closing && !normalise(body).endsWith(normalise(closing))) {
-    return { text: `${body}\n\n${closing}`, asked: true, dropped }
-  }
-
-  return { text: body, asked: true, dropped }
-}
-
-async function withWelcome(
-  reply: string,
-  welcomeText: string | undefined,
-  videoUrl: string | undefined,
-  language: string | undefined,
-  settings: Settings,
-  customerName: string | undefined,
-  /**
-   * The intake question due on this turn, already in the guest's language.
-   *
-   * The welcome may place it with {{firstQuestion}}, so the whole opening
-   * message — greeting, video, first question — is edited in ONE field in the
-   * backoffice (Andrea, 2026-08-25). It is still the machine that decides
-   * WHICH question that is, so it stays tracked as asked; the tenant only
-   * decides where it sits.
-   */
-  firstQuestion?: string,
-): Promise<string> {
-  const welcome = substitutePlaceholders(welcomeText?.trim() ?? '', customerName)
-  if (!welcome) return reply
-
-  // The model was told not to greet, and greeted anyway — so the greeting it
-  // wrote is REMOVED rather than the configured one skipped.
-  //
-  // Comparing the two texts does not work: the model paraphrases ("Ciao! Sono
-  // l'assistente della Pro Loco di Sappada") and no substring of the tenant's
-  // welcome appears in it, so the guard passed and the guest read two
-  // different welcomes in a row (Andrea, 2026-08-23). What identifies a
-  // greeting is its SHAPE — an opening line that introduces the assistant and
-  // asks nothing — not its wording, and the shape is something code can find.
-  const stripped = stripLeadingGreeting(reply)
-  const body = stripped.trim() ? stripped : reply
-
-  const lang = (language || settings.defaultLanguage || 'it').toLowerCase()
-  const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
-  const translated =
-    lang === sourceLang ? welcome : await translateWelcome(welcome, lang, settings)
-
-  // {{firstQuestion}} — the tenant decides WHERE the opening question sits;
-  // the intake machine decides WHICH one it is. With no question due (a
-  // returning guest whose profile is complete) the placeholder collapses,
-  // taking its blank line with it rather than leaving a hole.
-  const QUESTION_SLOT = /\n?[ \t]*\{\{\s*firstQuestion\s*\}\}[ \t]*/gi
-  const hasSlot = QUESTION_SLOT.test(translated)
-  QUESTION_SLOT.lastIndex = 0
-  const greeting = hasSlot
-    ? translated.replace(QUESTION_SLOT, firstQuestion?.trim() ? `\n${firstQuestion.trim()}` : '')
-    : translated
-
-  const parts = [greeting]
-  const video = videoUrl?.trim()
-  if (video && !reply.includes(video)) {
-    parts.push('', VIDEO_INTRO[lang] ?? VIDEO_INTRO.it, video)
-  }
-  parts.push('', body)
-  return parts.join('\n')
-}
-
-/**
- * Days after departure before the finished stay is archived.
- *
- * Three, not zero: the days right after leaving are when the goodbye happens
- * — the feedback, the consent, the "we left a jacket at the rifugio". Wiping
- * the stay there would take the conversation's subject away mid-sentence.
- *
- * After that the holiday is closed: the profile is archived, the itinerary
- * and what-they-did are cleared, and the guest goes back to being a contact.
- * When they write again — next week or next February — the assistant starts
- * a fresh stay and asks the dates anew, which is exactly the service being
- * offered to them a second time.
- */
-const ARCHIVE_STAY_AFTER_DEPARTURE_DAYS = 3
-
-/**
- * Has this guest come back for a fresh holiday?
- *
- * Detected from the calendar, never asked: a returning guest does not
- * announce a new stay, they just say hello. Without this the profile stays
- * frozen on last summer — the assistant keeps insisting the holiday is over,
- * never asks the new dates, and refuses to propose the Cascatelle because
- * they were done in August (Andrea, 2026-08-23).
- */
-function isStayOverAndClosed(profile: StayProfile | null, now: Date): boolean {
-  const departure = profile?.departureDate
-  if (!departure) return false
-  const departureMs = Date.parse(`${departure}T23:59:59`)
-  if (Number.isNaN(departureMs)) return false
-  const daysSince = (now.getTime() - departureMs) / 86_400_000
-  return daysSince > ARCHIVE_STAY_AFTER_DEPARTURE_DAYS
-}
-
-/**
- * Roll the current stay into history and clear what belongs to one holiday.
- *
- * Kept: where they come from, who they are, the consent (a legal record, not
- * a holiday detail) and everything already archived.
- * Cleared: dates, the questions asked, what they did, the itinerary answer —
- * all of it is about a trip that is over.
- */
-function rolloverStay(profile: StayProfile): StayProfile {
-  const history = [...(profile.pastStays ?? [])]
-  if (profile.arrivalDate || profile.departureDate || profile.doneAlready) {
-    history.push({
-      arrivalDate: profile.arrivalDate,
-      departureDate: profile.departureDate,
-      doneAlready: profile.doneAlready,
-      // What they thought of it is the most valuable thing the stay produced:
-      // it is what makes the next welcome-back worth reading.
-      feedback: profile.lastFeedback,
-    })
-  }
-
-  return {
-    // Facts that outlive a single holiday: who they are and where they come
-    // from do not change between one August and the next.
-    adults: profile.adults,
-    children: profile.children,
-    childrenAges: profile.childrenAges,
-    seniors: profile.seniors,
-    origin: profile.origin,
-    consentAsked: profile.consentAsked,
-    // Told once, remembered for good: a returning guest already knows how to
-    // opt out, and hearing it again on a new holiday reads like nagging.
-    pushOptOutHintSent: profile.pushOptOutHintSent,
-    // Written by a person at the Pro Loco, never by this module. Wiping it
-    // would delete someone else's work.
-    operatorNotes: profile.operatorNotes,
-    // The bot's own card goes with the holiday it described: "coppia senza
-    // auto, la moglie è celiaca, 22-26 agosto" is about a stay that is over,
-    // and carrying it into the next one filters a holiday nobody has
-    // described yet (contratto.md: "cancelliamo le note e itinerario").
-    //
-    // Cleared HERE, at the rollover, not when the guest accepts the renewal:
-    // the renewal is asked on the last day, while they are still in Sappada
-    // and can still write — wiping the card then would strip their coeliac
-    // and their lack of a car mid-conversation (conflitto sciolto con Andrea,
-    // opzione C, 2026-08-25).
-    notes: undefined,
-    // Kept in history, cleared from the live stay.
-    pastStays: history.slice(-5),
-    // Everything below is deliberately absent: a new holiday, asked afresh.
-    arrivalDate: undefined,
-    departureDate: undefined,
-    doneAlready: undefined,
-    itinerary: undefined,
-    // The plan belonged to the days that are over. Left behind it would be
-    // presented as "il vostro programma" on the first turn of a holiday whose
-    // dates we do not even know yet.
-    itineraryPlan: undefined,
-    // Both are about THIS trip: what limited them last winter (a plaster cast,
-    // a pregnancy) and what they felt like doing then are not facts about the
-    // person, and carrying them over silently filters a holiday they have not
-    // described yet. Asked again, like the dates.
-    constraints: undefined,
-    interests: undefined,
-    asked: [],
-    // Consumed: the restart it asked for has just happened.
-    restartRequested: undefined,
-    feedbackGiven: undefined,
-    lastFeedback: undefined,
-    // videoSent is NOT cleared: they have seen the presentation once, and a
-    // returning guest does not need to be introduced to Sappada again.
-    videoSent: profile.videoSent,
-  }
-}
-
-/**
- * Days of holiday left, or null when we do not know the departure.
- * Zero or negative means today is the last day (or it is already over).
- */
-function daysLeftInStay(profile: StayProfile | null, now: Date): number | null {
-  const departure = profile?.departureDate
-  if (!departure) return null
-  const departureMs = Date.parse(`${departure}T23:59:59`)
-  if (Number.isNaN(departureMs)) return null
-  return Math.ceil((departureMs - now.getTime()) / 86_400_000)
-}
-
-/**
- * Render the stay for the model, with the days remaining computed HERE.
- *
- * The count is derived from `departureDate` on every turn, never stored:
- * "3 giorni" written down on Monday is wrong by Wednesday, and the whole
- * point of knowing the stay is to concentrate the suggestions into the time
- * that is actually left.
- */
-/**
- * What formatStayBlock produced: the prompt text, and WHICH intake question it
- * put in front of the model.
- *
- * The key used to be a module-level `let` that the function assigned as a side
- * effect. Two turns being served at once on the same dyno shared it, so one
- * guest's pending question leaked into another's turn — and any turn that
- * returned early left the previous value standing (CLAUDE.md §10: no shared
- * state across conversations).
- */
-/**
- * The intake steps, in the order they are put to the guest.
- *
- * A union rather than free strings: the key ties together the settings entry
- * that supplies the wording, the `asked` marker that retires it, and the
- * save_preferences enum — a typo in any one of them would otherwise make a question
- * repeat forever or vanish silently.
- */
-export type IntakeKey =
-  | 'location'
-  | 'remoteNeeds'
-  | 'party'
-  | 'headcount'
-  | 'stay'
-  | 'composition'
-  | 'childrenAges'
-  | 'constraints'
-  | 'interests'
-  | 'itinerary'
-  | 'consent'
-  | 'name'
-
-export interface StayBlock {
-  text: string
-  askedKey: string | null
-  /** Every intake key shown this turn. All of them get marked as asked. */
-  askedKeys: string[]
-  /**
-   * The configured wording dictated this turn. Carried out so the
-   * one-question guard can tell OUR question — which may legitimately span
-   * several sentences — from questions the model added on its own.
-   */
-  askedQuestion: string | null
-}
-
-/**
- * The exact sentence to put to the guest for this intake step.
- *
- * Resolution order, CLAUDE.md §1A: the workspace's own text (edited in the
- * backoffice and merged into settings by the host) → this module's
- * settings.json default → `null`, meaning nothing is asked at all.
- *
- * `null` is a real answer, not a failure to paper over: a question nobody
- * configured is better skipped than improvised by the model or sent in the
- * wrong language.
- */
-function intakeQuestionFor(key: IntakeKey, settings: Settings): string | null {
-  const configured = settings.intakeQuestions?.[key]
-  return configured?.trim() ? configured.trim() : null
-}
-
-export function formatStayBlock(
-  profile: StayProfile | null,
-  now: Date,
-  returningGuest = false,
-  /**
-   * The guest's name, when the host already knows it (widget registration
-   * form) or the `remember` tool has captured it. Passed in so the intake can
-   * skip a question we already have the answer to — on WhatsApp there is no
-   * form, and without asking, the assistant never learns it at all.
-   */
-  knownName?: string,
-  /** Carries `intakeQuestions` — the wording this block dictates. */
-  settings: Settings = DEFAULT_SETTINGS,
-): StayBlock {
-  // A guest with no saved profile is precisely the one everything still has to
-  // be asked of. Returning early here meant the FIRST message — the only turn
-  // where the intake has not started at all — got no question and no key: the
-  // model improvised a seven-day plan for two people it knew nothing about,
-  // and the single-question guard stayed off because there was no pending key
-  // to guard (Andrea, live, 2026-08-23).
-  const stay: StayProfile = profile ?? ({} as StayProfile)
-
-  const lines: string[] = []
-
-  if (returningGuest && profile) {
-    const last = stay.pastStays?.[stay.pastStays.length - 1]
-    lines.push(
-      'È TORNATO — nuova vacanza. Salutalo come si saluta chi si rivede, non come uno sconosciuto:',
-      last?.doneAlready
-        ? `  la volta scorsa aveva fatto: ${last.doneAlready}. Ricordaglielo con piacere, e proponigli ` +
-          'qualcosa di nuovo oppure la stessa cosa in un\'altra stagione (le Cascatelle d\'inverno sono ' +
-          'un\'altra cosa).'
-        : '  non sappiamo cosa avesse fatto la volta scorsa.',
-      // The archived feedback is the sharpest thing we hold about a returning
-      // guest: it says what to steer AWAY from, which `doneAlready` alone
-      // never does.
-      ...(last?.feedback
-        ? [
-            `  alla fine ci aveva detto: ${last.feedback}. Che gli sia piaciuto o no, orienta le ` +
-              'proposte di quest\'anno di conseguenza.',
-          ]
-        : []),
-      '  Le date di questa vacanza NON le sai ancora: chiediglielo.',
-    )
-  }
-  const party: string[] = []
-  if (stay.adults) party.push(`${stay.adults} adulti`)
-  if (stay.children) {
-    party.push(
-      stay.childrenAges
-        ? `${stay.children} bambini (${stay.childrenAges})`
-        : `${stay.children} bambini`,
-    )
-  }
-  if (stay.seniors) party.push(`${stay.seniors} anziani`)
-  if (party.length > 0) lines.push(`In vacanza: ${party.join(', ')}`)
-  if (stay.origin) lines.push(`Arrivano da: ${stay.origin}`)
-  if (stay.presence === 'remote') {
-    lines.push(
-      '🚨 NON È A SAPPADA e non ha una vacanza in programma: è un contatto che scrive da casa. ' +
-        'NIENTE domande sul soggiorno (quanti siete, cosa vi piace, fino a quando…): aiutalo su ' +
-        'alloggi, eventi e informazioni con i fatti delle schede. Se dice che verrà o che sta ' +
-        "programmando una vacanza, salva SUBITO save_preferences presence='planned' (o 'in_loco' " +
-        'se è appena arrivato): da lì riparte il flusso normale.',
-    )
-  } else if (stay.presence === 'planned') {
-    lines.push(
-      'HA UNA VACANZA IN PROGRAMMA ma non è ancora a Sappada: trattalo come un ospite futuro — ' +
-        "date, con chi viene e interessi valgono per quando arriverà, e l'itinerario glielo puoi " +
-        'proporre per quelle date. Quando ti dice che è arrivato, salva ' +
-        "save_preferences presence='in_loco'.",
-    )
-  }
-  if (stay.interests) {
-    lines.push(
-      `🚨 GLI INTERESSA: ${stay.interests}. Te l'hanno detto loro, rispondendo a una domanda ` +
-        'esplicita: il PRIMO consiglio che dai deve essere di questo tipo. Un guest che ha ' +
-        'risposto "sport" e si è sentito proporre il museo ha capito che la domanda era finta ' +
-        '(Andrea, 2026-08-25). Se il meteo o un vincolo rendono impraticabile quello che vogliono, ' +
-        'dillo e proponi la cosa più vicina — non cambiare argomento in silenzio. Il resto lo ' +
-        'proponi dopo, se serve.',
-    )
-  }
-
-  if (stay.constraints) {
-    lines.push(
-      `⚠️ DA TENERE PRESENTE SEMPRE: ${stay.constraints}. Filtra OGNI proposta su questo, senza ` +
-        'ricordarglielo ogni volta: se non puoi rispettarlo, dillo apertamente e proponi altro.',
-    )
-  }
-  if (stay.arrivalDate) {
-    const arrivalDay = new Date(`${stay.arrivalDate}T12:00:00`)
-    const arrivalLabel = Number.isNaN(arrivalDay.getTime())
-      ? stay.arrivalDate
-      : arrivalDay.toLocaleDateString('it-IT', {
-          timeZone: TIMEZONE,
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        })
-    lines.push(`Arrivo: ${stay.arrivalDate} (${arrivalLabel})`)
-  }
-
-  if (stay.departureDate) {
-    const departure = Date.parse(`${stay.departureDate}T23:59:59`)
-    if (!Number.isNaN(departure)) {
-      // Counted between CALENDAR DAYS in Sappada, not from a millisecond
-      // difference: `T23:59:59` is parsed in the host's zone, so on a UTC dyno
-      // the small hours of a Rome day still belonged to the previous one and
-      // the count came out a day short (Andrea, live, 2026-08-23).
-      //
-      // DAYS OF PRESENCE, not nights: a guest who says "restiamo 5 giorni" is
-      // counting the days they are here, arrival day included — so the day of
-      // departure itself is 1, not 0 (Andrea's call, 2026-08-23). The +1 is
-      // what turns a calendar gap into that count.
-      const todayInSappada = now.toLocaleDateString('en-CA', { timeZone: TIMEZONE })
-      const daysLeft =
-        Math.round(
-          (Date.parse(`${stay.departureDate}T12:00:00Z`) -
-            Date.parse(`${todayInSappada}T12:00:00Z`)) /
-            86_400_000,
-        ) + 1
-      // With the weekday spelled out: the model said "giovedì 2 settembre"
-    // about a date it had just saved as the 3rd — the day of the week is
-    // arithmetic, and arithmetic is not what a language model is for
-    // (Andrea, 2026-08-23).
-    const departureDay = new Date(`${stay.departureDate}T12:00:00`)
-    const departureLabel = Number.isNaN(departureDay.getTime())
-      ? stay.departureDate
-      : departureDay.toLocaleDateString('it-IT', {
-          timeZone: TIMEZONE,
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        })
-    lines.push(
-      `Partenza: ${stay.departureDate} (${departureLabel}) — usa QUESTO giorno della settimana, non calcolarlo tu`,
-    )
-      if (daysLeft > 1) {
-        lines.push(
-          `GIORNI RIMANENTI: ${daysLeft}. Concentra i consigli in questo tempo: proponi prima le cose ` +
-            `che non vorresti si perdessero.`,
-        )
-      } else if (daysLeft === 1) {
-        lines.push(
-          'OGGI È IL GIORNO DELLA PARTENZA. Proponi solo cose che stanno in una mattinata, e chiedi come ' +
-            'è andata la vacanza (cosa è piaciuto e cosa no) e salvala con save_feedback, poi salutali ' +
-            'dicendo che li aspettiamo di nuovo.',
-        )
-      } else if (daysLeft <= 0) {
-        // Not an ending: the guest can write whenever they like, and often
-        // does (a phone left behind, a recipe, a question about next year).
-        // What changes is the JOB — from planning their days to closing the
-        // relationship well and keeping it open (Andrea, 2026-08-23).
-        lines.push(
-          'LA VACANZA È FINITA (o finisce oggi). Non proporre più attività da fare qui: non sono più in ' +
-            'zona. Continua però a rispondere normalmente a qualsiasi cosa ti chiedano.',
-          'In questo momento hai tre cose da fare, una per messaggio, senza affollarle:',
-          '  1. Chiedi come è andata — cosa è piaciuto e cosa no — e salva con save_feedback.',
-          '  2. Il consenso che avevano dato valeva SOLO per la permanenza, che ora è finita. Chiedi se ' +
-            'vogliono RINNOVARLO per la prossima volta: ' +
-            'gli eventi dell\'anno (il Carnevale, le feste d\'estate) e le offerte di alloggio. ' +
-            'SOLO QUESTE DUE: fuori stagione le promozioni generiche del territorio non servono a chi ' +
-            'non è qui, e un rinnovo più leggero si ottiene molto più facilmente. Chiedi su quale ' +
-            'delle due, o entrambe, e registra con save_push_consent indicando SOLO i topics che ' +
-            'hanno nominato — mai `offers` in questo momento. Ricorda anche qui, in una riga, che ' +
-            'possono farli smettere quando vogliono, basta che ce lo dicano. ' +
-            'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
-            'dato all\'arrivo.',
-          '  3. Salutali dicendo che li aspettiamo di nuovo, con calore, come si saluta un ospite sulla porta.',
-          stay.feedbackGiven
-            ? '  ⚠️ IL FEEDBACK È GIÀ STATO DATO: non richiederlo, passa direttamente al punto 2 e 3.'
-            : '  Il feedback non è ancora stato raccolto.',
-        )
-      }
-    }
-  }
-
-  if (stay.operatorNotes) {
-    lines.push(
-      `NOTA DELLA PRO LOCO su questo ospite: ${stay.operatorNotes}. Tienine conto, ma non citarla ` +
-        'mai apertamente: è scritta per noi, non per lui.',
-    )
-  }
-
-  lines.push(
-    'Se il cliente CORREGGE o AGGIORNA uno di questi dati — partono prima, si è aggiunta una persona, ' +
-      'cambia l\'alloggio — richiama subito save_preferences con il valore NUOVO: sovrascrive quello vecchio, ' +
-      'e da lì in poi i giorni rimanenti e i consigli si ricalcolano da soli.',
-  )
-
-  // The card the Pro Loco reads. Shown back to the model so it rewrites the
-  // paragraph it already wrote instead of starting a new one each time.
-  if (stay.notes) {
-    lines.push(`SCHEDA (come l'hai scritta finora): ${stay.notes}`)
-  }
-  lines.push(
-    'OGNI VOLTA che impari qualcosa di nuovo su di loro, insieme al campo giusto risalva anche `notes` ' +
-      'con save_preferences: è la scheda che legge la Pro Loco, tutta la vacanza in un paragrafo — chi sono, ' +
-      'quando ci sono, da dove vengono, cosa li limita, cosa gli piace, cosa hanno già fatto. ' +
-      'Riscrivila INTERA ogni volta, non aggiungere righe in fondo. Non è un messaggio per il cliente: ' +
-      'non parlargliene mai.',
-  )
-
-  if (stay.doneAlready) {
-    lines.push(
-      `GIÀ FATTO (non riproporlo, semmai costruiscici sopra): ${stay.doneAlready}`,
-      // Not proposing it again is half the job. The other half is READING the
-      // reaction: a walk that was too tiring rules out the other long ones,
-      // a disappointing dinner means suggest a different kind of place, and
-      // something they loved is the direction to go further in (Andrea,
-      // 2026-08-23). This is what makes the next proposal follow from the
-      // last one instead of restarting from a generic list.
-      'Se accanto a una di queste cose c\'è come è andata, USALA per scegliere la prossima: se una ' +
-        'non è piaciuta NON proporne una simile, cambia genere; se una è piaciuta molto, vai in ' +
-        'quella direzione. Non commentare il fatto che te lo ricordi, usalo e basta.',
-    )
-  }
-
-  // What they told us at the end of a PREVIOUS holiday. Saved and archived
-  // since the beginning, but never shown to the model, so it changed nothing
-  // (live check, 2026-08-23).
-  if (stay.lastFeedback) {
-    lines.push(
-      `COSA CI AVEVA DETTO L'ULTIMA VOLTA: ${stay.lastFeedback}. Tienine conto in ogni proposta.`,
-    )
-  }
-
-  // What is still open, and what must never be asked again. Computed here so
-  // the model is told plainly instead of inferring it from absence — absence
-  // is exactly what it gets wrong, re-asking a question the guest ignored.
-  const asked = new Set(stay.asked ?? [])
-
-  // WHICH question comes next is decided by the intake machine — one
-  // declarative table, in intake-machine.ts, that is also consulted after the
-  // model saves the guest's answer. Two callers, one authority: that is what
-  // stops the queue and the guards from disagreeing (Andrea, 2026-08-25).
-  const intakeCtx: IntakeContext = { profile: stay, asked, knownName }
-  const nextStep = nextIntakeStep(intakeCtx)
-
-  const askedKey = nextStep?.key ?? null
-  // Only the key actually put to the guest is marked as asked.
-  //
-  // `party` used to retire `stay` with it, back when one question stood for
-  // both. Now `stay` is its own step, asked when the guest answers only half
-  // ("siamo due adulti") — and retiring it here meant it was gone before it
-  // could ever be asked, so nobody learned the dates (2026-08-25).
-  const askedKeys = askedKey ? [askedKey] : []
-
-  // The question is DICTATED, not described.
-  //
-  // This block used to explain each question to the model and let it compose
-  // the sentence ("with whom — NAME THE THREE CATEGORIES…"). Describing invites
-  // composing, and composing is how three questions ended up in one numbered
-  // list on a first turn (Andrea, live, 2026-08-24: "una alla volta le
-  // domande"). The same lesson custom-demorobot learned: the code owns WHICH
-  // question and its WORDING, the model owns only the language it is said in.
-  const question = askedKey ? intakeQuestionFor(askedKey as IntakeKey, settings) : null
-
-  if (askedKey && question) {
-    lines.push(
-      '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
-      'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
-      'davvero, con i fatti che hai, e SOLO DOPO aggiungi la domanda qui sotto.',
-      '',
-      '## LA DOMANDA DA FARE ADESSO',
-      '',
-      'Questa istruzione ha la precedenza su qualsiasi altra cosa tu possa dedurre dalla',
-      'conversazione. Fai QUESTA domanda, alla lettera, tradotta nella lingua del cliente:',
-      '',
-      question,
-      '',
-      // The sentence demorobot has and demosappada did not: the question IS
-      // the reply, not something appended to one. Without it the model wrote
-      // three museums with addresses, an offer of more detail and a link, and
-      // put the question at the bottom (Andrea, 2026-08-25: "devono essere
-      // domande secche una dopo l'altra").
-      ...(askedKey === 'itinerary'
-        ? []
-        : [
-            'MANDALA COME RISPOSTA INTERA. Se il cliente non ti ha chiesto niente, il tuo messaggio',
-            'è SOLO questa domanda: niente consigli, niente elenchi di posti, niente link, niente',
-            'meteo, niente offerte di ulteriori dettagli, nemmeno mezza riga di introduzione.',
-          ]),
-      'Se invece il cliente TI HA CHIESTO qualcosa, rispondi prima a lui — davvero, con i fatti',
-      'che hai — e la domanda va in coda, da sola.',
-      'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
-      'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
-      'NON toccare il campo `asked` di save_preferences: lo registra il sistema.',
-    )
-
-    // The branch question needs its reading key: the answer decides which of
-    // the three flows this guest gets, and the model is the one reading the
-    // nuance (contratto.md, 2026-08-27: "devi essere intelligente... in tutti
-    // i casi il sistema deve rispondere bene").
-    if (askedKey === 'location') {
-      lines.push(
-        '',
-        'La risposta ti dice DOVE si trova, e va salvata SUBITO con save_preferences:',
-        "- è già a Sappada («sì», «siamo qui», «arrivati ieri») → presence='in_loco'",
-        "- la vacanza è decisa ma non è ancora qui («veniamo il prossimo mese», «arriviamo sabato») → presence='planned', e salva anche le date che nomina",
-        "- non è qui e non ha piani («no», «cerco solo informazioni») → presence='remote'",
-        'Se la risposta non chiarisce nulla, non salvare niente: la domanda resta aperta.',
-      )
-    }
-
-    // The turn that closes the intake. Every question has been answered, the
-    // guest has just given their name, and this is the first message where the
-    // assistant has the whole picture — so it is the one that must READ like
-    // it (Andrea, 2026-08-24: "Ciao [nome] oggi il meteo a Sappada è...").
-    //
-    // Shaped here rather than left to the model: without it the plan question
-    // arrives bare, on the turn where using their name for the first time is
-    // worth the most. The CONTENT stays the model's — the weather is whatever
-    // get_weather returned, the suggestion whatever fits their card.
-    if (askedKey === 'itinerary') {
-      lines.push(
-        '',
-        '## COME SI APRE QUESTO MESSAGGIO',
-        '',
-        'È il messaggio che chiude le domande: hai tutte le risposte e sai come si chiama.',
-        'Scrivilo in QUEST\'ORDINE, quattro pezzi e nient\'altro:',
-        // The name is NOT interpolated here: on the very turn the guest gives
-        // it, `remember` writes it to state AFTER this prompt was built, so
-        // it would still be empty. The model has the name in front of it — it
-        // is the message it is answering — so it is told to use it.
-        '1. "Perfetto <NOME>," — chiamalo per nome, con il nome che ti ha appena detto.',
-        '2. Com\'è il meteo a Sappada (il dato VERO da get_weather, mai stimato).',
-        '3. UN consiglio solo, coerente con quel meteo e con la sua scheda.',
-        '4. La domanda qui sopra, alla lettera, da sola in fondo.',
-        ...(settings.closingLine?.trim()
-          ? [`5. E per chiudere, esattamente questa riga: "${settings.closingLine.trim()}"`]
-          : []),
-        'Niente elenchi numerati di posti, niente riepilogo di quello che ti ha detto,',
-        'niente altre domande, e NON offrire nulla che non ti abbia chiesto.',
-      )
-    }
-  } else if (askedKey && !question) {
-    // Configuration says nothing for this key, so nothing is asked. Silence
-    // beats an English sentence sent to a guest writing in Italian, and beats
-    // the model improvising a question of its own (CLAUDE.md §1A).
-    // eslint-disable-next-line no-console
-    console.error(`[demosappada][intake] no question configured for "${askedKey}" — skipped`)
-    lines.push('NON FARE DOMANDE sul suo soggiorno in questo messaggio.')
-  } else {
-    lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
-  }
-
-  if (asked.size > 0 || stay.consentAsked || stay.itinerary) {
-    // The key being dictated THIS turn must not also sit in the "never ask
-    // again" list — since the second intake pass (intake-machine.ts) a
-    // still-unanswered question CAN be dictated a second time, and listing
-    // it here as forbidden would have the prompt contradict itself.
-    const done = [
-      ...Array.from(asked).filter((k) => k !== askedKey),
-      ...(stay.consentAsked ? ['consent'] : []),
-      ...(stay.itinerary ? ['itinerary'] : []),
-    ]
-    lines.push(
-      `GIÀ CHIESTO (non richiederlo MAI più, nemmeno se non ha risposto): ${done.join(', ')}`,
-    )
-  }
-
-  if (stay.consentAsked) {
-    lines.push(
-      'Il consenso per la permanenza è già stato chiesto. Non richiederlo ora: si torna sul tema SOLO ' +
-        'alla partenza, e lì riguarda il rinnovo per la prossima volta (eventi dell\'anno e alloggi).',
-    )
-  }
-
-  // The switch, always live. Not tied to consentAsked: someone can ask to be
-  // left alone before anyone has asked them anything, and the request must be
-  // honoured the moment it is made.
-  lines.push(
-    'SE IN QUALSIASI MOMENTO ti dicono che non vogliono più ricevere messaggi — anche solo "basta ' +
-      'notifiche", "non scriveteci più" — chiama SUBITO save_push_consent con granted=false, ' +
-      'confermaglielo in una riga e non tornarci sopra. Se invece chiedono di ricevere di nuovo ' +
-      'qualcosa, chiama save_push_consent con granted=true e SOLO i topics che hanno nominato ' +
-      '(eventi, alloggi, offerte del territorio). Non chiedere loro di scrivere UNSUBSCRIBE: ' +
-      'basta che te lo dicano a parole.',
-  )
-
-  if (stay.itineraryPlan) {
-    lines.push(
-      'PROGRAMMA CONCORDATO (è il vostro piano: portalo avanti, non ricominciare da capo):',
-      ...stay.itineraryPlan.split('\n').map((line) => `  ${line}`),
-      'Quando qualcosa cambia — meteo, una cosa già fatta, una partenza anticipata — aggiorna SOLO i ' +
-        'giorni interessati e risalvalo INTERO con save_itinerary.',
-      // Asking during the stay, not only at the end: the answer is what feeds
-      // `doneAlready`, and `doneAlready` is what stops the same excursion
-      // being proposed twice. Left to the end of the holiday it arrives too
-      // late to be useful to THIS guest (Andrea, 2026-08-23).
-      'Se il programma prevedeva qualcosa per IERI o per OGGI e non sai ancora com\'è andata, chiedilo ' +
-        'in una riga, con naturalezza, in coda alla tua risposta: sapere se ci sono stati e se è ' +
-        'piaciuto è quello che ti evita di riproporglielo. Quello che ti dicono va salvato subito con ' +
-        'save_preferences in `doneAlready`. Non insistere se non rispondono.',
-    )
-  }
-
-  if (stay.itinerary === 'no') {
-    lines.push('Ha detto che NON vuole un programma: rispondi solo alle sue domande, non pianificare.')
-  } else if (stay.itinerary === 'yes') {
-    lines.push('Vuole il programma: sei il suo pianificatore, porta avanti il piano.')
-  }
-
-  if (lines.length === 0) return { text: '', askedKey, askedKeys, askedQuestion: question }
-  return { text: ['', '═══ QUESTO OSPITE ═══', ...lines].join('\n'), askedKey, askedKeys, askedQuestion: question }
-}
-
-/**
- * Tags the module maintains on the customer record.
- *
- * They exist for the campaign side of the product: a promotion for tonight's
- * dinner must reach only the guests who are IN TOWN tonight, and an offer on
- * accommodation only those who agreed to hear about accommodation. Segmenting
- * at send time is what makes the consent worth something.
- *
- * `INLOCO` is DERIVED from the stay dates, never asked and never set by the
- * model: the guest does not announce their departure, the calendar does.
- */
-/**
  * The words the guest was promised: writing one revokes the consent.
  *
  * This is NOT phrase-based intent detection (CLAUDE.md §14) — nothing here
@@ -2230,30 +628,6 @@ function seasonOf(now: Date): string {
   if (month >= 3 && month <= 5) return 'primavera — stagione di mezzo: impianti chiusi, quota alta ancora innevata, verifica sempre'
   return 'autunno — stagione di mezzo: impianti chiusi, molti rifugi chiusi, verifica sempre'
 }
-
-/**
- * Renewed consent for the NEXT holiday, given on the way home.
- *
- * The counterpart of INLOCO: that one says "is here now" and is kept in sync
- * from the dates; this one says "wants to hear from us before coming back",
- * and is set only when the guest says yes to the renewal (contratto.md).
- */
-const TAG_NOT_IN_LOCO = 'NO-INLOCO'
-/**
- * A prospect writing from home, with no stay at all (contratto.md,
- * 2026-08-27). Deliberately NOT `NO-INLOCO`: that one records a CONSENT (the
- * renewal for the next holiday) and reusing it here would drop people who
- * never agreed to anything into a consented campaign segment. This tag only
- * says who they are; any push to them still needs its own consent.
- */
-const TAG_REMOTE_PROSPECT = 'NO-A-SAPPADA'
-const TAG_INTEREST_EVENTS = 'INTERESSE-EVENTI'
-const TAG_INTEREST_LODGING = 'INTERESSE-ALLOGGI'
-const TAG_INTEREST_OFFERS = 'INTERESSE-OFFERTE'
-
-// isCurrentlyInTown and TAG_IN_LOCO moved to shared/stay-inloco.ts: the
-// scheduler's stale-inloco-cleanup job needs the SAME derivation for guests
-// who departed and never wrote again. One authority, imported by both.
 
 /** Render the structures for the model: who they are, how to reach them. */
 function formatCatalogue(entries: CatalogueEntry[]): string {
@@ -2388,52 +762,6 @@ async function fetchWeather(sessionId: string, now: Date): Promise<WeatherReport
 
 // ── Prompt assembly ───────────────────────────────────────────────────────
 
-/**
- * How many FAQ entries travel with a turn.
- *
- * All 85 of this tenant's entries used to go out on EVERY message — ~31k
- * tokens to answer "ciao" — which is most of what a turn costs and is what
- * pushed the prompt past the provider's per-request ceiling (Andrea,
- * 2026-08-25: "non va in locale").
- *
- * Twenty-four, not five: the entries are the assistant's ONLY source of facts,
- * so a relevant one left out is a question it can no longer answer. The number
- * is generous on purpose — the saving comes from dropping the long tail, not
- * from cutting close to the bone.
- */
-const FAQ_BUDGET = 24
-
-/**
- * The FAQ entries worth sending for THIS message.
- *
- * Ranked by the same topic-overlap measurement the media guard uses — no
- * phrasing or intent is read (CLAUDE.md §14), only how much an entry's
- * distinctive words overlap the conversation.
- *
- * Scored against the guest's message AND the recent history, because a
- * follow-up ("e gli orari?") carries almost no words of its own: the subject
- * lives in what was said before.
- *
- * Under the budget nothing is selected at all — with a short catalogue the
- * whole thing is cheaper than deciding what to leave out.
- */
-function selectRelevantFaqs(faqs: FaqEntry[], context: string): FaqEntry[] {
-  if (faqs.length <= FAQ_BUDGET) return faqs
-  const ranked = faqs
-    .map((faq) => ({ faq, score: subjectScore(faq, context, faqs) }))
-    .sort((a, b) => b.score - a.score)
-  const chosen = ranked.slice(0, FAQ_BUDGET).map((r) => r.faq)
-  // eslint-disable-next-line no-console
-  console.error(`[demosappada][faq-budget] ${chosen.length}/${faqs.length} entries sent`)
-  return chosen
-}
-
-function formatFaqBlock(faqs: FaqEntry[]): string {
-  if (faqs.length === 0) return ''
-  const entries = faqs.map((f, i) => `[${i}] Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
-  return ['═══ APPROVED CONTENT (your only source of facts) ═══', '', entries].join('\n')
-}
-
 function formatRuntimeBlock(params: {
   now: Date
   channel: string
@@ -2524,73 +852,6 @@ function formatRuntimeBlock(params: {
   }
 
   return lines.join('\n')
-}
-
-// ── LLM ───────────────────────────────────────────────────────────────────
-
-interface ToolCall {
-  id?: string
-  function: { name: string; arguments?: string }
-}
-
-interface Message {
-  role: 'system' | 'user' | 'assistant' | 'tool'
-  content: string | null
-  tool_calls?: ToolCall[]
-  tool_call_id?: string
-  name?: string
-}
-
-interface LlmResult {
-  content: string
-  toolCalls: ToolCall[]
-  tokensUsed: number
-}
-
-async function callLLM(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
-  if (!API_KEY) throw new Error('OPENROUTER_API_KEY is not set')
-
-  const response = await fetch(`${BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: settings.model,
-      temperature: settings.temperature,
-      max_tokens: settings.maxTokens,
-      messages,
-      tools,
-    }),
-  })
-
-  if (!response.ok) {
-    const body = await response.text()
-    throw new Error(`LLM HTTP ${response.status}: ${body.slice(0, 300)}`)
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[] } }>
-    usage?: { total_tokens?: number }
-  }
-
-  const message = data.choices?.[0]?.message
-  return {
-    content: message?.content ?? '',
-    toolCalls: message?.tool_calls ?? [],
-    tokensUsed: data.usage?.total_tokens ?? 0,
-  }
-}
-
-function safeParseArgs(raw: string | undefined): Record<string, unknown> {
-  if (!raw) return {}
-  try {
-    const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
-  } catch {
-    return {}
-  }
 }
 
 // ── Turn ──────────────────────────────────────────────────────────────────
@@ -2812,7 +1073,6 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     // eslint-disable-next-line no-console
     console.error(`[demosappada][tools-off] not offered this turn: ${missingBuiltIns.join(', ')}`)
   }
-
 
   // INLOCO is kept in sync by CODE, every turn, from the stay dates. It is the
   // segment a campaign for tonight is sent to, so it must be true even when
@@ -3120,11 +1380,64 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   let forcedSaveDone = false
   /** True when save_push_consent granted the consent on THIS turn. */
   let consentJustGranted = false
+  /** True when save_itinerary stored a plan on THIS turn — the delivery turn. */
+  let itineraryJustSaved = false
   /** Last free-text answer the model produced, kept as a fallback. */
   let pendingReply = ''
   let emptyRetryDone = false
   let droppedQuestionRetryDone = false
   let missingExamplesRetryDone = false
+
+  // 🍽️ The end of the itinerary-delivery message, shaped by CODE.
+  //
+  // The plan went out ending in "Se avete bisogno di ulteriori dettagli…
+  // contattare l'InfoPoint…" and "Se avete domande o volete modificare
+  // qualcosa, fatemelo sapere!" — model filler where the tenant's follow-up
+  // belongs (Andrea, live, 2026-08-27: "da togliere; che l'itinerario finisca
+  // con vuoi consigli su dove andare a mangiare prodotti tipici locali?").
+  // Same mechanism as the opt-out hint: the trailing offers are stripped and
+  // the configured question appended deterministically, once per stay, on the
+  // turn the plan is saved (the prompt makes that the delivery turn:
+  // "salvalo SUBITO con save_itinerary, nella stessa risposta").
+  //
+  // Shared by the normal path and the hops-exhausted fallback — an itinerary
+  // is exactly the heavy turn most likely to land on the fallback.
+  // `intakeQuestionWentOut` keeps the one-question rule: while an intake
+  // question is going out, nothing is appended under it.
+  const applyItineraryClosing = async (
+    text: string,
+    replyLang: string | null | undefined,
+    intakeQuestionWentOut: boolean,
+  ): Promise<string> => {
+    if (!itineraryJustSaved || !text.trim()) return text
+    const firstDelivery = !stayProfile?.closingQuestionAsked && !intakeQuestionWentOut
+    const cleaned = stripTrailingOffers(text, firstDelivery)
+    if (cleaned.removed.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[demosappada][itinerary-close] dropped: ${cleaned.removed.join(' | ').slice(0, 200)}`,
+      )
+    }
+    let out = cleaned.text
+    const questionSource = settings.itineraryClosingQuestion?.trim()
+    if (firstDelivery && questionSource) {
+      const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
+      const question =
+        replyLang && replyLang.toLowerCase() !== sourceLang
+          ? await translateWelcome(questionSource, replyLang, settings)
+          : questionSource
+      if (!out.toLowerCase().includes(question.toLowerCase())) out = `${out}\n\n${question}`
+      if (customerId && input.config.handlers?.saveStayProfile) {
+        await input.config.handlers.saveStayProfile({
+          workspaceId: input.config.workspaceId,
+          customerId,
+          profile: { closingQuestionAsked: true },
+        })
+        if (stayProfile) stayProfile.closingQuestionAsked = true
+      }
+    }
+    return out
+  }
 
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
@@ -3211,6 +1524,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
       const checked: { text: string; removed: string[] } = stripUnverifiableContacts(reply, approvedContent)
       checked.text = stripWeatherHedges(checked.text)
+      if (stayWasSaved) {
+        const noAck = stripSaveAcknowledgment(checked.text)
+        if (noAck && noAck !== checked.text) {
+          // eslint-disable-next-line no-console
+          console.error('[demosappada][save-ack] dropped save acknowledgment opener')
+          checked.text = noAck
+        }
+      }
       {
         const inv = stripInventedLists(checked.text, approvedContent)
         if (inv.removed.length > 0) {
@@ -3543,13 +1864,21 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         asked: new Set(stayProfile?.asked ?? []),
         knownName,
       })
-      const effectiveKey = freshStep?.key ?? null
-      const effectiveQuestion = freshStep
+      let effectiveKey = freshStep?.key ?? null
+      let effectiveQuestion = freshStep
         ? intakeQuestionFor(freshStep.key as IntakeKey, settings)
         : null
       if (effectiveKey !== questionShown) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][intake-shift] "${questionShown}" → "${effectiveKey}"`)
+      }
+      const guestEngaged =
+        guestAskedSomething(userMessage) || guestSaidAside || detailAnswer || answersWithFacts
+      if (holdRepeatedQuestion(sessionId, effectiveKey, guestEngaged)) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][repeat-hold] "${effectiveKey}" held this turn`)
+        effectiveKey = null
+        effectiveQuestion = null
       }
 
       // Every fixed line the code inserts travels through the same translation
@@ -3575,7 +1904,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         key: effectiveKey,
         question: effectiveQuestion,
         questionTranslated,
-        guestAsked: guestAskedSomething(userMessage) || guestSaidAside || detailAnswer || answersWithFacts,
+        guestAsked: guestEngaged,
         closingLine: closingTranslated,
         intakeOpen: !!freshStep,
       })
@@ -3590,6 +1919,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         // eslint-disable-next-line no-console
         console.error(`[demosappada][intake-turn] dropped: ${turn.dropped.join(' | ').slice(0, 200)}`)
       }
+      checked.text = await applyItineraryClosing(checked.text, askLangForCheck, turn.asked)
       // 🔔 The opt-out line, prepended by CODE on the turn the guest accepts.
       //
       // It used to be an instruction inside save_push_consent's tool output,
@@ -3835,8 +2165,31 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           const str = (v: unknown) =>
             guestStatedFacts && typeof v === 'string' && v.trim() ? v.trim() : undefined
 
-          profile.adults = num(args.adults)
-          profile.children = num(args.children)
+          // 👥 Party numbers with PROVENANCE, same contract as the dates
+          // below: the message itself must carry a number — a digit or one of
+          // the number-words parseParty reads — for the model's numbers to
+          // have come from. From "VOGLIAMO VEDERE I RIFUGI" it saved adults:1,
+          // children:0, seniors:0; the machine believed the headcount was
+          // answered and never asked it again (Andrea, 2026-08-27 live: "tu
+          // hai inventato adulti 1"). The code reads no meaning (§14): real
+          // answers flow through the deterministic answer-capture regardless,
+          // so only inventions are lost.
+          const partyAnchored =
+            probe.adults !== undefined ||
+            probe.children !== undefined ||
+            probe.seniors !== undefined ||
+            /\d/.test(userMessage)
+          const partyRefused =
+            !partyAnchored &&
+            (num(args.adults) !== undefined ||
+              num(args.children) !== undefined ||
+              num(args.seniors) !== undefined)
+          if (partyRefused) {
+            // eslint-disable-next-line no-console
+            console.error('[demosappada][party-guard] refused adults/children/seniors — no number in message')
+          }
+          profile.adults = partyAnchored ? num(args.adults) : undefined
+          profile.children = partyAnchored ? num(args.children) : undefined
           profile.childrenAges = str(args.childrenAges)
 
           // Where the guest stands with Sappada — the branch the whole intake
@@ -3871,7 +2224,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
                 ? `${previous}; ${interest}`
                 : interest
           }
-          profile.seniors = num(args.seniors)
+          profile.seniors = partyAnchored ? num(args.seniors) : undefined
 
           // 📅 Dates are accepted only with PROVENANCE. From "siamo due
           // adulti" the model invented arrivo 25/8 and partenza 30/8, and the
@@ -4005,6 +2358,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             ? ' ATTENZIONE: arrivalDate/departureDate SCARTATE — rimanda save_preferences aggiungendo ' +
               "dateSaidAs con le parole ESATTE del cliente che dicono le date (es. \"fino a domenica\")."
             : ''
+          // Same shape as dateNote (iron rule 2): a silent drop would leave
+          // the model believing the numbers were saved.
+          const partyNote = partyRefused
+            ? ' ATTENZIONE: adults/children/seniors SCARTATI — in questo messaggio il cliente non ha ' +
+              'detto quanti sono. Non inventare numeri: salva solo quello che scrive davvero.'
+            : ''
           toolOutput = JSON.stringify({
             ok: saved,
             instruction:
@@ -4012,7 +2371,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
                 ? 'Saved. Now ask briefly how it went — one short question, in their language. Their answer ' +
                   'goes to save_feedback. Do not ask again about something already recorded.'
                 : 'Saved. Do not thank them for the information or repeat it back: just carry on helping.') +
-              dateNote,
+              dateNote +
+              partyNote,
           })
         }
       } else if (name === 'save_itinerary') {
@@ -4046,15 +2406,34 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           } else if (!plan) {
             toolOutput = JSON.stringify({ ok: false, error: 'empty_plan' })
           } else {
+            // `itinerary: 'yes'` only when the offer was actually PUT — the
+            // same rule save_preferences enforces. The model called
+            // save_itinerary on its own while chatting about rifugi, the flag
+            // closed the step, and the intake ended without the offer the
+            // contract closes on (Andrea, 2026-08-27 live: "alla fine non
+            // chiedi se vogliono un itinerario?"). The PLAN itself is always
+            // kept: a guest who asked for one spontaneously must not lose it,
+            // and the still-open step guarantees the offer goes out anyway.
+            const offerWasPut =
+              stayProfile?.itinerary === 'asked' || questionsShown.includes('itinerary')
+            if (!offerWasPut) {
+              // eslint-disable-next-line no-console
+              console.error("[demosappada][itinerary-guard] plan saved, 'yes' refused — offer never put")
+            }
             const saved = await input.config.handlers!.saveStayProfile!({
               workspaceId: input.config.workspaceId,
               customerId,
-              profile: { itineraryPlan: plan, itinerary: 'yes' },
+              profile: offerWasPut
+                ? { itineraryPlan: plan, itinerary: 'yes' }
+                : { itineraryPlan: plan },
             })
+            if (saved) itineraryJustSaved = true
             toolOutput = JSON.stringify({
               ok: saved,
               instruction:
-                'Plan saved. Do not read it back to the customer — they just agreed to it. Carry on.',
+                'Plan saved. Do not read it back to the customer — they just agreed to it. End the ' +
+                'message with the plan itself: no offers of further help, no contact suggestions, no ' +
+                'extra questions after it — the closing line is added automatically.',
             })
           }
         }
@@ -4250,6 +2629,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
     checked.text = stripWeatherHedges(checked.text)
+    if (stayWasSaved) {
+      const noAck = stripSaveAcknowledgment(checked.text)
+      if (noAck && noAck !== checked.text) {
+        // eslint-disable-next-line no-console
+        console.error('[demosappada][save-ack] dropped save acknowledgment opener (fallback)')
+        checked.text = noAck
+      }
+    }
     {
       const inv = stripInventedLists(checked.text, approvedContent)
       if (inv.removed.length > 0) {
@@ -4277,6 +2664,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
     // Same composition as the normal path: a turn that ran out of hops must
     // not be shaped by different rules than one that did not.
+    let fallbackAsked = false
     if (questionShown) {
       const fallbackLang = lang
         ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
@@ -4289,10 +2677,25 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         asked: new Set(stayProfile?.asked ?? []),
         knownName,
       })
-      const fallbackKey = freshStep?.key ?? null
-      const fallbackQuestion = freshStep
+      let fallbackKey = freshStep?.key ?? null
+      let fallbackQuestion = freshStep
         ? intakeQuestionFor(freshStep.key as IntakeKey, settings)
         : null
+      // The full aside probe (parseParty/nextWeekdayDate) lives inside the
+      // hop loop and is out of scope here; this reduced shape errs toward
+      // KEEPING the model's prose — on this exhausted-budget path a kept
+      // answer is always safer than a discarded one.
+      const fallbackGuestEngaged =
+        guestAskedSomething(userMessage) ||
+        (userMessage.trim().split(/\s+/).length >= 3 &&
+          !/\d/.test(userMessage) &&
+          !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim()))
+      if (holdRepeatedQuestion(sessionId, fallbackKey, fallbackGuestEngaged)) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][repeat-hold] "${fallbackKey}" held this turn (fallback)`)
+        fallbackKey = null
+        fallbackQuestion = null
+      }
       const translated =
         fallbackQuestion && fallbackLang && fallbackLang.toLowerCase() !== sourceLang
           ? await translateWelcome(fallbackQuestion, fallbackLang, settings)
@@ -4302,24 +2705,24 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         key: fallbackKey,
         question: fallbackQuestion,
         questionTranslated: translated,
-        // The full aside probe (parseParty/nextWeekdayDate) lives inside the
-        // hop loop and is out of scope here; this reduced shape errs toward
-        // KEEPING the model's prose — on this exhausted-budget path a kept
-        // answer is always safer than a discarded one.
-        guestAsked:
-          guestAskedSomething(userMessage) ||
-          (userMessage.trim().split(/\s+/).length >= 3 &&
-            !/\d/.test(userMessage) &&
-            !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim())),
+        guestAsked: fallbackGuestEngaged,
         closingLine: settings.closingLine,
         intakeOpen: !!freshStep,
       })
       checked.text = turn.text
+      fallbackAsked = turn.asked
       if (turn.dropped.length > 0) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][intake-turn] dropped: ${turn.dropped.join(' | ').slice(0, 200)}`)
       }
     }
+    checked.text = await applyItineraryClosing(
+      checked.text,
+      lang
+        ? resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage)
+        : getState(sessionId).language,
+      fallbackAsked,
+    )
     if (lang) {
       commitLanguageFromReply(
         sessionId,

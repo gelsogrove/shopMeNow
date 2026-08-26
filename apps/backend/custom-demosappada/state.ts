@@ -38,6 +38,14 @@ export interface SessionState {
   // dictated NEXT filed "2 bambini di 8 e 10 anni" under `constraints`
   // (2026-08-25).
   lastAskedKey?: string
+
+  // Pacing for the strict pipeline: when the guest sidesteps the pending
+  // question with a question of their own, the SAME question must not be
+  // stapled onto the very next reply — the turn ends on the answer, and the
+  // question returns one turn later (Andrea, 2026-08-27 live: "me la chiedi
+  // 2 volte?"). Set on the turn the repeat is held back, cleared on the turn
+  // it goes out again, so held and asked turns alternate until answered.
+  repeatCooldownKey?: string
 }
 
 export type PatchKey = 'name' | 'language' | 'phone'
@@ -115,6 +123,16 @@ export function updateState(
 
 export function resetState(sessionId: string): void {
   sessions.delete(sessionId)
+}
+
+// Named transitions for repeatCooldownKey: updateState skips undefined values
+// by design, so clearing needs its own door — same pattern as languageIsSeed.
+export function armRepeatCooldown(sessionId: string, key: string): void {
+  entry(sessionId).state.repeatCooldownKey = key
+}
+
+export function clearRepeatCooldown(sessionId: string): void {
+  entry(sessionId).state.repeatCooldownKey = undefined
 }
 
 // ── Persistence ───────────────────────────────────────────────────────────
