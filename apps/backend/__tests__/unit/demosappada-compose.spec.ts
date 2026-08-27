@@ -11,6 +11,7 @@
  * live; the test states the guarantee the code now owns.
  */
 import {
+  classifyTurn,
   composeIntakeTurn,
   guestAskedSomething,
   holdRepeatedQuestion,
@@ -207,5 +208,51 @@ describe("demosappada replyLacksSubstance — the general form of 'reply is book
   it("a reply that is only a DIFFERENT question from the dictated one still lacks substance", () => {
     const dictated = "Siete già a Sappada?"
     expect(replyLacksSubstance("Perfetto. E fino a quando vi fermate?", dictated)).toBe(true)
+  })
+})
+
+describe("demosappada classifyTurn — ONE authority on the turn's kind", () => {
+  // Every consumer (retry guard, composer, fallback) reads this predicate,
+  // so they can never disagree about "did the guest bring content to serve".
+  // Each case below is one of the 2026-08-28 live bugs, where two consumers
+  // deciding independently is exactly what broke.
+
+  it("a long request with no question mark is an ANSWER turn", () => {
+    // Live, three times: "Suggeriscimi un paio di escursioni di massimo 4
+    // ore..." — no "?", never declared by the model, first turn (nothing
+    // pending). It must still be served before our question goes out.
+    const msg =
+      "prossimo weekend a Sappada. Suggeriscimi per favore un paio di escursioni di massimo 4 ore"
+    expect(classifyTurn(msg, { machineAdvanced: true, hasPendingRequest: false })).toBe("answer")
+  })
+
+  it("a bare yes/no or a sub-3-word message is an ADVANCE turn", () => {
+    expect(classifyTurn("si", { machineAdvanced: true, hasPendingRequest: false })).toBe("advance")
+    expect(classifyTurn("niente", { machineAdvanced: true, hasPendingRequest: false })).toBe("advance")
+  })
+
+  it("a short answer that moved the machine forward is an ADVANCE turn", () => {
+    // "nessun bambino 3 adulti" answers composition+headcount: the next
+    // question IS the whole reply, no retry, no scolding the model.
+    expect(
+      classifyTurn("nessun bambino 3 adulti", { machineAdvanced: true, hasPendingRequest: false }),
+    ).toBe("advance")
+    expect(
+      classifyTurn("fino a domenica prossima", { machineAdvanced: true, hasPendingRequest: false }),
+    ).toBe("advance")
+  })
+
+  it("a short sentence that advanced NOTHING is an ANSWER turn", () => {
+    // "cerchiamo un albergo" (2026-08-28 live): filed under constraints by
+    // mistake, but as a turn it carries a request, not an answer.
+    expect(
+      classifyTurn("cerchiamo un albergo", { machineAdvanced: false, hasPendingRequest: false }),
+    ).toBe("answer")
+  })
+
+  it("an open pendingRequest forces ANSWER whatever the message shape", () => {
+    // The guest is owed a reply from an earlier turn: a bare "sì" to our
+    // consent question must not bury the excursion they asked about.
+    expect(classifyTurn("si", { machineAdvanced: true, hasPendingRequest: true })).toBe("answer")
   })
 })

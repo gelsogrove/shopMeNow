@@ -74,4 +74,18 @@ describe("demosappada content guard — markdown links are stripped whole", () =
     const { text } = stripUnverifiableContacts(reply, APPROVED)
     expect(text).toBe("Sappada è bellissima in ogni stagione.\n\nSe hai bisogno di altro, chiedi pure!")
   })
+
+  // 🚨 regression 2026-08-28 live: "Hotel La Baita ... Tel.. " — the model
+  // invented a phone number, the guard stripped it, and the "Tel." label it
+  // introduced stayed behind as a visibly amputated line. The husk goes with
+  // the value.
+  it("drops the contact label left orphaned by a stripped invented phone", () => {
+    const reply =
+      "Hotel La Baita — €€\nOffre camere confortevoli.\nTel. 0435 123999.\nDettagli: https://www.visitsappada.it/webcam-sappada.php"
+    const { text } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).not.toMatch(/Tel\W*$/m)
+    expect(text).toContain("camere confortevoli")
+    // The Dettagli line keeps its approved URL — a label WITH its value stays.
+    expect(text).toContain("Dettagli: https://www.visitsappada.it/webcam-sappada.php")
+  })
 })

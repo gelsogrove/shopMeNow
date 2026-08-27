@@ -200,13 +200,22 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
   if (removed.length > 0) {
     // Tidy the holes left behind: doubled spaces, orphaned punctuation,
     // and lines that held nothing but the stripped value.
+    //
+    // A stripped phone or URL can also leave its LABEL standing alone —
+    // "Tel.. " reached a guest after the invented number it introduced was
+    // removed (Andrea, 2026-08-28 live: "Hotel La Baita ... Tel.. "). A line
+    // whose only content is a contact label is the husk of a removed value:
+    // it goes with it. Stems over the bot's own output, like OFFER_STEM —
+    // never the guest's words (§14).
+    const ORPHAN_LABEL_RE =
+      /^[\s•\-*]*(?:tel(?:efono)?|phone|t[eé]l[eé]?(?:phone)?|e-?mail|mail|web|sito|website|dettagli|details|info(?:rmazioni)?|contatt[oi]|contacts?)\s*[.:,;]*\s*$/i
     text = text
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/[ \t]+([.,;:!?])/g, '$1')
       .split('\n')
       .filter((line, i, all) => {
         const bare = line.replace(/^[\s•\-*\d.)]+/, '').trim()
-        if (bare.length > 0) return true
+        if (bare.length > 0) return !ORPHAN_LABEL_RE.test(line)
         // Keep single blank lines used as paragraph breaks.
         return line.trim() === '' && all[i - 1]?.trim() !== ''
       })

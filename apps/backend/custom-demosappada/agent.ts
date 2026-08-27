@@ -64,8 +64,8 @@ import {
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
 import {
+  classifyTurn,
   composeIntakeTurn,
-  guestAskedSomething,
   holdRepeatedQuestion,
   intakeQuestionLacksExamples,
   renderPromptVariables,
@@ -1779,42 +1779,28 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // fammelo sapere!" sailed past it (no "?", not short) while "com'è il
       // tempo?" went unanswered (Andrea, 2026-08-28 live).
       //
-      // The trigger is the MESSAGE's shape, not a list of positive signals.
-      // The first version fired only on "?" / guestSaidAside / a declared
-      // pendingRequest — and a first-turn request with no question mark
-      // ("Suggeriscimi un paio di escursioni...") tripped none of them:
-      // guestSaidAside needs a PREVIOUS question, and pendingRequest needs
-      // the model to have already declared it, which is exactly what it had
-      // failed to do (Andrea, 2026-08-28 live, twice: "non hai risposto alla
-      // domanda"). Now only a message that CANNOT carry a request is exempt:
-      // fewer than 3 words, or a bare yes/no/ok — the two unambiguous §14
-      // shapes. NOT the parseParty probe and NOT the weekday check: the probe
-      // reads "massimo 4 ore" as adults=4 through its loose-number fallback,
-      // which would have exempted the very excursion request this exists to
-      // catch. A genuine short answer ("siamo 2 adulti", "fino a domenica")
-      // stays safe anyway: it advances the machine, so the outgoing question
-      // DIFFERS from `dictatedQuestion`, survives the strip, and the reply
-      // has substance — the retry only ever fires when the same question is
-      // going back out over a message that deserved an answer.
-      // A short message that ANSWERED the pending question is the one case a
-      // questions-only reply is legitimate: the machine advanced (the model's
-      // mid-turn saves are already on stayProfile here), the next question IS
-      // the whole turn by design. Six words is room for "nessun bambino 3
-      // adulti" or "fino a domenica prossima" — a real request does not fit.
-      const machineAdvanced =
-        nextIntakeStep({
-          profile: stayProfile,
-          asked: new Set(stayProfile?.asked ?? []),
-          knownName,
-        })?.key !== questionShown
-      const wordCount = userMessage.trim().split(/\s+/).length
-      const messageCouldCarryRequest =
-        wordCount >= 3 &&
-        !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim()) &&
-        !(machineAdvanced && wordCount <= 6)
+      // ONE authority decides what kind of turn this is — see classifyTurn
+      // (intake-compose.ts). The guard here, the composer below and the
+      // hops-exhausted fallback all read THIS value: tonight's regressions
+      // were each a pair of them deciding "did the guest bring content?"
+      // from different signals and disagreeing (Andrea, 2026-08-28: "non
+      // voglio accrocchi, voglio un bel design pattern").
+      //
+      // `machineAdvanced` is measured on the profile as it stands NOW — the
+      // model's mid-turn saves included. `hasPendingRequest` covers both the
+      // request declared THIS turn and one still carried from earlier turns.
+      const turnKind = classifyTurn(userMessage, {
+        machineAdvanced:
+          nextIntakeStep({
+            profile: stayProfile,
+            asked: new Set(stayProfile?.asked ?? []),
+            knownName,
+          })?.key !== questionShown,
+        hasPendingRequest: !!pendingRequestThisTurn || !!stayProfile?.pendingRequest,
+      })
       if (
         !droppedQuestionRetryDone &&
-        (guestAskedSomething(userMessage) || messageCouldCarryRequest || !!pendingRequestThisTurn) &&
+        turnKind === 'answer' &&
         replyLacksSubstance(checked.text, dictatedQuestion)
       ) {
         droppedQuestionRetryDone = true
@@ -2001,12 +1987,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         // eslint-disable-next-line no-console
         console.error(`[demosappada][intake-shift] "${questionShown}" → "${effectiveKey}"`)
       }
-      const guestEngaged =
-        guestAskedSomething(userMessage) ||
-        guestSaidAside ||
-        detailAnswer ||
-        answersWithFacts ||
-        !!pendingRequestThisTurn
+      // The composer obeys the SAME classification as the retry guard above —
+      // one authority, no second vote. The old OR of seven signals is gone:
+      // its members each caught one shape and missed the next, and the
+      // composer reading a different subset than the guard is how a forced
+      // answer got thrown away one line later (2026-08-28 live, 01:25: the
+      // excursion request met with "Perfetto. E fino a quando vi fermate?" —
+      // while the 01:16 run survived only because its answer happened to
+      // carry phone numbers). detailAnswer/answersWithFacts keep their real
+      // jobs (media, capture stand-down); they no longer vote here.
+      const guestEngaged = turnKind === 'answer'
       if (holdRepeatedQuestion(sessionId, effectiveKey, guestEngaged)) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][repeat-hold] "${effectiveKey}" held this turn`)
@@ -2869,16 +2859,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       let fallbackQuestion = freshStep
         ? intakeQuestionFor(freshStep.key as IntakeKey, settings)
         : null
-      // The full aside probe (parseParty/nextWeekdayDate) lives inside the
-      // hop loop and is out of scope here; this reduced shape errs toward
-      // KEEPING the model's prose — on this exhausted-budget path a kept
-      // answer is always safer than a discarded one.
+      // Same single authority as the main path — no reduced local variant:
+      // the fallback keeping its own shape rules is exactly the divergence
+      // classifyTurn exists to end (Andrea, 2026-08-28: "non voglio
+      // accrocchi").
       const fallbackGuestEngaged =
-        guestAskedSomething(userMessage) ||
-        !!pendingRequestThisTurn ||
-        (userMessage.trim().split(/\s+/).length >= 3 &&
-          !/\d/.test(userMessage) &&
-          !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim()))
+        classifyTurn(userMessage, {
+          machineAdvanced: fallbackKey !== questionShown,
+          hasPendingRequest: !!pendingRequestThisTurn || !!stayProfile?.pendingRequest,
+        }) === 'answer'
       if (holdRepeatedQuestion(sessionId, fallbackKey, fallbackGuestEngaged)) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][repeat-hold] "${fallbackKey}" held this turn (fallback)`)

@@ -25,6 +25,48 @@ export function guestAskedSomething(message: string): boolean {
 }
 
 /**
+ * THE single authority on what kind of turn this is (Andrea, 2026-08-28:
+ * "voglio un bel design pattern, non accrocchi") — the same role
+ * `nextIntakeStep` plays for WHICH question is due. Every consumer — the
+ * substance-retry guard, `composeIntakeTurn`, the hops-exhausted fallback —
+ * asks HERE, so they can never disagree again. Tonight's bugs were exactly
+ * that disagreement: the guard forced an answer out of the model and the
+ * composer, reading a DIFFERENT set of signals, threw it away.
+ *
+ *   - 'answer'  → the guest brought content to serve: the reply is the
+ *                 model's answer first, our ONE dictated question at the end
+ *                 ("rispondi all'utente e POI chiedi quello che vuoi").
+ *   - 'advance' → the guest only answered our pending question ("sì", "no",
+ *                 "fino a domenica", "nessun bambino 3 adulti"): the next
+ *                 question IS the whole reply.
+ *
+ * Shape-only, never intent (§14): a question mark, bare yes/no, word count,
+ * and whether the intake machine ADVANCED on this message — facts about
+ * form, computable in every language. A still-open `pendingRequest` forces
+ * 'answer' whatever the shape: the guest is owed a reply from an earlier
+ * turn, and a bare "sì" must not bury it again.
+ */
+export type TurnKind = 'answer' | 'advance'
+
+export function classifyTurn(
+  message: string,
+  opts: { machineAdvanced: boolean; hasPendingRequest: boolean },
+): TurnKind {
+  if (opts.hasPendingRequest) return 'answer'
+  const text = message.trim()
+  if (text.includes('?')) return 'answer'
+  if (/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(text)) return 'advance'
+  const words = text.split(/\s+/).length
+  if (words < 3) return 'advance'
+  // A short message that moved the machine forward is an answer to OUR
+  // question ("fino a domenica prossima", "nessun bambino 3 adulti"). Six
+  // words is room for those; a real request does not fit in six words
+  // without also failing to advance the machine.
+  if (opts.machineAdvanced && words <= 6) return 'advance'
+  return 'answer'
+}
+
+/**
  * Is this reply nothing but our own intake question?
  *
  * Short, ends in a question mark, and carries no fact of its own. When the
