@@ -1,0 +1,5 @@
+{
+  "name": "@echatbot/shared",
+  "private": true,
+  "type": "module"
+}

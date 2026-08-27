@@ -42,7 +42,17 @@ import { stripUnverifiableContacts } from './content-guards.js'
 import { nextIntakeStep } from './intake-machine.js'
 import { getSappadaWeather, TIMEZONE, type WeatherReport } from './weather.js'
 import { MAX_TOOL_HOPS, WELCOME_BACK_STALE_MS } from './bounds.js'
-import { isCurrentlyInTown, TAG_IN_LOCO } from '@shared/stay-inloco'
+// Relative on purpose, like the scheduler's import of the same file: this
+// module is loaded at RUNTIME via tsx's tsImport, which does not resolve
+// tsconfig path aliases — '@shared/stay-inloco' compiled fine and then took
+// production down at import time ("Cannot find package '@shared/stay-inloco'",
+// Heroku, 2026-08-27), every message falling through to the deprecated flow
+// engine's hardcoded English greeting.
+//
+// shared/package.json declares "type": "module" precisely so this import
+// works: without it tsx compiled the shared file as CommonJS and the ESM
+// side could not see its named exports.
+import { isCurrentlyInTown, TAG_IN_LOCO } from '../../../shared/stay-inloco.js'
 import { callLLM, LLM_DEBUG, safeParseArgs, type Message } from './llm.js'
 import {
   contentMediaAllowed,
