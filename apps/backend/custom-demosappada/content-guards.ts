@@ -212,6 +212,15 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
     text = text
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/[ \t]+([.,;:!?])/g, '$1')
+      // The MID-LINE husk: "Tel.. Anche qui, chiama prima..." — the stripped
+      // phone sat between its label and the next sentence, so the line-level
+      // filter below never sees a bare label (2026-08-28 live, second form).
+      // Removed only when followed by a sentence start, punctuation or the
+      // end of the line — "Tel. 0435 469833" (digit next) is never touched.
+      .replace(
+        /\b(?:tel(?:efono)?|phone|t[eé]l(?:[eé]phone)?)\s*[.:]{1,3}\s*(?=[A-ZÀ-Ý]|[.,;]|\n|$)/g,
+        '',
+      )
       .split('\n')
       .filter((line, i, all) => {
         const bare = line.replace(/^[\s•\-*\d.)]+/, '').trim()

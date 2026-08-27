@@ -56,6 +56,7 @@ import { isCurrentlyInTown, TAG_IN_LOCO } from '../../../shared/stay-inloco.js'
 import { callLLM, LLM_DEBUG, safeParseArgs, type Message } from './llm.js'
 import {
   contentMediaAllowed,
+  countNamedSubjects,
   formatFaqBlock,
   replyIsDetailAnswer,
   selectRelevantFaqs,
@@ -1453,6 +1454,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   let emptyRetryDone = false
   let droppedQuestionRetryDone = false
   let missingExamplesRetryDone = false
+  /** One forecast-demand retry per turn — see the proposal-weather guard. */
+  let weatherRetryDone = false
   // The ONE signal that replaces the pile of per-turn heuristics that each
   // caught a different shape of "the guest's words got dropped" and missed
   // the next one: `guestSaidAside` (off by design for free-text keys),
@@ -1607,7 +1610,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
       const checked: { text: string; removed: string[] } = stripUnverifiableContacts(reply, approvedContent)
       checked.text = stripWeatherHedges(checked.text)
-      if (stayWasSaved) {
+      {
+        // UNCONDITIONAL — no longer gated on stayWasSaved: the model writes
+        // "Perfetto, ho salvato le tue informazioni" even on turns where the
+        // save was done by the deterministic answer-capture, or by nobody
+        // (2026-08-28 live, 01:37). The guest must never read it either way
+        // ("LO DEVI FARE MA NON SCRIVERE").
         const noAck = stripSaveAcknowledgment(checked.text)
         if (noAck && noAck !== checked.text) {
           // eslint-disable-next-line no-console
@@ -1815,6 +1823,66 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             'scritto. Riscrivi la risposta: PRIMA rispondi a quello che ha detto o chiesto — se non ' +
             'hai il dato, dillo apertamente e indica dove trovarlo (InfoPoint 0435 469131 o il sito ' +
             'ufficiale) — e SOLO DOPO, in coda, rimetti la tua domanda in una riga.',
+        })
+        continue
+      }
+
+      // The retry above is one hop and the model may waste it — the same
+      // opening request got its answer at 01:37 and lost it at 01:39, same
+      // code, same message (gpt-4o-mini simply not complying twice in a
+      // row). The DETERMINISTIC net: a served-nothing answer-turn writes the
+      // guest's message itself into `pendingRequest` — verbatim, no reading
+      // of meaning (§14) — so the next turn's prompt opens with RICHIESTA IN
+      // SOSPESO and the request survives the model's bad turn instead of
+      // vanishing. The model's own declaration, when it made one, wins.
+      if (
+        droppedQuestionRetryDone &&
+        turnKind === 'answer' &&
+        replyLacksSubstance(checked.text, dictatedQuestion) &&
+        !pendingRequestThisTurn &&
+        !stayProfile?.pendingRequest &&
+        stayEnabled &&
+        customerId &&
+        input.config.handlers?.saveStayProfile
+      ) {
+        const carried = userMessage.trim().slice(0, 200)
+        // eslint-disable-next-line no-console
+        console.error('[demosappada][pending-carry] request carried to next turn')
+        await input.config.handlers.saveStayProfile({
+          workspaceId: input.config.workspaceId,
+          customerId,
+          profile: { pendingRequest: carried },
+        })
+        stayProfile = { ...(stayProfile ?? {}), pendingRequest: carried }
+      }
+
+      // GUARD: a PROPOSAL turn that never consulted the forecast. Same
+      // mechanism save_itinerary already has (weather_not_checked): the
+      // product promise is crossing meteo × preferences × schede, and the
+      // weekend excursions went out with no forecast at all — then the next
+      // turn quoted "domani" at a guest arriving NEXT weekend (Andrea,
+      // 2026-08-28 live, 01:37: "non vedo che mi dici nulla sul meteo").
+      // Proposal shape is measured by IDF overlap (two or more FAQ places
+      // featured), never by reading the guest's words (§14). One hop, once.
+      if (
+        !weatherRetryDone &&
+        weatherEnabled &&
+        turnKind === 'answer' &&
+        weatherCache.get(sessionId)?.hourKey !== sappadaHourKey(now) &&
+        countNamedSubjects(checked.text, faqs) >= 2
+      ) {
+        weatherRetryDone = true
+        // eslint-disable-next-line no-console
+        console.error('[demosappada][guard] proposals without forecast — retrying with get_weather')
+        pendingReply = checked.text || pendingReply
+        messages.push({ role: 'assistant', content: result.content || null })
+        messages.push({
+          role: 'user',
+          content:
+            '[SYSTEM] Stai proponendo attività senza aver consultato il meteo. Chiama ORA get_weather ' +
+            'e riscrivi la STESSA proposta incrociando le condizioni dei giorni della permanenza — il ' +
+            'meteo sta dentro la frase, come motivo del consiglio. Se il bollettino non copre i giorni ' +
+            'della visita, dillo in una riga e consiglia in base alla stagione.',
         })
         continue
       }
@@ -2807,7 +2875,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     const { reply, lang } = extractLanguage(pendingReply)
     const checked = stripUnverifiableContacts(reply, approvedContent)
     checked.text = stripWeatherHedges(checked.text)
-    if (stayWasSaved) {
+    {
+      // Unconditional, mirroring the main path — see the comment there.
       const noAck = stripSaveAcknowledgment(checked.text)
       if (noAck && noAck !== checked.text) {
         // eslint-disable-next-line no-console

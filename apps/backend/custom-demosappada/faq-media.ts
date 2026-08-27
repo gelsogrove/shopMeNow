@@ -177,6 +177,18 @@ const LIST_PLACE_SCORE = 0.8
  * with the next intake question bulldozed the request (2026-08-25: "se ti
  * dico cascatelle è il punto che devi espandere").
  */
+/**
+ * How many FAQ places this reply substantially features — the same IDF
+ * measurement as everything else here, never phrasing (§14). Two or more
+ * named places is the shape of a PROPOSAL turn ("ecco due escursioni..."),
+ * which is the turn that must have consulted the forecast: the product
+ * promise is crossing meteo × preferences × schede (contratto), and a
+ * weekend recommendation written without get_weather is a guess.
+ */
+export function countNamedSubjects(reply: string, faqs: FaqEntry[]): number {
+  return faqs.filter((f) => subjectScore(f, reply, faqs) >= SUBJECT_MIN_SCORE).length
+}
+
 export function replyIsDetailAnswer(reply: string, userMessage: string, faqs: FaqEntry[]): boolean {
   if (faqs.length === 0) return false
   // A detail is about ONE place. Counted at the ordinary subject bar: the

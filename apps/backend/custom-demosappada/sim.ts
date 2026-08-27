@@ -1,0 +1,170 @@
+/**
+ * Dialogue simulator for custom-demosappada — the CLI runner this module
+ * lacked (demoam and demorobot have one; not having it cost half a night of
+ * "fix → restart the backend → retest by hand", 2026-08-28).
+ *
+ * Runs the REAL module (agent.ts, loaded from source) against the REAL LLM,
+ * with in-memory stand-ins for every host handler: no backend process, no
+ * database, no restarts — an edit here is live on the next run.
+ *
+ *   npx tsx sim.ts                     # scripted default dialogue
+ *   npx tsx sim.ts "msg1" "msg2" ...   # your own dialogue, one arg per turn
+ *
+ * 💶 Every turn calls the real model configured in settings.json — declare
+ * the run to Andrea before launching big scripts (CLAUDE.md §16A applies in
+ * spirit: a default run is ~6 turns of gpt-4o-mini, well under €0.05).
+ *
+ * The FAQ/catalogue fixtures below are TEST DATA for the harness, not
+ * content anyone ships: production content lives in the workspace DB
+ * (CLAUDE.md §1 untouched — nothing here reaches a customer).
+ */
+import { config as loadEnv } from 'dotenv'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { ChatbotInput, HistoryEntry } from './index.js'
+import type { FaqEntry, CatalogueEntry, StayProfile } from './agent.js'
+
+// Repo-root .env, loaded the way the backend loads it (values never printed).
+// The MODULE is imported dynamically below, AFTER this runs: llm.ts snapshots
+// OPENROUTER_API_KEY at import time, and static imports are hoisted above
+// this call — the first sim run died exactly that way.
+loadEnv({ path: join(dirname(fileURLToPath(import.meta.url)), '../../../.env') })
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+const settings = JSON.parse(readFileSync(join(HERE, 'settings.json'), 'utf8'))
+
+// ── In-memory host stand-ins ───────────────────────────────────────────────
+
+const FAQS: FaqEntry[] = [
+  {
+    question: 'Cascatelle del Mühlbach: come si arriva?',
+    answer:
+      'Percorso facile di 20 minuti a/r, dislivello 91 m, partenza dal ponte di legno sul rio ' +
+      'Mühlbach vicino al Piccolo Museo della Grande Guerra. Passerelle tra le rocce. ' +
+      'Info: https://www.visitsappada.it/cascatelle.php',
+  },
+  {
+    question: 'Sorgenti del Piave: escursione e rifugio',
+    answer:
+      'Dal piazzale in Val Sesis, 30 minuti a/r, dislivello minimo, adatta a tutti. Al Rifugio ' +
+      'Sorgenti del Piave cucina alpina semplice. Tel. 334 7799175.',
+  },
+  {
+    question: 'Rifugio Piani del Cristo: orari e cucina',
+    answer:
+      'Raggiungibile in circa 2 ore e mezza a/r, dislivello 300 m. Cucina tipica. Tel. 0435 469120.',
+  },
+  {
+    question: 'Dove mangiare prodotti tipici a Sappada?',
+    answer:
+      'Latteria di Sappada Plodarkelder, prodotti locali e piatti tipici. Tel. 0435 469833.',
+  },
+  {
+    question: 'Dove dormire a Sappada? Elenco strutture',
+    answer:
+      'Elenco completo delle strutture: https://www.visitsappada.it/dove-dormire.php — InfoPoint 0435 469131.',
+  },
+]
+
+const CATALOGUE: CatalogueEntry[] = [
+  { name: 'Agriturismo Zaine', description: 'Agriturismo in Borgata Soravia 32.', link: 'https://www.visitsappada.it/dove-dormire.php', type: 'hotel' },
+  { name: 'Bach Boutique Hotel', description: 'Hotel in Borgata Bach 26, con ristorante.', link: 'https://www.visitsappada.it/dove-dormire.php', type: 'hotel' },
+]
+
+// The host's merge, faithfully: empty values never overwrite, "RISOLTO"
+// deletes (custom-client-chatbot.service.ts saveStayProfile).
+let stayProfile: Record<string, unknown> | null = null
+function mergeProfile(patch: StayProfile): void {
+  const merged: Record<string, unknown> = { ...(stayProfile ?? {}) }
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === 'RISOLTO') {
+      delete merged[k]
+      continue
+    }
+    if (v !== undefined && v !== null && v !== '') merged[k] = v
+  }
+  stayProfile = merged
+}
+
+// ── The dialogue ───────────────────────────────────────────────────────────
+
+const DEFAULT_DIALOGUE = [
+  'prossimo weekend a Sappada. Suggeriscimi per favore un paio di escursioni di massimo 4 ore a/r di camminata, massimo 500 mt di dislivello, con possibilitá di pranzo in un rifugio',
+  'domenica',
+  'sono ciliaco e non ho la macchina',
+  'no',
+  'si',
+  'andrea',
+]
+
+async function main(): Promise<void> {
+  // Dynamic, so the env above is loaded before llm.ts snapshots the API key.
+  const { chatbotFn } = await import('./index.js')
+  // The built-in tools reach the module as WorkspaceCallingFunction rows via
+  // getCustomTools in production; the manifest is their single source, so the
+  // sim serves it directly.
+  const { MODULE_TOOLS } = await import('./tools.manifest.js')
+  const customTools = MODULE_TOOLS.map((t) => ({
+    name: t.functionName,
+    description: t.description,
+    parameters: t.parameters,
+    responseInstructions: t.responseInstructions,
+  }))
+
+  const turns = process.argv.length > 2 ? process.argv.slice(2) : DEFAULT_DIALOGUE
+  const history: HistoryEntry[] = []
+  let persistedState: unknown
+
+  for (const userMessage of turns) {
+    console.log(`\n🧑 ${userMessage}`)
+    const input: ChatbotInput = {
+      userMessage,
+      userName: 'Sim',
+      channel: 'widget',
+      config: {
+        workspaceId: 'sim-workspace',
+        debugChannel: false,
+        isPlayground: false,
+        settings,
+        messages: null,
+        handlers: {
+          getFaqs: async () => FAQS,
+          getCatalogue: async () => CATALOGUE,
+          getCustomTools: async () => customTools,
+          getStayProfile: async () => (stayProfile ? ({ ...stayProfile } as StayProfile) : null),
+          saveStayProfile: async ({ profile }) => {
+            mergeProfile(profile)
+            return true
+          },
+          saveFeedback: async () => true,
+          savePushConsent: async () => true,
+          setCustomerTags: async () => true,
+        },
+      },
+      context: {
+        sessionId: 'sim-session',
+        customerId: 'sim-customer',
+        history: [...history],
+        persistedState,
+      },
+    }
+
+    const out = await chatbotFn(input)
+    persistedState = out.persistedState ?? persistedState
+
+    console.log(`🤖 ${out.reply ?? `(nessuna risposta${out.error ? ` — ${out.error}` : ''})`}`)
+    history.push({ role: 'user', content: userMessage, timestamp: new Date().toISOString() })
+    if (out.reply) {
+      history.push({ role: 'assistant', content: out.reply, timestamp: new Date().toISOString() })
+    }
+  }
+
+  console.log('\n═══ stayProfile finale ═══')
+  console.log(JSON.stringify(stayProfile, null, 2))
+}
+
+main().catch((e) => {
+  console.error('SIM ERROR:', e instanceof Error ? e.message : e)
+  process.exit(1)
+})
