@@ -43,6 +43,45 @@ export function isBareIntakeQuestion(reply: string): boolean {
 }
 
 /**
+ * Is there anything LEFT in this reply once the parts that never count as an
+ * answer are stripped — a save acknowledgment, a trailing helper-offer, and
+ * the intake question itself (ours, dictated, always allowed to be there)?
+ *
+ * The general form of `isBareIntakeQuestion`: that check only catches a reply
+ * that IS the question and nothing else, so "Ho registrato il vostro arrivo
+ * per domani... Se hai bisogno di suggerimenti, fammelo sapere!" sailed
+ * through it — it does not end in "?", so it looked like real content, while
+ * the guest had asked "com'è il tempo?" and never got an answer (Andrea,
+ * 2026-08-28 live). Both failures are the same shape: everything that
+ * survives is bookkeeping, not an answer.
+ *
+ * Used ONLY to decide whether a `pendingRequest` was actually served this
+ * turn — never to pick content or read the guest's intent (§14 untouched:
+ * this scans the MODEL's own output against its own known filler shapes).
+ */
+export function replyLacksSubstance(reply: string, ours: string | null): boolean {
+  let text = stripSaveAcknowledgment(reply)
+  text = stripTrailingOffers(text, true).text
+  // `stripTrailingOffers` only cuts a TRAILING paragraph when at least one
+  // other survives beside it — built for trimming the tail of a longer
+  // reply, not for judging the one paragraph left standing. Once the save
+  // acknowledgment above is gone, an offer-only reply IS that one paragraph,
+  // and the length>1 loop never runs (Andrea, 2026-08-28 live: "Ho
+  // registrato il vostro arrivo... Se hai bisogno di suggerimenti, fammelo
+  // sapere!" survived whole because nothing else was left to compare it to).
+  if (text.trim() && OFFER_STEM.test(text.trim())) text = ''
+  if (ours) {
+    const normalise = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ')
+    const target = normalise(ours)
+    text = text
+      .split('\n')
+      .filter((line) => !normalise(line).includes(target))
+      .join('\n')
+  }
+  return text.trim().length < 12
+}
+
+/**
  * Did the intake question reach the guest WITHOUT the examples that make it
  * answerable?
  *

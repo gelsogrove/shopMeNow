@@ -196,11 +196,21 @@ type StayProfile = {
   pastStays?: Array<Record<string, unknown>>
   /** Intake questions already put to this guest — asked once, never again. */
   asked?: string[]
+  /** 'in_loco' | 'planned' | 'remote' — where the guest stands with Sappada (contratto.md, 2026-08-27). */
+  presence?: "in_loco" | "remote" | "planned"
+  /** True once the remote prospect's needs question has been put. */
+  remoteNeedsAsked?: boolean
   consentAsked?: boolean
+  /** True when this customer wrote to us before the current conversation (host-derived from history). */
+  hasWrittenBefore?: boolean
+  /** Set by the startNewStay tool when the guest says they are back; cleared by the rollover it triggers. */
+  restartRequested?: boolean
   /** 'yes' | 'no' — whether they wanted a day-by-day plan. */
   itinerary?: string
   /** The accepted plan, one line per day. Rewritten whole on every change. */
   itineraryPlan?: string
+  /** True once the configured itinerary closing question has been appended to a delivered plan. */
+  closingQuestionAsked?: boolean
   /** Presentation video already shown to this guest. */
   videoSent?: boolean
   /** End-of-stay feedback already collected. */
@@ -208,6 +218,8 @@ type StayProfile = {
   /** Their words about this stay, archived with it. */
   lastFeedback?: string
   notes?: string
+  /** What the guest asked for and has not fully received yet, in their own words. Cleared once satisfied. */
+  pendingRequest?: string
 }
 
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
@@ -1351,6 +1363,16 @@ export class CustomClientChatbotService {
       const current = p.replace ? {} : ((await this.getStayProfile(p)) ?? {})
       const merged: Record<string, unknown> = { ...current }
       for (const [key, value] of Object.entries(p.profile)) {
+        // "RISOLTO" is the one deliberate CLEAR sentinel (pendingRequest):
+        // an empty/undefined value is silently skipped by design (a guest's
+        // answer left blank must never erase a field an earlier turn filled
+        // in), so a field that needs to go back to "nothing pending" has no
+        // other way to say so — an empty string would just be ignored and
+        // the OLD value would stay stuck forever.
+        if (value === "RISOLTO") {
+          delete merged[key]
+          continue
+        }
         if (value !== undefined && value !== null && value !== "") merged[key] = value
       }
 

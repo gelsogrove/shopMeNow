@@ -15,6 +15,7 @@ import {
   guestAskedSomething,
   holdRepeatedQuestion,
   isBareIntakeQuestion,
+  replyLacksSubstance,
   stripTrailingOffers,
 } from "../../custom-demosappada/intake-compose"
 import { getState, resetState, updateState } from "../../custom-demosappada/state"
@@ -168,5 +169,32 @@ describe("demosappada guest-input shape checks (never intent, CLAUDE.md §14)", 
     expect(isBareIntakeQuestion("Fino a quando vi fermate?")).toBe(true)
     // A reply carrying a number or a list is doing real work — not bare.
     expect(isBareIntakeQuestion("La funivia costa 12 euro, vi fermate fino a domenica?")).toBe(false)
+  })
+})
+
+describe("demosappada replyLacksSubstance — the general form of 'reply is bookkeeping only'", () => {
+  const STAY_QUESTION = "Fino a quando vi fermate?"
+
+  // 🚨 regression 2026-08-28 live: "Arriviamo domani mattina, com'è il
+  // tempo?" got "Ho registrato il vostro arrivo per domani e il soggiorno
+  // fino al 31 agosto. Se hai bisogno di suggerimenti per attività o luoghi
+  // da visitare, fammelo sapere!" — no "?", not short, so isBareIntakeQuestion
+  // missed it entirely while the weather question went unanswered.
+  it("a save-ack + trailing offer, with no real content, lacks substance", () => {
+    const reply =
+      "Ho registrato il vostro arrivo per domani e il soggiorno fino al 31 agosto.\n\n" +
+      "Se hai bisogno di suggerimenti per attività o luoghi da visitare, fammelo sapere!"
+    expect(replyLacksSubstance(reply, null)).toBe(true)
+  })
+
+  it("a reply that is only the dictated question lacks substance", () => {
+    expect(replyLacksSubstance(STAY_QUESTION, STAY_QUESTION)).toBe(true)
+  })
+
+  it("a reply with a real forecast or recommendation has substance", () => {
+    const reply =
+      "Domani a Sappada è previsto sole con 22°C, condizioni ideali per una passeggiata.\n\n" +
+      STAY_QUESTION
+    expect(replyLacksSubstance(reply, STAY_QUESTION)).toBe(false)
   })
 })

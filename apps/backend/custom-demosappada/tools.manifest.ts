@@ -90,11 +90,25 @@ export const SAVE_STAY_TOOL = {
             'makes it clear.',
         },
         adults: { type: 'integer', description: 'How many adults.' },
-        children: { type: 'integer', description: 'How many children.' },
+        children: { type: 'integer', description: 'How many children. Send 0 the moment the guest rules children out ("nessun bambino", "solo adulti", "no kids") — 0 is a real answer, not a value to leave unset, and omitting it here is what makes the intake ask about children again after the guest already answered.' },
         childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },
         constraints: { type: 'string', description: 'Anything that limits what suits them: coeliac or another intolerance, no car, a pregnancy, limited walking, a dog, a wheelchair. Append to what is already there rather than replacing it.' },
         interests: { type: 'string', description: 'What they said they enjoy: nature, food, history, quiet, walking, local culture. A preference, NOT a limitation — anything that rules an option out belongs in constraints. Append to what is already there rather than replacing it.' },
-        seniors: { type: 'integer', description: 'How many elderly people.' },
+        seniors: { type: 'integer', description: 'How many elderly people. Send 0 the moment the guest rules seniors out ("nessun anziano", "solo adulti", "siamo giovani") — same reasoning as children: 0 is a real answer, and leaving it unset is what makes the intake ask about it again.' },
+        pendingRequest: {
+          type: 'string',
+          description:
+            'What the customer just asked for, in a few words, WHENEVER your reply this turn does not ' +
+            'fully serve it yet — an accommodation, an event, an itinerary, a recommendation, anything ' +
+            'that needs more turns or more of their answers first. Send it even without a question mark: ' +
+            '"cerchiamo un albergo" is a request, not a stay fact. RULE: you always answer it first — ' +
+            'even one line, even a generic answer with what you already know — THEN ask your own ' +
+            'question; this field is for a request that genuinely needs another turn to finish serving, ' +
+            'not an excuse to postpone answering. The moment you have fully answered a request you were ' +
+            'carrying, send the exact word "RISOLTO" (nothing else) to stop carrying it — an empty string ' +
+            'is silently ignored and would leave the OLD request stuck forever. Never invent a request: ' +
+            'only what the customer actually asked.',
+        },
         arrivalDate: { type: 'string', description: 'YYYY-MM-DD, the day they arrived.' },
         departureDate: { type: 'string', description: 'YYYY-MM-DD, the day they leave. Compute it from "we stay 5 days" using today\'s date in RUNTIME.' },
         dateSaidAs: {

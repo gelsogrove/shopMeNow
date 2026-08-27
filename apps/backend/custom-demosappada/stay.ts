@@ -255,6 +255,29 @@ export function formatStayBlock(
 
   const lines: string[] = []
 
+  // First line in the block, on purpose: the guest's own words come before
+  // anything else, including the welcome-back copy below. A request made
+  // before the intake even had a chance to run — "un'escursione max 4h, 500m
+  // dislivello, pranzo in rifugio" on the FIRST message — was answered with
+  // only the welcome and the first intake question, and was gone again two
+  // turns later once the guest had answered something else in between
+  // (Andrea, 2026-08-28 live: "non hai risposto alla domanda"). The rule has
+  // no exception for "it depends on who they are" (Andrea, 2026-08-28:
+  // "devi rispondere e poi portare l'utente a rispondere alle tue domande") —
+  // answer FIRST, even one line, even generic if the data is not all in yet,
+  // THEN ask. Cleared by the model via save_preferences.pendingRequest the
+  // moment it has actually served it.
+  if (stay.pendingRequest) {
+    lines.push(
+      `RICHIESTA IN SOSPESO: "${stay.pendingRequest}"`,
+      'Questa richiesta viene SEMPRE PRIMA di qualsiasi domanda tua, in questo messaggio: rispondi ad ' +
+        'essa — anche in una riga, anche in modo generico se non hai ancora tutti i dati — e SOLO DOPO, ' +
+        'in coda, fai la tua domanda. Non è una scelta legata a chi sia l\'ospite: vale sempre, senza ' +
+        'eccezioni. Quando la tua risposta la soddisfa davvero, chiama save_preferences con ' +
+        'pendingRequest="RISOLTO" così smette di essere ripetuta.',
+    )
+  }
+
   if (returningGuest && profile) {
     const last = stay.pastStays?.[stay.pastStays.length - 1]
     lines.push(

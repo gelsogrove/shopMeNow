@@ -68,8 +68,8 @@ import {
   guestAskedSomething,
   holdRepeatedQuestion,
   intakeQuestionLacksExamples,
-  isBareIntakeQuestion,
   renderPromptVariables,
+  replyLacksSubstance,
   stripInventedLists,
   stripSaveAcknowledgment,
   stripTrailingOffers,
@@ -434,6 +434,29 @@ export interface StayProfile {
    * deve andare tutto dentro note").
    */
   notes?: string
+  /**
+   * What the guest asked for and has NOT fully received yet, in their own
+   * words — "un'escursione max 4h, 500m dislivello, pranzo in rifugio".
+   * `undefined`/absent once satisfied.
+   *
+   * The single replacement for a pile of per-turn heuristics that each
+   * caught one shape of "the guest's words got dropped" and missed the
+   * next: a bare intake question with no "?" in the message (2026-08-23), a
+   * free-text answer read as a fact instead of a request ("cerchiamo un
+   * albergo" filed under `constraints`, 2026-08-28), a direct question
+   * answered with only a save acknowledgment ("com'è il tempo?" → "ho
+   * registrato il vostro arrivo", 2026-08-28), and a request made before the
+   * intake even started that never came back once the intake had something
+   * else to ask (an itinerary request buried under "fino a quando vi
+   * fermate?", 2026-08-28: "non hai risposto alla domanda").
+   *
+   * The MODEL declares it via save_preferences — the code reads no intent
+   * from the guest's words (§14), it only keeps what the model reported
+   * pending in front of the model on every turn until it reports it
+   * resolved (contratto.md: "devi rispondere e poi portare l'utente a
+   * rispondere alle tue domande" — never the reverse, and never skipped).
+   */
+  pendingRequest?: string
 }
 
 export type GetStayProfileHandler = (params: {
@@ -852,13 +875,16 @@ function formatRuntimeBlock(params: {
       'on the weather or the season, no "che bella giornata": the welcome above already greeted them,',
       'and a line like "Oggi è una giornata ideale per esplorare Sappada!" is filler in front of the',
       'only thing you were asked to say (Andrea, 2026-08-24). Never invent the topic on their behalf.',
-      'On this first turn, when they asked something whose answer depends on WHO they are — what to do',
-      'today, where to eat, which walk, a plan for the days — do NOT hand over a full set of',
-      'recommendations and then ask who they are: ask FIRST, in one short line, joining the two things',
-      'you need most ("siete in quanti, e quanto vi fermate?"). One line of recommendation before it is',
-      'fine as a taster; six is a list you will have to throw away.',
-      'When what they asked does not depend on it (a phone number, an opening time, how to get here),',
-      'answer it fully, then ask the FIRST question from ANCORA DA CHIEDERE.',
+      '🚨 RULE, NO EXCEPTIONS (Andrea, 2026-08-28: "devi rispondere e poi portare l\'utente a rispondere',
+      'alle tue domande"): when their message carries a request, you ALWAYS answer it FIRST — even in one',
+      'short line, even generically if you do not have all their details yet ("un\'escursione così di',
+      'solito ci vogliono 3-4 ore; appena so quanti siete affino il consiglio") — and ONLY THEN, at the',
+      'end, ask the FIRST question from ANCORA DA CHIEDERE. Never the reverse, never skipped: a full set',
+      'of six recommendations is too much, silence in front of their request is worse. If your answer',
+      'this turn cannot fully serve what they asked — it needs another turn or more of their answers —',
+      'call save_preferences with `pendingRequest` set to what they asked, in their own words, so it is',
+      'not lost once the intake moves on; call it again with pendingRequest="RISOLTO" the moment you have',
+      'actually served it.',
       'Never end with a generic "how can I help you?" — the welcome above you already said that.',
     )
   } else if (greeting === 'returning') {
@@ -1427,6 +1453,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   let emptyRetryDone = false
   let droppedQuestionRetryDone = false
   let missingExamplesRetryDone = false
+  // The ONE signal that replaces the pile of per-turn heuristics that each
+  // caught a different shape of "the guest's words got dropped" and missed
+  // the next one: `guestSaidAside` (off by design for free-text keys),
+  // `detailAnswer`/`answersWithFacts` (only catch a place-specific or
+  // link-carrying reply), the old per-turn `guestMadeRequestThisTurn`. None
+  // of them survive a turn — a request made before the intake even started
+  // ("un'escursione max 4h, 500m dislivello, pranzo in rifugio", answered
+  // with only the welcome + first intake question) was gone two turns later,
+  // once the guest had answered something else in between (Andrea,
+  // 2026-08-28 live: "non hai risposto alla domanda").
+  //
+  // The model reports it via save_preferences.pendingRequest (§14: the code
+  // reads no intent from the guest's words) and it is carried on the PROFILE,
+  // not a turn-local flag, so it survives exactly as long as it needs to —
+  // cleared only when the model reports the request served, or by the
+  // escape hatch below if it never is.
+  let pendingRequestThisTurn: string | undefined
 
   // 🍽️ The end of the itinerary-delivery message, shaped by CODE.
   //
@@ -1725,13 +1768,22 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // injected before the first model call, not only the after-the-fact
       // guards here.)
 
-      // GUARD: the guest said something and got ONLY our intake question back.
-      // Their words were dropped — the one failure that makes people stop
-      // writing. One more hop, spent answering them.
+      // GUARD: the guest said something (a "?", a sidestepped structured
+      // question, or a request already carried as `pendingRequest` from an
+      // earlier turn) and the reply has no substance beyond bookkeeping —
+      // an ack, a filler offer, or the dictated question itself. Their words
+      // were dropped — the one failure that makes people stop writing. One
+      // more hop, spent answering them.
+      //
+      // `replyLacksSubstance` replaces the narrower `isBareIntakeQuestion`
+      // check here: that one only caught a reply that WAS the question, so
+      // "Ho registrato il vostro arrivo... Se hai bisogno di suggerimenti,
+      // fammelo sapere!" sailed past it (no "?", not short) while "com'è il
+      // tempo?" went unanswered (Andrea, 2026-08-28 live).
       if (
         !droppedQuestionRetryDone &&
-        (guestAskedSomething(userMessage) || guestSaidAside) &&
-        isBareIntakeQuestion(checked.text)
+        (guestAskedSomething(userMessage) || guestSaidAside || !!pendingRequestThisTurn) &&
+        replyLacksSubstance(checked.text, dictatedQuestion)
       ) {
         droppedQuestionRetryDone = true
         // eslint-disable-next-line no-console
@@ -1761,7 +1813,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // `presence` (in_loco / planned / remote) via save_preferences.
           if (/^(s[iì]|yes|ja)\.?$/i.test(verbatim)) captured.presence = 'in_loco'
           else if (/^(no|nein)\.?$/i.test(verbatim)) captured.presence = 'remote'
-        } else if ((captureKey === 'constraints' || captureKey === 'interests') && !detailAnswer && !answersWithFacts) {
+        } else if (
+          (captureKey === 'constraints' || captureKey === 'interests') &&
+          !detailAnswer &&
+          !answersWithFacts &&
+          !pendingRequestThisTurn
+        ) {
           // A rich answer often carries BOTH facts: "siamo a piedi e voglio
           // vedere sappada" states the constraint AND the interest in one
           // breath. The two free-text fields are filled INDEPENDENTLY — the
@@ -1913,7 +1970,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         console.error(`[demosappada][intake-shift] "${questionShown}" → "${effectiveKey}"`)
       }
       const guestEngaged =
-        guestAskedSomething(userMessage) || guestSaidAside || detailAnswer || answersWithFacts
+        guestAskedSomething(userMessage) ||
+        guestSaidAside ||
+        detailAnswer ||
+        answersWithFacts ||
+        !!pendingRequestThisTurn
       if (holdRepeatedQuestion(sessionId, effectiveKey, guestEngaged)) {
         // eslint-disable-next-line no-console
         console.error(`[demosappada][repeat-hold] "${effectiveKey}" held this turn`)
@@ -2267,6 +2328,29 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             profile.presence = args.presence as StayProfile['presence']
           }
 
+          // NOT gated on `guestStatedFacts` like the fields above: this is the
+          // MODEL reporting on ITS OWN reply ("I finished serving what I was
+          // carrying"), not a fact read off the guest's words, so a guest
+          // reply as short as "sì" must not block it — the whole point is to
+          // let a resolved request stop being carried the moment it is.
+          //
+          // "RISOLTO" is a deliberate CLEAR sentinel, not the guest's words:
+          // the host's own merge skips empty/undefined values so a guest's
+          // blank answer never erases a field an earlier turn filled in —
+          // which means an ordinary empty string can never CLEAR
+          // `pendingRequest` either, it would just be ignored and the OLD
+          // request would stay stuck forever. Sent straight through in
+          // `profile` so the host's merge (which recognises the same
+          // sentinel) actually deletes it, not just this turn's copy.
+          const rawPendingRequest =
+            typeof args.pendingRequest === 'string' ? args.pendingRequest.trim() : ''
+          if (rawPendingRequest === 'RISOLTO') {
+            profile.pendingRequest = 'RISOLTO'
+          } else if (rawPendingRequest) {
+            profile.pendingRequest = rawPendingRequest
+            pendingRequestThisTurn = rawPendingRequest
+          }
+
           // Appended: constraints arrive one at a time over a conversation
           // ("she's coeliac"… later "and we're on foot"), and a replacing
           // write would drop the one told first.
@@ -2406,12 +2490,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             // plain spread let a refused date (profile.departureDate =
             // undefined) wipe the one already in memory — the DB kept it, the
             // turn forgot it, and the guest was asked the dates again with
-            // the answer sitting in the database (2026-08-25).
+            // the answer sitting in the database (2026-08-25). "RISOLTO"
+            // mirrors the host's own CLEAR sentinel: it must delete the key
+            // in memory too, not be copied in as the literal string.
             const cleaned: Partial<StayProfile> = {}
             for (const [k, v] of Object.entries(profile)) {
-              if (v !== undefined && v !== null && v !== '') (cleaned as Record<string, unknown>)[k] = v
+              if (v === 'RISOLTO') delete (cleaned as Record<string, unknown>)[k]
+              else if (v !== undefined && v !== null && v !== '') (cleaned as Record<string, unknown>)[k] = v
             }
             stayProfile = { ...(stayProfile ?? {}), ...cleaned }
+            if (rawPendingRequest === 'RISOLTO') stayProfile.pendingRequest = undefined
           }
 
           // The refusal travels IN the tool output — the tool refuses, the
@@ -2751,6 +2839,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // answer is always safer than a discarded one.
       const fallbackGuestEngaged =
         guestAskedSomething(userMessage) ||
+        !!pendingRequestThisTurn ||
         (userMessage.trim().split(/\s+/).length >= 3 &&
           !/\d/.test(userMessage) &&
           !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim()))
