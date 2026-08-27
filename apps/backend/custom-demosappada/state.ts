@@ -68,8 +68,6 @@ interface SessionEntry {
   patches: CustomerPatch[]
   turnCount: number
   recentMessageTimestamps: number[]
-  /** Per-field ask counters, used to bound repeated questions. Per-process. */
-  askedCounts: Record<string, number>
 }
 
 const sessions = new Map<string, SessionEntry>()
@@ -82,21 +80,10 @@ function entry(sessionId: string): SessionEntry {
       patches: [],
       turnCount: 0,
       recentMessageTimestamps: [],
-      askedCounts: {},
     }
     sessions.set(sessionId, e)
   }
   return e
-}
-
-export function registerFieldRequest(sessionId: string, field: string): number {
-  const e = entry(sessionId)
-  e.askedCounts[field] = (e.askedCounts[field] ?? 0) + 1
-  return e.askedCounts[field]
-}
-
-export function getAskedCounts(sessionId: string): Readonly<Record<string, number>> {
-  return entry(sessionId).askedCounts
 }
 
 export function getState(sessionId: string): SessionState {
@@ -146,9 +133,9 @@ export function clearRepeatCooldown(sessionId: string): void {
 // ── Persistence ───────────────────────────────────────────────────────────
 // Same rationale as custom-demorobot/state.ts: Heroku restarts dynos daily and
 // runs more than one, so durable facts (name, language, greeting, videoSent)
-// are mirrored into ChatSession.context. Ask counters, turnCount and
-// rate-limit timestamps stay per-process on purpose — re-hydrating them
-// across dynos would give a false sense of enforcement.
+// are mirrored into ChatSession.context. turnCount and rate-limit timestamps
+// stay per-process on purpose — re-hydrating them across dynos would give a
+// false sense of enforcement.
 
 interface PersistedState {
   state: SessionState

@@ -197,4 +197,15 @@ describe("demosappada replyLacksSubstance — the general form of 'reply is book
       STAY_QUESTION
     expect(replyLacksSubstance(reply, STAY_QUESTION)).toBe(false)
   })
+
+  // 🚨 regression 2026-08-28 live (third form): "Suggeriscimi un paio di
+  // escursioni..." was met with "Perfetto. E fino a quando vi fermate?" —
+  // the model saved presence mid-turn, the machine advanced, and the
+  // OUTGOING question differed from the one dictated at turn start, so a
+  // strip keyed on `ours` alone let it count as substance. A reply made of
+  // nothing but questions carries no facts, whichever question it is.
+  it("a reply that is only a DIFFERENT question from the dictated one still lacks substance", () => {
+    const dictated = "Siete già a Sappada?"
+    expect(replyLacksSubstance("Perfetto. E fino a quando vi fermate?", dictated)).toBe(true)
+  })
 })

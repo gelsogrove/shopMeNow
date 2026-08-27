@@ -1768,21 +1768,53 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // injected before the first model call, not only the after-the-fact
       // guards here.)
 
-      // GUARD: the guest said something (a "?", a sidestepped structured
-      // question, or a request already carried as `pendingRequest` from an
-      // earlier turn) and the reply has no substance beyond bookkeeping —
-      // an ack, a filler offer, or the dictated question itself. Their words
-      // were dropped — the one failure that makes people stop writing. One
-      // more hop, spent answering them.
+      // GUARD: the guest's message could carry a request and the reply has no
+      // substance beyond bookkeeping — an ack, a filler offer, or the dictated
+      // question itself. Their words were dropped — the one failure that makes
+      // people stop writing. One more hop, spent answering them.
       //
       // `replyLacksSubstance` replaces the narrower `isBareIntakeQuestion`
-      // check here: that one only caught a reply that WAS the question, so
-      // "Ho registrato il vostro arrivo... Se hai bisogno di suggerimenti,
+      // here: that one only caught a reply that WAS the question, so "Ho
+      // registrato il vostro arrivo... Se hai bisogno di suggerimenti,
       // fammelo sapere!" sailed past it (no "?", not short) while "com'è il
       // tempo?" went unanswered (Andrea, 2026-08-28 live).
+      //
+      // The trigger is the MESSAGE's shape, not a list of positive signals.
+      // The first version fired only on "?" / guestSaidAside / a declared
+      // pendingRequest — and a first-turn request with no question mark
+      // ("Suggeriscimi un paio di escursioni...") tripped none of them:
+      // guestSaidAside needs a PREVIOUS question, and pendingRequest needs
+      // the model to have already declared it, which is exactly what it had
+      // failed to do (Andrea, 2026-08-28 live, twice: "non hai risposto alla
+      // domanda"). Now only a message that CANNOT carry a request is exempt:
+      // fewer than 3 words, or a bare yes/no/ok — the two unambiguous §14
+      // shapes. NOT the parseParty probe and NOT the weekday check: the probe
+      // reads "massimo 4 ore" as adults=4 through its loose-number fallback,
+      // which would have exempted the very excursion request this exists to
+      // catch. A genuine short answer ("siamo 2 adulti", "fino a domenica")
+      // stays safe anyway: it advances the machine, so the outgoing question
+      // DIFFERS from `dictatedQuestion`, survives the strip, and the reply
+      // has substance — the retry only ever fires when the same question is
+      // going back out over a message that deserved an answer.
+      // A short message that ANSWERED the pending question is the one case a
+      // questions-only reply is legitimate: the machine advanced (the model's
+      // mid-turn saves are already on stayProfile here), the next question IS
+      // the whole turn by design. Six words is room for "nessun bambino 3
+      // adulti" or "fino a domenica prossima" — a real request does not fit.
+      const machineAdvanced =
+        nextIntakeStep({
+          profile: stayProfile,
+          asked: new Set(stayProfile?.asked ?? []),
+          knownName,
+        })?.key !== questionShown
+      const wordCount = userMessage.trim().split(/\s+/).length
+      const messageCouldCarryRequest =
+        wordCount >= 3 &&
+        !/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(userMessage.trim()) &&
+        !(machineAdvanced && wordCount <= 6)
       if (
         !droppedQuestionRetryDone &&
-        (guestAskedSomething(userMessage) || guestSaidAside || !!pendingRequestThisTurn) &&
+        (guestAskedSomething(userMessage) || messageCouldCarryRequest || !!pendingRequestThisTurn) &&
         replyLacksSubstance(checked.text, dictatedQuestion)
       ) {
         droppedQuestionRetryDone = true
@@ -2491,12 +2523,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             // undefined) wipe the one already in memory — the DB kept it, the
             // turn forgot it, and the guest was asked the dates again with
             // the answer sitting in the database (2026-08-25). "RISOLTO"
-            // mirrors the host's own CLEAR sentinel: it must delete the key
-            // in memory too, not be copied in as the literal string.
+            // (below, after the merge) mirrors the host's own CLEAR
+            // sentinel: `cleaned` starts empty, so simply never copying the
+            // literal string into it is enough — it must still delete the
+            // key already sitting in memory from an earlier turn, which the
+            // spread on its own would not touch.
             const cleaned: Partial<StayProfile> = {}
             for (const [k, v] of Object.entries(profile)) {
-              if (v === 'RISOLTO') delete (cleaned as Record<string, unknown>)[k]
-              else if (v !== undefined && v !== null && v !== '') (cleaned as Record<string, unknown>)[k] = v
+              if (v !== 'RISOLTO' && v !== undefined && v !== null && v !== '') {
+                ;(cleaned as Record<string, unknown>)[k] = v
+              }
             }
             stayProfile = { ...(stayProfile ?? {}), ...cleaned }
             if (rawPendingRequest === 'RISOLTO') stayProfile.pendingRequest = undefined

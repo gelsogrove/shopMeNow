@@ -78,6 +78,26 @@ export function replyLacksSubstance(reply: string, ours: string | null): boolean
       .filter((line) => !normalise(line).includes(target))
       .join('\n')
   }
+  // ANY remaining question-only sentence is bookkeeping too, not just ours
+  // by wording: when the model saves a fact mid-turn the machine advances,
+  // the outgoing question is the NEXT one — different words from the
+  // `ours` dictated at turn start — and it survived the filter above,
+  // counting as substance while the guest's request went unanswered
+  // ("Suggeriscimi un paio di escursioni..." met with nothing but "E fino
+  // a quando vi fermate?", Andrea, 2026-08-28 live, third time). Questions
+  // carry no facts by definition; whatever remains after removing them is
+  // the actual answer, or there is none. URLs are spared as ever.
+  text = text
+    .split('\n')
+    .map((line) => {
+      if (!line.includes('?') || /https?:\/\//.test(line)) return line
+      return (line.match(/[^.!?]+[.!?]*/g) ?? [line])
+        .filter((sentence) => !sentence.trim().endsWith('?'))
+        .join('')
+        .trim()
+    })
+    .join('\n')
+  // A short interjection left alone ("Perfetto.", "Certo!") is not an answer.
   return text.trim().length < 12
 }
 
