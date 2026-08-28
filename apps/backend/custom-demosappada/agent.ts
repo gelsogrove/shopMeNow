@@ -140,7 +140,10 @@ export interface Settings {
    * Resolution order per CLAUDE.md §1A: workspace advanced-settings (edited in
    * the backoffice) → this module's settings.json → nothing asked at all.
    */
-  intakeQuestions?: Partial<Record<IntakeKey, string>>
+  intakeQuestions?: Partial<Record<IntakeKey, string>> & {
+    /** Singular wording for `childrenAges` when exactly one child is on the card. */
+    childAge?: string
+  }
   /**
    * One line put BEFORE the first intake question of a stay ("Permettimi di
    * farti qualche domanda per consigliarti meglio…"), so the questions that

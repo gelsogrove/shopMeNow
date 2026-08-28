@@ -300,7 +300,16 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     console.error(`[demosappada][repeat-hold] "${effectiveKey}" held this turn`)
     effectiveKey = null
   }
-  const effectiveQuestion = effectiveKey ? intakeQuestionFor(effectiveKey as IntakeKey, settings) : null
+  // The wording, from the tenant. One child gets the singular wording when
+  // the tenant configured it (`intakeQuestions.childAge`): "io e mio figlio"
+  // must not be asked "che età hanno i bambini?" (Andrea, 2026-08-29).
+  const singularChild =
+    effectiveKey === 'childrenAges' && stayProfile?.children === 1 && settings.intakeQuestions?.childAge?.trim()
+  const effectiveQuestion = singularChild
+    ? settings.intakeQuestions!.childAge!.trim()
+    : effectiveKey
+      ? intakeQuestionFor(effectiveKey as IntakeKey, settings)
+      : null
   const lang = getState(sessionId).language
   const sourceLang = (settings.defaultLanguage || 'it').toLowerCase()
   const needsTranslation = !!lang && lang.toLowerCase() !== sourceLang
