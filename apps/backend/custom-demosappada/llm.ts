@@ -15,6 +15,11 @@ import type { Settings } from './agent.js'
 
 // ANTHROPIC_API_KEY is the standard name every Anthropic SDK reads.
 const API_KEY = process.env.ANTHROPIC_API_KEY
+// Required by identity-linked API keys (the Console ties them to a user):
+// those requests must also say WHICH Anthropic workspace they act in. A
+// standard workspace-scoped key does not need it — the header is only sent
+// when the env var is present.
+const WORKSPACE_ID = process.env.ANTHROPIC_WORKSPACE_ID
 const BASE_URL = process.env.LLM_BASE_URL || 'https://api.anthropic.com'
 const ANTHROPIC_VERSION = '2023-06-01'
 export const LLM_DEBUG = process.env.LLM_DEBUG === '1'
@@ -161,6 +166,7 @@ export async function callLLM(messages: Message[], settings: Settings, tools: un
       'x-api-key': API_KEY,
       'anthropic-version': ANTHROPIC_VERSION,
       'Content-Type': 'application/json',
+      ...(WORKSPACE_ID ? { 'anthropic-workspace-id': WORKSPACE_ID } : {}),
     },
     body: JSON.stringify({
       model,
