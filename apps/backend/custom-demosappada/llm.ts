@@ -58,13 +58,81 @@ export interface LlmResult {
 }
 
 /**
+ * Prompt caching (2026-08-28, Andrea: "ho messo un modello che costa di più,
+ * cerca di ottimizzare i costi con cache").
+ *
+ * The agent sends ONE system string. It marks the boundary between the part
+ * that is stable across turns (tenant prompt + operating rules) and the part
+ * that changes (FAQ subset, runtime clock, guest card) with CACHE_BREAK. Here
+ * that string becomes content blocks with `cache_control` at the boundary and
+ * at the end of the system — the render order is tools → system → messages,
+ * so the first breakpoint caches the tools and the stable prompt for every
+ * turn within the TTL, the second caches the whole system for every tool hop
+ * of the same turn (2–4 calls per guest message, all with the same system).
+ * A root-level `cache_control` lets the provider advance a third breakpoint
+ * along the growing conversation.
+ *
+ * Explicit markers are an Anthropic mechanism — sent only to Claude models,
+ * on either provider. OpenAI models cache automatically on a byte-identical
+ * prefix (≥1024 tokens), which the same ordering gives them for free.
+ * Verified from usage, never assumed: every call logs the four meters.
+ */
+export const CACHE_BREAK = '\u241F'
+
+const isClaudeModel = (model: string | undefined): boolean => /claude/i.test(model ?? '')
+
+type SystemBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral'; ttl?: '1h' } }
+
+/**
+ * The system string as cacheable blocks: a breakpoint at every CACHE_BREAK
+ * and at the end. The FIRST block — the tenant prompt and the rules, the
+ * same bytes for every guest of the tenant — is cached for an hour: written
+ * once, read by every conversation of the hour. The rest changes with the
+ * turn and keeps the 5-minute default (a WhatsApp reply usually comes
+ * within it; when it does not, only the small block is rewritten).
+ */
+export function systemBlocks(system: string): SystemBlock[] {
+  const parts = system.split(CACHE_BREAK).map((t) => t.trim()).filter(Boolean)
+  return parts.map((text, i) => ({
+    type: 'text',
+    text,
+    cache_control: i === 0 && parts.length > 1 ? { type: 'ephemeral', ttl: '1h' } : { type: 'ephemeral' },
+  }))
+}
+
+export interface CacheUsage {
+  input: number
+  cacheRead: number
+  cacheWrite: number
+  output: number
+}
+
+function logUsage(model: string | undefined, u: CacheUsage): void {
+  // eslint-disable-next-line no-console
+  console.error(
+    `[demosappada][usage] model=${model} input=${u.input} cache_read=${u.cacheRead} cache_write=${u.cacheWrite} output=${u.output}`,
+  )
+}
+
+/**
  * Per-call options. `toolChoice: 'required'` forces the model to call one of
  * the tools offered instead of answering in prose — the code's way of taking
  * a freedom away (iron rule 1) on a hop where prose has already proven to be
  * filler. Translated per provider below.
  */
 export interface CallOptions {
-  toolChoice?: 'required'
+  /** 'required' = any offered tool; a name = that tool and no prose at all. */
+  toolChoice?: 'required' | { name: string }
+}
+
+/** The provider's shape for a forced tool choice. */
+function openAiToolChoice(choice: CallOptions['toolChoice']): unknown {
+  if (!choice) return undefined
+  return choice === 'required' ? 'required' : { type: 'function', function: { name: choice.name } }
+}
+function anthropicToolChoice(choice: CallOptions['toolChoice']): unknown {
+  if (!choice) return undefined
+  return choice === 'required' ? { type: 'any' } : { type: 'tool', name: choice.name }
 }
 
 export async function callLLM(
@@ -88,6 +156,14 @@ async function callOpenRouter(
 ): Promise<LlmResult> {
   if (!OPENROUTER_KEY) throw new Error('OPENROUTER_API_KEY is not set')
 
+  const claude = isClaudeModel(settings.model)
+  // System content: blocks with cache markers for Claude; the plain string
+  // (marker removed) for everything else.
+  const wireMessages = messages.map((m) =>
+    m.role === 'system' && typeof m.content === 'string' && m.content.includes(CACHE_BREAK)
+      ? { ...m, content: claude ? systemBlocks(m.content) : m.content.split(CACHE_BREAK).join('\n') }
+      : m,
+  )
   const response = await fetch(`${OPENROUTER_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -98,9 +174,10 @@ async function callOpenRouter(
       model: settings.model,
       temperature: settings.temperature,
       max_tokens: settings.maxTokens,
-      messages,
+      messages: wireMessages,
       tools,
-      ...(options.toolChoice === 'required' && tools.length > 0 ? { tool_choice: 'required' } : {}),
+      ...(claude ? { cache_control: { type: 'ephemeral' } } : {}),
+      ...(options.toolChoice && tools.length > 0 ? { tool_choice: openAiToolChoice(options.toolChoice) } : {}),
     }),
   })
 
@@ -111,10 +188,21 @@ async function callOpenRouter(
 
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[] } }>
-    usage?: { total_tokens?: number }
+    usage?: {
+      total_tokens?: number
+      prompt_tokens?: number
+      completion_tokens?: number
+      prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number }
+    }
   }
 
   const message = data.choices?.[0]?.message
+  logUsage(settings.model, {
+    input: data.usage?.prompt_tokens ?? 0,
+    cacheRead: data.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+    cacheWrite: data.usage?.prompt_tokens_details?.cache_write_tokens ?? 0,
+    output: data.usage?.completion_tokens ?? 0,
+  })
   return {
     content: message?.content ?? '',
     toolCalls: message?.tool_calls ?? [],
@@ -177,17 +265,29 @@ interface AnthropicContentBlock {
  * - an assistant message with no text and no tool calls (a retry
  *   placeholder) is skipped: Anthropic rejects empty content.
  */
-function toAnthropicPayload(messages: Message[]): {
+/**
+ * Operator notes the agent injects mid-conversation ("[SYSTEM] …" guards)
+ * travel as `role: "system"` messages — the operator channel — never as
+ * user text. As user text a capable model answers THEM, addressing the
+ * guest: "non hai fornito informazioni sul vostro soggiorno — era solo un
+ * saluto" went out, in Italian, to a Spanish speaker (live 16:30,
+ * 2026-08-28). Models that do not accept a mid-conversation system role
+ * return a 400; `callAnthropic` retries once with those notes as user text.
+ */
+export function toAnthropicPayload(
+  messages: Message[],
+  midSystemAs: 'system' | 'user' = 'system',
+): {
   system: string | undefined
-  messages: Array<{ role: 'user' | 'assistant'; content: unknown }>
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: unknown }>
 } {
   let system: string | undefined
-  const out: Array<{ role: 'user' | 'assistant'; content: unknown }> = []
+  const out: Array<{ role: 'user' | 'assistant' | 'system'; content: unknown }> = []
 
   for (const m of messages) {
     if (m.role === 'system') {
       if (system === undefined) system = m.content ?? ''
-      else out.push({ role: 'user', content: m.content ?? '' })
+      else out.push({ role: midSystemAs, content: m.content ?? '' })
       continue
     }
     if (m.role === 'tool') {
@@ -239,13 +339,14 @@ async function callAnthropic(
   settings: Settings,
   tools: unknown[],
   options: CallOptions,
+  midSystemAs: 'system' | 'user' = 'system',
 ): Promise<LlmResult> {
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
   if (!settings.model) throw new Error('settings.model is not set')
   if (!settings.maxTokens) throw new Error('settings.maxTokens is not set')
 
   const model = normalizeModel(settings.model)
-  const { system, messages: anthropicMessages } = toAnthropicPayload(messages)
+  const { system, messages: anthropicMessages } = toAnthropicPayload(messages, midSystemAs)
 
   const response = await fetch(`${ANTHROPIC_URL}/v1/messages`, {
     method: 'POST',
@@ -258,18 +359,24 @@ async function callAnthropic(
     body: JSON.stringify({
       model,
       max_tokens: settings.maxTokens,
-      ...(system ? { system } : {}),
+      ...(system ? { system: systemBlocks(system) } : {}),
       ...(settings.temperature !== undefined && !samplingRemoved(model)
         ? { temperature: settings.temperature }
         : {}),
       messages: anthropicMessages,
       ...(tools.length > 0 ? { tools: toAnthropicTools(tools) } : {}),
-      ...(options.toolChoice === 'required' && tools.length > 0 ? { tool_choice: { type: 'any' } } : {}),
+      cache_control: { type: 'ephemeral' },
+      ...(options.toolChoice && tools.length > 0 ? { tool_choice: anthropicToolChoice(options.toolChoice) } : {}),
     }),
   })
 
   if (!response.ok) {
     const body = await response.text()
+    if (response.status === 400 && midSystemAs === 'system' && /role.{0,20}system/i.test(body)) {
+      // This model has no mid-conversation system role: send the notes as
+      // user text, once.
+      return callAnthropic(messages, settings, tools, options, 'user')
+    }
     throw new Error(`LLM HTTP ${response.status}: ${body.slice(0, 300)}`)
   }
 
@@ -290,6 +397,15 @@ async function callAnthropic(
     }
   }
 
+  const usage = data.usage as
+    | { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
+    | undefined
+  logUsage(model, {
+    input: usage?.input_tokens ?? 0,
+    cacheRead: usage?.cache_read_input_tokens ?? 0,
+    cacheWrite: usage?.cache_creation_input_tokens ?? 0,
+    output: usage?.output_tokens ?? 0,
+  })
   return {
     content,
     toolCalls,

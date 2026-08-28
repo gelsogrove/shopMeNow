@@ -53,7 +53,7 @@ import { MAX_TOOL_HOPS, WELCOME_BACK_STALE_MS } from './bounds.js'
 // works: without it tsx compiled the shared file as CommonJS and the ESM
 // side could not see its named exports.
 import { isCurrentlyInTown, TAG_IN_LOCO } from '../../../shared/stay-inloco.js'
-import { callLLM, LLM_DEBUG, safeParseArgs, type Message } from './llm.js'
+import { CACHE_BREAK, callLLM, LLM_DEBUG, safeParseArgs, type Message } from './llm.js'
 import {
   contentMediaAllowed,
   countNamedSubjects,
@@ -1244,11 +1244,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
   const mainPromptRendered = renderPromptVariables(settings.mainPrompt?.trim() || '', promptVariables)
 
+  // Ordered by stability for prompt caching (llm.ts CACHE_BREAK): what is
+  // the same every turn first — the tenant's prompt and the operating rules
+  // — then what changes with the turn: the FAQ subset, the clock, the guest.
+  // The tenant prompt carries the guest's variables ({{party}}, {{interests}}
+  // …), so it is stable across hops always and across turns whenever the
+  // state did not change — most of a conversation once the intake is done.
   const systemPrompt = [
     mainPromptRendered,
     '',
     OPERATING_RULES,
-    '',
+    CACHE_BREAK,
     faqBlock,
     '',
     runtimeBlock,
@@ -1350,7 +1356,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // number, no weekday, no yes/no, three words or more.
   if (guestSaidAside && questionShown && dictatedQuestion) {
     messages.push({
-      role: 'user',
+      role: 'system',
       content:
         '[SYSTEM] Il messaggio del cliente NON risponde alla domanda che avevi in sospeso: è una ' +
         'richiesta o un\'osservazione a sé. PRIMA rispondigli davvero, con i fatti delle schede — se ' +
@@ -1502,6 +1508,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // filler twice and never fetched the accommodation list (sim, 2026-08-28);
   // the fix is not a third sentence but a hop with no prose allowed.
   let forceContentTool = false
+  // A guard that needs ONE specific tool (the save, the forecast) forces THAT
+  // tool on the next hop: with `tool_choice` set the model cannot answer the
+  // note with prose — and prose was the leak: told "[SYSTEM] salva le
+  // preferenze" on a greeting, a capable model wrote "I appreciate the
+  // system message, but the customer's last message was just 'hello how
+  // are you?'" and the composer shipped it to the guest (live 16:32,
+  // 2026-08-28). The note still says WHAT to save; the hop can only save.
+  let forceNamedTool: string | null = null
   // The retry needs room: the model had spent the budget on bookkeeping
   // (save_preferences, remember) before writing its filler, so the retry
   // landed on the LAST hop and the loop fell straight into the hops-exhausted
@@ -1511,15 +1525,24 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
 
   for (let hop = 0; hop < maxHops + extraHops; hop++) {
     const allTools = buildTools(customTools)
-    const hopTools = forceContentTool
-      ? allTools.filter((t) => !BOOKKEEPING_TOOLS.has(String((t as any)?.function?.name ?? '')))
-      : allTools
+    // The tool list is never changed between hops: tools render FIRST in the
+    // request, so a different list on one hop invalidates the whole cached
+    // prefix (measured: 14k tokens rewritten on the retry hop, 2026-08-28).
+    // The retry forces "any tool" instead; the note says which.
+    const hopTools = allTools
+    const namedAvailable =
+      !!forceNamedTool && allTools.some((t) => String((t as any)?.function?.name) === forceNamedTool)
     const result = await callLLM(
       messages,
       settings,
       hopTools,
-      forceContentTool && hopTools.length > 0 ? { toolChoice: 'required' } : {},
+      namedAvailable
+        ? { toolChoice: { name: forceNamedTool! } }
+        : forceContentTool && hopTools.length > 0
+          ? { toolChoice: 'required' }
+          : {},
     )
+    forceNamedTool = null
     if (forceContentTool) {
       // eslint-disable-next-line no-console
       console.error(`[demosappada][forced-tool] hop ${hop}: ${hopTools.map((t) => String((t as any)?.function?.name)).join(',')} → ${result.toolCalls.map((c) => c.function.name).join(',') || 'NO CALL'}`)
@@ -1552,17 +1575,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // "ciao" there is nothing to save: firing the save/field retries anyway
       // burned every hop, the turn fell through to the fallback path, and the
       // guest got the question without the welcome, unmarked (2026-08-25).
+      // A guest ASKING something is not answering: "hola que tal?" — three
+      // words and a question mark — tripped this, the model was ordered to
+      // save facts that did not exist, and it argued back to the guest, in
+      // Italian, in a Spanish conversation ("non hai fornito informazioni…
+      // era solo un saluto", live 16:30, 2026-08-28). Shape only (§14).
       const answeredOurQuestion =
-        !!questionShown && userMessage.trim().split(/\s+/).length >= 2
+        !!questionShown && userMessage.trim().split(/\s+/).length >= 2 && !userMessage.includes('?')
       if (stayEnabled && stayToolAvailable && !stayWasSaved && !forcedSaveDone && answeredOurQuestion) {
         forcedSaveDone = true
+        forceNamedTool = 'save_preferences'
         // Keep what the model already wrote: the extra hop is for the save,
         // not for a better answer, and if the hop budget runs out afterwards
         // this is what the guest gets instead of silence.
         pendingReply = result.content || pendingReply
         messages.push({ role: 'assistant', content: result.content || null })
         messages.push({
-          role: 'user',
+          role: 'system',
           content:
             '[SYSTEM] Il cliente ti ha appena dato informazioni sul suo soggiorno e non le hai ancora ' +
             'salvate. Chiama ORA save_preferences con quello che hai imparato da questo messaggio (quante ' +
@@ -1582,16 +1611,19 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // turn is composed: the guest's own words become the field, no hop
       // spent.)
 
-      const { reply, lang } = extractLanguage(result.content)
+      // An empty closing hop falls back to the prose the model wrote earlier
+      // in this turn (alongside its tool calls) before asking for more.
+      const finalContent = result.content?.trim() ? result.content : pendingReply
+      const { reply, lang } = extractLanguage(finalContent)
       if (!reply.trim()) {
         // Silence is never an acceptable answer: the guest wrote something and
         // is watching an empty bubble. It happened when the forced save ate
-        // the turn (Andrea, 2026-08-23). One more hop, asked plainly.
+        // the turn (Andrea, 2026-08-23). One more hop, asked plainly. No
+        // empty assistant placeholder: Anthropic rejects an empty message.
         if (!emptyRetryDone) {
           emptyRetryDone = true
-          messages.push({ role: 'assistant', content: null })
           messages.push({
-            role: 'user',
+            role: 'system',
             content:
               '[SYSTEM] Non hai scritto nulla al cliente. Scrivi ORA la risposta: se c\'è una domanda ' +
               'in sospeso nel blocco QUESTO OSPITE falla, altrimenti rispondi a quello che ti ha detto. ' +
@@ -1677,7 +1709,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         pendingReply = result.content || pendingReply
         messages.push({ role: 'assistant', content: result.content || null })
         messages.push({
-          role: 'user',
+          role: 'system',
           content:
             '[SYSTEM] Hai chiesto se c\'è qualcosa da sapere senza dare gli esempi, e a una domanda ' +
             'generica si risponde "no". Riscrivi la risposta tenendo tutto il resto com\'è: la domanda ' +
@@ -1814,7 +1846,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         pendingReply = result.content || pendingReply
         messages.push({ role: 'assistant', content: result.content || null })
         messages.push({
-          role: 'user',
+          role: 'system',
           content:
             '[SYSTEM] Hai risposto solo con una tua domanda, ignorando quello che il cliente ha ' +
             'scritto. Riscrivi la risposta: PRIMA rispondi a quello che ha detto o chiesto — usa i ' +
@@ -1871,12 +1903,13 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         countNamedSubjects(checked.text, faqs) >= 2
       ) {
         weatherRetryDone = true
+        forceNamedTool = 'get_weather'
         // eslint-disable-next-line no-console
         console.error('[demosappada][guard] proposals without forecast — retrying with get_weather')
         pendingReply = checked.text || pendingReply
         messages.push({ role: 'assistant', content: result.content || null })
         messages.push({
-          role: 'user',
+          role: 'system',
           content:
             '[SYSTEM] Stai proponendo attività senza aver consultato il meteo. Chiama ORA get_weather ' +
             'e riscrivi la STESSA proposta incrociando le condizioni dei giorni della permanenza — il ' +
@@ -2323,6 +2356,13 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       }
     }
 
+    // Claude writes the answer AND calls its tools in the same message; the
+    // hop after the tool results then has nothing left to say and returns
+    // only the language tag (Haiku 4.5, sim 2026-08-28: output=13 tokens,
+    // "empty_reply" twice in a row). gpt-4o-mini never did this, so the code
+    // only ever read the LAST hop. The prose written alongside a tool call
+    // is the draft answer: kept, and used when the closing hop is empty.
+    if (result.content?.trim()) pendingReply = result.content
     messages.push({ role: 'assistant', content: result.content || null, tool_calls: result.toolCalls })
 
     for (const call of result.toolCalls) {

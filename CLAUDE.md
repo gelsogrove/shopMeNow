@@ -282,6 +282,16 @@ column and ask before treating it as one.
 
 ### 16B. custom-demosappada — IL CONTRATTO È LEGGE (🚨 Andrea, 2026-08-25)
 
+- **Costo delle prove (🚨 Andrea, 2026-08-28: "non voglio far prove costose
+  che mi fanno fuori il credito")**: `custom-demosappada/sim.ts` chiama il
+  modello REALE via OpenRouter — ogni turno costa (≈15–17k token di input a
+  chiamata, 2–4 chiamate a turno). Stesso regime di §16A: PRIMA di ogni
+  lancio dichiara scenario, numero di turni, modello e costo stimato, e
+  ASPETTA l'OK esplicito di Andrea. Mai più di uno scenario per verifica;
+  mai rilanciare "per sicurezza"; mai provare modelli diversi da quello in
+  produzione (Haiku 4.5) senza che lo chieda lui. Se il ragionamento sul
+  codice basta, non si lancia nulla.
+
 - **`apps/backend/custom-demosappada/contratto.md` è la specifica vincolante
   del chatbot della Pro Loco di Sappada. Leggilo PRIMA di toccare il modulo e
   verifica ogni modifica contro le sue regole.**
