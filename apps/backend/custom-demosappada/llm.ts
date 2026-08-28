@@ -1,27 +1,41 @@
-// The Anthropic plumbing: one HTTP client, the message shapes it speaks, and
-// the env configuration. Nothing in here knows about tourism, intake or
-// guards — it sends messages and returns what the model said.
+// The LLM plumbing: one HTTP client per provider, the message shapes they
+// speak, and the env configuration. Nothing in here knows about tourism,
+// intake or guards — it sends messages and returns what the model said.
 //
-// Switched from OpenRouter to the first-party Anthropic API (Andrea,
-// 2026-08-28: "al posto di usare openrouter usiamo la key di anthropic e
-// puntiamo sempre ad anthropic"). The agent still speaks the OpenAI-ish
-// message shape it always has (role/content/tool_calls/tool) — the whole
-// translation to Anthropic's Messages API lives HERE, so the switch is one
-// file and agent.ts is untouched (iron rule 3: one file, one responsibility).
-// The other custom-* modules still ride OpenRouter; migrating them is a
-// separate, deliberate job.
+// TWO transports, ONE switch (Andrea, 2026-08-28: "deve essere semplice
+// cambiarlo"): `LLM_PROVIDER=anthropic` calls the first-party Anthropic API,
+// `LLM_PROVIDER=openrouter` (the default — today's working production state)
+// calls OpenRouter. One variable instead of two booleans on purpose: two
+// flags can contradict each other, one enum cannot.
+//
+// The agent always speaks the same OpenAI-ish message shape it always has
+// (role/content/tool_calls/tool); the Anthropic translation lives entirely
+// here, so switching provider is an env change, never a code change
+// (iron rule 3: one file, one responsibility). The other custom-* modules
+// still ride OpenRouter only.
 
 import type { Settings } from './agent.js'
 
+type Provider = 'anthropic' | 'openrouter'
+
+function resolveProvider(): Provider {
+  const raw = (process.env.LLM_PROVIDER ?? 'openrouter').trim().toLowerCase()
+  if (raw === 'anthropic' || raw === 'openrouter') return raw
+  throw new Error(`LLM_PROVIDER must be "anthropic" or "openrouter", got "${raw}"`)
+}
+
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY
+const OPENROUTER_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
+
 // ANTHROPIC_API_KEY is the standard name every Anthropic SDK reads.
-const API_KEY = process.env.ANTHROPIC_API_KEY
-// Required by identity-linked API keys (the Console ties them to a user):
-// those requests must also say WHICH Anthropic workspace they act in. A
-// standard workspace-scoped key does not need it — the header is only sent
-// when the env var is present.
-const WORKSPACE_ID = process.env.ANTHROPIC_WORKSPACE_ID
-const BASE_URL = process.env.LLM_BASE_URL || 'https://api.anthropic.com'
+// ANTHROPIC_WORKSPACE_ID is required by identity-linked API keys (the
+// Console ties them to a user): those requests must also say WHICH Anthropic
+// workspace they act in. The header is only sent when the env var is present.
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+const ANTHROPIC_WORKSPACE_ID = process.env.ANTHROPIC_WORKSPACE_ID
+const ANTHROPIC_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'
 const ANTHROPIC_VERSION = '2023-06-01'
+
 export const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 
 export interface ToolCall {
@@ -43,6 +57,52 @@ export interface LlmResult {
   tokensUsed: number
 }
 
+export async function callLLM(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
+  return resolveProvider() === 'anthropic'
+    ? callAnthropic(messages, settings, tools)
+    : callOpenRouter(messages, settings, tools)
+}
+
+// ── OpenRouter (OpenAI-compatible; the agent's native shape passes through) ──
+
+async function callOpenRouter(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
+  if (!OPENROUTER_KEY) throw new Error('OPENROUTER_API_KEY is not set')
+
+  const response = await fetch(`${OPENROUTER_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      temperature: settings.temperature,
+      max_tokens: settings.maxTokens,
+      messages,
+      tools,
+    }),
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`LLM HTTP ${response.status}: ${body.slice(0, 300)}`)
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[] } }>
+    usage?: { total_tokens?: number }
+  }
+
+  const message = data.choices?.[0]?.message
+  return {
+    content: message?.content ?? '',
+    toolCalls: message?.tool_calls ?? [],
+    tokensUsed: data.usage?.total_tokens ?? 0,
+  }
+}
+
+// ── Anthropic (first-party Messages API; translated from the agent's shape) ──
+
 /**
  * The tenant configures the model in the backoffice (workspace column →
  * settings.json, §1D) and may paste either the OpenRouter spelling
@@ -56,8 +116,9 @@ function normalizeModel(raw: string): string {
   const id = bare.replace(/\./g, '-')
   if (!id.startsWith('claude')) {
     throw new Error(
-      `Model "${raw}" is not an Anthropic model: this module now calls the Anthropic API directly. ` +
-        'Set a Claude model (e.g. "claude-haiku-4-5") in the backoffice chatbot settings.',
+      `Model "${raw}" is not an Anthropic model but LLM_PROVIDER=anthropic. ` +
+        'Set a Claude model (e.g. "claude-haiku-4-5") in the backoffice chatbot settings, ' +
+        'or switch LLM_PROVIDER back to "openrouter".',
     )
   }
   return id
@@ -152,21 +213,21 @@ function toAnthropicTools(tools: unknown[]): unknown[] {
   })
 }
 
-export async function callLLM(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
-  if (!API_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
+async function callAnthropic(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
+  if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
   if (!settings.model) throw new Error('settings.model is not set')
   if (!settings.maxTokens) throw new Error('settings.maxTokens is not set')
 
   const model = normalizeModel(settings.model)
   const { system, messages: anthropicMessages } = toAnthropicPayload(messages)
 
-  const response = await fetch(`${BASE_URL}/v1/messages`, {
+  const response = await fetch(`${ANTHROPIC_URL}/v1/messages`, {
     method: 'POST',
     headers: {
-      'x-api-key': API_KEY,
+      'x-api-key': ANTHROPIC_KEY,
       'anthropic-version': ANTHROPIC_VERSION,
       'Content-Type': 'application/json',
-      ...(WORKSPACE_ID ? { 'anthropic-workspace-id': WORKSPACE_ID } : {}),
+      ...(ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': ANTHROPIC_WORKSPACE_ID } : {}),
     },
     body: JSON.stringify({
       model,
