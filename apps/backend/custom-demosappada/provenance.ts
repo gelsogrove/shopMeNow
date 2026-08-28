@@ -50,3 +50,22 @@ export function isRuleOutOnly(args: { adults?: unknown; children?: unknown; seni
   const counts = [args.adults, args.children, args.seniors].filter((v) => typeof v === 'number') as number[]
   return counts.length > 0 && counts.every((v) => v === 0)
 }
+
+/**
+ * The most people a message can state WITHOUT a number. "io e mio marito",
+ * "io, mia moglie e mia madre" enumerate individuals — three is the practical
+ * ceiling; any larger party is stated with a number, which takes the digit
+ * path. So a count anchored only by a quote is accepted up to this total.
+ * "siamo un gruppo di persone e siamo in pulman" — quote anchored, no number
+ * — got adults 5 from gpt-4o-mini (sim, 2026-08-28): the words were real,
+ * the number was not. Above the cap the tool refuses and the headcount is
+ * ASKED, which is the honest outcome when nobody said how many.
+ */
+export const MAX_QUOTE_ANCHORED_PARTY = 3
+
+export function withinQuoteAnchoredCap(args: { adults?: unknown; children?: unknown; seniors?: unknown }): boolean {
+  const total = [args.adults, args.children, args.seniors]
+    .filter((v): v is number => typeof v === 'number' && v > 0)
+    .reduce((a, b) => a + b, 0)
+  return total <= MAX_QUOTE_ANCHORED_PARTY
+}

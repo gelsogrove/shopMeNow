@@ -50,9 +50,15 @@ export type TurnKind = 'answer' | 'advance'
 
 export function classifyTurn(
   message: string,
-  opts: { machineAdvanced: boolean; hasPendingRequest: boolean },
+  opts: { machineAdvanced: boolean; hasPendingRequest: boolean; contentFetched?: boolean },
 ): TurnKind {
   if (opts.hasPendingRequest) return 'answer'
+  // The model fetched content (weather, accommodation, a tenant webhook) to
+  // serve this message: it IS a request, whatever its shape. Observed from
+  // the tool calls, not read from the text (§14). "cerchiamo un rifugio con
+  // funivia" — five words, no "?" — lost its fetched list to the six-word
+  // rule below (sim, 2026-08-28).
+  if (opts.contentFetched) return 'answer'
   const text = message.trim()
   if (text.includes('?')) return 'answer'
   if (/^(s[iì]|no|ok|yes|nein|ja)\.?$/i.test(text)) return 'advance'
@@ -465,7 +471,13 @@ export function composeIntakeTurn(input: IntakeTurnInput): IntakeTurnResult {
 
   // Step 1+2 — keep the model's answer, strip every question it invented, and
   // make sure ours is there exactly once, at the end.
-  const withoutQuestions = stripModelQuestions(reply, ask, dropped)
+  // Helper-offer paragraphs go first: mid-intake "Se hai bisogno di ulteriori
+  // informazioni, fammi sapere!" is never an answer, and when it was ALL the
+  // model wrote it went out as one, stapled above our question (sim,
+  // 2026-08-28: "cerchiamo un albergo e vogliamo spendere poco"). Matched on
+  // the bot's output only (§14 untouched).
+  const withoutOffers = stripOfferParagraphs(reply, dropped)
+  const withoutQuestions = stripModelQuestions(withoutOffers, ask, dropped)
 
   const alreadyThere = normalise(withoutQuestions).includes(normalise(ask))
   const body = alreadyThere
@@ -491,6 +503,20 @@ export function composeIntakeTurn(input: IntakeTurnInput): IntakeTurnResult {
  */
 const OFFER_STEM =
   /(fatemelo sapere|fammelo sapere|fatemi sapere|fammi sapere|let (me|us) know|lasst? (es )?(mich|uns) wissen|h[aá]z(me|noslo)?lo saber|avisadme|av[ií]same|faites[- ]le[- ]moi savoir|n'h[eé]sitez pas|non esit(are|ate|i)|don'?t hesitate|no dud(es|[eé]is)|se (avete|hai) (bisogno|domande|dubbi)|if you (have any|need)|falls (sie|ihr|du) fragen|si (ten[eé]is|tienes|necesitas)|per (ulteriori|qualsiasi|altre) (dettagli|informazioni|domande)|for (further|more) (details|information)|f[uü]r weitere)/i
+
+/** Remove every short paragraph that is only a helper-offer, wherever it sits. */
+export function stripOfferParagraphs(reply: string, dropped: string[]): string {
+  return reply
+    .split(/\n{2,}/)
+    .filter((p) => {
+      const t = p.trim()
+      const isOffer = t.length > 0 && t.length <= 250 && OFFER_STEM.test(t) && !/^[-•*\d]|\*\*/m.test(t)
+      if (isOffer) dropped.push(t)
+      return !isOffer
+    })
+    .join('\n\n')
+    .trim()
+}
 
 /**
  * Drop the trailing helper-offer paragraphs from the itinerary-delivery turn.

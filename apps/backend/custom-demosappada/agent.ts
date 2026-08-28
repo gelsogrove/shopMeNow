@@ -65,7 +65,7 @@ import {
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
 import { renderIntakeQuestion } from './intake-question.js'
-import { isRuleOutOnly, quoteAnchoredIn, rulesOutParty } from './provenance.js'
+import { isRuleOutOnly, quoteAnchoredIn, rulesOutParty, withinQuoteAnchoredCap } from './provenance.js'
 import {
   classifyTurn,
   composeIntakeTurn,
@@ -1536,6 +1536,16 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     return out
   }
 
+  // Did the model FETCH something to serve the guest this turn — the
+  // forecast, the accommodation list, a tenant webhook? A code-observable
+  // fact, read by classifyTurn: a turn in which content was fetched is an
+  // answer turn whatever the message's shape. "cerchiamo un rifugio con
+  // funivia" (5 words, no "?") was classed as a plain intake answer, and the
+  // list the model had just fetched was thrown away for "E fino a quando vi
+  // fermate?" (sim, 2026-08-28). Bookkeeping tools do not count.
+  const BOOKKEEPING_TOOLS = new Set(['remember', 'save_preferences', 'save_itinerary', 'save_push_consent', 'save_feedback'])
+  let contentFetched = false
+
   for (let hop = 0; hop < maxHops; hop++) {
     const result = await callLLM(
       messages,
@@ -1816,6 +1826,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             knownName,
           })?.key !== questionShown,
         hasPendingRequest: !!pendingRequestThisTurn || !!stayProfile?.pendingRequest,
+        contentFetched,
       })
       if (
         !droppedQuestionRetryDone &&
@@ -2309,6 +2320,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     for (const call of result.toolCalls) {
       const name = call.function.name
       let toolOutput: string
+      if (!BOOKKEEPING_TOOLS.has(name)) contentFetched = true
 
       if (name === 'get_weather') {
         if (!weatherEnabled) {
@@ -2445,7 +2457,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             probe.children !== undefined ||
             probe.seniors !== undefined ||
             /\d/.test(userMessage) ||
-            quoteAnchoredIn(partyQuote, userMessage) ||
+            (quoteAnchoredIn(partyQuote, userMessage) && withinQuoteAnchoredCap(args)) ||
             (partyTurn && isRuleOutOnly(args))
           const partyRefused =
             !partyAnchored &&
@@ -2992,6 +3004,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         classifyTurn(userMessage, {
           machineAdvanced: fallbackKey !== questionShown,
           hasPendingRequest: !!pendingRequestThisTurn || !!stayProfile?.pendingRequest,
+          contentFetched,
         }) === 'answer'
       if (holdRepeatedQuestion(sessionId, fallbackKey, fallbackGuestEngaged)) {
         // eslint-disable-next-line no-console
