@@ -1558,8 +1558,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // filler twice and never fetched the accommodation list (sim, 2026-08-28);
   // the fix is not a third sentence but a hop with no prose allowed.
   let forceContentTool = false
+  // The retry needs room: the model had spent the budget on bookkeeping
+  // (save_preferences, remember) before writing its filler, so the retry
+  // landed on the LAST hop and the loop fell straight into the hops-exhausted
+  // fallback — the forced tool hop never ran (sim, 2026-08-28). One retry
+  // earns two hops: one to fetch, one to write.
+  let extraHops = 0
 
-  for (let hop = 0; hop < maxHops; hop++) {
+  for (let hop = 0; hop < maxHops + extraHops; hop++) {
     const allTools = buildTools(customTools)
     const hopTools = forceContentTool
       ? allTools.filter((t) => !BOOKKEEPING_TOOLS.has(String((t as any)?.function?.name ?? '')))
@@ -1858,6 +1864,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       ) {
         droppedQuestionRetryDone = true
         forceContentTool = true
+        extraHops = 2
         // eslint-disable-next-line no-console
         console.error('[demosappada][guard] guest message ignored — retrying')
         pendingReply = result.content || pendingReply
