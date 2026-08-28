@@ -298,11 +298,12 @@ export function stripUnknownVenues(reply: string, approvedContent: string): { te
     const key = words.slice(0, 2).join(' ')
     return source.includes(key)
   }
-  // A bold heading that is not a venue at all ("**Per stasera**", "**Domani**")
-  // breaks the tenant's bold rule but invents nothing: it is demoted to plain
-  // text, not removed. A venue is a heading that starts with a venue type
-  // (rifugio, malga, museo, hotel…) or reads as a proper name (two or more
-  // capitalised words).
+  // Only venues are judged: a bold heading that is no venue at all ("**Oggi
+  // (sabato 29 agosto)**", "**Per stasera**") is left exactly as written —
+  // demoting it to plain text flattened every itinerary (live, 2026-08-29
+  // 01:03: "le liste non sono ben formattate"). A venue is a heading that
+  // starts with a venue type (rifugio, malga, museo, hotel…) or reads as a
+  // proper name (two or more capitalised words).
   const VENUE_TYPE =
     /^(rifugio|malga|museo|latteria|hotel|albergo|agriturismo|ristorante|trattoria|osteria|pizzeria|bar|baita|b&b|chalet|casera|cascat|sorgent|lag[oh]|monte|val|chiesa|santuario|parco|piscina|centro|infopoint|pro loco|seggiovia|funivia|sentiero|borgata|villaggio)\b/i
   const looksLikeVenue = (name: string): boolean => {
@@ -311,15 +312,10 @@ export function stripUnknownVenues(reply: string, approvedContent: string): { te
     const capitalised = words.filter((w) => /^\p{Lu}/u.test(w)).length
     return words.length >= 2 && capitalised >= 2
   }
-  let paragraphs = reply.split(/\n{2,}/)
-  paragraphs = paragraphs.map((p) => {
-    const m = p.trim().match(/^\*\*([^*\n]{3,80})\*\*/)
-    if (!m || known(m[1]) || looksLikeVenue(m[1])) return p
-    return p.replace(/^(\s*)\*\*([^*\n]{3,80})\*\*/, '$1$2')
-  })
+  const paragraphs = reply.split(/\n{2,}/)
   const drop = paragraphs.map((p) => {
     const m = p.trim().match(/^\*\*([^*\n]{3,80})\*\*/)
-    if (!m || known(m[1])) return false
+    if (!m || known(m[1]) || !looksLikeVenue(m[1])) return false
     removed.push(m[1].trim())
     return true
   })
@@ -338,4 +334,51 @@ export function stripUnknownVenues(reply: string, approvedContent: string): { te
   }
   const kept = paragraphs.filter((_, i) => !drop[i])
   return { text: kept.join('\n\n').trim(), removed }
+}
+
+/**
+ * Names of the places the tenant's data knows: the catalogue names as they
+ * are, and the FAQ subjects — the part of a question before ":" / "—" / "?"
+ * when it reads as a name (2–5 words, capitalised). Deterministic input for
+ * `boldKnownVenues`.
+ */
+export function knownVenueNames(faqQuestions: string[], catalogueNames: string[]): string[] {
+  const out = new Set<string>()
+  for (const n of catalogueNames) if (n.trim().length >= 4) out.add(n.trim())
+  for (const q of faqQuestions) {
+    const head = q.split(/[:—–?(]/)[0].trim()
+    const words = head.split(/\s+/)
+    if (words.length < 2 || words.length > 5) continue
+    if (!/^\p{Lu}/u.test(head)) continue
+    if (/^(come|dove|quando|quanto|cosa|chi|perch|c'è|ci sono|orari|info)/i.test(head)) continue
+    out.add(head)
+  }
+  return [...out].sort((a, b) => b.length - a.length)
+}
+
+/**
+ * Put the known place names in bold where the reply mentions them plainly —
+ * the contract's format ("solo i nomi dei posti in bold"), applied by code
+ * instead of hoped for: the itinerary named the Latteria, the Museo and the
+ * Cascatelle in running prose with no bold at all (live, 2026-08-29 01:03).
+ * First plain mention per paragraph; text already inside bold is untouched.
+ */
+export function boldKnownVenues(reply: string, names: string[]): string {
+  if (names.length === 0) return reply
+  return reply
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      let p = paragraph
+      for (const name of names) {
+        const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const re = new RegExp(`(^|[^*\\p{L}])(${esc})(?=$|[^*\\p{L}])`, 'u')
+        const m = p.match(re)
+        if (!m) continue
+        // Already bold somewhere in this paragraph → leave it.
+        if (p.includes(`**${m[2]}`)) continue
+        p = p.replace(re, `$1**$2**`)
+      }
+      return p
+    })
+    .join('\n\n')
 }

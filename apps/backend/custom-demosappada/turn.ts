@@ -16,7 +16,7 @@
 
 import type { ChatbotInput, CustomToolDefinition, FaqEntry, Settings, StayProfile } from './agent.js'
 import { OPERATING_RULES, fetchWeather, formatCatalogue, weatherCheckedThisHour } from './agent.js'
-import { stripUnknownVenues, stripUnverifiableContacts } from './content-guards.js'
+import { boldKnownVenues, knownVenueNames, stripUnknownVenues, stripUnverifiableContacts } from './content-guards.js'
 import { contentMediaAllowed, replyIsDetailAnswer, withFaqMedia } from './faq-media.js'
 import {
   composeIntakeTurn,
@@ -118,6 +118,19 @@ const UNDERSTAND_RULES = [
   '- language: the ISO code of the language they write in.',
 ].join('\n')
 
+/**
+ * Output format for the ANSWER call — the contract's rule, restated where
+ * the model writes (contratto.md: "le liste mostrano il nome in bold su una
+ * riga, poi la descrizione a capo — stesso formato degli itinerari"). An
+ * instruction to the model (§1B), not customer copy.
+ */
+const ANSWER_FORMAT_RULES = [
+  '═══ FORMAT ═══',
+  'Lists and itineraries: every place on its own paragraph — the place name in **bold** alone on the',
+  'first line, the description on the next line(s). In an itinerary, each day is a **bold** heading',
+  'followed by its places in that same format. Bold is for place names and day headings only.',
+].join('\n')
+
 const toolName = (t: CustomToolDefinition): string => t.name
 
 function schemaOf(tool: CustomToolDefinition): unknown {
@@ -164,6 +177,7 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     message: userMessage,
     profile: stayProfile,
     questionKey: questionShown,
+    firstTurn: ctx.history.length === 0,
     now,
     enabledLanguages: settings.enabledLanguages,
     defaultLanguage: settings.defaultLanguage,
@@ -206,6 +220,9 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
 
   // Merge: the code's reading first, the model fills the rest.
   const strong = /\d/.test(userMessage) || detSlots.adults !== undefined
+  // The model's reading of the interests ("vedere Sappada") beats the code's
+  // verbatim sentence when both exist.
+  if (understanding.slots.interests && detSlots.interests && ctx.history.length === 0) delete detSlots.interests
   const merged = mergeSlots(stayProfile, detSlots, understanding.slots, strong)
   await save(merged)
   // eslint-disable-next-line no-console
@@ -303,6 +320,7 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
       ctx.mainPromptRendered,
       '',
       OPERATING_RULES,
+      ANSWER_FORMAT_RULES,
       CACHE_BREAK,
       ctx.faqBlock,
       '',
@@ -410,6 +428,8 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     }
     text = stripWeatherHedges(text)
     text = stripSaveAcknowledgment(text) || text
+    // The contract's format, by code: known place names in bold.
+    text = boldKnownVenues(text, knownVenueNames(ctx.faqs.map((f) => f.question), accommodationOffered))
     if (ctx.greeting !== 'none') text = stripLeadingGreeting(text)
     // Helper offers and plan confirmations ("vi va così?") never go out —
     // on any answer, not only the itinerary one (Andrea, 2026-08-28).

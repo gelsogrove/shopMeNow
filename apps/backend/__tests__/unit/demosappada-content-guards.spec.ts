@@ -177,12 +177,39 @@ describe("demosappada content guard — a lead-in left with nothing under it goe
   })
 })
 
-describe("demosappada content guard — a bold heading that is no venue is demoted, not removed", () => {
-  it("🚨 '**Per stasera**' keeps its paragraph (sim 2026-08-28 dropped the evening advice)", () => {
+describe("demosappada content guard — a bold heading that is no venue is left exactly as written", () => {
+  it("🚨 '**Per stasera**' / '**Oggi (sabato 29 agosto)**' keep their bold and their paragraph", () => {
     const SOURCE = "Q: Latteria Plodarkelder\nA: prodotti locali"
-    const reply = "**Per stasera**\nRestate al coperto, piove.\n\n**Rifugio Fedare**\nInventato."
+    const reply = "**Oggi (sabato 29 agosto)**\nPiove tutto il giorno.\n\n**Per stasera**\nRestate al coperto.\n\n**Rifugio Fedare**\nInventato."
     const { text, removed } = stripUnknownVenues(reply, SOURCE)
-    expect(text).toBe("Per stasera\nRestate al coperto, piove.")
+    expect(text).toBe("**Oggi (sabato 29 agosto)**\nPiove tutto il giorno.\n\n**Per stasera**\nRestate al coperto.")
     expect(removed).toEqual(["Rifugio Fedare"])
+  })
+})
+
+/**
+ * WHAT: known place names are bolded by code where the reply mentions them
+ * plainly; names come from the catalogue and the FAQ subjects.
+ * WHY: contratto.md — "solo i nomi dei posti devono essere in bold"; the
+ * itinerary of 2026-08-29 01:03 named every place in plain prose.
+ */
+import { boldKnownVenues, knownVenueNames } from "../../custom-demosappada/content-guards"
+
+describe("demosappada — known venues in bold, by code", () => {
+  const names = knownVenueNames(
+    ["Cascatelle del Mühlbach: come si arriva?", "Latteria Plodarkelder — orari", "Dove si buttano i rifiuti?", "Museo Etnografico"],
+    ["Bach Boutique Hotel"],
+  )
+
+  it("derives names from FAQ subjects and the catalogue, not from questions", () => {
+    expect(names).toEqual(expect.arrayContaining(["Cascatelle del Mühlbach", "Latteria Plodarkelder", "Museo Etnografico", "Bach Boutique Hotel"]))
+    expect(names.some((n) => /rifiuti/i.test(n))).toBe(false)
+  })
+
+  it("🚨 bolds the first plain mention per paragraph, leaves bold text alone", () => {
+    const reply = "Poi fermatevi alla Latteria Plodarkelder per pranzo.\n\n**Cascatelle del Mühlbach**\n20 minuti a piedi alle Cascatelle del Mühlbach."
+    expect(boldKnownVenues(reply, names)).toBe(
+      "Poi fermatevi alla **Latteria Plodarkelder** per pranzo.\n\n**Cascatelle del Mühlbach**\n20 minuti a piedi alle Cascatelle del Mühlbach.",
+    )
   })
 })

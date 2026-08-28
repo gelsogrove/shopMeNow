@@ -182,3 +182,11 @@ describe("the name turn — one word is a name", () => {
     expect(u.name).toBe("Andrea")
   })
 })
+
+describe("the opening message fills the interests", () => {
+  it("🚨 live 01:03: 'io e mio marito vogliamo vedere sappada' → interests, no question later", () => {
+    const out = deterministicSlots({ ...ctx("io e mio marito vogliamo vedere sappada", "location"), firstTurn: true })
+    expect(out).toMatchObject({ adults: 2, interests: "io e mio marito vogliamo vedere sappada" })
+    expect(deterministicSlots({ ...ctx("ciao a tutti", "location"), firstTurn: true })).not.toHaveProperty("interests")
+  })
+})

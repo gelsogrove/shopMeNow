@@ -102,6 +102,8 @@ export interface UnderstandContext {
   profile: StayProfile | null | undefined
   /** The intake question put to the guest this turn (from the machine), if any. */
   questionKey: string | null
+  /** True on the opening message of a conversation (no history yet). */
+  firstTurn?: boolean
   now: Date
   /** Languages the tenant enabled; anything else falls back to the default. */
   enabledLanguages?: string[]
@@ -206,6 +208,14 @@ export function deterministicSlots(
   // (sim, 2026-08-28: the constraints question three times in a row).
   if (questionKey === 'constraints' && !profile?.constraints) out.constraints = verbatim
   if (questionKey === 'interests' && !profile?.interests) out.interests = verbatim
+  // The opening message says what they came for ("io e mio marito vogliamo
+  // vedere sappada"): a real sentence fills the interests, or the interests
+  // question comes back at someone who just answered it (live, 2026-08-29
+  // 01:03: "ti avevo già detto che volevamo visitare Sappada"). The model's
+  // cleaner reading, when it gives one, replaces this (turn.ts).
+  if (ctx.firstTurn && !profile?.interests && out.interests === undefined && verbatim.split(/\s+/).length >= 6) {
+    out.interests = verbatim
+  }
   if (questionKey === 'childrenAges' && !profile?.childrenAges && /\d/.test(verbatim)) out.childrenAges = verbatim
 
   return out
