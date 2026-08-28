@@ -7,15 +7,16 @@
 // one fact ("qualcosa da segnalarci? senza macchina? bambini o anziani?"),
 // and a guest who has just said "siamo senza macchina" was read the whole
 // sentence back, "senza macchina" included (Andrea, 2026-08-28: "questo è il
-// minimo che un utente si aspetta da un chatbot"). So the question goes
-// through ONE model call that translates it AND drops what is already known.
+// minimo che un utente si aspetta da un chatbot").
 //
-// Division of labour, as everywhere in this module: code owns which question,
-// what is known, and whether the rendering is acceptable; the model owns the
-// language. The code reads no meaning (CLAUDE.md §14): it lists the facts
-// the profile holds and checks the SHAPE of what comes back. Anything that
-// fails the shape check falls back to the plain translation — the wording
-// as the tenant wrote it — so the intake never loses a question.
+// Division of labour, as everywhere in this module: the code splits the
+// question into sentences and lists the facts the profile holds; the model
+// only says WHICH sentence a WHICH fact answers (JSON, nothing free-form);
+// the code deletes those sentences and translates the rest. The code reads
+// no meaning (CLAUDE.md §14), the model writes no words: it cannot rephrase,
+// decorate, or drop a sentence without naming the fact that answers it.
+// Anything malformed drops nothing — the wording goes out as the tenant
+// wrote it, so the intake never loses a question.
 
 import type { Settings, StayProfile } from './agent.js'
 import { callLLM } from './llm.js'
@@ -42,21 +43,50 @@ export function knownFacts(profile: StayProfile | null | undefined): string[] {
 }
 
 /**
- * Shape check on the rendering — the only judgement the code passes.
- * A rendering is usable when it is still a question, did not grow (the
- * model must subtract, never add), and did not collapse to nothing.
+ * The question split into its sentences, delimiters kept. "A? B? C?" → three
+ * items. Shape only, holds in every language.
  */
-export function renderingAcceptable(rendered: string, original: string): boolean {
-  const r = rendered.trim()
-  if (!r || !r.includes('?')) return false
-  if (r.length > original.trim().length * 1.5 + 20) return false
-  return true
+export function splitSentences(question: string): string[] {
+  return (question.match(/[^?!.]+[?!.]*/g) ?? []).map((s) => s.trim()).filter(Boolean)
 }
 
 /**
- * The question as it goes out. No known facts → the plain (cached)
- * translation, no extra call, behaviour unchanged. With facts known → one
- * model call that translates and trims, guarded by `renderingAcceptable`.
+ * What the model may say: which sentences to drop, each bound to the fact
+ * that answers it. Parsed strictly — anything malformed drops NOTHING.
+ */
+export function parseDrops(raw: string, sentenceCount: number, factCount: number): number[] {
+  try {
+    const json = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+    const arr = JSON.parse(json)
+    if (!Array.isArray(arr)) return []
+    const out = new Set<number>()
+    for (const item of arr) {
+      const sentence = Number(item?.sentence)
+      const fact = Number(item?.fact)
+      if (!Number.isInteger(sentence) || !Number.isInteger(fact)) continue
+      if (sentence < 1 || sentence > sentenceCount) continue
+      if (fact < 1 || fact > factCount) continue
+      out.add(sentence)
+    }
+    return [...out].sort((a, b) => a - b)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * The question as it goes out.
+ *
+ * Facts known → ONE model call that returns, as JSON, the sentences to drop
+ * and the fact answering each — the model never rewrites a word. The code
+ * deletes exactly those sentences (a drop not bound to a listed fact is
+ * ignored; dropping everything is refused) and only THEN translates, through
+ * the same cached path as before. The first version let the model rewrite
+ * the question freely and gpt-4o-mini deleted "Sarete senza macchina?" with
+ * nothing about a car known, and decorated with emoji (sim, 2026-08-28) —
+ * so the model now chooses, and the code edits.
+ *
+ * No facts known → the plain translation, no extra call, behaviour unchanged.
  */
 export async function renderIntakeQuestion(
   question: string,
@@ -65,38 +95,43 @@ export async function renderIntakeQuestion(
   needsTranslation: boolean,
   settings: Settings,
 ): Promise<string> {
-  const plain = async (): Promise<string> =>
-    needsTranslation && language ? translateWelcome(question, language, settings) : question
+  const translate = async (text: string): Promise<string> =>
+    needsTranslation && language ? translateWelcome(text, language, settings) : text
   const facts = knownFacts(profile)
-  if (facts.length === 0) return plain()
+  const sentences = splitSentences(question)
+  if (facts.length === 0 || sentences.length < 2) return translate(question)
 
   try {
-    const target = language || settings.defaultLanguage || 'it'
     const result = await callLLM(
       [
         {
           role: 'system',
           content:
-            `You render ONE question for a guest, in the language with ISO 639-1 code "${target}". ` +
-            'The question may ask several things at once. The guest has ALREADY told us:\n' +
-            facts.map((f) => `- ${f}`).join('\n') +
-            '\n\nRewrite the question so it asks ONLY what is still unknown: remove every part ' +
-            'that the facts above already answer, keep everything else as it is, keep the tone ' +
-            'and the emoji. Never add a new question, never mention the facts, never answer. ' +
-            'Output ONLY the resulting question, no preamble, no quotes.',
+            'A question for a guest is split into numbered sentences. The guest has ALREADY told us ' +
+            'the numbered facts below. Return ONLY a JSON array of the sentences that a listed fact ' +
+            'fully answers, each as {"sentence": n, "fact": m}. A sentence stays unless a fact ' +
+            'answers exactly what it asks. Never bind a sentence to a fact about something else. ' +
+            'Empty array [] when nothing is answered.\n\nFACTS:\n' +
+            facts.map((f, i) => `${i + 1}. ${f}`).join('\n'),
         },
-        { role: 'user', content: question },
+        {
+          role: 'user',
+          content: 'SENTENCES:\n' + sentences.map((s, i) => `${i + 1}. ${s}`).join('\n'),
+        },
       ],
-      { ...settings, maxTokens: 300 },
+      { ...settings, maxTokens: 200 },
       [],
     )
-    const rendered = result.content.trim()
-    if (renderingAcceptable(rendered, question)) return rendered
-    // eslint-disable-next-line no-console
-    console.error(`[demosappada][question-render] rejected "${rendered.slice(0, 80)}" — plain wording used`)
+    const drops = parseDrops(result.content, sentences.length, facts.length)
+    if (drops.length > 0 && drops.length < sentences.length) {
+      const kept = sentences.filter((_, i) => !drops.includes(i + 1)).join(' ')
+      // eslint-disable-next-line no-console
+      console.error(`[demosappada][question-render] dropped sentences ${drops.join(',')} of "${question.slice(0, 60)}"`)
+      return translate(kept)
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[demosappada][question-render] failed — plain wording used', err)
   }
-  return plain()
+  return translate(question)
 }

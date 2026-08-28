@@ -14,7 +14,7 @@
  * senza macchina?' ... questo è il minimo che un utente si aspetta da un
  * chatbot"). One rendering call, guarded, in one place — not a case list.
  */
-import { knownFacts, renderIntakeQuestion, renderingAcceptable } from "../../custom-demosappada/intake-question"
+import { knownFacts, parseDrops, renderIntakeQuestion, splitSentences } from "../../custom-demosappada/intake-question"
 import { callLLM } from "../../custom-demosappada/llm"
 import { translateWelcome } from "../../custom-demosappada/welcome"
 
@@ -51,27 +51,47 @@ describe("demosappada knownFacts — what the code tells the model is already kn
   })
 })
 
-describe("demosappada renderingAcceptable — shape only, never meaning", () => {
-  it("accepts a shorter question", () => {
-    expect(renderingAcceptable("C'è qualcosa di particolare che vuoi segnalarci?", CONSTRAINTS)).toBe(true)
+describe("demosappada splitSentences / parseDrops — the code edits, the model only chooses", () => {
+  it("splits the constraints wording into its three questions", () => {
+    expect(splitSentences(CONSTRAINTS)).toHaveLength(3)
   })
 
-  it("rejects an empty rendering, a non-question, and a rendering that grew", () => {
-    expect(renderingAcceptable("", CONSTRAINTS)).toBe(false)
-    expect(renderingAcceptable("Perfetto, grazie.", CONSTRAINTS)).toBe(false)
-    expect(renderingAcceptable(CONSTRAINTS + " " + CONSTRAINTS + "?", CONSTRAINTS)).toBe(false)
+  it("parses only drops bound to a real sentence AND a real fact", () => {
+    // sentence 9 does not exist; fact 0 does not exist; the plain one is kept.
+    const drops = parseDrops('[{"sentence":3,"fact":1},{"sentence":9,"fact":1},{"sentence":2,"fact":0}]', 3, 1)
+    expect(drops).toEqual([3])
+  })
+
+  it("malformed output drops nothing — the tenant's wording survives", () => {
+    expect(parseDrops("Perfetto, tolgo la terza frase.", 3, 1)).toEqual([])
+    expect(parseDrops('{"sentence":1}', 3, 1)).toEqual([])
+  })
+
+  it("tolerates a fenced code block around the JSON", () => {
+    expect(parseDrops('```json\n[{"sentence":2,"fact":1}]\n```', 3, 1)).toEqual([2])
   })
 })
 
-describe("demosappada renderIntakeQuestion — one guarded call, plain wording as fallback", () => {
-  it("🚨 regression 2026-08-28: 'siamo senza macchina' known → the car part is gone", async () => {
-    mockLLM.mockResolvedValue({ content: "C'è qualcosa di particolare che vuoi segnalarci? Ci sono bambini o anziani?" } as any)
+describe("demosappada renderIntakeQuestion — the model chooses, the code deletes, then translates", () => {
+  it("🚨 regression 2026-08-28: 'siamo senza macchina' known → only the car sentence goes", async () => {
+    // The model binds sentence 2 ("Sarete senza macchina?") to fact 1.
+    mockLLM.mockResolvedValue({ content: '[{"sentence":2,"fact":1}]' } as any)
     const out = await renderIntakeQuestion(CONSTRAINTS, { constraints: "senza macchina" }, "it", false, settings)
-    expect(out).not.toContain("senza macchina")
-    expect(out).toContain("?")
-    // The facts reached the model as the code's list, not as prose it invented.
+    expect(out).toBe("C'è qualcosa di particolare che vuoi segnalarci? Ci sono bambini o anziani?")
+    // The facts reached the model as the code's numbered list.
     const system = String(mockLLM.mock.calls[0][0][0].content)
-    expect(system).toContain("senza macchina")
+    expect(system).toContain("1. vincoli/esigenze già dichiarati: senza macchina")
+  })
+
+  it("🚨 sim 2026-08-28: the model cannot rewrite — words it invents never reach the guest", async () => {
+    // The free-form first version let gpt-4o-mini drop the car sentence with
+    // nothing about a car known and add a 🚗. Now free text is not a valid
+    // answer: nothing is dropped, the wording goes out exactly as written.
+    mockLLM.mockResolvedValue({
+      content: "C'è qualcosa di particolare che vuoi segnalarci? Ci sono bambini o anziani? 🚗",
+    } as any)
+    const out = await renderIntakeQuestion(CONSTRAINTS, { adults: 2 }, "it", false, settings)
+    expect(out).toBe(CONSTRAINTS)
   })
 
   it("nothing known → no rendering call: plain translation path, behaviour unchanged", async () => {
@@ -82,8 +102,14 @@ describe("demosappada renderIntakeQuestion — one guarded call, plain wording a
     expect(out).toBe("Is there anything special we should know?")
   })
 
-  it("a rendering that fails the shape check falls back to the tenant's wording", async () => {
-    mockLLM.mockResolvedValue({ content: "Perfetto, grazie per le informazioni." } as any)
+  it("a single-sentence question is never sent for trimming — there is nothing to subtract", async () => {
+    const out = await renderIntakeQuestion("E in quanti siete?", { departureDate: "2026-08-30" }, "it", false, settings)
+    expect(mockLLM).not.toHaveBeenCalled()
+    expect(out).toBe("E in quanti siete?")
+  })
+
+  it("dropping EVERY sentence is refused — a question must remain", async () => {
+    mockLLM.mockResolvedValue({ content: '[{"sentence":1,"fact":1},{"sentence":2,"fact":1},{"sentence":3,"fact":1}]' } as any)
     const out = await renderIntakeQuestion(CONSTRAINTS, { children: 0 }, "it", false, settings)
     expect(out).toBe(CONSTRAINTS)
   })
@@ -94,10 +120,12 @@ describe("demosappada renderIntakeQuestion — one guarded call, plain wording a
     expect(out).toBe(CONSTRAINTS)
   })
 
-  it("when a translation is needed, the fallback is the translated wording", async () => {
-    mockLLM.mockRejectedValue(new Error("boom"))
-    mockTranslate.mockResolvedValue("Anything special?")
-    const out = await renderIntakeQuestion(CONSTRAINTS, { children: 0 }, "en", true, settings)
-    expect(out).toBe("Anything special?")
+  it("the trimmed question is translated AFTER the cut, through the cached path", async () => {
+    mockLLM.mockResolvedValue({ content: '[{"sentence":3,"fact":1}]' } as any)
+    mockTranslate.mockResolvedValue("Anything special? No car?")
+    const out = await renderIntakeQuestion(CONSTRAINTS, { children: 0, seniors: 0 }, "en", true, settings)
+    expect(mockTranslate).toHaveBeenCalledWith(
+      "C'è qualcosa di particolare che vuoi segnalarci? Sarete senza macchina?", "en", settings)
+    expect(out).toBe("Anything special? No car?")
   })
 })
