@@ -105,7 +105,9 @@ const UNDERSTAND_RULES = [
   'You are the understanding step of a tourist-office assistant for Sappada. You do NOT reply to the guest.',
   'Read the whole conversation and the guest card, then call `understand` exactly once.',
   '- intent: "request" when the latest message asks for something (a place, a plan, an information, a',
-  '  price, an opening time); "answer" when it answers our question or volunteers facts; "chitchat" for',
+  '  price, an opening time) OR states a wish or a plan that expects a suggestion ("vogliamo vedere',
+  '  Sappada", "ci piacerebbe camminare", "cerchiamo un posto per cena"); "answer" ONLY when it just',
+  '  answers our question or states bare facts (dates, headcount, a name); "chitchat" for',
   '  greetings, thanks, small talk; "opt_out" when they no longer want messages; "change_language" when',
   '  they ask to switch language; "restart_stay" when they say they are back for a new holiday.',
   '- slots: every stay fact the guest STATED, in any message, that is not already on the card. Count the',
@@ -287,9 +289,12 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     knownName,
   })
   let effectiveKey: string | null = freshStep?.key ?? null
-  // With nothing left to ask, every message deserves a reply — a greeting, an
-  // "ok", a thank-you: the answer call handles it rather than sending nothing.
-  const guestAsked = understanding.intent === 'request' || !effectiveKey
+  // The answer call runs when there is something to answer: a request; the
+  // OPENING message, whatever its shape — the guest wrote to us first, and
+  // "siamo io e mio figlio, vogliamo vedere Sappada" met four questions and
+  // not one word about Sappada (live, 2026-08-29 01:18: "ma quando rispondi
+  // all'utente?"); and every message once nothing is left to ask.
+  const guestAsked = understanding.intent === 'request' || ctx.history.length === 0 || !effectiveKey
   if (holdRepeatedQuestion(sessionId, effectiveKey, guestAsked)) {
     // eslint-disable-next-line no-console
     console.error(`[demosappada][repeat-hold] "${effectiveKey}" held this turn`)
