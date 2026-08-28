@@ -64,6 +64,7 @@ import {
 } from './faq-media.js'
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
+import { quoteAnchoredIn } from './provenance.js'
 import {
   classifyTurn,
   composeIntakeTurn,
@@ -2398,11 +2399,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // hai inventato adulti 1"). The code reads no meaning (§14): real
           // answers flow through the deterministic answer-capture regardless,
           // so only inventions are lost.
+          //
+          // A number is not the only way to state a party: "io e mio marito"
+          // says two adults and no children in as many words, and the model
+          // reads it perfectly — then this guard threw its numbers away and
+          // "E in quanti siete?" went out at a guest who had just answered
+          // (Andrea, 2026-08-28: "se dico io e mio marito devi capire che
+          // sono 2 persone e non ci sono bambini"). So the numbers may also
+          // be anchored by `partySaidAs` — the guest's exact words naming the
+          // party, verified to exist in the message — the same provenance
+          // contract as `dateSaidAs` below. Still no meaning read in code.
+          const partyQuote = str(args.partySaidAs)
           const partyAnchored =
             probe.adults !== undefined ||
             probe.children !== undefined ||
             probe.seniors !== undefined ||
-            /\d/.test(userMessage)
+            /\d/.test(userMessage) ||
+            quoteAnchoredIn(partyQuote, userMessage)
           const partyRefused =
             !partyAnchored &&
             (num(args.adults) !== undefined ||
@@ -2410,7 +2423,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               num(args.seniors) !== undefined)
           if (partyRefused) {
             // eslint-disable-next-line no-console
-            console.error('[demosappada][party-guard] refused adults/children/seniors — no number in message')
+            console.error(
+              `[demosappada][party-guard] refused adults/children/seniors — no number in message, quote ${partyQuote ? `"${partyQuote}" not in message` : 'missing'}`
+            )
           }
           profile.adults = partyAnchored ? num(args.adults) : undefined
           profile.children = partyAnchored ? num(args.children) : undefined
@@ -2616,8 +2631,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // Same shape as dateNote (iron rule 2): a silent drop would leave
           // the model believing the numbers were saved.
           const partyNote = partyRefused
-            ? ' ATTENZIONE: adults/children/seniors SCARTATI — in questo messaggio il cliente non ha ' +
-              'detto quanti sono. Non inventare numeri: salva solo quello che scrive davvero.'
+            ? ' ATTENZIONE: adults/children/seniors SCARTATI — in questo messaggio non c\'è un numero né ' +
+              'partySaidAs con le parole ESATTE del cliente che dicono chi sono (es. "io e mio marito"). ' +
+              'Se il cliente ha davvero detto chi sono, rimanda save_preferences con partySaidAs; altrimenti non inventare numeri.'
             : ''
           toolOutput = JSON.stringify({
             ok: saved,

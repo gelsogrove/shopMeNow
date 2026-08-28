@@ -89,7 +89,22 @@ export const SAVE_STAY_TOOL = {
             'Save it the moment their answer to "Siete già a Sappada?" — or anything they volunteer — ' +
             'makes it clear.',
         },
-        adults: { type: 'integer', description: 'How many adults.' },
+        adults: {
+          type: 'integer',
+          description:
+            'How many adults. Count the people the guest NAMES, not only digits: "io e mio marito" is ' +
+            'adults 2 — and, since no children were named, children 0 in the same call. Always send ' +
+            'partySaidAs with it.',
+        },
+        partySaidAs: {
+          type: 'string',
+          description:
+            "The customer's EXACT words stating who is in the party, copied verbatim from their latest " +
+            'message — e.g. "io e mio marito", "siamo in 3", "due adulti e un bimbo", "we are a couple". ' +
+            'REQUIRED whenever adults/children/seniors are sent and the message carries no digit or ' +
+            'number-word: numbers arriving without it, or with words the customer never wrote, are ' +
+            'DISCARDED. Never paraphrase it, never quote a sentence that does not name the people.',
+        },
         children: { type: 'integer', description: 'How many children. Send 0 the moment the guest rules children out ("nessun bambino", "solo adulti", "no kids") — 0 is a real answer, not a value to leave unset, and omitting it here is what makes the intake ask about children again after the guest already answered.' },
         childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },
         constraints: { type: 'string', description: 'Anything that limits what suits them: coeliac or another intolerance, no car, a pregnancy, limited walking, a dog, a wheelchair. Append to what is already there rather than replacing it.' },
