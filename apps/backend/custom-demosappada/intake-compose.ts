@@ -501,8 +501,15 @@ export function composeIntakeTurn(input: IntakeTurnInput): IntakeTurnResult {
  * same class of check as stripSaveAcknowledgment above. Stems, not sentences,
  * across the languages the bot writes in.
  */
+// Also the plan CONFIRMATION the model closes an itinerary with — "Vi va
+// così per sabato, o volete aggiungere/cambiare qualcosa?" — which the
+// contract's owner does not want, for the same reason as the save
+// acknowledgment: it narrates the mechanism instead of helping (Andrea,
+// 2026-08-28: "non c'è bisogno di dirla, come non c'è bisogno di dire ho
+// salvato le preferenze"). The plan is theirs; if they want a change they
+// say so (mainPrompt). Bot output only, never the guest's words (§14).
 const OFFER_STEM =
-  /(fatemelo sapere|fammelo sapere|fatemi sapere|fammi sapere|let (me|us) know|lasst? (es )?(mich|uns) wissen|h[aá]z(me|noslo)?lo saber|avisadme|av[ií]same|faites[- ]le[- ]moi savoir|n'h[eé]sitez pas|non esit(are|ate|i)|don'?t hesitate|no dud(es|[eé]is)|se (avete|hai) (bisogno|domande|dubbi)|if you (have any|need)|falls (sie|ihr|du) fragen|si (ten[eé]is|tienes|necesitas)|per (ulteriori|qualsiasi|altre) (dettagli|informazioni|domande)|for (further|more) (details|information)|f[uü]r weitere)/i
+  /(fatemelo sapere|fammelo sapere|fatemi sapere|fammi sapere|let (me|us) know|lasst? (es )?(mich|uns) wissen|h[aá]z(me|noslo)?lo saber|avisadme|av[ií]same|faites[- ]le[- ]moi savoir|n'h[eé]sitez pas|non esit(are|ate|i)|don'?t hesitate|no dud(es|[eé]is)|se (avete|hai) (bisogno|domande|dubbi)|if you (have any|need)|falls (sie|ihr|du) fragen|si (ten[eé]is|tienes|necesitas)|per (ulteriori|qualsiasi|altre) (dettagli|informazioni|domande)|for (further|more) (details|information)|f[uü]r weitere|(vi|ti|le) va (bene )?(cos[iì]|questo|il programma)|va bene cos[iì]|(volete|vuoi|vuole) (aggiungere|cambiare|modificare|togliere)|che ne (pensi|pensate|dite|dice)|(does|would) (that|this) (work|suit)|sound(s)? good|(want|like) to (add|change|adjust)|(passt|gef[aä]llt) (euch|ihnen|dir)|(m[oö]chte(t|n)? (ihr|sie)|willst du) .*([aä]ndern|hinzuf[uü]gen)|[cç]a vous (va|convient)|(voulez|veux)-?(vous|tu) (ajouter|changer|modifier)|(os|te|le) parece bien|(quer[eé]is|quieres|quiere) (a[ñn]adir|cambiar|modificar))/i
 
 /** Remove every short paragraph that is only a helper-offer, wherever it sits. */
 export function stripOfferParagraphs(reply: string, dropped: string[]): string {

@@ -322,3 +322,36 @@ describe("demosappada stripOfferParagraphs — filler is never an answer", () =>
     expect(stripOfferParagraphs(reply, dropped)).toBe(reply)
   })
 })
+
+/**
+ * WHAT: the plan-confirmation question the model appends to an itinerary is
+ * stripped like any other helper-offer.
+ *
+ * WHY: "Vi va così per sabato, o volete aggiungere/cambiare qualcosa?" —
+ * Andrea, 2026-08-28: "non la voglio questa frase... non c'è bisogno di
+ * dirla come non c'è bisogno di dire ho salvato le preferenze". The plan is
+ * the guest's; a change is theirs to ask for (mainPrompt). Bot output only.
+ */
+import { stripTrailingOffers } from "../../custom-demosappada/intake-compose"
+
+describe("demosappada — the plan confirmation question is stripped", () => {
+  const PLAN = "**Sabato**\n- Mattina: Cascatelle\n- Pomeriggio: Museo Etnografico"
+
+  it("🚨 'Vi va così per sabato, o volete aggiungere/cambiare qualcosa?' goes, the plan stays", () => {
+    const { text, removed } = stripTrailingOffers(
+      PLAN + "\n\nVi va così per sabato, o volete aggiungere/cambiare qualcosa?", false)
+    expect(text).toBe(PLAN)
+    expect(removed).toHaveLength(1)
+  })
+
+  it("other languages, same class", () => {
+    expect(stripTrailingOffers(PLAN + "\n\nDoes that work for you, or would you like to change anything?", false).text).toBe(PLAN)
+    expect(stripTrailingOffers(PLAN + "\n\nÇa vous va, ou voulez-vous changer quelque chose ?", false).text).toBe(PLAN)
+    expect(stripTrailingOffers(PLAN + "\n\n¿Os parece bien, o queréis cambiar algo?", false).text).toBe(PLAN)
+  })
+
+  it("a follow-up about yesterday is NOT a confirmation and stays", () => {
+    const followUp = PLAN + "\n\nCom'è andata ieri alle Cascatelle?"
+    expect(stripTrailingOffers(followUp, false).text).toBe(followUp)
+  })
+})

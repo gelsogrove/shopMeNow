@@ -2015,20 +2015,6 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             captured.children = 0
             captured.seniors = 0
           }
-          // A FIRST message that says everything ("...e vogliamo visitare
-          // sappada") also states the interests: their words fill the field,
-          // or the interests question comes back at someone who already
-          // answered it (2026-08-25). Rich messages only; when the opener is
-          // pure logistics the same words land there and the LLM simply reads
-          // nothing extra from them — re-asking is the worse failure per the
-          // contract's owner.
-          if (
-            !getState(sessionId).lastAskedKey &&
-            !stayProfile?.interests &&
-            verbatim.split(/\s+/).length >= 6
-          ) {
-            captured.interests = verbatim
-          }
           // A weekday the guest wrote beats whatever date the model computed:
           // "fino a domenica" was stored as a Friday (2026-08-25). Calendar
           // arithmetic is code's job (iron rule 1).
@@ -2049,6 +2035,22 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         ) {
           updateState(sessionId, { name: verbatim })
           knownName = verbatim
+        }
+        // A FIRST message that says everything ("io e mio marito vogliamo
+        // vedere Sappada e non abbiamo la macchina") also states the
+        // interests: their words fill the field, or the interests question
+        // comes back at someone who already answered it (2026-08-25). This
+        // rule used to live inside the party/headcount branch — dead since
+        // `location` became the first question — and "Cosa ti piacerebbe
+        // fare? Visitare Sappada…" went out at a guest who had just written
+        // "vogliamo vedere Sappada" (Andrea, live 16:14, 2026-08-28). Rich
+        // messages only; the LLM reads the meaning when it recommends.
+        if (
+          !getState(sessionId).lastAskedKey &&
+          !stayProfile?.interests &&
+          verbatim.split(/\s+/).length >= 6
+        ) {
+          captured.interests = verbatim
         }
         // People named one by one ("io e mio marito") are captured on ANY
         // turn, whatever question was pending: the opening message is where
@@ -2779,10 +2781,30 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           }
         }
       } else if (name === 'save_push_consent') {
-        if (!customerId || !input.config.handlers?.savePushConsent) {
+        const consentArgs = safeParseArgs(call.function.arguments)
+        // A bare "si" is an answer to whatever WE just asked — "Siete già a
+        // Sappada?" in the sim of 2026-08-28 — and the model filed it as a
+        // push consent, so the opt-out hint went out to a guest who had
+        // consented to nothing. Consent needs its question: a yes of one or
+        // two words is refused unless the consent question was put (this
+        // turn or before). A sentence ("sì, mandatemi gli eventi") can still
+        // be a spontaneous opt-in — shape only, no reading of words (§14).
+        const consentWasAsked = questionsShown.includes('consent') || !!stayProfile?.consentAsked
+        const bareYes = userMessage.trim().split(/\s+/).length <= 2
+        if (consentArgs.granted === true && !consentWasAsked && bareYes) {
+          // eslint-disable-next-line no-console
+          console.error('[demosappada][consent-guard] refused granted=true — consent not asked, bare answer')
+          toolOutput = JSON.stringify({
+            ok: false,
+            instruction:
+              'Refused: the consent question has not been asked yet, and a one-word answer cannot be a ' +
+              'consent to notifications. It answers the question you just put. Do not call this again ' +
+              'until the consent question is dictated.',
+          })
+        } else if (!customerId || !input.config.handlers?.savePushConsent) {
           toolOutput = JSON.stringify({ ok: false, error: 'no_customer' })
         } else {
-          const args = safeParseArgs(call.function.arguments)
+          const args = consentArgs
           const granted = args.granted === true
           if (granted) consentJustGranted = true
           const saved = await input.config.handlers.savePushConsent({

@@ -89,3 +89,46 @@ describe("demosappada content guard — markdown links are stripped whole", () =
     expect(text).toContain("Dettagli: https://www.visitsappada.it/webcam-sappada.php")
   })
 })
+
+/**
+ * WHAT: price BANDS ("€€") are verified like prices: a band stays only when
+ * the approved content states one for that venue.
+ *
+ * WHY: the model decorated every venue with a band — "Rifugio Sorgenti del
+ * Piave — €€" in one run, "— €" in the next — from a FAQ entry carrying none
+ * (sim, 2026-08-28; Andrea, live: "rifugio togli il simbolo del dollaro"). A
+ * band is a claim about cost; an invented one misleads exactly like an
+ * invented price.
+ */
+import { stripInventedPriceBands, stripUnverifiableContacts as strip } from "../../custom-demosappada/content-guards"
+
+describe("demosappada content guard — invented price bands", () => {
+  const FAQ =
+    "Q: Dove mangiare tipico?\nA: Latteria Plodarkelder — € — prodotti locali, tel 0435 469833.\n" +
+    "Q: Rifugio Sorgenti del Piave\nA: In Val Sesis, cucina alpina semplice. Tel. 334 7799175."
+
+  it("🚨 removes the band from a venue the source describes without one", () => {
+    const removed: string[] = []
+    const out = stripInventedPriceBands("**Rifugio Sorgenti del Piave — €€**\nCucina alpina semplice.", FAQ, removed)
+    expect(out).toBe("**Rifugio Sorgenti del Piave**\nCucina alpina semplice.")
+    expect(removed).toEqual(["€€"])
+  })
+
+  it("keeps the band the source states for that venue", () => {
+    const removed: string[] = []
+    const out = stripInventedPriceBands("**Latteria Plodarkelder — €**\nProdotti locali.", FAQ, removed)
+    expect(out).toContain("— €")
+    expect(removed).toEqual([])
+  })
+
+  it("leaves real prices to the price check — a band with digits is not a band", () => {
+    const removed: string[] = []
+    expect(stripInventedPriceBands("Ingresso €5", FAQ, removed)).toBe("Ingresso €5")
+  })
+
+  it("runs inside stripUnverifiableContacts", () => {
+    const { text } = strip("**Rifugio Sorgenti del Piave (€€)**\nTel. 334 7799175.", FAQ)
+    expect(text).not.toContain("€")
+    expect(text).toContain("334 7799175")
+  })
+})

@@ -188,6 +188,16 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
     return ''
   })
 
+  // Price BANDS ("€€", "— €", "(€€€)"): the model decorates every venue with
+  // one, whether the source states it or not — "Rifugio Sorgenti del Piave —
+  // €€" in one run, "— €" in the next, from a FAQ entry that carries no band
+  // at all (sim, 2026-08-28; Andrea, live: "rifugio togli il simbolo del
+  // dollaro"). A band is a claim about cost, held to the same rule as a price:
+  // it stays only when the source states a band for THAT venue — the venue's
+  // name and a band within the same source entry. Bands with a digit are the
+  // prices handled above.
+  text = stripInventedPriceBands(text, haystack, removed)
+
   text = text.replace(PHONE_RE, (match) => {
     const digits = digitsOf(match)
     if (digits.length < 6) return match
@@ -234,4 +244,36 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
   }
 
   return { text, removed }
+}
+
+const BAND_RE = /(?:\s*[—–-]\s*|\s*\(\s*)?(€{1,4})(?!\s?\d)(\s*\))?/g
+
+/**
+ * Remove a price band from every line whose venue the approved content does
+ * not describe with a band. The venue is the bold name on the line, or the
+ * text before the band; "described with a band" means the name occurs in the
+ * source and a bare band occurs within the 400 characters that follow it —
+ * one FAQ entry, in practice.
+ */
+export function stripInventedPriceBands(reply: string, approvedContent: string, removed: string[]): string {
+  const source = approvedContent.toLowerCase()
+  const sourceHasBand = (name: string): boolean => {
+    const at = source.indexOf(name.toLowerCase())
+    if (at < 0) return false
+    return /€(?!\s?\d)/.test(source.slice(at, at + 400))
+  }
+  return reply
+    .split('\n')
+    .map((line) => {
+      if (!/€(?!\s?\d)/.test(line)) return line
+      const bold = line.match(/\*\*([^*]+)\*\*/)?.[1]
+      const before = line.split(/€/)[0].replace(/[*\s—–\-(]+$/g, '').trim()
+      const name = (bold ?? before).trim()
+      if (name && sourceHasBand(name)) return line
+      return line.replace(BAND_RE, (_match, band: string) => {
+        removed.push(band)
+        return ''
+      })
+    })
+    .join('\n')
 }
