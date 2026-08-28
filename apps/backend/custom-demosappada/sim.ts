@@ -119,7 +119,12 @@ async function main(): Promise<void> {
   // getCustomTools in production; the manifest is their single source, so the
   // sim serves it directly.
   const { MODULE_TOOLS } = await import('./tools.manifest.js')
-  const customTools = MODULE_TOOLS.map((t) => ({
+  // SIM_WITHOUT_TOOLS="save_preferences,remember": switch tools off for a
+  // run, the way an admin can in Settings → Custom Tools. Used to prove the
+  // code's own paths — with save_preferences gone, the only way a fact can
+  // reach the state is the deterministic capture (2026-08-28).
+  const withoutTools = new Set((process.env.SIM_WITHOUT_TOOLS ?? '').split(',').map((t) => t.trim()).filter(Boolean))
+  const customTools = MODULE_TOOLS.filter((t) => !withoutTools.has(t.functionName)).map((t) => ({
     name: t.functionName,
     description: t.description,
     parameters: t.parameters,
