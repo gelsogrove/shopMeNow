@@ -57,15 +57,35 @@ export interface LlmResult {
   tokensUsed: number
 }
 
-export async function callLLM(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
+/**
+ * Per-call options. `toolChoice: 'required'` forces the model to call one of
+ * the tools offered instead of answering in prose — the code's way of taking
+ * a freedom away (iron rule 1) on a hop where prose has already proven to be
+ * filler. Translated per provider below.
+ */
+export interface CallOptions {
+  toolChoice?: 'required'
+}
+
+export async function callLLM(
+  messages: Message[],
+  settings: Settings,
+  tools: unknown[],
+  options: CallOptions = {},
+): Promise<LlmResult> {
   return resolveProvider() === 'anthropic'
-    ? callAnthropic(messages, settings, tools)
-    : callOpenRouter(messages, settings, tools)
+    ? callAnthropic(messages, settings, tools, options)
+    : callOpenRouter(messages, settings, tools, options)
 }
 
 // ── OpenRouter (OpenAI-compatible; the agent's native shape passes through) ──
 
-async function callOpenRouter(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
+async function callOpenRouter(
+  messages: Message[],
+  settings: Settings,
+  tools: unknown[],
+  options: CallOptions,
+): Promise<LlmResult> {
   if (!OPENROUTER_KEY) throw new Error('OPENROUTER_API_KEY is not set')
 
   const response = await fetch(`${OPENROUTER_URL}/chat/completions`, {
@@ -80,6 +100,7 @@ async function callOpenRouter(messages: Message[], settings: Settings, tools: un
       max_tokens: settings.maxTokens,
       messages,
       tools,
+      ...(options.toolChoice === 'required' && tools.length > 0 ? { tool_choice: 'required' } : {}),
     }),
   })
 
@@ -213,7 +234,12 @@ function toAnthropicTools(tools: unknown[]): unknown[] {
   })
 }
 
-async function callAnthropic(messages: Message[], settings: Settings, tools: unknown[]): Promise<LlmResult> {
+async function callAnthropic(
+  messages: Message[],
+  settings: Settings,
+  tools: unknown[],
+  options: CallOptions,
+): Promise<LlmResult> {
   if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY is not set')
   if (!settings.model) throw new Error('settings.model is not set')
   if (!settings.maxTokens) throw new Error('settings.maxTokens is not set')
@@ -238,6 +264,7 @@ async function callAnthropic(messages: Message[], settings: Settings, tools: unk
         : {}),
       messages: anthropicMessages,
       ...(tools.length > 0 ? { tools: toAnthropicTools(tools) } : {}),
+      ...(options.toolChoice === 'required' && tools.length > 0 ? { tool_choice: { type: 'any' } } : {}),
     }),
   })
 

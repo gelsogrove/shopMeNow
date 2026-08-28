@@ -256,3 +256,69 @@ describe("demosappada classifyTurn — ONE authority on the turn's kind", () => 
     expect(classifyTurn("si", { machineAdvanced: true, hasPendingRequest: true })).toBe("answer")
   })
 })
+
+/**
+ * WHAT: two more signals for the turn composer, both observed from the
+ * bot's side and never read from the guest's words (§14).
+ *
+ * WHY (sim, 2026-08-28, the four "can you handle these?" requests):
+ *  - "cerchiamo un rifugio con funivia": five words, no "?", the machine had
+ *    advanced (presence saved) — the six-word rule classed it as a plain
+ *    intake answer and the accommodation list the model had FETCHED was
+ *    thrown away for "E fino a quando vi fermate?". A turn in which the
+ *    model fetched content is an answer turn: `contentFetched`.
+ *  - "cerchiamo un albergo e vogliamo spendere poco": the model wrote only
+ *    "Se hai bisogno di ulteriori informazioni, fammi sapere!" and that
+ *    filler went out as the answer, above our question. Offer-only
+ *    paragraphs are stripped from every intake turn.
+ */
+import { stripOfferParagraphs } from "../../custom-demosappada/intake-compose"
+
+describe("demosappada classifyTurn — a fetched result makes an ANSWER turn", () => {
+  it("🚨 sim 2026-08-28: 'cerchiamo un rifugio con funivia' with check_accommodation called", () => {
+    expect(
+      classifyTurn("cerchiamo un rifugio con funivia", {
+        machineAdvanced: true,
+        hasPendingRequest: false,
+        contentFetched: true,
+      }),
+    ).toBe("answer")
+  })
+
+  it("without a fetch the six-word rule still applies — existing behaviour unchanged", () => {
+    expect(
+      classifyTurn("cerchiamo un rifugio con funivia", {
+        machineAdvanced: true,
+        hasPendingRequest: false,
+        contentFetched: false,
+      }),
+    ).toBe("advance")
+  })
+})
+
+describe("demosappada stripOfferParagraphs — filler is never an answer", () => {
+  it("🚨 sim 2026-08-28: an offer-only reply is emptied, so our question goes out alone", () => {
+    const dropped: string[] = []
+    const out = stripOfferParagraphs("Se hai bisogno di ulteriori informazioni o di altri consigli, fammi sapere!", dropped)
+    expect(out).toBe("")
+    expect(dropped).toHaveLength(1)
+  })
+
+  it("keeps content paragraphs and drops only the offer between them", () => {
+    const dropped: string[] = []
+    const reply =
+      "**Latteria Plodarkelder — €**\nProdotti locali, Tel. 0435 469833.\n\n" +
+      "Se hai bisogno di altro, fammi sapere!\n\n" +
+      "E fino a quando vi fermate?"
+    const out = stripOfferParagraphs(reply, dropped)
+    expect(out).toContain("Plodarkelder")
+    expect(out).toContain("E fino a quando vi fermate?")
+    expect(out).not.toContain("fammi sapere")
+  })
+
+  it("never cuts a paragraph carrying plan content, even if it mentions an offer", () => {
+    const dropped: string[] = []
+    const reply = "- Cascatelle al mattino\n- Se avete domande fatemelo sapere, poi Sorgenti del Piave"
+    expect(stripOfferParagraphs(reply, dropped)).toBe(reply)
+  })
+})

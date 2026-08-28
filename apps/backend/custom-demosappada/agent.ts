@@ -1337,6 +1337,13 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       if (n === undefined || n < 1 || n > 30) continue
       const nextTok = toks[i + 1]
       const c = nextTok ? cat(nextTok) : null
+      // "un"/"una"/"one" are articles far more often than counts: "siamo UN
+      // gruppo di persone" read as one adult, which then anchored the
+      // model's invented adults:5 (sim, 2026-08-28). The word counts only
+      // when the next word says WHAT it counts ("un bambino", "una notte");
+      // on its own it is grammar, not a number. The digit "1" is unaffected.
+      const isArticle = !/^\d+$/.test(toks[i]) && n === 1
+      if (isArticle && !c && !(nextTok && isDayWord(nextTok))) continue
       if (c) out[c] = n
       // "3 giorni" / "2 notti": a number is a DURATION only when its own
       // next word says so — the positional "second number = days" guess
@@ -1545,13 +1552,29 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // fermate?" (sim, 2026-08-28). Bookkeeping tools do not count.
   const BOOKKEEPING_TOOLS = new Set(['remember', 'save_preferences', 'save_itinerary', 'save_push_consent', 'save_feedback'])
   let contentFetched = false
+  // Set by the ignored-message retry: on the next hop the model is offered
+  // ONLY the content tools and MUST call one. Asked twice in prose to serve
+  // "cerchiamo un albergo e vogliamo spendere poco", gpt-4o-mini wrote
+  // filler twice and never fetched the accommodation list (sim, 2026-08-28);
+  // the fix is not a third sentence but a hop with no prose allowed.
+  let forceContentTool = false
 
   for (let hop = 0; hop < maxHops; hop++) {
+    const allTools = buildTools(customTools)
+    const hopTools = forceContentTool
+      ? allTools.filter((t) => !BOOKKEEPING_TOOLS.has(String((t as any)?.function?.name ?? '')))
+      : allTools
     const result = await callLLM(
       messages,
       settings,
-      buildTools(customTools),
+      hopTools,
+      forceContentTool && hopTools.length > 0 ? { toolChoice: 'required' } : {},
     )
+    if (forceContentTool) {
+      // eslint-disable-next-line no-console
+      console.error(`[demosappada][forced-tool] hop ${hop}: ${hopTools.map((t) => String((t as any)?.function?.name)).join(',')} → ${result.toolCalls.map((c) => c.function.name).join(',') || 'NO CALL'}`)
+    }
+    forceContentTool = false
     tokensUsed += result.tokensUsed
 
     if (result.toolCalls.length === 0) {
@@ -1834,6 +1857,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         replyLacksSubstance(checked.text, dictatedQuestion)
       ) {
         droppedQuestionRetryDone = true
+        forceContentTool = true
         // eslint-disable-next-line no-console
         console.error('[demosappada][guard] guest message ignored — retrying')
         pendingReply = result.content || pendingReply
@@ -1842,9 +1866,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           role: 'user',
           content:
             '[SYSTEM] Hai risposto solo con una tua domanda, ignorando quello che il cliente ha ' +
-            'scritto. Riscrivi la risposta: PRIMA rispondi a quello che ha detto o chiesto — se non ' +
-            'hai il dato, dillo apertamente e indica dove trovarlo (InfoPoint 0435 469131 o il sito ' +
-            'ufficiale) — e SOLO DOPO, in coda, rimetti la tua domanda in una riga.',
+            'scritto. Riscrivi la risposta: PRIMA rispondi a quello che ha detto o chiesto — usa i ' +
+            'tool: check_accommodation se cerca dove dormire (hotel, rifugio, B&B, appartamento), ' +
+            'get_weather per il meteo; se non hai il dato, dillo apertamente e indica dove trovarlo ' +
+            '(InfoPoint 0435 469131 o il sito ufficiale) — e SOLO DOPO, in coda, rimetti la tua ' +
+            'domanda in una riga.',
         })
         continue
       }

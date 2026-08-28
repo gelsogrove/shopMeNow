@@ -105,3 +105,32 @@ describe("demosappada isRuleOutOnly — zeros are a rule-out, a count is not", (
     expect(isRuleOutOnly({ adults: "2" })).toBe(false)
   })
 })
+
+/**
+ * WHAT: a party count anchored ONLY by a quote (no digit, no number-word in
+ * the message) is accepted up to MAX_QUOTE_ANCHORED_PARTY people in total.
+ *
+ * WHY: "siamo un gruppo di persone e siamo in pulman" — the quote was real,
+ * the number was not: gpt-4o-mini saved adults 5 (sim, 2026-08-28). A
+ * message can enumerate two or three individuals without a number ("io e
+ * mio marito"); a larger party is always stated WITH one, which takes the
+ * digit path. Above the cap the tool refuses and the headcount gets asked —
+ * the honest outcome when nobody said how many.
+ */
+import { MAX_QUOTE_ANCHORED_PARTY, withinQuoteAnchoredCap } from "../../custom-demosappada/provenance"
+
+describe("demosappada withinQuoteAnchoredCap — no number, no big party", () => {
+  it("🚨 sim 2026-08-28: 'un gruppo di persone' → adults 5 is refused", () => {
+    expect(withinQuoteAnchoredCap({ adults: 5 })).toBe(false)
+  })
+
+  it("'io e mio marito' → 2 passes; 'io, mia moglie e mia madre' → 3 passes", () => {
+    expect(withinQuoteAnchoredCap({ adults: 2, children: 0 })).toBe(true)
+    expect(withinQuoteAnchoredCap({ adults: 2, seniors: 1 })).toBe(true)
+    expect(MAX_QUOTE_ANCHORED_PARTY).toBe(3)
+  })
+
+  it("the cap is on the TOTAL across categories", () => {
+    expect(withinQuoteAnchoredCap({ adults: 2, children: 2 })).toBe(false)
+  })
+})
