@@ -2004,6 +2004,23 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               captured.seniors = 0
             }
           }
+        } else if (captureKey === 'consent' && !stayProfile?.consentAsked) {
+          // The consent answer is captured by CODE, like every other answer
+          // to a dictated question: the question was put, whatever they
+          // said it is answered (asked once, never again). A bare yes/no —
+          // the §14 closed class — also records the grant itself, so the
+          // opt-in does not hang on the model calling save_push_consent.
+          captured.consentAsked = true
+          const yes = /^(s[iì]|yes|ja|oui|s[ií]|ok|okay|va bene|certo)\.?!?$/i.test(verbatim)
+          const no = /^(no|nein|non|nope)\.?!?$/i.test(verbatim)
+          if ((yes || no) && input.config.handlers?.savePushConsent) {
+            await input.config.handlers.savePushConsent({
+              workspaceId: input.config.workspaceId,
+              customerId,
+              granted: yes,
+            })
+            if (yes) consentJustGranted = true
+          }
         } else if (captureKey === 'childrenAges' && !stayProfile?.childrenAges && /\d/.test(verbatim)) {
           captured.childrenAges = verbatim
         } else if (captureKey === 'stay') {
@@ -2880,6 +2897,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               customerId,
               profile: { consentAsked: true },
             })
+            // In memory too: the machine that picks the outgoing question
+            // reads THIS object. Saved only to the host, `consent` stayed
+            // open and the question was appended again under the reply the
+            // guest had just said "Si" to (live 16:56, 2026-08-28).
+            stayProfile = { ...(stayProfile ?? {}), consentAsked: true }
           }
 
           // The interests are what makes the consent usable: an offer on rooms
