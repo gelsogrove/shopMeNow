@@ -149,6 +149,18 @@ export interface Settings {
    */
   intakeIntro?: string
   /**
+   * Which turn implementation runs: 'v1' the single-call loop in this file,
+   * 'v2' the four-step turn in turn.ts (docs/turn-design.md). Defaults to
+   * v2; 'v1' is the fallback for one release, then removed.
+   */
+  turnEngine?: 'v1' | 'v2'
+  /**
+   * What the guest reads when they asked for something the assistant has no
+   * data for. Configuration, translated at runtime; absent → the answer is
+   * simply the next question (§1A: never an English literal).
+   */
+  noDataMessage?: string
+  /**
    * Shown ONLY to a guest who accepts the push consent: how to turn it off
    * again. Configuration, not a literal, so it can be reworded per tenant and
    * the LLM renders it in the guest's language (CLAUDE.md §1A).
@@ -695,7 +707,7 @@ function seasonOf(now: Date): string {
  * a structure is now stripped by the content guard instead of approved by it.
  * The structure quotes its own rates when the guest calls.
  */
-function formatCatalogue(entries: CatalogueEntry[]): string {
+export function formatCatalogue(entries: CatalogueEntry[]): string {
   const lines = entries.map((e) => {
     const bits = [e.type ? `[${e.type}]` : '', e.name].filter(Boolean)
     const detail: string[] = []
@@ -712,7 +724,7 @@ function formatCatalogue(entries: CatalogueEntry[]): string {
 // the backoffice is not a safety rule (CLAUDE.md §1B). Kept short — it is
 // paid on every call.
 
-const OPERATING_RULES = [
+export const OPERATING_RULES = [
   '═══ OPERATING RULES (system, not customer-facing) ═══',
   '- Every fact you state — a name, an hour, a price, a phone number, a URL — must appear in the FAQ block, in a tool result, or in the customer\'s own message. Nothing else is knowledge you may use.',
   '- You MAY combine several FAQ entries and the weather into one tailored recommendation. That is your job. What you may NOT do is add a fact none of them contain.',
@@ -783,6 +795,11 @@ const weatherCache = new Map<string, CachedForecast>()
  * it is still the previous day there — the same mismatch that once told a
  * guest writing at 02:08 that it was 00:08 (2026-08-23).
  */
+/** True when get_weather was actually called for this session within the clock hour (save_itinerary guard). */
+export function weatherCheckedThisHour(sessionId: string, now: Date): boolean {
+  return weatherCache.get(sessionId)?.hourKey === sappadaHourKey(now)
+}
+
 function sappadaHourKey(now: Date): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TIMEZONE,
@@ -813,7 +830,7 @@ function sappadaHourKey(now: Date): string {
  * Only a good report is cached: a transient outage is retried on the next
  * question, never remembered as "weather unavailable".
  */
-async function fetchWeather(sessionId: string, now: Date): Promise<WeatherReport> {
+export async function fetchWeather(sessionId: string, now: Date): Promise<WeatherReport> {
   const hourKey = sappadaHourKey(now)
   const cached = weatherCache.get(sessionId)
   if (cached && cached.hourKey === hourKey) {
@@ -1532,6 +1549,35 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // fallback — the forced tool hop never ran (sim, 2026-08-28). One retry
   // earns two hops: one to fetch, one to write.
   let extraHops = 0
+
+  // v2 is the turn (docs/turn-design.md; four acceptance scenarios passed on
+  // Haiku 4.5, 2026-08-28). The loop below is kept for ONE release as the
+  // fallback (`turnEngine: 'v1'` in the advanced settings), then removed.
+  if (settings.turnEngine !== 'v1') {
+    const { runTurnV2 } = await import('./turn.js')
+    return runTurnV2({
+      input,
+      settings,
+      sessionId,
+      now,
+      userMessage,
+      history,
+      customerId,
+      stayEnabled,
+      stayProfile,
+      knownName,
+      greeting,
+      returningGuest,
+      faqs,
+      faqBlock,
+      approvedContent,
+      customTools,
+      weatherEnabled,
+      accommodationEnabled,
+      runtimeBlock,
+      mainPromptRendered,
+    })
+  }
 
   for (let hop = 0; hop < maxHops + extraHops; hop++) {
     const allTools = buildTools(customTools)

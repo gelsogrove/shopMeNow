@@ -247,6 +247,14 @@ export function formatStayBlock(
   knownName: string | undefined,
   /** Carries `intakeQuestions` — the wording this block dictates. */
   settings: Settings,
+  /**
+   * 'intake' (default): the block dictates the question of the turn to the
+   * model — the old single-call design. 'card': facts only, no intake
+   * directives — for the ANSWER call of the new turn (docs/turn-design.md),
+   * which must not know an intake exists. `askedKey`/`askedQuestion` are
+   * computed either way, for the code that composes the turn.
+   */
+  mode: 'intake' | 'card' = 'intake',
 ): StayBlock {
   // A guest with no saved profile is precisely the one everything still has to
   // be asked of. Returning early here meant the FIRST message — the only turn
@@ -516,108 +524,110 @@ export function formatStayBlock(
   // question and its WORDING, the model owns only the language it is said in.
   const question = askedKey ? intakeQuestionFor(askedKey as IntakeKey, settings) : null
 
-  if (askedKey && question) {
-    lines.push(
-      '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
-      'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
-      'davvero, con i fatti che hai, e SOLO DOPO aggiungi la domanda qui sotto.',
-      '',
-      '## LA DOMANDA DA FARE ADESSO',
-      '',
-      'Questa istruzione ha la precedenza su qualsiasi altra cosa tu possa dedurre dalla',
-      'conversazione. Fai QUESTA domanda, alla lettera, tradotta nella lingua del cliente:',
-      '',
-      question,
-      '',
-      // The sentence demorobot has and demosappada did not: the question IS
-      // the reply, not something appended to one. Without it the model wrote
-      // three museums with addresses, an offer of more detail and a link, and
-      // put the question at the bottom (Andrea, 2026-08-25: "devono essere
-      // domande secche una dopo l'altra").
-      ...(askedKey === 'itinerary'
-        ? []
-        : [
-            'MANDALA COME RISPOSTA INTERA. Se il cliente non ti ha chiesto niente, il tuo messaggio',
-            'è SOLO questa domanda: niente consigli, niente elenchi di posti, niente link, niente',
-            'meteo, niente offerte di ulteriori dettagli, nemmeno mezza riga di introduzione.',
-          ]),
-      'Se invece il cliente TI HA CHIESTO qualcosa, rispondi prima a lui — davvero, con i fatti',
-      'che hai — e la domanda va in coda, da sola.',
-      'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
-      'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
-      'NON toccare il campo `asked` di save_preferences: lo registra il sistema.',
-    )
-
-    // The branch question needs its reading key: the answer decides which of
-    // the three flows this guest gets, and the model is the one reading the
-    // nuance (contratto.md, 2026-08-27: "devi essere intelligente... in tutti
-    // i casi il sistema deve rispondere bene").
-    if (askedKey === 'location') {
+  if (mode === 'intake') {
+    if (askedKey && question) {
       lines.push(
+        '🚨 RISPONDI SEMPRE PRIMA A QUELLO CHE TI HA CHIESTO. Se il cliente ha fatto una domanda — un',
+        'prezzo, un orario, un consiglio, qualsiasi cosa — quella ha la precedenza assoluta: rispondi',
+        'davvero, con i fatti che hai, e SOLO DOPO aggiungi la domanda qui sotto.',
         '',
-        'La risposta ti dice DOVE si trova, e va salvata SUBITO con save_preferences:',
-        "- è già a Sappada («sì», «siamo qui», «arrivati ieri») → presence='in_loco'",
-        "- la vacanza è decisa ma non è ancora qui («veniamo il prossimo mese», «arriviamo sabato») → presence='planned', e salva anche le date che nomina",
-        "- non è qui e non ha piani («no», «cerco solo informazioni») → presence='remote'",
-        'Se la risposta non chiarisce nulla, non salvare niente: la domanda resta aperta.',
+        '## LA DOMANDA DA FARE ADESSO',
+        '',
+        'Questa istruzione ha la precedenza su qualsiasi altra cosa tu possa dedurre dalla',
+        'conversazione. Fai QUESTA domanda, alla lettera, tradotta nella lingua del cliente:',
+        '',
+        question,
+        '',
+        // The sentence demorobot has and demosappada did not: the question IS
+        // the reply, not something appended to one. Without it the model wrote
+        // three museums with addresses, an offer of more detail and a link, and
+        // put the question at the bottom (Andrea, 2026-08-25: "devono essere
+        // domande secche una dopo l'altra").
+        ...(askedKey === 'itinerary'
+          ? []
+          : [
+              'MANDALA COME RISPOSTA INTERA. Se il cliente non ti ha chiesto niente, il tuo messaggio',
+              'è SOLO questa domanda: niente consigli, niente elenchi di posti, niente link, niente',
+              'meteo, niente offerte di ulteriori dettagli, nemmeno mezza riga di introduzione.',
+            ]),
+        'Se invece il cliente TI HA CHIESTO qualcosa, rispondi prima a lui — davvero, con i fatti',
+        'che hai — e la domanda va in coda, da sola.',
+        'NON aggiungere altre domande. NON elencarne altre. NON anticipare le prossime.',
+        'NON riformularla e non aggiungere spiegazioni sul perché la fai: dilla e basta.',
+        'NON toccare il campo `asked` di save_preferences: lo registra il sistema.',
       )
+
+      // The branch question needs its reading key: the answer decides which of
+      // the three flows this guest gets, and the model is the one reading the
+      // nuance (contratto.md, 2026-08-27: "devi essere intelligente... in tutti
+      // i casi il sistema deve rispondere bene").
+      if (askedKey === 'location') {
+        lines.push(
+          '',
+          'La risposta ti dice DOVE si trova, e va salvata SUBITO con save_preferences:',
+          "- è già a Sappada («sì», «siamo qui», «arrivati ieri») → presence='in_loco'",
+          "- la vacanza è decisa ma non è ancora qui («veniamo il prossimo mese», «arriviamo sabato») → presence='planned', e salva anche le date che nomina",
+          "- non è qui e non ha piani («no», «cerco solo informazioni») → presence='remote'",
+          'Se la risposta non chiarisce nulla, non salvare niente: la domanda resta aperta.',
+        )
+      }
+
+      // The turn that closes the intake. Every question has been answered, the
+      // guest has just given their name, and this is the first message where the
+      // assistant has the whole picture — so it is the one that must READ like
+      // it (Andrea, 2026-08-24: "Ciao [nome] oggi il meteo a Sappada è...").
+      //
+      // Shaped here rather than left to the model: without it the plan question
+      // arrives bare, on the turn where using their name for the first time is
+      // worth the most. The CONTENT stays the model's — the weather is whatever
+      // get_weather returned, the suggestion whatever fits their card.
+      if (askedKey === 'itinerary') {
+        lines.push(
+          '',
+          '## COME SI APRE QUESTO MESSAGGIO',
+          '',
+          'È il messaggio che chiude le domande: hai tutte le risposte e sai come si chiama.',
+          'Scrivilo in QUEST\'ORDINE, quattro pezzi e nient\'altro:',
+          // The name is NOT interpolated here: on the very turn the guest gives
+          // it, `remember` writes it to state AFTER this prompt was built, so
+          // it would still be empty. The model has the name in front of it — it
+          // is the message it is answering — so it is told to use it.
+          '1. "Perfetto <NOME>," — chiamalo per nome, con il nome che ti ha appena detto.',
+          '2. Com\'è il meteo a Sappada (il dato VERO da get_weather, mai stimato).',
+          '3. UN consiglio solo, coerente con quel meteo e con la sua scheda.',
+          '4. La domanda qui sopra, alla lettera, da sola in fondo.',
+          ...(settings.closingLine?.trim()
+            ? [`5. E per chiudere, esattamente questa riga: "${settings.closingLine.trim()}"`]
+            : []),
+          'Niente elenchi numerati di posti, niente riepilogo di quello che ti ha detto,',
+          'niente altre domande, e NON offrire nulla che non ti abbia chiesto.',
+        )
+      }
+    } else if (askedKey && !question) {
+      // Configuration says nothing for this key, so nothing is asked. Silence
+      // beats an English sentence sent to a guest writing in Italian, and beats
+      // the model improvising a question of its own (CLAUDE.md §1A).
+      // eslint-disable-next-line no-console
+      console.error(`[demosappada][intake] no question configured for "${askedKey}" — skipped`)
+      lines.push('NON FARE DOMANDE sul suo soggiorno in questo messaggio.')
+    } else {
+      lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
     }
 
-    // The turn that closes the intake. Every question has been answered, the
-    // guest has just given their name, and this is the first message where the
-    // assistant has the whole picture — so it is the one that must READ like
-    // it (Andrea, 2026-08-24: "Ciao [nome] oggi il meteo a Sappada è...").
-    //
-    // Shaped here rather than left to the model: without it the plan question
-    // arrives bare, on the turn where using their name for the first time is
-    // worth the most. The CONTENT stays the model's — the weather is whatever
-    // get_weather returned, the suggestion whatever fits their card.
-    if (askedKey === 'itinerary') {
+    if (asked.size > 0 || stay.consentAsked || stay.itinerary) {
+      // The key being dictated THIS turn must not also sit in the "never ask
+      // again" list — since the second intake pass (intake-machine.ts) a
+      // still-unanswered question CAN be dictated a second time, and listing
+      // it here as forbidden would have the prompt contradict itself.
+      const done = [
+        ...Array.from(asked).filter((k) => k !== askedKey),
+        ...(stay.consentAsked ? ['consent'] : []),
+        ...(stay.itinerary ? ['itinerary'] : []),
+      ]
       lines.push(
-        '',
-        '## COME SI APRE QUESTO MESSAGGIO',
-        '',
-        'È il messaggio che chiude le domande: hai tutte le risposte e sai come si chiama.',
-        'Scrivilo in QUEST\'ORDINE, quattro pezzi e nient\'altro:',
-        // The name is NOT interpolated here: on the very turn the guest gives
-        // it, `remember` writes it to state AFTER this prompt was built, so
-        // it would still be empty. The model has the name in front of it — it
-        // is the message it is answering — so it is told to use it.
-        '1. "Perfetto <NOME>," — chiamalo per nome, con il nome che ti ha appena detto.',
-        '2. Com\'è il meteo a Sappada (il dato VERO da get_weather, mai stimato).',
-        '3. UN consiglio solo, coerente con quel meteo e con la sua scheda.',
-        '4. La domanda qui sopra, alla lettera, da sola in fondo.',
-        ...(settings.closingLine?.trim()
-          ? [`5. E per chiudere, esattamente questa riga: "${settings.closingLine.trim()}"`]
-          : []),
-        'Niente elenchi numerati di posti, niente riepilogo di quello che ti ha detto,',
-        'niente altre domande, e NON offrire nulla che non ti abbia chiesto.',
+        `GIÀ CHIESTO (non richiederlo MAI più, nemmeno se non ha risposto): ${done.join(', ')}`,
       )
     }
-  } else if (askedKey && !question) {
-    // Configuration says nothing for this key, so nothing is asked. Silence
-    // beats an English sentence sent to a guest writing in Italian, and beats
-    // the model improvising a question of its own (CLAUDE.md §1A).
-    // eslint-disable-next-line no-console
-    console.error(`[demosappada][intake] no question configured for "${askedKey}" — skipped`)
-    lines.push('NON FARE DOMANDE sul suo soggiorno in questo messaggio.')
-  } else {
-    lines.push('NON CHIEDERE PIÙ NULLA sul suo soggiorno: sai già tutto quello che serve.')
-  }
-
-  if (asked.size > 0 || stay.consentAsked || stay.itinerary) {
-    // The key being dictated THIS turn must not also sit in the "never ask
-    // again" list — since the second intake pass (intake-machine.ts) a
-    // still-unanswered question CAN be dictated a second time, and listing
-    // it here as forbidden would have the prompt contradict itself.
-    const done = [
-      ...Array.from(asked).filter((k) => k !== askedKey),
-      ...(stay.consentAsked ? ['consent'] : []),
-      ...(stay.itinerary ? ['itinerary'] : []),
-    ]
-    lines.push(
-      `GIÀ CHIESTO (non richiederlo MAI più, nemmeno se non ha risposto): ${done.join(', ')}`,
-    )
   }
 
   if (stay.consentAsked) {

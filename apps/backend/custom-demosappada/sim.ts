@@ -39,6 +39,8 @@ const settings = JSON.parse(readFileSync(join(HERE, 'settings.json'), 'utf8'))
 // in the backoffice. SIM_MODEL exists so two sim runs can compare models
 // before Andrea commits to one there.
 if (process.env.SIM_MODEL) settings.model = process.env.SIM_MODEL
+// SIM_TURN_ENGINE=v2 runs the four-step turn (turn.ts) instead of the loop.
+if (process.env.SIM_TURN_ENGINE) settings.turnEngine = process.env.SIM_TURN_ENGINE
 
 // ── In-memory host stand-ins ───────────────────────────────────────────────
 
