@@ -136,8 +136,10 @@ const NO_LEADING = /^(no|nein|non|nope)\b/i
  * people, weekdays, durations, bare yes/no answers to the question just put.
  * Runs BEFORE the model and never depends on it.
  */
-export function deterministicSlots(ctx: UnderstandContext): Partial<StayProfile> & { consent?: 'granted' | 'declined' } {
-  const out: Partial<StayProfile> & { consent?: 'granted' | 'declined' } = {}
+export function deterministicSlots(
+  ctx: UnderstandContext,
+): Partial<StayProfile> & { consent?: 'granted' | 'declined'; name?: string } {
+  const out: Partial<StayProfile> & { consent?: 'granted' | 'declined'; name?: string } = {}
   const { message, profile, questionKey, now } = ctx
   const verbatim = message.trim().slice(0, 200)
   if (!verbatim || message.includes('?')) return out
@@ -184,6 +186,16 @@ export function deterministicSlots(ctx: UnderstandContext): Partial<StayProfile>
   if (questionKey === 'itinerary' && (!profile?.itinerary || profile.itinerary === 'asked')) {
     if (YES.test(verbatim)) out.itinerary = 'yes'
     else if (NO_LEADING.test(verbatim)) out.itinerary = 'no'
+  }
+
+  // The name: to "come ti chiami?" a short answer without digits IS the name
+  // ("Andrea", "Maria Rossi"). Live 2026-08-28 17:49: "Andrea" was refused
+  // as a one-word message and the question came back three times.
+  if (questionKey === 'name' && !NO_LEADING.test(verbatim) && !YES.test(verbatim)) {
+    const words = verbatim.replace(/[^\p{L}\s'-]/gu, ' ').trim().split(/\s+/).filter(Boolean)
+    if (words.length >= 1 && words.length <= 3 && !/\d/.test(verbatim)) {
+      out.name = words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 60)
+    }
   }
 
   // Free-text answers to their own question: the guest's whole sentence is
@@ -329,8 +341,9 @@ export function applyUnderstanding(raw: unknown, ctx: UnderstandContext): Unders
       if (v) slots[key] = v
     }
   }
+  // A name is legitimately one word: no `statedFacts` bar here.
   const nameRaw = str(s.name)
-  const name = nameRaw && statedFacts && !/^visitor/i.test(nameRaw) ? nameRaw.slice(0, 60) : undefined
+  const name = nameRaw && !/^visitor/i.test(nameRaw) && !/\d/.test(nameRaw) ? nameRaw.slice(0, 60) : undefined
 
   return { intent, request, language, slots, consent, name, refused }
 }

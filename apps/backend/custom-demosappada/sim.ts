@@ -141,7 +141,7 @@ async function main(): Promise<void> {
     console.log(`\n🧑 ${userMessage}`)
     const input: ChatbotInput = {
       userMessage,
-      userName: 'Sim',
+      userName: process.env.SIM_NO_NAME ? '' : 'Sim',
       channel: 'widget',
       config: {
         workspaceId: 'sim-workspace',

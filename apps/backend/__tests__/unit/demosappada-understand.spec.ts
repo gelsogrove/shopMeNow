@@ -172,3 +172,13 @@ describe("deterministicSlots — a bare answer to a free-text question still ans
     expect(deterministicSlots(ctx("si", "interests"))).toMatchObject({ interests: "si" })
   })
 })
+
+describe("the name turn — one word is a name", () => {
+  it("🚨 live 17:49: 'Andrea' to 'come ti chiami?' is the name, not a message without facts", () => {
+    expect(deterministicSlots(ctx("Andrea", "name"))).toMatchObject({ name: "Andrea" })
+    expect(deterministicSlots(ctx("maria rossi", "name"))).toMatchObject({ name: "Maria Rossi" })
+    expect(deterministicSlots(ctx("no", "name"))).not.toHaveProperty("name")
+    const u = applyUnderstanding({ intent: "answer", slots: { name: "Andrea" } }, ctx("Andrea", "name"))
+    expect(u.name).toBe("Andrea")
+  })
+})

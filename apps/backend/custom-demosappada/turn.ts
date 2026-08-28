@@ -169,7 +169,7 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     defaultLanguage: settings.defaultLanguage,
   }
   const det = deterministicSlots(uctx)
-  const { consent: detConsent, ...detSlots } = det
+  const { consent: detConsent, name: detName, ...detSlots } = det
 
   // ── 1. UNDERSTAND — one forced call, no prose possible ──────────────────
   let understanding: Understanding = {
@@ -214,10 +214,12 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
   // Language: the model's reading, validated against the tenant's list.
   if (understanding.language) commitLanguageFromReply(sessionId, understanding.language)
 
-  // Name: on the customer, not the stay.
-  if (understanding.name && !knownName) {
-    updateState(sessionId, { name: understanding.name })
-    knownName = understanding.name
+  // Name: on the customer, not the stay. The code's reading of the name
+  // turn first, the model's otherwise.
+  const newName = detName ?? understanding.name
+  if (newName && !knownName) {
+    updateState(sessionId, { name: newName })
+    knownName = newName
   }
 
   // Consent: recorded by code, with its tags (contratto.md: IN LOCO + eventi, news, offerte, meteo).
