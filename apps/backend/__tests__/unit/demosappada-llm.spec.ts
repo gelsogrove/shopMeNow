@@ -20,10 +20,8 @@ import { CACHE_BREAK, systemBlocks, toAnthropicPayload } from "../../custom-demo
 describe("demosappada systemBlocks — a breakpoint at the stable boundary and at the end", () => {
   it("splits at CACHE_BREAK into two cacheable blocks, in order", () => {
     const blocks = systemBlocks(`TENANT PROMPT\nRULES${CACHE_BREAK}FAQ\nRUNTIME`)
-    // The tenant block is shared by every guest → cached for an hour; the
-    // per-turn block keeps the 5-minute default.
     expect(blocks).toEqual([
-      { type: "text", text: "TENANT PROMPT\nRULES", cache_control: { type: "ephemeral", ttl: "1h" } },
+      { type: "text", text: "TENANT PROMPT\nRULES", cache_control: { type: "ephemeral" } },
       { type: "text", text: "FAQ\nRUNTIME", cache_control: { type: "ephemeral" } },
     ])
   })

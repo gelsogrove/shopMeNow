@@ -470,6 +470,14 @@ export interface StayProfile {
    * rispondere alle tue domande" — never the reverse, and never skipped).
    */
   pendingRequest?: string
+  /**
+   * True when `pendingRequest` was written by CODE (the served-nothing carry),
+   * not declared by the model. A code-carried request lives ONE turn: the
+   * next answer with substance clears it. Left alone, a greeting carried as
+   * a request ("hola que tal?") made every later turn an answer-turn owed a
+   * substantive reply (sim, 2026-08-28).
+   */
+  pendingRequestCarried?: boolean
 }
 
 export type GetStayProfileHandler = (params: {
@@ -1419,6 +1427,8 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   }
   /** Last free-text answer the model produced, kept as a fallback. */
   let pendingReply = ''
+  const carriedAtStart = !!stayProfile?.pendingRequestCarried
+  let lastTurnKind: 'answer' | 'advance' | null = null
   let emptyRetryDone = false
   let droppedQuestionRetryDone = false
   let missingExamplesRetryDone = false
@@ -1615,7 +1625,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // in this turn (alongside its tool calls) before asking for more.
       const finalContent = result.content?.trim() ? result.content : pendingReply
       const { reply, lang } = extractLanguage(finalContent)
-      if (!reply.trim()) {
+      // With an intake question dictated this turn, an empty model reply is
+      // LEGITIMATE: the guest answered ("si, hasta el domingo"), the code
+      // puts the next question, the model has nothing to add — and Haiku
+      // 4.5 says so by writing nothing but the language tag (13 tokens,
+      // twice, then `empty_reply`; sim 2026-08-28). The composer turns the
+      // empty prose into the dictated question; the substance guard below
+      // still catches an empty reply to a real request.
+      if (!reply.trim() && !questionShown) {
         // Silence is never an acceptable answer: the guest wrote something and
         // is watching an empty bubble. It happened when the forced save ate
         // the turn (Andrea, 2026-08-23). One more hop, asked plainly. No
@@ -1833,6 +1850,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         hasPendingRequest: !!pendingRequestThisTurn || !!stayProfile?.pendingRequest,
         contentFetched,
       })
+      lastTurnKind = turnKind
       if (
         !droppedQuestionRetryDone &&
         turnKind === 'answer' &&
@@ -1882,9 +1900,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         await input.config.handlers.saveStayProfile({
           workspaceId: input.config.workspaceId,
           customerId,
-          profile: { pendingRequest: carried },
+          profile: { pendingRequest: carried, pendingRequestCarried: true },
         })
-        stayProfile = { ...(stayProfile ?? {}), pendingRequest: carried }
+        stayProfile = { ...(stayProfile ?? {}), pendingRequest: carried, pendingRequestCarried: true }
       }
 
       // GUARD: a PROPOSAL turn that never consulted the forecast. Same
@@ -3143,6 +3161,21 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     }
     if (checked.text.trim()) {
       recordShownAccommodations(checked.text)
+      // A code-carried request has now been served with substance: cleared
+      // by code, with the host's CLEAR sentinel (see pendingRequestCarried).
+      if (
+        carriedAtStart &&
+        lastTurnKind === 'answer' &&
+        !replyLacksSubstance(checked.text, dictatedQuestion) &&
+        customerId &&
+        input.config.handlers?.saveStayProfile
+      ) {
+        await input.config.handlers.saveStayProfile({
+          workspaceId: input.config.workspaceId,
+          customerId,
+          profile: { pendingRequest: 'RISOLTO', pendingRequestCarried: 'RISOLTO' as unknown as boolean },
+        })
+      }
       return {
         reply: checked.text,
         language: getState(sessionId).language,

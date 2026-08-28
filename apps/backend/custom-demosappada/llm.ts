@@ -85,19 +85,17 @@ type SystemBlock = { type: 'text'; text: string; cache_control?: { type: 'epheme
 
 /**
  * The system string as cacheable blocks: a breakpoint at every CACHE_BREAK
- * and at the end. The FIRST block — the tenant prompt and the rules, the
- * same bytes for every guest of the tenant — is cached for an hour: written
- * once, read by every conversation of the hour. The rest changes with the
- * turn and keeps the 5-minute default (a WhatsApp reply usually comes
- * within it; when it does not, only the small block is rewritten).
+ * and at the end. Default 5-minute TTL on every block. The 1-hour TTL was
+ * tried on the first block and REMOVED: the tenant prompt carries the
+ * guest's variables ({{party}}, {{departureDate}}…), so during the intake
+ * it changes every turn — production showed cache_write≈29k on the first
+ * hop of every turn (2026-08-28, 16:46) — and a 1h write costs 2x against
+ * 1.25x. The win is within the turn (hops 2–4 read at 0.1x) and across
+ * turns once the state is stable; both work at 5 minutes.
  */
 export function systemBlocks(system: string): SystemBlock[] {
   const parts = system.split(CACHE_BREAK).map((t) => t.trim()).filter(Boolean)
-  return parts.map((text, i) => ({
-    type: 'text',
-    text,
-    cache_control: i === 0 && parts.length > 1 ? { type: 'ephemeral', ttl: '1h' } : { type: 'ephemeral' },
-  }))
+  return parts.map((text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } }))
 }
 
 export interface CacheUsage {
