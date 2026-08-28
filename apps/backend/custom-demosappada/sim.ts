@@ -34,6 +34,12 @@ loadEnv({ path: join(dirname(fileURLToPath(import.meta.url)), '../../../.env') }
 const HERE = dirname(fileURLToPath(import.meta.url))
 const settings = JSON.parse(readFileSync(join(HERE, 'settings.json'), 'utf8'))
 
+// A/B harness override, in memory only: settings.json is GENERATED from the
+// DB (CLAUDE.md §1D) and is never edited by hand — the real model is chosen
+// in the backoffice. SIM_MODEL exists so two sim runs can compare models
+// before Andrea commits to one there.
+if (process.env.SIM_MODEL) settings.model = process.env.SIM_MODEL
+
 // ── In-memory host stand-ins ───────────────────────────────────────────────
 
 const FAQS: FaqEntry[] = [
@@ -91,7 +97,8 @@ function mergeProfile(patch: StayProfile): void {
 
 const DEFAULT_DIALOGUE = [
   'prossimo weekend a Sappada. Suggeriscimi per favore un paio di escursioni di massimo 4 ore a/r di camminata, massimo 500 mt di dislivello, con possibilitá di pranzo in un rifugio',
-  'domenica',
+  'fino a domenica',
+  'siamo in due',
   'sono ciliaco e non ho la macchina',
   'no',
   'si',

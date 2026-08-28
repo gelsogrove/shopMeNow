@@ -1322,6 +1322,15 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     const out: { adults?: number; children?: number; seniors?: number; days?: number } = {}
     let loose: number | undefined
     for (let i = 0; i < toks.length; i++) {
+      // "coppia"/"couple": a closed-vocabulary word that IS a headcount, same
+      // §14 class as the number-words above. "mio marito ed io siamo una
+      // coppia di 50enni" told the machine nothing, the headcount stayed
+      // open, and "Ci sono bambini o anziani?" went out at two adults who
+      // had just introduced themselves (Andrea, 2026-08-28 live, 01:57).
+      if (/^(coppia|couple|paar|pareja|casal|par)$/.test(toks[i])) {
+        if (out.adults === undefined) out.adults = 2
+        continue
+      }
       const n = /^\d+$/.test(toks[i]) ? parseInt(toks[i], 10) : WORD_NUM[toks[i]]
       if (n === undefined || n < 1 || n > 30) continue
       const nextTok = toks[i + 1]
