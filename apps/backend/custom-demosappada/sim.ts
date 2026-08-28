@@ -44,6 +44,13 @@ if (process.env.SIM_MODEL) settings.model = process.env.SIM_MODEL
 
 const FAQS: FaqEntry[] = [
   {
+    question: 'Dove si buttano i rifiuti? Raccolta differenziata a Sappada',
+    answer:
+      'Raccolta differenziata con i contenitori nelle borgate: umido (marrone), carta (giallo), ' +
+      'plastica e lattine (blu), vetro (verde), secco (grigio). Ecocentro in via Bach aperto il ' +
+      'sabato 9-12. Info: 0435 469131.',
+  },
+  {
     question: 'Cascatelle del Mühlbach: come si arriva?',
     answer:
       'Percorso facile di 20 minuti a/r, dislivello 91 m, partenza dal ponte di legno sul rio ' +

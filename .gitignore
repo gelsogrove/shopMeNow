@@ -126,3 +126,6 @@ deploy/*/.env
 deploy/echatbot-images.tar.gz
 deploy/.env.example
 deploy/.env
+
+# graphify (generated knowledge graph output)
+graphify-out/

@@ -134,3 +134,38 @@ describe("demosappada withinQuoteAnchoredCap — no number, no big party", () =>
     expect(withinQuoteAnchoredCap({ adults: 2, children: 2 })).toBe(false)
   })
 })
+
+/**
+ * WHAT: with no number in the message, the count the model saves must equal
+ * the number of people it can ENUMERATE from the guest's own words.
+ *
+ * WHY: "cerchiamo un albergo e vogliamo spendere poco" → adults 2 (sim,
+ * 2026-08-28): the quote "cerchiamo" was a real word, the pair was inferred
+ * from a plural verb. Enumeration makes the provenance concrete: "io e mio
+ * marito" names two people; "cerchiamo" names nobody.
+ */
+import { membersAnchored, partyTotal } from "../../custom-demosappada/provenance"
+
+describe("demosappada membersAnchored — one anchored member per counted person", () => {
+  it("🚨 'io e mio marito' → ['io','mio marito'] → 2, equal to adults 2", () => {
+    const msg = "io e mio marito siamo a sappada"
+    expect(membersAnchored(["io", "mio marito"], msg)).toBe(2)
+    expect(partyTotal({ adults: 2, children: 0 })).toBe(2)
+  })
+
+  it("🚨 sim 2026-08-28: 'cerchiamo un albergo' enumerates nobody → the pair is refused", () => {
+    const msg = "cerchiamo un albergo e vogliamo spendere poco"
+    expect(membersAnchored(["noi"], msg)).toBe(0)
+    expect(membersAnchored(["io", "mio marito"], msg)).toBe(0)
+  })
+
+  it("survives a typo on the person's word, exact-matches the short pronouns", () => {
+    expect(membersAnchored(["io", "mio marito"], "io e mio marit siamo qui")).toBe(2)
+    expect(membersAnchored(["I", "my wife"], "My wife and I are here until Sunday")).toBe(2)
+  })
+
+  it("garbage members count for nothing", () => {
+    expect(membersAnchored("io", "io e mio marito")).toBe(0)
+    expect(membersAnchored([1, null], "io e mio marito")).toBe(0)
+  })
+})

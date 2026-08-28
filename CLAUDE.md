@@ -419,3 +419,18 @@ const userId = (req as any).user.id            // set by authMiddleware
 - ❌ **NEVER** run `git add` — Andrea does this
 - ❌ **NEVER** run `git commit` — Andrea does this
 - ❌ **NEVER** run `git push` — Andrea does this
+
+## graphify
+
+A knowledge graph of this repo lives in `graphify-out/` (AST-only, generated
+with `graphify . --code-only`, zero API cost, gitignored).
+
+- Before grepping or reading files for a structural question, run
+  `graphify query "<question>"` — it returns the scoped subgraph
+  (nodes + call edges) in a fraction of the tokens.
+- `graphify path "A" "B"` for the relationship between two symbols,
+  `graphify explain "<concept>"` for a concept overview.
+- After modifying code, run `graphify update .` so the graph stays in sync.
+- Hooks in `.claude/settings.json` (`graphify hook-guard search|read`) remind
+  Claude to consult the graph before raw Bash/Read/Glob searches.
+- Full instructions: `.claude/skills/graphify/SKILL.md` — trigger `/graphify`.

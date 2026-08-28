@@ -93,8 +93,9 @@ export const SAVE_STAY_TOOL = {
           type: 'integer',
           description:
             'How many adults. Count the people the guest NAMES, not only digits: "io e mio marito" is ' +
-            'adults 2 — and, since no children were named, children 0 in the same call. Always send ' +
-            'partySaidAs with it.',
+            'adults 2 — and, since no children were named, children 0 in the same call. When the message ' +
+            'has no number, send partySaidAs AND partyMembers with it. A plural verb ("cerchiamo", "siamo") ' +
+            'or "un gruppo" does NOT tell you how many: send nothing and let the headcount be asked.',
         },
         partySaidAs: {
           type: 'string',
@@ -104,6 +105,15 @@ export const SAVE_STAY_TOOL = {
             'REQUIRED whenever adults/children/seniors are sent and the message carries no digit or ' +
             'number-word: numbers arriving without it, or with words the customer never wrote, are ' +
             'DISCARDED. Never paraphrase it, never quote a sentence that does not name the people.',
+        },
+        partyMembers: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'One entry per person you counted, in the guest\'s own words: "io e mio marito" → ' +
+            '["io", "mio marito"]; "my wife and I" → ["my wife", "I"]. REQUIRED with partySaidAs. The ' +
+            'number of entries must equal adults+children+seniors, and each must be a person the guest ' +
+            'actually named — otherwise the numbers are DISCARDED.',
         },
         children: { type: 'integer', description: 'How many children. Send 0 the moment the guest rules children out ("nessun bambino", "solo adulti", "no kids") — 0 is a real answer, not a value to leave unset, and omitting it here is what makes the intake ask about children again after the guest already answered.' },
         childrenAges: { type: 'string', description: 'Their ages as the guest said them, e.g. "8, 9 e 10". Save it the moment you learn it — it changes what is worth proposing.' },

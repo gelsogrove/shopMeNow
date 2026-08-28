@@ -69,3 +69,41 @@ export function withinQuoteAnchoredCap(args: { adults?: unknown; children?: unkn
     .reduce((a, b) => a + b, 0)
   return total <= MAX_QUOTE_ANCHORED_PARTY
 }
+
+/**
+ * Each person the model COUNTED, as the guest named them, verified one by one
+ * against the message. The count it saves must equal the number of members
+ * it can point to: "io e mio marito" → ["io", "mio marito"] → 2; "cerchiamo
+ * un albergo" → nothing to enumerate → no count. This is what stops "we" from
+ * becoming adults 2 on its own: the model inferred a pair from a plural
+ * verb, the quote ("cerchiamo") was a real word, and the guess went into the
+ * state (sim, 2026-08-28). Short words ("io", "me", "I") match exactly;
+ * longer ones by 4-char prefix, like quoteAnchoredIn.
+ */
+export function membersAnchored(members: unknown, message: string): number {
+  if (!Array.isArray(members)) return 0
+  const msgTokens = message
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  const anchored = (word: string): boolean =>
+    word.length < 4 ? msgTokens.includes(word) : msgTokens.some((m) => m.slice(0, 4) === word.slice(0, 4))
+  let count = 0
+  for (const m of members) {
+    if (typeof m !== 'string') continue
+    const words = m.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean)
+    // A member is anchored when its most specific word (the last: "marito"
+    // in "mio marito") is in the message.
+    const last = words[words.length - 1]
+    if (last && anchored(last)) count += 1
+  }
+  return count
+}
+
+/** The total the model saved across the three categories (positive counts only). */
+export function partyTotal(args: { adults?: unknown; children?: unknown; seniors?: unknown }): number {
+  return [args.adults, args.children, args.seniors]
+    .filter((v): v is number => typeof v === 'number' && v > 0)
+    .reduce((a, b) => a + b, 0)
+}

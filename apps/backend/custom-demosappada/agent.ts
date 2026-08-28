@@ -65,7 +65,7 @@ import {
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
 import { renderIntakeQuestion } from './intake-question.js'
-import { isRuleOutOnly, quoteAnchoredIn, rulesOutParty, withinQuoteAnchoredCap } from './provenance.js'
+import { isRuleOutOnly, membersAnchored, partyTotal, quoteAnchoredIn, rulesOutParty, withinQuoteAnchoredCap } from './provenance.js'
 import {
   classifyTurn,
   composeIntakeTurn,
@@ -2490,7 +2490,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             probe.children !== undefined ||
             probe.seniors !== undefined ||
             /\d/.test(userMessage) ||
-            (quoteAnchoredIn(partyQuote, userMessage) && withinQuoteAnchoredCap(args)) ||
+            // No number in the message: the count is accepted only when the
+            // model can point to each person it counted (`partyMembers`),
+            // every one of them in the guest's own words, up to the cap.
+            (quoteAnchoredIn(partyQuote, userMessage) &&
+              withinQuoteAnchoredCap(args) &&
+              membersAnchored(args.partyMembers, userMessage) === partyTotal(args)) ||
             (partyTurn && isRuleOutOnly(args))
           const partyRefused =
             !partyAnchored &&
@@ -2500,11 +2505,25 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           if (partyRefused) {
             // eslint-disable-next-line no-console
             console.error(
-              `[demosappada][party-guard] refused adults/children/seniors — no number in message, quote ${partyQuote ? `"${partyQuote}" not in message` : 'missing'}`
+              `[demosappada][party-guard] refused adults/children/seniors — no number in message, quote ${partyQuote ? `"${partyQuote}"` : 'missing'}, members anchored ${membersAnchored(args.partyMembers, userMessage)}/${partyTotal(args)}`
             )
           }
           profile.adults = partyAnchored ? num(args.adults) : undefined
           profile.children = partyAnchored ? num(args.children) : undefined
+          // The guest ENUMERATED the party ("io e mio marito") and named no
+          // child and no senior: those are 0, deterministically — the model
+          // sends the zeros only sometimes (sim, 2026-08-28), and without
+          // them "Ci sono bambini o anziani?" went out at a couple who had
+          // just introduced themselves (Andrea: "devi capire che sono 2
+          // persone e non ci sono bambini").
+          const enumerated =
+            partyAnchored &&
+            !/\d/.test(userMessage) &&
+            probe.adults === undefined &&
+            membersAnchored(args.partyMembers, userMessage) === partyTotal(args) &&
+            partyTotal(args) > 0
+          if (enumerated && profile.children === undefined) profile.children = 0
+          if (enumerated && num(args.seniors) === undefined) args.seniors = 0
           profile.childrenAges = str(args.childrenAges)
 
           // Where the guest stands with Sappada — the branch the whole intake
@@ -2708,8 +2727,9 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // the model believing the numbers were saved.
           const partyNote = partyRefused
             ? ' ATTENZIONE: adults/children/seniors SCARTATI — in questo messaggio non c\'è un numero né ' +
-              'partySaidAs con le parole ESATTE del cliente che dicono chi sono (es. "io e mio marito"). ' +
-              'Se il cliente ha davvero detto chi sono, rimanda save_preferences con partySaidAs; altrimenti non inventare numeri.'
+              'partySaidAs + partyMembers (una voce per persona, con le parole ESATTE del cliente: ' +
+              '["io", "mio marito"]). Se il cliente ha davvero nominato le persone, rimanda save_preferences ' +
+              'con partySaidAs e partyMembers; se ha solo detto "noi" o "un gruppo" NON sai quanti sono: non inventare.'
             : ''
           toolOutput = JSON.stringify({
             ok: saved,
