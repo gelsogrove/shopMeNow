@@ -155,3 +155,38 @@ describe("demosappada intake machine — strict pipeline", () => {
     })
   })
 })
+
+/**
+ * WHAT: the headcount is closed by ANY description of the party, not by
+ * `adults` alone. "siamo due anziani" fills `seniors` (parseParty assigns the
+ * number-word to the category that follows it) and leaves `adults` unset.
+ *
+ * WHY: read on `adults` only, the machine asked "E in quanti siete?" at two
+ * people who had just said who they were. Andrea, 2026-08-28: "non posso
+ * farti 1000 casi, devi capire te che se hai già la info non la devi più
+ * richiedere" — so the rule is general (any count), not a list of phrasings.
+ * The dates must still be asked: `stay` becomes relevant on the same signal.
+ */
+describe("demosappada intake — any party count closes the headcount (2026-08-28)", () => {
+  const asked = new Set<string>()
+
+  it("🚨 'siamo due anziani' (seniors only): no headcount, no composition — the dates are next", () => {
+    const step = nextIntakeStep({ profile: { presence: 'in_loco', seniors: 2 }, asked })
+    expect(step?.key).toBe("stay")
+  })
+
+  it("children only ('siamo con 2 bimbi'): headcount closed, dates next, ages later", () => {
+    const step = nextIntakeStep({ profile: { presence: 'in_loco', children: 2 }, asked })
+    expect(step?.key).toBe("stay")
+  })
+
+  it("a party described AND dated moves straight on to the constraints", () => {
+    const step = nextIntakeStep({ profile: { presence: 'in_loco', seniors: 2, departureDate: "2026-08-30" }, asked })
+    expect(step?.key).toBe("constraints")
+  })
+
+  it("dates alone still ask the headcount — nothing about the party was said", () => {
+    const step = nextIntakeStep({ profile: { presence: 'in_loco', departureDate: "2026-08-30" }, asked })
+    expect(step?.key).toBe("headcount")
+  })
+})

@@ -64,6 +64,7 @@ import {
 } from './faq-media.js'
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
+import { renderIntakeQuestion } from './intake-question.js'
 import { isRuleOutOnly, quoteAnchoredIn, rulesOutParty } from './provenance.js'
 import {
   classifyTurn,
@@ -2106,10 +2107,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // Every fixed line the code inserts travels through the same translation
       // as the question: the closing line went out in Italian under an English
       // conversation (Andrea, 2026-08-25: "scrive in due lingue").
-      const questionTranslated =
-        effectiveQuestion && needsTranslation
-          ? await translateWelcome(effectiveQuestion, askLangForCheck, settings)
-          : effectiveQuestion
+      // The question itself is RENDERED, not just translated: the parts the
+      // profile already answers are dropped (intake-question.ts, 2026-08-28).
+      const questionTranslated = effectiveQuestion
+        ? await renderIntakeQuestion(effectiveQuestion, stayProfile, askLangForCheck, needsTranslation, settings)
+        : effectiveQuestion
       const closingTranslated =
         settings.closingLine?.trim() && needsTranslation
           ? await translateWelcome(settings.closingLine.trim(), askLangForCheck, settings)
@@ -2997,10 +2999,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         fallbackKey = null
         fallbackQuestion = null
       }
-      const translated =
-        fallbackQuestion && fallbackLang && fallbackLang.toLowerCase() !== sourceLang
-          ? await translateWelcome(fallbackQuestion, fallbackLang, settings)
-          : fallbackQuestion
+      // Same rendering as the main path (intake-question.ts): translated AND
+      // trimmed of what the profile already answers.
+      const translated = fallbackQuestion
+        ? await renderIntakeQuestion(
+            fallbackQuestion,
+            stayProfile,
+            fallbackLang,
+            !!fallbackLang && fallbackLang.toLowerCase() !== sourceLang,
+            settings,
+          )
+        : fallbackQuestion
       const turn = composeIntakeTurn({
         reply: checked.text,
         key: fallbackKey,

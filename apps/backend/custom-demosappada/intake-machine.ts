@@ -55,6 +55,18 @@ export interface IntakeStep {
  */
 const isRemote = ({ profile }: IntakeContext): boolean => profile?.presence === 'remote'
 
+/**
+ * The guest has described who they are — ANY count closes the headcount.
+ * "siamo due anziani" fills `seniors`, not `adults`, and the machine, reading
+ * `adults` alone, asked "E in quanti siete?" at two people who had just said
+ * (Andrea, 2026-08-28: "se hai già la info non la devi più richiedere").
+ * The rule is general, not a case list: once the party is described, what
+ * is missing (the plain-adult count) is the model's to infer from what was
+ * said, never a question to put again.
+ */
+const partyKnown = ({ profile }: IntakeContext): boolean =>
+  profile?.adults !== undefined || profile?.children !== undefined || profile?.seniors !== undefined
+
 export const INTAKE_STEPS: readonly IntakeStep[] = [
   {
     // THE branch question, before everything: in town, planning to come, or
@@ -82,14 +94,14 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
     // only the missing HALF is asked, by `headcount` or `stay` below, never
     // the whole question again ("ho detto fino a domenica!", 2026-08-25).
     key: 'party',
-    satisfiedBy: ({ profile }) => profile?.adults !== undefined || !!profile?.departureDate,
+    satisfiedBy: (ctx) => partyKnown(ctx) || !!ctx.profile?.departureDate,
     relevantWhen: (ctx) => !isRemote(ctx),
   },
   {
     // The guest gave the dates but not the number ("siamo qui fino a
     // domenica"): only the headcount is asked.
     key: 'headcount',
-    satisfiedBy: ({ profile }) => profile?.adults !== undefined,
+    satisfiedBy: partyKnown,
     relevantWhen: (ctx) =>
       !isRemote(ctx) && (ctx.asked.has('party') || !!ctx.profile?.departureDate),
   },
@@ -99,8 +111,7 @@ export const INTAKE_STEPS: readonly IntakeStep[] = [
     // is chosen before this turn's answer is saved (2026-08-25).
     key: 'stay',
     satisfiedBy: ({ profile }) => !!profile?.departureDate,
-    relevantWhen: (ctx) =>
-      !isRemote(ctx) && (ctx.asked.has('party') || ctx.profile?.adults !== undefined),
+    relevantWhen: (ctx) => !isRemote(ctx) && (ctx.asked.has('party') || partyKnown(ctx)),
   },
   {
     // Anything that changes what can be recommended at all: a coeliac, no
