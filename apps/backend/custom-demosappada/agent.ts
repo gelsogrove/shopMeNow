@@ -64,7 +64,7 @@ import {
 } from './faq-media.js'
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
-import { quoteAnchoredIn } from './provenance.js'
+import { isRuleOutOnly, quoteAnchoredIn, rulesOutParty } from './provenance.js'
 import {
   classifyTurn,
   composeIntakeTurn,
@@ -1943,6 +1943,27 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           if (!stayProfile?.interests && (captureKey === 'interests' || rich)) {
             captured.interests = verbatim
           }
+          // The constraints wording (settings, tenant-owned) asks about
+          // children and seniors in the same breath as the other limits.
+          // "no nessuna" answers ALL of it — but the machine keeps
+          // `composition` as its own step, so the negative was recorded as a
+          // constraint only and "Ci sono bambini o anziani?" went out at a
+          // guest who had just said no (Andrea, 2026-08-28 live, 14:40).
+          // Same rule-out capture as the composition branch below, on this
+          // turn too. A guest who named children instead ("2 bimbi") is read
+          // by parseParty, not zeroed.
+          if (
+            captureKey === 'constraints' &&
+            stayProfile?.children === undefined &&
+            stayProfile?.seniors === undefined &&
+            rulesOutParty(verbatim)
+          ) {
+            const party = parseParty(userMessage)
+            if (party.children === undefined && party.seniors === undefined) {
+              captured.children = 0
+              captured.seniors = 0
+            }
+          }
         } else if (captureKey === 'childrenAges' && !stayProfile?.childrenAges && /\d/.test(verbatim)) {
           captured.childrenAges = verbatim
         } else if (captureKey === 'stay') {
@@ -2410,12 +2431,20 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // party, verified to exist in the message — the same provenance
           // contract as `dateSaidAs` below. Still no meaning read in code.
           const partyQuote = str(args.partySaidAs)
+          // Zeros on a turn that ASKED about the party are the guest ruling
+          // people out ("no nessuna" to the constraints/composition question)
+          // — the provenance is our own question, like `dateTurn` for the
+          // dates below. A positive count still needs a number or a quote.
+          const partyTurn = ['party', 'headcount', 'composition', 'constraints'].some((k) =>
+            questionsShown.includes(k)
+          )
           const partyAnchored =
             probe.adults !== undefined ||
             probe.children !== undefined ||
             probe.seniors !== undefined ||
             /\d/.test(userMessage) ||
-            quoteAnchoredIn(partyQuote, userMessage)
+            quoteAnchoredIn(partyQuote, userMessage) ||
+            (partyTurn && isRuleOutOnly(args))
           const partyRefused =
             !partyAnchored &&
             (num(args.adults) !== undefined ||

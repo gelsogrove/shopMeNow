@@ -27,3 +27,26 @@ export function quoteAnchoredIn(quote: string | undefined, message: string): boo
   const msgTokens = tokensOf(message)
   return tokensOf(quote).some((q) => msgTokens.some((m) => m.slice(0, 4) === q.slice(0, 4)))
 }
+
+/**
+ * A negative answer to a question that asked about the party: "no", "no
+ * nessuna", "niente", "nessuno". The same closed yes/no class CLAUDE.md §14
+ * allows (it mirrors the composition capture in agent.ts) — a rule-out, not
+ * a count, so it needs no number to be believed.
+ */
+export function rulesOutParty(verbatim: string): boolean {
+  return /^(no|nein|non|nope|niente|nessun[oa]?)\b/i.test(verbatim.trim())
+}
+
+/**
+ * True when the model sent party numbers and ALL of them are 0: the guest
+ * ruled children/seniors out rather than counting anyone. Such zeros answer
+ * OUR question on the turns that asked about the party, and carry no digit
+ * by nature — so they are accepted there without the number/quote anchor a
+ * positive count still needs (the invented "adults 1" of 2026-08-27 stays
+ * refused: it was not a zero).
+ */
+export function isRuleOutOnly(args: { adults?: unknown; children?: unknown; seniors?: unknown }): boolean {
+  const counts = [args.adults, args.children, args.seniors].filter((v) => typeof v === 'number') as number[]
+  return counts.length > 0 && counts.every((v) => v === 0)
+}

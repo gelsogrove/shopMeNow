@@ -55,3 +55,53 @@ describe("demosappada quoteAnchoredIn — the model's quote must exist in the me
     expect(quoteAnchoredIn("mein Mann und ich", "Mein Mann und ich sind bis Sonntag hier")).toBe(true)
   })
 })
+
+/**
+ * WHAT: the rule-out helpers behind the second live bug of 2026-08-28 (14:40).
+ *
+ * WHY: the constraints question (tenant wording) also asks "ci sono bambini o
+ * anziani?". The guest answered "no nessuna"; the code recorded it as a
+ * constraint only, the model's children:0/seniors:0 were refused by the
+ * party guard (no digit in "no nessuna"), and the machine — composition still
+ * open — asked "Ci sono bambini o anziani?" right after. Content and mechanism
+ * disagreed. Now: `rulesOutParty` lets the constraints turn capture the
+ * zeros deterministically, and `isRuleOutOnly` lets the guard accept zeros on
+ * a turn that asked about the party — while a positive count still needs a
+ * number or a quote, so the invented "adults 1" stays refused.
+ */
+import { isRuleOutOnly, rulesOutParty } from "../../custom-demosappada/provenance"
+
+describe("demosappada rulesOutParty — a negative answer is a real answer", () => {
+  it("🚨 regression 2026-08-28 14:40: 'no nessuna' rules the party out", () => {
+    expect(rulesOutParty("no nessuna")).toBe(true)
+  })
+
+  it("accepts the closed negative forms in the covered languages", () => {
+    for (const v of ["no", "No.", "nein", "niente", "nessuno", "nessuna", "nope", "non ci sono"]) {
+      expect(rulesOutParty(v)).toBe(true)
+    }
+  })
+
+  it("does not fire on a sentence that merely contains a negation later", () => {
+    // "siamo in 3, no bambini" is a count, read by parseParty — not a rule-out.
+    expect(rulesOutParty("siamo in 3, no bambini")).toBe(false)
+    expect(rulesOutParty("sì, due bimbi")).toBe(false)
+  })
+})
+
+describe("demosappada isRuleOutOnly — zeros are a rule-out, a count is not", () => {
+  it("all-zero numbers are a rule-out", () => {
+    expect(isRuleOutOnly({ children: 0, seniors: 0 })).toBe(true)
+    expect(isRuleOutOnly({ children: 0 })).toBe(true)
+  })
+
+  it("any positive count is NOT — the invented 'adults 1' of 2026-08-27 stays refused", () => {
+    expect(isRuleOutOnly({ adults: 1, children: 0, seniors: 0 })).toBe(false)
+    expect(isRuleOutOnly({ children: 2 })).toBe(false)
+  })
+
+  it("no numbers at all is not a rule-out either", () => {
+    expect(isRuleOutOnly({})).toBe(false)
+    expect(isRuleOutOnly({ adults: "2" })).toBe(false)
+  })
+})
