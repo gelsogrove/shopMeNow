@@ -277,3 +277,65 @@ export function stripInventedPriceBands(reply: string, approvedContent: string, 
     })
     .join('\n')
 }
+
+/**
+ * Drop every venue the reply names in BOLD that the approved content does
+ * not know. Bold is reserved for place names (contratto.md: "solo i nomi dei
+ * posti devono essere in bold"), so a bold name absent from the FAQ block,
+ * the catalogue and the tool results is an invented venue — "Rifugio
+ * Fedare, raggiungibile con la funivia" (sim, 2026-08-28), complete with a
+ * description and an opening season. The paragraph goes whole: name and the
+ * lines under it, up to the next blank line. Matched by the first two words
+ * of the name so a shortened or re-accented spelling still counts as known.
+ */
+export function stripUnknownVenues(reply: string, approvedContent: string): { text: string; removed: string[] } {
+  const norm = (t: string): string => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim()
+  const source = norm(approvedContent)
+  const removed: string[] = []
+  const known = (name: string): boolean => {
+    const words = norm(name).split(' ').filter((w) => w.length > 2)
+    if (words.length === 0) return true
+    const key = words.slice(0, 2).join(' ')
+    return source.includes(key)
+  }
+  // A bold heading that is not a venue at all ("**Per stasera**", "**Domani**")
+  // breaks the tenant's bold rule but invents nothing: it is demoted to plain
+  // text, not removed. A venue is a heading that starts with a venue type
+  // (rifugio, malga, museo, hotel…) or reads as a proper name (two or more
+  // capitalised words).
+  const VENUE_TYPE =
+    /^(rifugio|malga|museo|latteria|hotel|albergo|agriturismo|ristorante|trattoria|osteria|pizzeria|bar|baita|b&b|chalet|casera|cascat|sorgent|lag[oh]|monte|val|chiesa|santuario|parco|piscina|centro|infopoint|pro loco|seggiovia|funivia|sentiero|borgata|villaggio)\b/i
+  const looksLikeVenue = (name: string): boolean => {
+    const words = name.trim().split(/\s+/)
+    if (VENUE_TYPE.test(name.trim())) return true
+    const capitalised = words.filter((w) => /^\p{Lu}/u.test(w)).length
+    return words.length >= 2 && capitalised >= 2
+  }
+  let paragraphs = reply.split(/\n{2,}/)
+  paragraphs = paragraphs.map((p) => {
+    const m = p.trim().match(/^\*\*([^*\n]{3,80})\*\*/)
+    if (!m || known(m[1]) || looksLikeVenue(m[1])) return p
+    return p.replace(/^(\s*)\*\*([^*\n]{3,80})\*\*/, '$1$2')
+  })
+  const drop = paragraphs.map((p) => {
+    const m = p.trim().match(/^\*\*([^*\n]{3,80})\*\*/)
+    if (!m || known(m[1])) return false
+    removed.push(m[1].trim())
+    return true
+  })
+  // A lead-in that ends in a colon ("vi consiglio:") introduces what was
+  // just removed: it goes too, or the reply ends mid-sentence.
+  const isVenue = (p: string): boolean => /^\*\*[^*\n]{3,80}\*\*/.test(p.trim())
+  for (let i = 0; i < paragraphs.length - 1; i++) {
+    if (drop[i] || !/:\s*$/.test(paragraphs[i].trim())) continue
+    let j = i + 1
+    let survivor = false
+    while (j < paragraphs.length && isVenue(paragraphs[j])) {
+      if (!drop[j]) survivor = true
+      j++
+    }
+    if (j > i + 1 && !survivor) drop[i] = true
+  }
+  const kept = paragraphs.filter((_, i) => !drop[i])
+  return { text: kept.join('\n\n').trim(), removed }
+}

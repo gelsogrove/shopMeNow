@@ -150,3 +150,25 @@ describe("mergeSlots — the itinerary offer placeholder gives way to the answer
     expect(mergeSlots({ itinerary: "asked" }, { itinerary: "yes" }, {}, false)).toEqual({ itinerary: "yes" })
   })
 })
+
+describe("applyUnderstanding — a number anchors only its own category", () => {
+  it("🚨 'siamo a Sappada con due bambini': children 2 accepted, adults 2 refused", () => {
+    const u = applyUnderstanding(
+      { intent: "answer", slots: { adults: 2, children: 2, partySaidAs: "con due bambini", partyMembers: ["noi", "due bambini"] } },
+      ctx("siamo a sappada con due bambini", "location"))
+    expect(u.slots).toEqual({ children: 2 })
+    expect(u.refused).toContain("adults")
+  })
+
+  it("'siamo in 3 con 2 bambini': both accepted (a loose number anchors everything)", () => {
+    const u = applyUnderstanding({ intent: "answer", slots: { adults: 3, children: 2 } }, ctx("siamo in 3 con 2 bambini", "party"))
+    expect(u.slots).toMatchObject({ adults: 3, children: 2 })
+  })
+})
+
+describe("deterministicSlots — a bare answer to a free-text question still answers it", () => {
+  it("🚨 'no' to the constraints question closes the step (no third repeat)", () => {
+    expect(deterministicSlots(ctx("no", "constraints"))).toMatchObject({ constraints: "no" })
+    expect(deterministicSlots(ctx("si", "interests"))).toMatchObject({ interests: "si" })
+  })
+})

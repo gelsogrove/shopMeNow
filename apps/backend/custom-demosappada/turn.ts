@@ -16,7 +16,7 @@
 
 import type { ChatbotInput, CustomToolDefinition, FaqEntry, Settings, StayProfile } from './agent.js'
 import { OPERATING_RULES, fetchWeather, formatCatalogue, weatherCheckedThisHour } from './agent.js'
-import { stripUnverifiableContacts } from './content-guards.js'
+import { stripUnknownVenues, stripUnverifiableContacts } from './content-guards.js'
 import { contentMediaAllowed, replyIsDetailAnswer, withFaqMedia } from './faq-media.js'
 import {
   composeIntakeTurn,
@@ -247,7 +247,13 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
         remove: [TAG_INTEREST_EVENTS, TAG_INTEREST_LODGING, TAG_INTEREST_OFFERS],
       })
     }
-    return { reply: settings.unsubscribedMessage?.trim() || null, tokensUsed, answeredFromFaq: false }
+    const bye = settings.unsubscribedMessage?.trim()
+    const byeLang = getState(sessionId).language
+    const byeOut =
+      bye && byeLang && byeLang.toLowerCase() !== (settings.defaultLanguage || 'it').toLowerCase()
+        ? await translateWelcome(bye, byeLang, settings)
+        : bye
+    return { reply: byeOut || null, tokensUsed, answeredFromFaq: false }
   }
   if (understanding.intent === 'restart_stay') {
     // The rollover runs at the start of the next turn (agent.ts), as it
@@ -387,6 +393,19 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     if (declared) commitLanguageFromReply(sessionId, declared)
     let text = stripUnverifiableContacts(reply, approvedContent).text
     text = stripInventedLists(text, approvedContent).text
+    {
+      // A venue is real if it exists ANYWHERE in the tenant's data — the
+      // whole FAQ set, not only the entries selected for this turn: the
+      // model legitimately names a place it saw two turns ago, and the
+      // per-turn subset had dropped the Museo Etnografico (sim, 2026-08-28).
+      const venueSource = [approvedContent, ...ctx.faqs.map((f) => `${f.question}\n${f.answer}`)].join('\n')
+      const venues = stripUnknownVenues(text, venueSource)
+      if (venues.removed.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error(`[demosappada][invented-venue] dropped: ${venues.removed.join(' | ')}`)
+      }
+      text = venues.text
+    }
     text = stripWeatherHedges(text)
     text = stripSaveAcknowledgment(text) || text
     if (ctx.greeting !== 'none') text = stripLeadingGreeting(text)

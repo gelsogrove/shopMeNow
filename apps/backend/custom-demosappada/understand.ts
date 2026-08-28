@@ -188,9 +188,12 @@ export function deterministicSlots(ctx: UnderstandContext): Partial<StayProfile>
 
   // Free-text answers to their own question: the guest's whole sentence is
   // the value; the model reads the meaning when it recommends.
-  const bare = YES.test(verbatim) || NO.test(verbatim)
-  if (questionKey === 'constraints' && !profile?.constraints && !bare) out.constraints = verbatim
-  if (questionKey === 'interests' && !profile?.interests && !bare) out.interests = verbatim
+  // The guest's whole sentence is the value — a bare "si"/"no" included: to
+  // "C'è qualcosa di particolare…?" a "no" says "nothing", and re-asking the
+  // same words a second and third time is the loop the contract forbids
+  // (sim, 2026-08-28: the constraints question three times in a row).
+  if (questionKey === 'constraints' && !profile?.constraints) out.constraints = verbatim
+  if (questionKey === 'interests' && !profile?.interests) out.interests = verbatim
   if (questionKey === 'childrenAges' && !profile?.childrenAges && /\d/.test(verbatim)) out.childrenAges = verbatim
 
   return out
@@ -253,10 +256,27 @@ export function applyUnderstanding(raw: unknown, ctx: UnderstandContext): Unders
   const same = (k: 'adults' | 'children' | 'seniors'): boolean => int(s[k]) !== undefined && int(s[k]) === profile?.[k]
   for (const k of ['adults', 'children', 'seniors'] as const) if (same(k)) delete s[k]
   const sentNumbers = int(s.adults) !== undefined || int(s.children) !== undefined || int(s.seniors) !== undefined
+  // Per category: a number in the message anchors only the category it
+  // was attached to. "siamo a Sappada con due bambini" carries the 2 for the
+  // children; the adults the model added were a guess (sim, 2026-08-28).
+  // A loose number/digit ("siamo in 3") or the enumerated/zero paths anchor
+  // every category the model sends.
+  const loose = hasDigit || (probe.adults !== undefined && !/\b(adul|erwa|volw|voks)/i.test(message))
+  const fullyEnumerated = partyTotal(partyArgs) > 0 && membersAnchored(s.partyMembers, message) === partyTotal(partyArgs)
+  const anyCategory = anchored && (loose || (partyTurn && isRuleOutOnly(partyArgs)) || fullyEnumerated)
+  const acceptCategory = (k: 'adults' | 'children' | 'seniors'): boolean =>
+    anyCategory || probe[k] !== undefined || (partyTurn && int(s[k]) === 0)
   if (sentNumbers && anchored && statedFacts) {
-    if (int(s.adults) !== undefined) slots.adults = Math.min(99, int(s.adults)!)
-    if (int(s.children) !== undefined) slots.children = Math.min(30, int(s.children)!)
-    if (int(s.seniors) !== undefined) slots.seniors = Math.min(30, int(s.seniors)!)
+    let accepted = false
+    for (const k of ['adults', 'children', 'seniors'] as const) {
+      const v = int(s[k])
+      if (v === undefined) continue
+      if (acceptCategory(k)) {
+        slots[k] = Math.min(k === 'adults' ? 99 : 30, v)
+        accepted = true
+      } else refused.push(k)
+    }
+    if (!accepted) refused.push('party')
   } else if (sentNumbers) {
     refused.push('party')
   }

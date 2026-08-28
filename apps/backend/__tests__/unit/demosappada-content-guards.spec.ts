@@ -132,3 +132,57 @@ describe("demosappada content guard — invented price bands", () => {
     expect(text).toContain("334 7799175")
   })
 })
+
+/**
+ * WHAT: a venue named in bold that the approved content does not know is an
+ * invented venue: its paragraph is dropped whole.
+ *
+ * WHY: "Rifugio Fedare — raggiungibile con la funivia, vista panoramica,
+ * cucina tipica" (sim, 2026-08-28): no such entry anywhere in the FAQ block
+ * or the catalogue. Bold is reserved for place names (contratto.md), which
+ * makes the check deterministic: bold name not in the source → gone.
+ */
+import { stripUnknownVenues } from "../../custom-demosappada/content-guards"
+
+describe("demosappada content guard — invented venues in bold", () => {
+  const SOURCE = "Q: Rifugio Piani del Cristo\nA: Cucina tipica, aperto luglio-settembre. Tel. 0435 469120."
+
+  it("🚨 drops the invented rifugio, keeps the real one", () => {
+    const reply =
+      "A Sappada abbiamo due rifugi:\n\n**Rifugio Fedare**\nRaggiungibile con la funivia, vista panoramica.\n\n" +
+      "**Rifugio Piani del Cristo**\nCucina tipica.\nTel. 0435 469120."
+    const { text, removed } = stripUnknownVenues(reply, SOURCE)
+    expect(removed).toEqual(["Rifugio Fedare"])
+    expect(text).not.toContain("Fedare")
+    expect(text).toContain("**Rifugio Piani del Cristo**")
+  })
+
+  it("accents and shortened names still match the source", () => {
+    const { removed } = stripUnknownVenues("**Rifugio Piani Del Cristo**\nok", SOURCE)
+    expect(removed).toEqual([])
+  })
+
+  it("bold that is not a paragraph head is left alone", () => {
+    const reply = "Chiamate il **Rifugio Piani del Cristo** oggi."
+    expect(stripUnknownVenues(reply, SOURCE).text).toBe(reply)
+  })
+})
+
+describe("demosappada content guard — a lead-in left with nothing under it goes too", () => {
+  it("drops 'vi consiglio:' when every venue it introduced was removed", () => {
+    const SOURCE = "Q: Latteria Plodarkelder\nA: prodotti locali"
+    const reply = "Con i bambini vi consiglio:\n\n**Rifugio Fedare**\nInventato.\n\nDomani piove ancora."
+    const { text } = stripUnknownVenues(reply, SOURCE)
+    expect(text).toBe("Domani piove ancora.")
+  })
+})
+
+describe("demosappada content guard — a bold heading that is no venue is demoted, not removed", () => {
+  it("🚨 '**Per stasera**' keeps its paragraph (sim 2026-08-28 dropped the evening advice)", () => {
+    const SOURCE = "Q: Latteria Plodarkelder\nA: prodotti locali"
+    const reply = "**Per stasera**\nRestate al coperto, piove.\n\n**Rifugio Fedare**\nInventato."
+    const { text, removed } = stripUnknownVenues(reply, SOURCE)
+    expect(text).toBe("Per stasera\nRestate al coperto, piove.")
+    expect(removed).toEqual(["Rifugio Fedare"])
+  })
+})
