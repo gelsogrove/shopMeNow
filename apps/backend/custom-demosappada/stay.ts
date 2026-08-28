@@ -142,6 +142,7 @@ export function rolloverStay(profile: StayProfile): StayProfile {
     asked: [],
     // Consumed: the restart it asked for has just happened.
     restartRequested: undefined,
+    intakeIntroSent: undefined,
     feedbackGiven: undefined,
     lastFeedback: undefined,
     // videoSent is NOT cleared: they have seen the presentation once, and a

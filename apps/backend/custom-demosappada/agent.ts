@@ -65,6 +65,7 @@ import {
 import { greetingLanguage, looksLikeWrongLanguage } from './language-guards.js'
 import { translateText, translateWelcome, withWelcome } from './welcome.js'
 import { renderIntakeQuestion } from './intake-question.js'
+import { parseParty } from './party-parse.js'
 import { isRuleOutOnly, membersAnchored, partyTotal, quoteAnchoredIn, rulesOutParty, withinQuoteAnchoredCap } from './provenance.js'
 import {
   classifyTurn,
@@ -140,6 +141,13 @@ export interface Settings {
    * the backoffice) → this module's settings.json → nothing asked at all.
    */
   intakeQuestions?: Partial<Record<IntakeKey, string>>
+  /**
+   * One line put BEFORE the first intake question of a stay ("Permettimi di
+   * farti qualche domanda per consigliarti meglio…"), so the questions that
+   * follow read as a favour asked, not a form. Content, tenant-owned (§1A);
+   * sent once per stay (`intakeIntroSent`), translated like the questions.
+   */
+  intakeIntro?: string
   /**
    * Shown ONLY to a guest who accepts the push consent: how to turn it off
    * again. Configuration, not a literal, so it can be reworded per tenant and
@@ -371,6 +379,8 @@ export interface StayProfile {
    * stay pinned to a finished holiday. Cleared by the rollover it triggers.
    */
   restartRequested?: boolean
+  /** True once `settings.intakeIntro` has gone out — once per stay, cleared by the rollover. */
+  intakeIntroSent?: boolean
   /** 'yes' | 'no' — whether they wanted an itinerary. Asked once. */
   itinerary?: string
   /**
@@ -1289,72 +1299,6 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   // domenica"): the dictated first question stands in as the capture key,
   // or those facts were lost and the composition question came back at
   // someone who had just said "adulti" (2026-08-25).
-  // Number words and party categories — closed vocabularies (§14 lists
-  // word-numbers alongside digits). "siamo DUE adulti e DUE bambini" gave
-  // the machine nothing, because capture read only \d (2026-08-25). A
-  // number (digit or word) followed by a category word assigns that
-  // category; a lone number falls back to adults.
-  const parseParty = (msg: string): { adults?: number; children?: number; seniors?: number; days?: number } => {
-    const WORD_NUM: Record<string, number> = {
-      un: 1, uno: 1, una: 1, one: 1, eins: 1, deux: 2, due: 2, dos: 2, dois: 2, two: 2, zwei: 2, twee: 2, to: 2,
-      tre: 3, three: 3, drei: 3, trois: 3, tres: 3, drie: 3,
-      quattro: 4, four: 4, vier: 4, quatre: 4, cuatro: 4, quatro: 4, fire: 4,
-      cinque: 5, five: 5, cinq: 5, cinco: 5, vijf: 5, fem: 5,
-      sei: 6, six: 6, sechs: 6, seis: 6, zes: 6, seks: 6,
-      sette: 7, seven: 7, sieben: 7, sept: 7, siete: 7, sete: 7, zeven: 7, syv: 7,
-      otto: 8, eight: 8, acht: 8, huit: 8, ocho: 8, oito: 8, otte: 8,
-      nove: 9, nine: 9, neun: 9, neuf: 9, nueve: 9, negen: 9, ni: 9,
-      dieci: 10, ten: 10, zehn: 10, dix: 10, diez: 10, dez: 10, tien: 10, ti: 10,
-    }
-    const isDayWord = (t: string): boolean =>
-      /^(giorn|nott|day|nigh|tag|naech|nacht|jour|nuit|dia|noch|dag|naet)/.test(t)
-    const cat = (t: string): 'children' | 'adults' | 'seniors' | null =>
-      /^(bamb|bimb|figl|kind|child|enfant|nin|crian|born)/.test(t)
-        ? 'children'
-        : /^(adul|erwa|volw|voks)/.test(t)
-          ? 'adults'
-          : /^(anzi|senio|nonn|aelt|alte[rn])/.test(t)
-            ? 'seniors'
-            : null
-    const toks = msg
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-      .split(/\s+/)
-      .filter(Boolean)
-    const out: { adults?: number; children?: number; seniors?: number; days?: number } = {}
-    let loose: number | undefined
-    for (let i = 0; i < toks.length; i++) {
-      // "coppia"/"couple": a closed-vocabulary word that IS a headcount, same
-      // §14 class as the number-words above. "mio marito ed io siamo una
-      // coppia di 50enni" told the machine nothing, the headcount stayed
-      // open, and "Ci sono bambini o anziani?" went out at two adults who
-      // had just introduced themselves (Andrea, 2026-08-28 live, 01:57).
-      if (/^(coppia|couple|paar|pareja|casal|par)$/.test(toks[i])) {
-        if (out.adults === undefined) out.adults = 2
-        continue
-      }
-      const n = /^\d+$/.test(toks[i]) ? parseInt(toks[i], 10) : WORD_NUM[toks[i]]
-      if (n === undefined || n < 1 || n > 30) continue
-      const nextTok = toks[i + 1]
-      const c = nextTok ? cat(nextTok) : null
-      // "un"/"una"/"one" are articles far more often than counts: "siamo UN
-      // gruppo di persone" read as one adult, which then anchored the
-      // model's invented adults:5 (sim, 2026-08-28). The word counts only
-      // when the next word says WHAT it counts ("un bambino", "una notte");
-      // on its own it is grammar, not a number. The digit "1" is unaffected.
-      const isArticle = !/^\d+$/.test(toks[i]) && n === 1
-      if (isArticle && !c && !(nextTok && isDayWord(nextTok))) continue
-      if (c) out[c] = n
-      // "3 giorni" / "2 notti": a number is a DURATION only when its own
-      // next word says so — the positional "second number = days" guess
-      // read the 2 of "2 adulti" as two days and invented a departure
-      // date nobody stated (2026-08-25, live).
-      else if (nextTok && isDayWord(nextTok)) out.days = n
-      else if (loose === undefined) loose = n
-    }
-    if (out.adults === undefined && loose !== undefined) out.adults = loose
-    return out
-  }
 
   // The guest wrote a sentence that answers NOTHING we asked — no number,
   // no weekday, not a yes/no. "dove si butta la spazzatura" typed with a
@@ -2106,6 +2050,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           updateState(sessionId, { name: verbatim })
           knownName = verbatim
         }
+        // People named one by one ("io e mio marito") are captured on ANY
+        // turn, whatever question was pending: the opening message is where
+        // guests introduce themselves, and it is answered to `location`,
+        // not to `party`. Unnamed categories are 0 — the guest listed
+        // everyone (Andrea, 2026-08-28: "io e mio marito = 2 persone e non
+        // ci sono bambini"). Never overwrites a count already on file.
+        if (probe.enumerated && stayProfile?.adults === undefined && stayProfile?.children === undefined) {
+          captured.adults = probe.adults ?? 0
+          captured.children = probe.children ?? 0
+          captured.seniors = probe.seniors ?? 0
+        }
         if (Object.keys(captured).length > 0) {
           // eslint-disable-next-line no-console
           console.error(`[demosappada][answer-capture] ${captureKey} <- guest words`)
@@ -2153,9 +2108,19 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       // conversation (Andrea, 2026-08-25: "scrive in due lingue").
       // The question itself is RENDERED, not just translated: the parts the
       // profile already answers are dropped (intake-question.ts, 2026-08-28).
-      const questionTranslated = effectiveQuestion
+      let questionTranslated = effectiveQuestion
         ? await renderIntakeQuestion(effectiveQuestion, stayProfile, askLangForCheck, needsTranslation, settings)
         : effectiveQuestion
+      // The configured intro line, once, ahead of the FIRST question of the
+      // stay (Andrea, 2026-08-28: "non avevamo detto di fare la domanda
+      // 'permettimi di farti delle domande per…'?"). Travels with the
+      // question so the composer treats the pair as ours.
+      const intro = settings.intakeIntro?.trim()
+      const introDue = !!intro && !!questionTranslated && !stayProfile?.intakeIntroSent
+      if (introDue && questionTranslated) {
+        const introOut = needsTranslation && askLangForCheck ? await translateWelcome(intro!, askLangForCheck, settings) : intro!
+        questionTranslated = `${introOut}\n\n${questionTranslated}`
+      }
       const closingTranslated =
         settings.closingLine?.trim() && needsTranslation
           ? await translateWelcome(settings.closingLine.trim(), askLangForCheck, settings)
@@ -2182,6 +2147,14 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       let reachedGuest = turn.asked
       if (turn.asked && effectiveKey) {
         updateState(sessionId, { lastAskedKey: effectiveKey }, { mirror: false })
+      }
+      if (turn.asked && introDue && customerId && input.config.handlers?.saveStayProfile) {
+        await input.config.handlers.saveStayProfile({
+          workspaceId: input.config.workspaceId,
+          customerId,
+          profile: { intakeIntroSent: true },
+        })
+        stayProfile = { ...(stayProfile ?? {}), intakeIntroSent: true }
       }
       if (turn.dropped.length > 0) {
         // eslint-disable-next-line no-console
@@ -2517,11 +2490,12 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // just introduced themselves (Andrea: "devi capire che sono 2
           // persone e non ci sono bambini").
           const enumerated =
-            partyAnchored &&
-            !/\d/.test(userMessage) &&
-            probe.adults === undefined &&
-            membersAnchored(args.partyMembers, userMessage) === partyTotal(args) &&
-            partyTotal(args) > 0
+            !!probe.enumerated ||
+            (partyAnchored &&
+              !/\d/.test(userMessage) &&
+              probe.adults === undefined &&
+              membersAnchored(args.partyMembers, userMessage) === partyTotal(args) &&
+              partyTotal(args) > 0)
           if (enumerated && profile.children === undefined) profile.children = 0
           if (enumerated && num(args.seniors) === undefined) args.seniors = 0
           profile.childrenAges = str(args.childrenAges)
