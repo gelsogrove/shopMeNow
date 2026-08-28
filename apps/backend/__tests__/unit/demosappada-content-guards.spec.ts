@@ -213,3 +213,27 @@ describe("demosappada — known venues in bold, by code", () => {
     )
   })
 })
+
+/**
+ * WHAT: phone numbers are moved to the last line of their paragraph, alone.
+ * WHY: Andrea, 2026-08-29: "vorrei che il telefono sia ultima riga a capo" —
+ * the itinerary carried them inline: "(Borgata Bach 21, tel. 0435 469265)".
+ */
+import { phoneOnLastLine } from "../../custom-demosappada/content-guards"
+
+describe("demosappada — the phone number is the last line, alone", () => {
+  it("🚨 moves an inline '(…, tel. N)' to a closing 'Tel. N' line", () => {
+    const p = "Stasera, cena al **Karl Keller** (Borgata Bach 21, tel. 0435 469265) — ristorante e pizzeria in centro."
+    expect(phoneOnLastLine(p)).toBe("Stasera, cena al **Karl Keller** (Borgata Bach 21) — ristorante e pizzeria in centro.\nTel. 0435 469265")
+  })
+
+  it("leaves a paragraph that already ends with its Tel. line alone", () => {
+    const p = "**Latteria Plodarkelder**\nProdotti locali.\nTel. 0435 469833"
+    expect(phoneOnLastLine(p)).toBe(p)
+  })
+
+  it("two paragraphs, two numbers, each on its own last line", () => {
+    const p = "A, tel. 0435 469265.\n\nB — tel. 0435 469909 e basta."
+    expect(phoneOnLastLine(p)).toBe("A.\nTel. 0435 469265\n\nB e basta.\nTel. 0435 469909")
+  })
+})

@@ -382,3 +382,39 @@ export function boldKnownVenues(reply: string, names: string[]): string {
     })
     .join('\n\n')
 }
+
+/**
+ * Phone numbers go on the LAST line of their paragraph, alone ("Tel. …"),
+ * never inline in parentheses (Andrea, 2026-08-29: "vorrei che il telefono
+ * sia ultima riga a capo"). The number is moved, never altered; a paragraph
+ * that already ends with its Tel. line is left as it is.
+ */
+export function phoneOnLastLine(reply: string): string {
+  const INLINE = /(?:[,;]\s*|\s*[—–-]\s*|\(\s*)?\b(?:tel\.?|telefono|phone)\s*:?\s*((?:\+39[ .]?)?\d(?:[ .]?\d){5,10})(\s*\))?/gi
+  return reply
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      const lines = paragraph.split('\n')
+      const last = lines[lines.length - 1]?.trim() ?? ''
+      if (/^tel\.?\s*[\d+]/i.test(last) && !INLINE.test(lines.slice(0, -1).join('\n'))) return paragraph
+      INLINE.lastIndex = 0
+      const numbers: string[] = []
+      let body = paragraph.replace(INLINE, (whole, num: string, close?: string) => {
+        numbers.push(num.trim())
+        // "(Borgata Bach 21, tel. 0435 469265)" → "(Borgata Bach 21)"
+        return whole.trim().startsWith('(') ? '' : close ? ')' : ''
+      })
+      if (numbers.length === 0) return paragraph
+      body = body
+        .replace(/\(\s*\)/g, '')
+        .replace(/\(\s*,\s*/g, '(')
+        .replace(/,\s*\)/g, ')')
+        .replace(/\s+([,.;:)])/g, '$1')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trimEnd()
+      // A Tel. line the paragraph already carried is merged, not doubled.
+      const bodyLines = body.split('\n').filter((l) => !/^tel\.?\s*[\d+]/i.test(l.trim()))
+      return [...bodyLines, ...[...new Set(numbers)].map((n) => `Tel. ${n}`)].join('\n')
+    })
+    .join('\n\n')
+}

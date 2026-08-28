@@ -164,6 +164,12 @@ export interface Settings {
    */
   noDataMessage?: string
   /**
+   * The line that opens the intake's closing turn, with {{customerName}}:
+   * "Perfetto {{customerName}}!" (contratto.md). Prepended by code when the
+   * model did not open with the name; absent → nothing is prepended.
+   */
+  closingGreeting?: string
+  /**
    * Shown ONLY to a guest who accepts the push consent: how to turn it off
    * again. Configuration, not a literal, so it can be reworded per tenant and
    * the LLM renders it in the guest's language (CLAUDE.md §1A).

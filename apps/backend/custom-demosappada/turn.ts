@@ -16,7 +16,7 @@
 
 import type { ChatbotInput, CustomToolDefinition, FaqEntry, Settings, StayProfile } from './agent.js'
 import { OPERATING_RULES, fetchWeather, formatCatalogue, weatherCheckedThisHour } from './agent.js'
-import { boldKnownVenues, knownVenueNames, stripUnknownVenues, stripUnverifiableContacts } from './content-guards.js'
+import { boldKnownVenues, knownVenueNames, phoneOnLastLine, stripUnknownVenues, stripUnverifiableContacts } from './content-guards.js'
 import { contentMediaAllowed, replyIsDetailAnswer, withFaqMedia } from './faq-media.js'
 import {
   composeIntakeTurn,
@@ -46,7 +46,7 @@ import {
   TAG_INTEREST_OFFERS,
   type IntakeKey,
 } from './stay.js'
-import { translateText, translateWelcome, withWelcome } from './welcome.js'
+import { substitutePlaceholders, translateText, translateWelcome, withWelcome } from './welcome.js'
 import { applyUnderstanding, deterministicSlots, mergeSlots, UNDERSTAND_TOOL, type Understanding } from './understand.js'
 
 export interface TurnContext {
@@ -132,6 +132,22 @@ const ANSWER_FORMAT_RULES = [
   'first line, the description on the next line(s). In an itinerary, each day is a **bold** heading',
   'followed by its places in that same format. Bold is for place names and day headings only.',
 ].join('\n')
+
+/**
+ * The brief for the intake's closing turn (contratto.md: "Perfetto
+ * NOMEUTENTE, oggi (guarda il meteo) consiglio di… una sola proposta"). An
+ * instruction to the model (§1B); the offer question itself is appended by
+ * the composer from the tenant's wording.
+ */
+function closingTurnBrief(name: string | undefined): string {
+  return [
+    '═══ THIS TURN ═══',
+    `The intake is complete. Open by greeting the guest by name${name ? ` (${name})` : ''} in ONE short line,`,
+    'call get_weather, and propose ONE thing for today that fits the weather, the party and what they',
+    'said they want — name in **bold**, why it is worth it, how long it takes. Nothing else: no list, no',
+    'question of your own — the closing question is added automatically after your text.',
+  ].join('\n')
+}
 
 const toolName = (t: CustomToolDefinition): string => t.name
 
@@ -294,7 +310,11 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
   // "siamo io e mio figlio, vogliamo vedere Sappada" met four questions and
   // not one word about Sappada (live, 2026-08-29 01:18: "ma quando rispondi
   // all'utente?"); and every message once nothing is left to ask.
-  const guestAsked = understanding.intent === 'request' || ctx.history.length === 0 || !effectiveKey
+  // The closing turn of the intake — the itinerary offer — is the contract's
+  // "Perfetto NOMEUTENTE, oggi (guarda il meteo) consiglio di…": the answer
+  // call runs with that brief, and the offer is appended by the composer.
+  const closingTurn = effectiveKey === 'itinerary' && stayProfile?.itinerary !== 'asked'
+  const guestAsked = understanding.intent === 'request' || ctx.history.length === 0 || !effectiveKey || closingTurn
   if (holdRepeatedQuestion(sessionId, effectiveKey, guestAsked)) {
     // eslint-disable-next-line no-console
     console.error(`[demosappada][repeat-hold] "${effectiveKey}" held this turn`)
@@ -341,6 +361,7 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
       ctx.runtimeBlock,
       card.text,
       formatStateForPrompt(getState(sessionId)),
+      closingTurn ? closingTurnBrief(knownName) : '',
     ]
       .filter((p) => p !== '')
       .join('\n')
@@ -442,8 +463,19 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
     }
     text = stripWeatherHedges(text)
     text = stripSaveAcknowledgment(text) || text
-    // The contract's format, by code: known place names in bold.
+    // The contract's format, by code: known place names in bold, phone
+    // numbers alone on the last line of their paragraph.
     text = boldKnownVenues(text, knownVenueNames(ctx.faqs.map((f) => f.question), accommodationOffered))
+    text = phoneOnLastLine(text)
+    // The closing turn opens with the tenant's greeting by name ("Perfetto
+    // {{customerName}}!" — contratto.md), prepended by code when the model
+    // did not already open with the name. Content from the DB (§1A).
+    const closingGreeting = settings.closingGreeting?.trim()
+    if (closingTurn && closingGreeting && knownName && text.trim() && !text.trimStart().slice(0, 60).includes(knownName)) {
+      const line = substitutePlaceholders(closingGreeting, knownName)
+      const lineOut = needsTranslation && lang ? await translateWelcome(line, lang, settings) : line
+      text = `${lineOut}\n\n${text.trimStart()}`
+    }
     if (ctx.greeting !== 'none') text = stripLeadingGreeting(text)
     // Helper offers and plan confirmations ("vi va così?") never go out —
     // on any answer, not only the itinerary one (Andrea, 2026-08-28).
