@@ -59,6 +59,10 @@ domanda da fare, non può farne. Content-guard come oggi (URL, telefoni, orari,
 prezzi, fasce, liste inventate). Se la risposta esce vuota → riga configurata
 "non ho il dato, InfoPoint" (settings, §1A), nessun retry.
 
+### 3b. Quando parte la risposta
+
+Con intento `request`; sul **primo messaggio** sempre (benvenuto → reazione a ciò che ha scritto → domanda); quando non resta nulla da chiedere; sul **turno di chiusura** (offerta itinerario) con il brief del contratto — saluto col nome (`closingGreeting` dal DB se il modello non lo mette), meteo, una proposta. Formato garantito da codice: luoghi noti in bold, telefono in ultima riga, luoghi ignoti ai dati eliminati.
+
 ### 4. Composizione — template
 
 `[saluto/benvenuto] + [risposta] + [intro intake, una volta] + [domanda dettata]`
