@@ -69,6 +69,28 @@ export function isUrlAllowed(url: string, allowedDomains: string[]): boolean {
   })
 }
 
+/**
+ * The URLs in `message` NOT covered by the allow-list (internal domains merged
+ * with the workspace's allowedExternalLinks), in order of appearance.
+ *
+ * The FAIL-CLOSED companion of sanitizeOutboundLinks: chat replies strip the
+ * bad link and deliver the rest, but a push-campaign message without its link
+ * is broken marketing — those callers block the send (or reject the campaign
+ * at creation) when this returns anything.
+ */
+export function findUnauthorizedUrls(
+  message: string,
+  workspaceAllowedDomains: string[]
+): string[] {
+  if (!message) return []
+  const allowedDomains = [
+    ...INTERNAL_ALLOWED_DOMAINS,
+    ...(workspaceAllowedDomains || []),
+  ]
+  const urls = message.match(URL_REGEX) || []
+  return urls.filter((url) => !isUrlAllowed(url, allowedDomains))
+}
+
 export interface SanitizeResult {
   message: string
   removedUrls: string[]

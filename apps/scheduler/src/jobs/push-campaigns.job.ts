@@ -10,6 +10,19 @@ import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
 import { BillingService } from '../services/billing.service'
 
+/**
+ * Thrown inside the enqueue transaction when the merchant's push package hits
+ * zero mid-run: it aborts the transaction (no enqueue, no SENT mark, no
+ * debit) and the outer catch pauses the campaign instead of failing the
+ * recipient — the row stays PENDING and resumes after a top-up.
+ */
+class MerchantQuotaExhaustedError extends Error {
+  constructor() {
+    super('Merchant push quota exhausted')
+    this.name = 'MerchantQuotaExhaustedError'
+  }
+}
+
 // Initialize billing service for credit deduction
 const billingService = new BillingService()
 
@@ -57,6 +70,57 @@ export async function pushCampaignsJob(): Promise<void> {
           data: { status: 'FAILED', lastError: 'Workspace owner not found' },
         })
         continue
+      }
+
+      // 🪟 VALIDITY WINDOW (Andrea, 2026-08-31): a campaign with a from→to
+      // window (e.g. the winter campaign, 01/12 → 31/03) runs only inside it.
+      if (campaign.validFrom && now < campaign.validFrom) {
+        // Not started yet — aim the next run at the window start and move on.
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: { nextRunAt: campaign.validFrom },
+        })
+        continue
+      }
+      if (campaign.validTo && now > campaign.validTo) {
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: { status: 'COMPLETED', isActive: false, nextRunAt: null },
+        })
+        logger.info(`[PUSH-CAMPAIGN] Campaign ${campaign.id} completed — validity window ended`)
+        continue
+      }
+
+      // 🏪 MERCHANT GATE (Andrea, 2026-08-31): a campaign bought by a merchant
+      // (esercente) runs only while the merchant is active and their push
+      // package has quota left. Deterministic and fail-closed — quota zero
+      // means NOTHING more is sent for this merchant until a top-up.
+      if (campaign.merchantId) {
+        const merchant = await prisma.merchant.findFirst({
+          where: {
+            id: campaign.merchantId,
+            workspaceId: campaign.workspaceId, // multi-tenant boundary
+            deletedAt: null,
+          },
+          select: { isActive: true, quotaRemaining: true },
+        })
+        if (!merchant || !merchant.isActive) {
+          await prisma.pushCampaign.update({
+            where: { id: campaign.id },
+            data: { status: 'PAUSED', lastError: 'Merchant is inactive or missing' },
+          })
+          continue
+        }
+        if (merchant.quotaRemaining <= 0) {
+          await prisma.pushCampaign.update({
+            where: { id: campaign.id },
+            data: {
+              status: 'PAUSED',
+              lastError: 'Merchant push quota exhausted — top up the package to resume',
+            },
+          })
+          continue
+        }
       }
 
       // Ensure we have recipients for this run
@@ -124,6 +188,7 @@ export async function pushCampaignsJob(): Promise<void> {
 
       let processed = 0
       let creditExhausted = false
+      let merchantQuotaExhausted = false
       const costPerMessage = Number(campaign.costPerMessage)
       let availableBalance = 0
 
@@ -246,6 +311,26 @@ export async function pushCampaignsJob(): Promise<void> {
           })
 
           await prisma.$transaction(async (tx) => {
+            // 🏪 Debit the merchant's push package ATOMICALLY with the enqueue:
+            // the decrement only succeeds while quota > 0 (guarded WHERE), so
+            // concurrent runs can never oversell, and it commits in the same
+            // transaction as the SENT mark — package ledger and send history
+            // cannot diverge. Debited at the same point platform credits are,
+            // so the two ledgers always agree on what counts as a send.
+            if (campaign.merchantId) {
+              const debited = await tx.merchant.updateMany({
+                where: {
+                  id: campaign.merchantId,
+                  workspaceId: campaign.workspaceId,
+                  quotaRemaining: { gt: 0 },
+                },
+                data: { quotaRemaining: { decrement: 1 } },
+              })
+              if (debited.count === 0) {
+                throw new MerchantQuotaExhaustedError()
+              }
+            }
+
             // Find or create conversationId for this customer
             let conversationId = `conv_${customer.id}`
             const lastConversation = await tx.conversationMessage.findFirst({
@@ -357,6 +442,12 @@ export async function pushCampaignsJob(): Promise<void> {
             break
           }
         } catch (error) {
+          if (error instanceof MerchantQuotaExhaustedError) {
+            // Not a recipient failure: the package ran out mid-run. The row
+            // stays PENDING and the campaign resumes after the next top-up.
+            merchantQuotaExhausted = true
+            break
+          }
           logger.error(
             `[PUSH-CAMPAIGN] Error sending to recipient ${recipient.id}:`,
             error
@@ -370,6 +461,22 @@ export async function pushCampaignsJob(): Promise<void> {
             },
           })
         }
+      }
+
+      if (merchantQuotaExhausted) {
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: {
+            status: 'PAUSED',
+            // Sent so far stays counted; remaining recipients stay PENDING.
+            actualSent: { increment: processed },
+            lastError: 'Merchant push quota exhausted — top up the package to resume',
+          },
+        })
+        logger.warn(
+          `[PUSH-CAMPAIGN] Campaign ${campaign.id} paused — merchant push quota exhausted after ${processed} send(s) this run`
+        )
+        continue
       }
 
       if (creditExhausted) {

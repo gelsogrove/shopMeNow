@@ -48,6 +48,8 @@ import { QueuePage } from "./pages/QueuePage"
 import DataProtectionPage from "./pages/data-protection"
 
 import CampaignsPage from "./pages/campaigns"
+import { MerchantsPage } from "./pages/MerchantsPage"
+import { MerchantDetailPage } from "./pages/MerchantDetailPage"
 import CheckoutSuccessPage from "./pages/checkout-success"
 import CheckoutPage from "./pages/CheckoutPage"
 import ExpiredPage from "./pages/expired"
@@ -673,6 +675,12 @@ function AppWithProviders() {
 
                   <Route path="/campaigns" element={<MinimalLayout />}>
                     <Route index element={<CampaignsPage />} />
+                  </Route>
+
+                  {/* 🏪 Merchant advertising: esercenti registry + per-merchant pushes/quota */}
+                  <Route path="/merchants" element={<MinimalLayout />}>
+                    <Route index element={<MerchantsPage />} />
+                    <Route path=":merchantId" element={<MerchantDetailPage />} />
                   </Route>
                 </Route>
 

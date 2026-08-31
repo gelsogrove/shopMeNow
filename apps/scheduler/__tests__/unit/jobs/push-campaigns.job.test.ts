@@ -34,11 +34,26 @@ jest.mock('../../../src/services/translation.service', () => ({
   translationService: mockTranslationService,
 }))
 
+// Billing mocked as always-successful: these tests exercise the QUOTA ledger
+// (merchant package), not the platform-credit ledger, and the real service
+// would hit unmocked prisma calls.
+const mockDeductOwnerPushCredit = jest.fn()
+jest.mock('../../../src/services/billing.service', () => ({
+  BillingService: jest.fn().mockImplementation(() => ({
+    deductOwnerPushCredit: mockDeductOwnerPushCredit,
+  })),
+}))
+
 // Mock prisma with full transaction support
 const mockPrisma = {
   pushCampaign: {
     findMany: jest.fn(),
     update: jest.fn(),
+  },
+  // 🏪 Merchant advertising (esercenti): package quota gate + atomic debit
+  merchant: {
+    findFirst: jest.fn(),
+    updateMany: jest.fn(),
   },
   workspace: {
     findUnique: jest.fn(),
@@ -142,6 +157,7 @@ describe('Push Campaigns Job', () => {
     })
     mockPrisma.conversationMessage.findFirst.mockResolvedValue(null)
     mockPrisma.whatsAppQueue.upsert.mockResolvedValue({ id: 'queue-1' })
+    mockDeductOwnerPushCredit.mockResolvedValue({ success: true, newBalance: 99 })
   })
 
   describe('Campaign Discovery', () => {
@@ -1592,6 +1608,215 @@ describe('Push Campaigns Job', () => {
       expect(queueArgs.create.pushCampaignRecipientId).toBe('rec-1')
 
       jest.useRealTimers()
+    })
+  })
+
+  // 🏪 Merchant advertising (Andrea, 2026-08-31): the Pro Loco resells push
+  // packages to local merchants. WHAT these tests lock: a merchant campaign
+  // sends ONLY while the merchant is active and their package has quota, the
+  // debit is atomic (guarded WHERE) so packages can never be oversold, and a
+  // finished window completes the campaign. WHY in code, not convention:
+  // sends are money the merchant already paid the Pro Loco for — an oversell
+  // or a free send is an invoicing dispute (CLAUDE.md §16 iron rule 1).
+  describe('Merchant quota gating (esercenti)', () => {
+    const merchantCampaign = {
+      id: 'campaign-m1',
+      workspaceId: 'ws-1',
+      status: 'SCHEDULED',
+      isActive: true,
+      frequency: 'ONCE',
+      batchSize: 50,
+      throttlePerSecond: 10,
+      costPerMessage: new Prisma.Decimal(1.0),
+      message: '*Offerta*\n\nSconto del 10%',
+      merchantId: 'merchant-1',
+      merchantPushId: 'push-1',
+    }
+
+    const workspaceRow = {
+      id: 'ws-1',
+      ownerId: 'owner-1',
+      name: 'Pro Loco',
+      enableWhatsapp: true,
+      defaultLanguage: 'it',
+    }
+
+    it('🚨 pauses the campaign BEFORE any processing when the package is already empty', async () => {
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([merchantCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspaceRow)
+      mockPrisma.merchant.findFirst.mockResolvedValue({
+        isActive: true,
+        quotaRemaining: 0, // package exhausted
+      })
+
+      await pushCampaignsJob()
+
+      // The gate reads the merchant from the campaign's OWN workspace (rule 2).
+      expect(mockPrisma.merchant.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 'merchant-1',
+            workspaceId: 'ws-1',
+          }),
+        })
+      )
+      expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith({
+        where: { id: 'campaign-m1' },
+        data: expect.objectContaining({
+          status: 'PAUSED',
+          lastError: expect.stringContaining('quota exhausted'),
+        }),
+      })
+      // Nothing else ran: no recipients were even counted.
+      expect(mockPrisma.pushCampaignRecipient.count).not.toHaveBeenCalled()
+    })
+
+    it('pauses the campaign when the merchant is inactive or missing', async () => {
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([merchantCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspaceRow)
+      mockPrisma.merchant.findFirst.mockResolvedValue({
+        isActive: false, // Pro Loco switched the merchant off
+        quotaRemaining: 500,
+      })
+
+      await pushCampaignsJob()
+
+      expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith({
+        where: { id: 'campaign-m1' },
+        data: expect.objectContaining({
+          status: 'PAUSED',
+          lastError: 'Merchant is inactive or missing',
+        }),
+      })
+    })
+
+    it('completes the campaign when the validity window has ended (validTo in the past)', async () => {
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([
+        { ...merchantCampaign, validTo: new Date('2020-01-01') },
+      ])
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspaceRow)
+
+      await pushCampaignsJob()
+
+      expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith({
+        where: { id: 'campaign-m1' },
+        data: expect.objectContaining({
+          status: 'COMPLETED',
+          isActive: false,
+        }),
+      })
+      // The merchant gate never ran — window check comes first.
+      expect(mockPrisma.merchant.findFirst).not.toHaveBeenCalled()
+    })
+
+    it('🚨 mid-run exhaustion: the guarded debit fails → campaign PAUSED, recipient stays PENDING (never FAILED)', async () => {
+      // SCENARIO: the gate saw quota 1, but a concurrent run drained it before
+      // this recipient's transaction — the atomic WHERE quotaRemaining > 0
+      // finds no row to decrement.
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([merchantCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspaceRow)
+      mockPrisma.merchant.findFirst.mockResolvedValue({
+        isActive: true,
+        quotaRemaining: 1,
+      })
+      mockPrisma.pushCampaignRecipient.count.mockResolvedValue(1)
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([
+        {
+          id: 'rec-1',
+          campaignId: 'campaign-m1',
+          customerId: 'customer-1',
+          phone: '+393331234567',
+          status: 'PENDING',
+          createdAt: new Date(),
+        },
+      ])
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        id: 'customer-1',
+        name: 'Mario Rossi',
+        phone: '+393331234567',
+        language: 'it',
+        isBlacklisted: false,
+        isActive: true,
+        push_notifications_consent: true,
+      })
+      mockTranslationService.translateMessage.mockResolvedValue('Offerta')
+      // The atomic debit finds nothing to decrement.
+      mockPrisma.merchant.updateMany.mockResolvedValue({ count: 0 })
+
+      await pushCampaignsJob()
+
+      // The debit carried the tenant boundary and the fail-closed guard.
+      expect(mockPrisma.merchant.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'merchant-1',
+          workspaceId: 'ws-1',
+          quotaRemaining: { gt: 0 },
+        },
+        data: { quotaRemaining: { decrement: 1 } },
+      })
+      // Campaign paused with the quota reason…
+      expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith({
+        where: { id: 'campaign-m1' },
+        data: expect.objectContaining({
+          status: 'PAUSED',
+          lastError: expect.stringContaining('quota exhausted'),
+        }),
+      })
+      // …the recipient was NOT marked FAILED (it resumes after a top-up)…
+      expect(mockPrisma.pushCampaignRecipient.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'FAILED' }),
+        })
+      )
+      // …and nothing was enqueued or billed.
+      expect(mockPrisma.whatsAppQueue.upsert).not.toHaveBeenCalled()
+      expect(mockDeductOwnerPushCredit).not.toHaveBeenCalled()
+    })
+
+    it('debits exactly one quota unit per enqueued recipient on the happy path', async () => {
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([merchantCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspaceRow)
+      mockPrisma.merchant.findFirst.mockResolvedValue({
+        isActive: true,
+        quotaRemaining: 500,
+      })
+      mockPrisma.pushCampaignRecipient.count
+        .mockResolvedValueOnce(1) // pending before the run
+        .mockResolvedValueOnce(0) // none left after
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([
+        {
+          id: 'rec-1',
+          campaignId: 'campaign-m1',
+          customerId: 'customer-1',
+          phone: '+393331234567',
+          status: 'PENDING',
+          createdAt: new Date(),
+        },
+      ])
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        id: 'customer-1',
+        name: 'Mario Rossi',
+        phone: '+393331234567',
+        language: 'it',
+        isBlacklisted: false,
+        isActive: true,
+        push_notifications_consent: true,
+      })
+      mockTranslationService.translateMessage.mockResolvedValue('Offerta')
+      mockPrisma.merchant.updateMany.mockResolvedValue({ count: 1 })
+      mockPrisma.pushCampaign.update.mockResolvedValue(merchantCampaign)
+
+      await pushCampaignsJob()
+
+      expect(mockPrisma.merchant.updateMany).toHaveBeenCalledTimes(1)
+      expect(mockPrisma.whatsAppQueue.upsert).toHaveBeenCalledTimes(1)
+      expect(mockDeductOwnerPushCredit).toHaveBeenCalledTimes(1)
+      // No pause: the campaign completed its run.
+      expect(mockPrisma.pushCampaign.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'PAUSED' }),
+        })
+      )
     })
   })
 })

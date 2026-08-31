@@ -88,6 +88,34 @@ describe("demosappada content guard — markdown links are stripped whole", () =
     // The Dettagli line keeps its approved URL — a label WITH its value stays.
     expect(text).toContain("Dettagli: https://www.visitsappada.it/webcam-sappada.php")
   })
+
+  it("🚨 drops the label the model itself left dangling — no strip needed", () => {
+    // WHAT: the husk cleanup must run on EVERY reply, not only when the guard
+    // removed something.
+    //
+    // WHY: the model, told never to invent numbers, sometimes writes the
+    // label and just stops. Andrea's live itinerary (2026-08-31) ended
+    // "…chiamate per confermare le opzioni senza glutine. Tel.." — the guard
+    // stripped nothing that turn (removed=[]), so the old cleanup, gated on
+    // removed.length > 0, never ran and the dangling "Tel.." reached the
+    // guest mid-demo.
+    const reply =
+      "Cena di fine vacanza al Karl Keller (centro, pizzeria e ristorante) — chiamate per confermare le opzioni senza glutine. Tel.."
+    const { text, removed } = stripUnverifiableContacts(reply, APPROVED)
+    // Nothing was stripped — this husk came straight from the model.
+    expect(removed).toEqual([])
+    expect(text).not.toMatch(/Tel\W*$/)
+    expect(text).toContain("le opzioni senza glutine.")
+  })
+
+  it("a real 'Tel. 0435 469131' the source approves is never touched by the always-on husk cleanup", () => {
+    // The husk regex requires a sentence start, punctuation or line end after
+    // the label — a digit after "Tel." means the value is present and stays.
+    const approved = APPROVED + "\nQ: InfoPoint?\nA: InfoPoint Sappada, Tel. 0435 469131"
+    const reply = "Per informazioni: InfoPoint Sappada.\nTel. 0435 469131"
+    const { text } = stripUnverifiableContacts(reply, approved)
+    expect(text).toContain("Tel. 0435 469131")
+  })
 })
 
 /**

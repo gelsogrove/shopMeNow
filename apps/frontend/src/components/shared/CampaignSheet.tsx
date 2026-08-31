@@ -40,6 +40,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Merchant, MerchantPush, merchantApi } from "@/services/merchantApi"
 
 interface Campaign {
   id: string
@@ -56,6 +57,12 @@ interface Campaign {
   batchSize?: number | null
   expectedRecipients?: number | null
   createdAt?: string
+  // 🏪 Merchant campaign: content snapshotted from the merchant's push,
+  // sends debited from their package quota
+  merchantId?: string | null
+  merchantPushId?: string | null
+  validFrom?: string | null
+  validTo?: string | null
 }
 
 interface CampaignSheetProps {
@@ -84,6 +91,13 @@ export function CampaignSheet({
   const [targetCustomerIds, setTargetCustomerIds] = useState<string[]>([])
   const [tagId, setTagId] = useState<string | null>(null)
   const [sendAt, setSendAt] = useState<string>("")
+  // 🏪 Merchant campaign state
+  const [merchantId, setMerchantId] = useState<string | null>(null)
+  const [merchantPushId, setMerchantPushId] = useState<string | null>(null)
+  const [validFrom, setValidFrom] = useState<string>("")
+  const [validTo, setValidTo] = useState<string>("")
+  const [merchants, setMerchants] = useState<Merchant[]>([])
+  const [merchantPushes, setMerchantPushes] = useState<MerchantPush[]>([])
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -94,8 +108,36 @@ export function CampaignSheet({
   useEffect(() => {
     if (open && workspaceId) {
       loadCustomers()
+      loadMerchants()
     }
   }, [open, workspaceId])
+
+  // The push dropdown offers only the selected merchant's ACTIVE creatives.
+  useEffect(() => {
+    if (!open || !workspaceId || !merchantId) {
+      setMerchantPushes([])
+      return
+    }
+    merchantApi
+      .getPushes(workspaceId, merchantId)
+      .then((pushes) => setMerchantPushes(pushes.filter((p) => p.isActive)))
+      .catch((error) => {
+        logger.error("Error loading merchant pushes:", error)
+        setMerchantPushes([])
+      })
+  }, [open, workspaceId, merchantId])
+
+  const loadMerchants = async () => {
+    if (!workspaceId) return
+    try {
+      const all = await merchantApi.getMerchants(workspaceId)
+      setMerchants(all.filter((m) => m.isActive))
+    } catch (error) {
+      // Non-blocking: campaigns without a merchant keep working.
+      logger.error("Error loading merchants:", error)
+      setMerchants([])
+    }
+  }
 
   // Reset form when campaign changes
   useEffect(() => {
@@ -118,6 +160,10 @@ export function CampaignSheet({
       setTargetCustomerIds(campaign.targetCustomerIds || [])
       setTagId(campaign.tagId || null)
       setSendAt(campaign.sendAt ? toLocalInputValue(campaign.sendAt) : "")
+      setMerchantId(campaign.merchantId || null)
+      setMerchantPushId(campaign.merchantPushId || null)
+      setValidFrom(campaign.validFrom ? toLocalInputValue(campaign.validFrom) : "")
+      setValidTo(campaign.validTo ? toLocalInputValue(campaign.validTo) : "")
     } else {
       // Reset form for new campaign
       setName("")
@@ -128,6 +174,10 @@ export function CampaignSheet({
       setTargetCustomerIds([])
       setTagId(null)
       setSendAt("")
+      setMerchantId(null)
+      setMerchantPushId(null)
+      setValidFrom("")
+      setValidTo("")
     }
   }, [campaign])
 
@@ -198,9 +248,15 @@ export function CampaignSheet({
       return
     }
 
+    // Merchant campaign: content is snapshotted server-side from the selected
+    // push, so a typed message is not required.
     const trimmedMessage = message.trim()
-    if (!trimmedMessage) {
+    if (!trimmedMessage && !merchantPushId) {
       toast.error("Please enter campaign message")
+      return
+    }
+    if (merchantId && !merchantPushId) {
+      toast.error("Please select which push to send for this merchant")
       return
     }
 
@@ -227,6 +283,24 @@ export function CampaignSheet({
     const normalizedFrequency = (frequency || "ONCE").toUpperCase()
     const normalizedTargeting = (targetingType || "ALL").toUpperCase()
 
+    const toIsoOrNull = (value: string, label: string): string | null | undefined => {
+      if (!value) return null
+      const parsed = new Date(value)
+      if (isNaN(parsed.getTime())) {
+        toast.error(`Invalid ${label} date/time`)
+        return undefined
+      }
+      return parsed.toISOString()
+    }
+    const validFromIso = toIsoOrNull(validFrom, "start")
+    if (validFromIso === undefined) return
+    const validToIso = toIsoOrNull(validTo, "end")
+    if (validToIso === undefined) return
+    if (validFromIso && validToIso && validToIso <= validFromIso) {
+      toast.error("End date must be after start date")
+      return
+    }
+
     const formData = {
       name: name.trim(),
       message: trimmedMessage,
@@ -236,6 +310,10 @@ export function CampaignSheet({
       targetCustomerIds,
       tagId,
       sendAt: sendAtDate,
+      merchantId,
+      merchantPushId,
+      validFrom: validFromIso,
+      validTo: validToIso,
     }
 
     try {
@@ -344,20 +422,111 @@ export function CampaignSheet({
             </div>
           </div>
 
+          {/* 🏪 Merchant campaign (optional): content comes from the selected
+              push (snapshotted at save), sends debited from the package */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Merchant (optional)</Label>
+                <Select
+                  value={merchantId ?? "none"}
+                  onValueChange={(v) => {
+                    setMerchantId(v === "none" ? null : v)
+                    setMerchantPushId(null)
+                  }}
+                  disabled={!isEditMode}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No merchant — free message" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No merchant — free message</SelectItem>
+                    {merchants.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name} · {m.quotaRemaining} push left
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {merchantId && (
+                <div className="space-y-2">
+                  <Label>
+                    Push <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={merchantPushId ?? ""}
+                    onValueChange={(v) => setMerchantPushId(v || null)}
+                    disabled={!isEditMode}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a creative" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {merchantPushes.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            {merchantPushId && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 whitespace-pre-wrap">
+                {(() => {
+                  const p = merchantPushes.find((x) => x.id === merchantPushId)
+                  if (!p) return "The campaign will send the selected push content."
+                  return `*${p.title}*\n\n${p.text}${p.location ? `\n\n📍 ${p.location}` : ""}`
+                })()}
+              </div>
+            )}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="valid-from">Valid from</Label>
+                <Input
+                  id="valid-from"
+                  type="datetime-local"
+                  value={validFrom}
+                  onChange={(e) => setValidFrom(e.target.value)}
+                  disabled={!isEditMode}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valid-to">Valid to</Label>
+                <Input
+                  id="valid-to"
+                  type="datetime-local"
+                  value={validTo}
+                  onChange={(e) => setValidTo(e.target.value)}
+                  disabled={!isEditMode}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Recurring campaigns stop by themselves after this date.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Message */}
           <div className="space-y-2">
             <Label htmlFor="campaign-message">
-              Message <span className="text-red-500">*</span>
+              Message {!merchantPushId && <span className="text-red-500">*</span>}
             </Label>
             <Textarea
               id="campaign-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
-              placeholder="Hello {{name}}! Check out our new offers..."
+              placeholder={
+                merchantPushId
+                  ? "Content comes from the selected push"
+                  : "Hello {{name}}! Check out our new offers..."
+              }
               className="font-mono text-sm"
-              disabled={!isEditMode}
-              required
+              disabled={!isEditMode || Boolean(merchantPushId)}
+              required={!merchantPushId}
             />
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex flex-wrap gap-2">
               <code className="px-1 py-0.5 rounded bg-white">{"{{name}}"}</code>

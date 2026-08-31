@@ -17,6 +17,7 @@
 
 import {
   INTERNAL_ALLOWED_DOMAINS,
+  findUnauthorizedUrls,
   isUrlAllowed,
   sanitizeOutboundLinks,
 } from "../../application/chat-engine/outbound-link-guard"
@@ -68,6 +69,38 @@ describe("isUrlAllowed", () => {
   it("blocks an unparseable URL", () => {
     // WHY: fail-safe — if we cannot even parse it, it must not go out.
     expect(isUrlAllowed("https://", allowed)).toBe(false)
+  })
+})
+
+describe("findUnauthorizedUrls", () => {
+  // WHAT: the FAIL-CLOSED companion of sanitizeOutboundLinks — reports which
+  // URLs violate the allow-list instead of stripping them, so the caller can
+  // BLOCK (queue send of push campaigns) or REJECT (campaign creation).
+  //
+  // WHY: chat replies degrade gracefully (strip the link, keep the answer),
+  // but a marketing push without its link is broken — Andrea, 2026-08-31:
+  // external content must never leave the channel, and the LLM SecurityAgent
+  // is fail-open, so this is the deterministic guarantee (CLAUDE.md §16).
+  const allowed = ["visitsappada.it"]
+
+  it("returns empty for a message whose links are all allowed (workspace list + internal domains)", () => {
+    const msg =
+      "Scopri gli eventi: https://visitsappada.it/eventi e il tuo profilo https://echatbot.ai/customer-profile"
+    expect(findUnauthorizedUrls(msg, allowed)).toEqual([])
+  })
+
+  it("returns every unauthorized URL, in order, leaving the allowed ones out", () => {
+    const msg =
+      "Offerta: https://visitsappada.it/offerte ma anche https://evil.example.com/a e https://phish.io/b"
+    expect(findUnauthorizedUrls(msg, allowed)).toEqual([
+      "https://evil.example.com/a",
+      "https://phish.io/b",
+    ])
+  })
+
+  it("returns empty for a message with no URLs and for an empty message", () => {
+    expect(findUnauthorizedUrls("Nessun link qui", allowed)).toEqual([])
+    expect(findUnauthorizedUrls("", allowed)).toEqual([])
   })
 })
 

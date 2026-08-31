@@ -279,6 +279,50 @@ describe("WhatsAppQueueService", () => {
       expect(mockPrisma.conversationMessage.update).toHaveBeenCalled()
     })
 
+    it("🚨 blocks a message carrying a URL outside the workspace allow-list, even when SecurityAgent says safe", async () => {
+      // SCENARIO: a queued push-campaign message contains an external link
+      // that is NOT in workspace.allowedExternalLinks. The LLM SecurityAgent
+      // is mocked safe:true — exactly the fail-open case (missing config,
+      // parse error, timeout) seen live on demosappada (2026-08-31: "SECURITY
+      // agent not configured for workspace").
+      // RULE (CLAUDE.md §16 iron rule 1): the guarantee that external content
+      // never leaves the channel is deterministic CODE — the send must be
+      // BLOCKED (not stripped: a campaign without its link is broken), with
+      // the offending URLs named in the error. Allow-list is read from the
+      // message's OWN workspace row (multi-tenant, rule 2).
+      const mockMessage = {
+        id: "msg_link",
+        workspaceId: "ws_abc",
+        customerId: "cust_xyz",
+        phoneNumber: "+34654728753",
+        messageContent:
+          "Offerta speciale! Prenota su https://visitsappada.it/offerte oppure https://truffa.example.com/pay",
+        conversationMessageId: "conv_456",
+        status: "pending",
+        skipSecurityCheck: false,
+      }
+
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: "ws_abc",
+        whatsappProvider: "ultramsg",
+        ultraMsgInstanceId: "161048",
+        ultraMsgToken: "test_token",
+        allowedExternalLinks: ["visitsappada.it"], // truffa.example.com NOT allowed
+      })
+      mockPrisma.conversationMessage.findUnique.mockResolvedValue({ id: "conv_456", debugInfo: null })
+      mockPrisma.conversationMessage.update.mockResolvedValue({})
+
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
+
+      // The provider must NEVER be reached.
+      expect(mockProvider.sendTextMessage).not.toHaveBeenCalled()
+      expect(result.success).toBe(false)
+      expect(result.error).toContain("Unauthorized link")
+      expect(result.error).toContain("https://truffa.example.com/pay")
+      // The allowed link must NOT be reported as a violation.
+      expect(result.error).not.toContain("visitsappada.it")
+    })
+
     it("should block message if SecurityAgent marks it unsafe", async () => {
       // SCENARIO: SecurityAgent detects malicious content
       // RULE: Message must be blocked BEFORE calling WhatsApp provider

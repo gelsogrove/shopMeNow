@@ -135,7 +135,7 @@ describe('PushCampaignService', () => {
       expect(result).toEqual(mockCampaign)
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: 'workspace-1' },
-        select: { enableWhatsapp: true, ownerId: true },
+        select: { enableWhatsapp: true, ownerId: true, allowedExternalLinks: true },
       })
 
       // Verify ALL targeting query filters correctly
@@ -585,7 +585,7 @@ describe('PushCampaignService', () => {
       // Verify all queries filter by correct workspaceId
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: 'workspace-2' },
-        select: { enableWhatsapp: true, ownerId: true },
+        select: { enableWhatsapp: true, ownerId: true, allowedExternalLinks: true },
       })
 
       expect(mockPrisma.customers.findMany).toHaveBeenCalledWith(

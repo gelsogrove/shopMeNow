@@ -192,6 +192,9 @@ model Workspace {
   environmentVariables   WorkspaceEnvironmentVariable[] // 🔐 Secure credentials storage
   supportTickets         SupportTicket[] // 🎫 Support tickets for this workspace
   pushCampaigns          PushCampaign[]
+  merchants              Merchant[]
+  merchantPushes         MerchantPush[]
+  merchantQuotaTopups    MerchantQuotaTopup[]
   pushCampaignRecipients PushCampaignRecipient[]
 
   // 📅 Calendar & Appointment Booking (Feature: Calendar Integration)
@@ -1920,6 +1923,15 @@ model PushCampaign {
   sendAt             DateTime? // First run/scheduled time
   nextRunAt          DateTime? // Calculated next run
   lastRunAt          DateTime? // Last execution time
+  // 🆕 Merchant advertising (Andrea, 2026-08-31): a campaign can be bought by a
+  // local merchant — content snapshotted from one of their MerchantPush
+  // creatives, sends debited from the merchant's push-package quota.
+  merchantId         String?
+  merchantPushId     String?
+  // Campaign validity window (e.g. the winter campaign runs 01/12 → 31/03):
+  // recurring runs stop by themselves after validTo.
+  validFrom          DateTime?
+  validTo            DateTime?
   templateId         String?
   templateLocale     String?
   bodyPreview        String?                   @db.Text
@@ -1940,6 +1952,8 @@ model PushCampaign {
 
   workspace  Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy  User?                   @relation(fields: [createdByUserId], references: [id])
+  merchant     Merchant?     @relation(fields: [merchantId], references: [id])
+  merchantPush MerchantPush? @relation(fields: [merchantPushId], references: [id])
   recipients PushCampaignRecipient[]
   whatsappQueue WhatsAppQueue[]
 
@@ -1947,7 +1961,103 @@ model PushCampaign {
   @@index([status])
   @@index([sendAt])
   @@index([nextRunAt])
+  @@index([workspaceId, merchantId])
   @@map("push_campaigns")
+}
+
+// 🆕 Merchant advertising (Andrea, 2026-08-31): the workspace owner (e.g. a
+// Pro Loco) RESELLS the push system to local merchants. The merchant buys a
+// push package (MerchantQuotaTopup), provides creatives (MerchantPush), and
+// campaigns linked to them debit the package until it runs out — then sending
+// stops for that merchant only. Platform credits (owner ↔ eChatbot) are a
+// SEPARATE ledger and both are debited per send.
+// NOT the chatbot's customers table: merchants are who BUYS visibility, not
+// who receives messages.
+model Merchant {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String
+  description String? @db.Text
+  location    String?
+
+  // Invoicing data — structured for export; actual invoicing happens OUTSIDE
+  // the system (Andrea, 2026-08-31), so amounts are never stored here.
+  billingName     String? // ragione sociale
+  vatNumber       String? // partita IVA
+  taxCode         String? // codice fiscale
+  sdiCode         String? // codice destinatario SDI
+  pec             String?
+  billingAddress  String?
+  billingCity     String?
+  billingZip      String?
+  billingProvince String?
+  billingCountry  String? @default("IT")
+
+  isActive Boolean @default(true)
+  // Push-package balance: sum of topups minus debited sends. Never expires
+  // (Andrea, 2026-08-31). Decremented atomically by the push-campaigns job at
+  // enqueue time — the same point where platform credits are debited, so the
+  // two ledgers can never diverge.
+  quotaRemaining Int @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pushes      MerchantPush[]
+  quotaTopups MerchantQuotaTopup[]
+  campaigns   PushCampaign[]
+
+  @@index([workspaceId, isActive])
+  @@map("merchants")
+}
+
+// A merchant's advertising creative: reusable across campaigns (summer and
+// winter can reference the same push). Campaign creation SNAPSHOTS the
+// content into the campaign row, so editing a creative never changes an
+// already-scheduled campaign.
+model MerchantPush {
+  id          String  @id @default(cuid())
+  workspaceId String
+  merchantId  String
+  title       String
+  text        String  @db.Text
+  photoUrl    String?
+  videoUrl    String?
+  location    String?
+  description String? @db.Text
+  isActive    Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  merchant  Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  campaigns PushCampaign[]
+
+  @@index([workspaceId, merchantId, isActive])
+  @@map("merchant_pushes")
+}
+
+// One row per package sale: the audit trail behind quotaRemaining
+// (topups − sends = balance). Quantities only — prices live outside the system.
+model MerchantQuotaTopup {
+  id              String  @id @default(cuid())
+  workspaceId     String
+  merchantId      String
+  amount          Int
+  note            String?
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  merchant  Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, merchantId])
+  @@map("merchant_quota_topups")
 }
 
 model PushCampaignRecipient {

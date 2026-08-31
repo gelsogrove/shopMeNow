@@ -323,8 +323,13 @@ export default function CampaignsPage() {
         await api.put(`/workspaces/${workspace?.id}/push-campaigns/${campaignId}`, formData)
         toast.success("Campaign updated")
       } else {
-        await api.post(`/workspaces/${workspace?.id}/push-campaigns`, formData)
+        const { data } = await api.post(`/workspaces/${workspace?.id}/push-campaigns`, formData)
         toast.success("Campaign created")
+        // 🏪 The merchant package doesn't cover the whole segment: surface the
+        // backend's warning so the owner isn't surprised by the mid-run pause.
+        if (data?.quotaWarning) {
+          toast.warning(data.quotaWarning)
+        }
       }
       setCampaignSheetOpen(false)
       loadCampaigns()
@@ -605,6 +610,12 @@ export default function CampaignsPage() {
               className="pl-9"
             />
           </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/merchants")}
+          >
+            Merchants
+          </Button>
           <Button onClick={handleAddCampaign} className="bg-emerald-600 hover:bg-emerald-700">
             + New Campaign
           </Button>

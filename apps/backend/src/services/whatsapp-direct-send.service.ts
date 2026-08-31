@@ -4,6 +4,7 @@ import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 import { SecurityAgent } from "../application/agents/SecurityAgent"
 import { checkOutboundSendGate } from "./whatsapp/outbound-send-gate"
+import { sanitizeOutboundLinks } from "../application/chat-engine/outbound-link-guard"
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import { generateSpeech, TTSResult } from "./tts-elevenlabs.service"
 import { messageAttachmentRepository } from "../repositories/message-attachment.repository"
@@ -139,7 +140,24 @@ export class WhatsAppDirectSendService {
     }
 
     const provider = WhatsAppProviderFactory.create(workspace)
-    const formattedMessage = mdToWhatsApp(messageContent)
+
+    // 🔗 DETERMINISTIC LINK GUARD: strip every URL outside the workspace
+    // allow-list from the reply. The SecurityAgent above is FAIL-OPEN (missing
+    // config, parse error, timeout → message passes), so the code-level
+    // guarantee against external links lives here (CLAUDE.md §16 iron rule 1).
+    // STRIP, not block, mirroring the chat-engine: a chat reply is still
+    // useful without the bad link. skipSecurityCheck (trusted system
+    // notifications) keeps its existing meaning and bypasses content checks.
+    let outboundContent = messageContent
+    if (!skipSecurityCheck) {
+      outboundContent = sanitizeOutboundLinks(
+        messageContent,
+        (workspace.allowedExternalLinks as string[] | null) || [],
+        { workspaceId, customerId }
+      ).message
+    }
+
+    const formattedMessage = mdToWhatsApp(outboundContent)
 
     let sendResult: { success: boolean; messageId?: string; error?: string }
     // 🎤 Set when the reply went out as a voice note — persisted as an AUDIO
@@ -148,7 +166,7 @@ export class WhatsAppDirectSendService {
     try {
       if (replyAsAudio && provider.sendAudioMessage) {
         // 🎤 TTS path: generate MP3 → upload → send as audio message
-        const tts = await generateSpeech(messageContent, workspaceId, customerLanguage, ttsVoiceId)
+        const tts = await generateSpeech(outboundContent, workspaceId, customerLanguage, ttsVoiceId)
         if (tts?.audioUrl) {
           logger.info("[DirectSend] 🎤 Sending audio reply via TTS", { workspaceId, customerId })
           sendResult = await provider.sendAudioMessage(phoneNumber, tts.audioUrl)

@@ -161,6 +161,10 @@ export type {
   TouristApartment,
   TouristEvent,
   TouristPhoto,
+  // Merchant advertising (esercenti) types
+  Merchant,
+  MerchantPush,
+  MerchantQuotaTopup,
 } from './generated/prisma/index.js'
 
 // Shared billing math + aggregations (single source of truth for invoices)

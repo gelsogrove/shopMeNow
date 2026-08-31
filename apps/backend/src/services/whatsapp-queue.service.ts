@@ -14,6 +14,7 @@ import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.reposito
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 import { checkOutboundSendGate } from "./whatsapp/outbound-send-gate"
+import { findUnauthorizedUrls } from "../application/chat-engine/outbound-link-guard"
 import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 
 export interface EnqueueMessageDto {
@@ -655,6 +656,32 @@ export class WhatsAppQueueService {
       })
       if (!gate.allowed) {
         return { success: false, error: `Outbound gate: ${gate.reason}` }
+      }
+
+      // 🔗 DETERMINISTIC LINK GUARD (fail-closed): a queued message — push
+      // campaigns above all — must not carry a URL outside the workspace
+      // allow-list. The LLM SecurityAgent above is FAIL-OPEN (missing config,
+      // parse error, timeout → message passes), so the guarantee against
+      // external content lives here, in code (CLAUDE.md §16 iron rule 1).
+      // It BLOCKS rather than strips: a campaign message without its link is
+      // broken marketing, and campaign content is validated at creation, so
+      // hitting this means the allow-list changed after scheduling.
+      if (!message.skipSecurityCheck) {
+        const unauthorized = findUnauthorizedUrls(
+          message.messageContent,
+          (workspace.allowedExternalLinks as string[] | null) || []
+        )
+        if (unauthorized.length > 0) {
+          logger.warn("🚫 [WhatsAppQueueService] Blocked message with unauthorized link(s)", {
+            messageId: message.id,
+            workspaceId: message.workspaceId,
+            unauthorized,
+          })
+          return {
+            success: false,
+            error: `Unauthorized link(s) in message: ${unauthorized.join(", ")}`,
+          }
+        }
       }
 
       // Create WhatsApp provider (UltraMsg or Meta)

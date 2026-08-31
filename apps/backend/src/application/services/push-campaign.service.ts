@@ -12,6 +12,7 @@ import {
   UpdatePushCampaignInput,
 } from "../../repositories/push-campaign.repository"
 import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
+import { findUnauthorizedUrls } from "../chat-engine/outbound-link-guard"
 import logger from "../../utils/logger"
 
 export interface CreatePushCampaignDTO {
@@ -30,6 +31,13 @@ export interface CreatePushCampaignDTO {
   sendAt?: Date | string | null
   throttlePerSecond?: number
   batchSize?: number
+  // 🏪 Merchant advertising (Andrea, 2026-08-31): campaign bought by a local
+  // merchant — content snapshotted from one of their creatives, sends debited
+  // from the merchant's push package.
+  merchantId?: string | null
+  merchantPushId?: string | null
+  validFrom?: Date | string | null
+  validTo?: Date | string | null
 }
 
 export class PushCampaignService {
@@ -175,6 +183,88 @@ export class PushCampaignService {
     return phone.replace(/\s+/g, "")
   }
 
+  /**
+   * Reject campaign content carrying URLs outside the workspace allow-list
+   * (workspace.allowedExternalLinks + platform-internal domains).
+   *
+   * Validated ONCE, at creation/update — the admin gets an immediate,
+   * actionable 400 instead of N per-recipient failures at send time. The
+   * queue's own fail-closed link guard stays as the last net (the allow-list
+   * can change between scheduling and sending). CLAUDE.md §16 iron rule 1:
+   * the guarantee is code, not a prompt or a convention.
+   */
+  private assertLinksAllowed(
+    message: string | undefined,
+    mediaUrl: string | undefined | null,
+    workspaceAllowedDomains: string[]
+  ): void {
+    const unauthorized = [
+      ...findUnauthorizedUrls(message || "", workspaceAllowedDomains),
+      ...findUnauthorizedUrls(mediaUrl || "", workspaceAllowedDomains),
+    ]
+    if (unauthorized.length > 0) {
+      throw new AppError(
+        400,
+        `Campaign content contains unauthorized link(s): ${unauthorized.join(", ")}. ` +
+          "Add the domain(s) to the workspace allowed external links first."
+      )
+    }
+  }
+
+  /** Accepts Date | string | null, throws a clean 400 on garbage. */
+  private parseDateInput(value: Date | string | null | undefined, label: string): Date | null {
+    if (value === undefined || value === null) return null
+    const parsed = value instanceof Date ? value : new Date(value)
+    if (Number.isNaN(parsed.getTime())) {
+      throw new AppError(400, `Invalid ${label} date/time`)
+    }
+    return parsed
+  }
+
+  /**
+   * Resolve a merchant campaign: merchant + creative must exist in THIS
+   * workspace, be active, and the package must have quota. Returns the
+   * content SNAPSHOT — the campaign freezes the creative's content at
+   * creation, so editing the creative never rewrites a scheduled campaign.
+   */
+  private async resolveMerchantCampaign(
+    workspaceId: string,
+    merchantId: string,
+    merchantPushId: string | null | undefined
+  ): Promise<{ message: string; mediaUrl: string | null; quotaRemaining: number }> {
+    const merchant = await this.prisma.merchant.findFirst({
+      where: { id: merchantId, workspaceId, deletedAt: null },
+      select: { isActive: true, quotaRemaining: true },
+    })
+    if (!merchant) throw new AppError(404, "Merchant not found")
+    if (!merchant.isActive) throw new AppError(400, "Merchant is not active")
+    if (merchant.quotaRemaining <= 0) {
+      throw new AppError(
+        400,
+        "Merchant push quota exhausted — top up the package before scheduling a campaign"
+      )
+    }
+    if (!merchantPushId) {
+      throw new AppError(400, "merchantPushId is required for a merchant campaign")
+    }
+    const push = await this.prisma.merchantPush.findFirst({
+      where: { id: merchantPushId, workspaceId, merchantId, deletedAt: null },
+    })
+    if (!push) throw new AppError(404, "Merchant push not found")
+    if (!push.isActive) throw new AppError(400, "Merchant push is not active")
+
+    // Snapshot format is mechanism, not copy: title bold (WhatsApp style),
+    // then the creative's own text/location/video — all tenant-authored.
+    const parts = [`*${push.title}*`, push.text]
+    if (push.location) parts.push(`📍 ${push.location}`)
+    if (push.videoUrl) parts.push(push.videoUrl)
+    return {
+      message: parts.join("\n\n"),
+      mediaUrl: push.photoUrl ?? null,
+      quotaRemaining: merchant.quotaRemaining,
+    }
+  }
+
   private calculateNextRunAt(
     frequency: CampaignFrequency,
     lastRun: Date = new Date()
@@ -215,7 +305,7 @@ export class PushCampaignService {
 
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: input.workspaceId },
-      select: { enableWhatsapp: true, ownerId: true },
+      select: { enableWhatsapp: true, ownerId: true, allowedExternalLinks: true },
     })
     if (!workspace) {
       throw new AppError(404, "Workspace not found")
@@ -229,6 +319,37 @@ export class PushCampaignService {
     if (!workspace.ownerId) {
       throw new AppError(500, "Workspace owner not found for credit check")
     }
+
+    // 🏪 Merchant campaign: resolve merchant + creative and SNAPSHOT the
+    // content before any validation, so the link check below runs on what
+    // will actually be sent.
+    let merchantQuotaRemaining: number | null = null
+    if (input.merchantId) {
+      const snapshot = await this.resolveMerchantCampaign(
+        input.workspaceId,
+        input.merchantId,
+        input.merchantPushId
+      )
+      input.message = snapshot.message
+      input.mediaUrl = snapshot.mediaUrl ?? undefined
+      merchantQuotaRemaining = snapshot.quotaRemaining
+    } else if (input.merchantPushId) {
+      throw new AppError(400, "merchantId is required when merchantPushId is provided")
+    }
+
+    // 🪟 Validity window (e.g. winter campaign 01/12 → 31/03)
+    const validFrom = this.parseDateInput(input.validFrom, "validFrom")
+    const validTo = this.parseDateInput(input.validTo, "validTo")
+    if (validFrom && validTo && validTo <= validFrom) {
+      throw new AppError(400, "validTo must be after validFrom")
+    }
+
+    // Fail fast on external links — before recipients are built or credits touched.
+    this.assertLinksAllowed(
+      input.message,
+      input.mediaUrl,
+      (workspace.allowedExternalLinks as string[] | null) || []
+    )
 
     const sendAt = (() => {
       if (input.sendAt === undefined || input.sendAt === null) return new Date()
@@ -312,9 +433,26 @@ export class PushCampaignService {
         throttlePerSecond,
         batchSize,
         status: PushCampaignStatus.SCHEDULED,
+        merchantId: input.merchantId ?? null,
+        merchantPushId: input.merchantPushId ?? null,
+        validFrom,
+        validTo,
       },
       recipients
     )
+
+    // 🏪 Quota warning, not a block (Andrea, 2026-08-31: send what the package
+    // covers, then pause): the admin sees upfront that the package won't cover
+    // the whole segment.
+    if (
+      merchantQuotaRemaining !== null &&
+      merchantQuotaRemaining < recipients.length
+    ) {
+      return {
+        ...campaign,
+        quotaWarning: `Merchant package covers ${merchantQuotaRemaining} of ${recipients.length} recipients — the campaign will pause when the quota runs out.`,
+      }
+    }
 
     return campaign
   }
@@ -326,6 +464,55 @@ export class PushCampaignService {
     const existing = await this.repo.findById(id, workspaceId)
     if (!existing) {
       throw new AppError(404, "Campaign not found")
+    }
+
+    // 🏪 Re-snapshot when the campaign is (re)pointed at a creative: the new
+    // push's content replaces the frozen one, then flows through the same
+    // link validation below.
+    if (input.merchantPushId !== undefined && input.merchantPushId !== null) {
+      const merchantId = input.merchantId ?? (existing as any).merchantId
+      if (!merchantId) {
+        throw new AppError(400, "merchantId is required when merchantPushId is provided")
+      }
+      const snapshot = await this.resolveMerchantCampaign(
+        workspaceId,
+        merchantId,
+        input.merchantPushId
+      )
+      input.merchantId = merchantId
+      input.message = snapshot.message
+      input.mediaUrl = snapshot.mediaUrl ?? undefined
+    }
+
+    // 🪟 Validity window changes keep the from<to invariant against the
+    // stored values they merge with.
+    if (input.validFrom !== undefined || input.validTo !== undefined) {
+      const mergedFrom = this.parseDateInput(
+        (input.validFrom !== undefined ? input.validFrom : (existing as any).validFrom) as any,
+        "validFrom"
+      )
+      const mergedTo = this.parseDateInput(
+        (input.validTo !== undefined ? input.validTo : (existing as any).validTo) as any,
+        "validTo"
+      )
+      if (mergedFrom && mergedTo && mergedTo <= mergedFrom) {
+        throw new AppError(400, "validTo must be after validFrom")
+      }
+      if (input.validFrom !== undefined) input.validFrom = mergedFrom
+      if (input.validTo !== undefined) input.validTo = mergedTo
+    }
+
+    // Same link validation as create, when the content is being changed.
+    if (input.message !== undefined || input.mediaUrl !== undefined) {
+      const ws = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { allowedExternalLinks: true },
+      })
+      this.assertLinksAllowed(
+        input.message ?? existing.message,
+        input.mediaUrl ?? (existing as any).mediaUrl,
+        (ws?.allowedExternalLinks as string[] | null) || []
+      )
     }
 
     if (input.sendAt !== undefined) {

@@ -208,40 +208,48 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
   })
 
   if (removed.length > 0) {
-    // Tidy the holes left behind: doubled spaces, orphaned punctuation,
-    // and lines that held nothing but the stripped value.
-    //
-    // A stripped phone or URL can also leave its LABEL standing alone —
-    // "Tel.. " reached a guest after the invented number it introduced was
-    // removed (Andrea, 2026-08-28 live: "Hotel La Baita ... Tel.. "). A line
-    // whose only content is a contact label is the husk of a removed value:
-    // it goes with it. Stems over the bot's own output, like OFFER_STEM —
-    // never the guest's words (§14).
-    const ORPHAN_LABEL_RE =
-      /^[\s•\-*]*(?:tel(?:efono)?|phone|t[eé]l[eé]?(?:phone)?|e-?mail|mail|web|sito|website|dettagli|details|info(?:rmazioni)?|contatt[oi]|contacts?)\s*[.:,;]*\s*$/i
+    // Tidy the holes left behind: doubled spaces and orphaned punctuation.
     text = text
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/[ \t]+([.,;:!?])/g, '$1')
-      // The MID-LINE husk: "Tel.. Anche qui, chiama prima..." — the stripped
-      // phone sat between its label and the next sentence, so the line-level
-      // filter below never sees a bare label (2026-08-28 live, second form).
-      // Removed only when followed by a sentence start, punctuation or the
-      // end of the line — "Tel. 0435 469833" (digit next) is never touched.
-      .replace(
-        /\b(?:tel(?:efono)?|phone|t[eé]l(?:[eé]phone)?)\s*[.:]{1,3}\s*(?=[A-ZÀ-Ý]|[.,;]|\n|$)/g,
-        '',
-      )
-      .split('\n')
-      .filter((line, i, all) => {
-        const bare = line.replace(/^[\s•\-*\d.)]+/, '').trim()
-        if (bare.length > 0) return !ORPHAN_LABEL_RE.test(line)
-        // Keep single blank lines used as paragraph breaks.
-        return line.trim() === '' && all[i - 1]?.trim() !== ''
-      })
-      .join('\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
   }
+
+  // A dangling contact LABEL is scrubbed on EVERY reply, not only after a
+  // strip. Two ways it appears:
+  // - a stripped phone/URL leaves its label behind — "Tel.. " reached a guest
+  //   after the invented number it introduced was removed (Andrea, 2026-08-28
+  //   live: "Hotel La Baita ... Tel.. ");
+  // - the model, told never to invent numbers, writes the label and simply
+  //   stops — the itinerary ended "…le opzioni senza glutine. Tel.." with
+  //   nothing stripped at all (Andrea, 2026-08-31 live), so a cleanup gated
+  //   on removed.length never ran.
+  // Stems over the bot's own output, like OFFER_STEM — never the guest's
+  // words (§14).
+  const ORPHAN_LABEL_RE =
+    /^[\s•\-*]*(?:tel(?:efono)?|phone|t[eé]l[eé]?(?:phone)?|e-?mail|mail|web|sito|website|dettagli|details|info(?:rmazioni)?|contatt[oi]|contacts?)\s*[.:,;]*\s*$/i
+  text = text
+    // The MID-LINE husk: "Tel.. Anche qui, chiama prima..." — the label sits
+    // between its (missing) number and the next sentence, so the line-level
+    // filter below never sees a bare label (2026-08-28 live, second form).
+    // Removed only when followed by a sentence start, punctuation or the
+    // end of the line — "Tel. 0435 469833" (digit next) is never touched.
+    // Label case is spelled out ([Tt]el…) instead of /i: a case-insensitive
+    // flag would also make the sentence-start lookahead match lowercase, and
+    // "il tel. di casa" must never lose its label.
+    .replace(
+      /\b(?:[Tt][Ee][Ll](?:[Ee][Ff][Oo][Nn][Oo])?|[Pp][Hh][Oo][Nn][Ee]|[Tt][EeÉé][Ll](?:[EeÉé][Pp][Hh][Oo][Nn][Ee])?)\s*[.:]{1,3}\s*(?=[A-ZÀ-Ý]|[.,;]|\n|$)/g,
+      '',
+    )
+    .split('\n')
+    .filter((line, i, all) => {
+      const bare = line.replace(/^[\s•\-*\d.)]+/, '').trim()
+      if (bare.length > 0) return !ORPHAN_LABEL_RE.test(line)
+      // Keep single blank lines used as paragraph breaks.
+      return line.trim() === '' && all[i - 1]?.trim() !== ''
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 
   return { text, removed }
 }

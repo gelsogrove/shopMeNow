@@ -29,6 +29,11 @@ export interface CreatePushCampaignInput {
   costPerMessage?: Prisma.Decimal | number
   throttlePerSecond?: number
   batchSize?: number
+  // 🏪 Merchant advertising (Andrea, 2026-08-31)
+  merchantId?: string | null
+  merchantPushId?: string | null
+  validFrom?: Date | null
+  validTo?: Date | null
 }
 
 export interface UpdatePushCampaignInput {
@@ -49,6 +54,11 @@ export interface UpdatePushCampaignInput {
   mediaUrl?: string
   throttlePerSecond?: number
   batchSize?: number
+  // 🏪 Merchant advertising (Andrea, 2026-08-31)
+  merchantId?: string | null
+  merchantPushId?: string | null
+  validFrom?: Date | null
+  validTo?: Date | null
 }
 
 export interface RecipientCreateInput {
@@ -95,6 +105,10 @@ export class PushCampaignRepository {
         costPerMessage: data.costPerMessage,
         throttlePerSecond: data.throttlePerSecond,
         batchSize: data.batchSize,
+        merchantId: data.merchantId,
+        merchantPushId: data.merchantPushId,
+        validFrom: data.validFrom,
+        validTo: data.validTo,
         expectedRecipients: recipients.length,
         recipients: {
           createMany: {

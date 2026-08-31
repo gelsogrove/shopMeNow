@@ -114,6 +114,7 @@ import { touristExcursionsRouter } from "../interfaces/http/routes/tourist-excur
 import { touristRefugesRouter } from "../interfaces/http/routes/tourist-refuges.routes"
 import { touristApartmentsRouter } from "../interfaces/http/routes/tourist-apartments.routes"
 import { touristEventsRouter } from "../interfaces/http/routes/tourist-events.routes"
+import { merchantsRouter } from "../interfaces/http/routes/merchants.routes"
 import { touristPhotosRouter } from "../interfaces/http/routes/tourist-photos.routes"
 import { publicTouristPhotosRouter } from "../interfaces/http/routes/public-tourist-photos.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
@@ -848,6 +849,11 @@ router.use(
 router.use("/workspaces/:workspaceId/tourist-events", touristEventsRouter())
 router.use("/workspaces/:workspaceId/tourist-photos", touristPhotosRouter())
 logger.info("Registered PRO_LOCO tourist content routers with workspace routes")
+
+// 🆕 Merchant advertising (Andrea, 2026-08-31): merchants (esercenti),
+// their creatives and push-package quota — the resale side of push campaigns.
+router.use("/workspaces/:workspaceId/merchants", merchantsRouter())
+logger.info("Registered merchant advertising router with workspace routes")
 
 // Mount billing routes (workspace-scoped) - Feature 185
 router.use("/workspaces/:workspaceId/billing", subscriptionBillingRoutes)
