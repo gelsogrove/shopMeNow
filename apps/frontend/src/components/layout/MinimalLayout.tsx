@@ -17,7 +17,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import { storage } from "@/lib/storage"
-import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, ListTodo, ClipboardList, Mail, Settings as SettingsIcon } from "lucide-react"
+import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Megaphone, Package, Briefcase, Store, Tag, Truck, UserCog, ShoppingCart, ListTodo, ClipboardList, Mail, Settings as SettingsIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { WidgetLoader } from "@/components/WidgetLoader"
@@ -328,7 +328,30 @@ export function MinimalLayout() {
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
-                      {/* Campaigns temporarily hidden from menu (Andrea, 2026-07-31) — page/route still live */}
+                      {/* 🏪 Campaigns + Merchants for FLOW/PRO_LOCO (Andrea,
+                          2026-09-01: "non lo vedo campagne puoi attivarlo per
+                          FLOW_PRO_LOCO") — the push resale flow: merchants buy
+                          packages, campaigns send their creatives. For
+                          ECOMMERCE the Campaigns entry stays hidden as decided
+                          on 2026-07-31 (page/route still live). */}
+                      {isCustomChatbot && (
+                        <>
+                          <DropdownMenuItem
+                            className="p-2 cursor-pointer"
+                            onClick={() => navigate("/campaigns")}
+                          >
+                            <Megaphone className="mr-2 h-4 w-4 text-emerald-600" />
+                            <span>Campaigns</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="p-2 cursor-pointer"
+                            onClick={() => navigate("/merchants")}
+                          >
+                            <Store className="mr-2 h-4 w-4 text-teal-600" />
+                            <span>Merchants</span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       {workspace?.channelMode === 'ECOMMERCE' && isSuperAdmin && (
                         <DropdownMenuItem
                           className="p-2 cursor-pointer"
