@@ -15,6 +15,8 @@ export const pushCampaignRoutes = () => {
   router.use(workspaceValidationMiddleware)
 
   router.get("/", controller.list.bind(controller))
+  // Before /:id — "audience" must never be parsed as a campaign id.
+  router.get("/audience", controller.audience.bind(controller))
   router.get("/:id", controller.get.bind(controller))
   router.get("/:id/recipients", controller.recipients.bind(controller))
   router.get("/:id/sent-messages", controller.sentMessages.bind(controller))

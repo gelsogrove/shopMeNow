@@ -91,13 +91,20 @@ export function CampaignSheet({
   const [targetCustomerIds, setTargetCustomerIds] = useState<string[]>([])
   const [tagId, setTagId] = useState<string | null>(null)
   const [sendAt, setSendAt] = useState<string>("")
-  // 🏪 Merchant campaign state
+  // 🏪 Merchant campaign state. contentType is the FIRST choice of the form
+  // (Andrea, 2026-09-01: "o mandiamo il messaggio o mandiamo il push"): a
+  // campaign sends EITHER a merchant creative OR a free message, explicitly.
+  const [contentType, setContentType] = useState<"FREE" | "MERCHANT">("FREE")
   const [merchantId, setMerchantId] = useState<string | null>(null)
   const [merchantPushId, setMerchantPushId] = useState<string | null>(null)
   const [validFrom, setValidFrom] = useState<string>("")
   const [validTo, setValidTo] = useState<string>("")
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [merchantPushes, setMerchantPushes] = useState<MerchantPush[]>([])
+  // 📊 Reachable audience, from the backend with the SAME eligibility rules
+  // the send job applies — the form shows real numbers, never guesses.
+  const [audienceTotal, setAudienceTotal] = useState<number | null>(null)
+  const [audienceTags, setAudienceTags] = useState<Array<{ tag: string; count: number }>>([])
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -109,8 +116,22 @@ export function CampaignSheet({
     if (open && workspaceId) {
       loadCustomers()
       loadMerchants()
+      loadAudience()
     }
   }, [open, workspaceId])
+
+  const loadAudience = async () => {
+    if (!workspaceId) return
+    try {
+      const { data } = await api.get(`/workspaces/${workspaceId}/push-campaigns/audience`)
+      setAudienceTotal(typeof data?.total === "number" ? data.total : null)
+      setAudienceTags(Array.isArray(data?.tags) ? data.tags : [])
+    } catch (error) {
+      logger.error("Error loading campaign audience:", error)
+      setAudienceTotal(null)
+      setAudienceTags([])
+    }
+  }
 
   // The push dropdown offers only the selected merchant's ACTIVE creatives.
   useEffect(() => {
@@ -160,6 +181,7 @@ export function CampaignSheet({
       setTargetCustomerIds(campaign.targetCustomerIds || [])
       setTagId(campaign.tagId || null)
       setSendAt(campaign.sendAt ? toLocalInputValue(campaign.sendAt) : "")
+      setContentType(campaign.merchantId ? "MERCHANT" : "FREE")
       setMerchantId(campaign.merchantId || null)
       setMerchantPushId(campaign.merchantPushId || null)
       setValidFrom(campaign.validFrom ? toLocalInputValue(campaign.validFrom) : "")
@@ -174,6 +196,7 @@ export function CampaignSheet({
       setTargetCustomerIds([])
       setTagId(null)
       setSendAt("")
+      setContentType("FREE")
       setMerchantId(null)
       setMerchantPushId(null)
       setValidFrom("")

@@ -32,6 +32,42 @@ export class PushCampaignController {
     }
   }
 
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/push-campaigns/audience:
+   *   get:
+   *     summary: Reachable audience for campaigns — total eligible customers and per-tag counts
+   *     tags: [PushCampaigns]
+   *     security: [{ bearerAuth: [] }]
+   *     parameters:
+   *       - { in: path, name: workspaceId, required: true, schema: { type: string } }
+   *     responses:
+   *       200:
+   *         description: Eligible customers (push consent, chatbot active, not blacklisted) — total and per tag, tag names exactly as stored
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 total: { type: integer }
+   *                 tags:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       tag: { type: string }
+   *                       count: { type: integer }
+   */
+  async audience(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId } = req.params
+      res.json(await service.audience(workspaceId))
+    } catch (error) {
+      logger.error("[PushCampaignController] audience error", error)
+      next(error)
+    }
+  }
+
   async get(req: Request, res: Response, next: NextFunction) {
     try {
       const { workspaceId, id } = req.params

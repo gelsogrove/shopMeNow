@@ -576,6 +576,44 @@ export class PushCampaignService {
     return this.repo.deleteCampaign(id, workspaceId)
   }
 
+  /**
+   * The numbers the campaign form is built on (Andrea, 2026-09-01: "tag vuoti
+   * non capisco"): how many customers a campaign can actually reach, total
+   * and per tag — counted with the SAME eligibility rules the job applies at
+   * send time (consent, chatbot active, not blacklisted, not deleted), so the
+   * estimate in the UI can never disagree with what really goes out.
+   * Tag names are returned EXACTLY as stored: array targeting (`tags has X`)
+   * is case-sensitive, and a lowercased "inloco" would silently miss every
+   * "INLOCO" customer.
+   */
+  async audience(workspaceId: string) {
+    const customers = await this.prisma.customers.findMany({
+      where: {
+        workspaceId,
+        isActive: true,
+        activeChatbot: true,
+        isBlacklisted: false,
+        deletedAt: null,
+        push_notifications_consent: true,
+      },
+      select: { tags: true },
+    })
+    const counts = new Map<string, number>()
+    for (const c of customers) {
+      for (const tag of c.tags || []) {
+        const t = tag.trim()
+        if (!t) continue
+        counts.set(t, (counts.get(t) || 0) + 1)
+      }
+    }
+    return {
+      total: customers.length,
+      tags: [...counts.entries()]
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
+    }
+  }
+
   async list(workspaceId: string) {
     const campaigns = await this.repo.listByWorkspace(workspaceId)
     if (campaigns.length === 0) return []
