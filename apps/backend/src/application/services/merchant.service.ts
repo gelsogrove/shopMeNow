@@ -121,6 +121,7 @@ export class MerchantService {
   async createPush(data: CreateMerchantPushData) {
     if (!data.title?.trim()) throw new AppError(400, "Push title is required")
     if (!data.text?.trim()) throw new AppError(400, "Push text is required")
+    this.assertPhotoSize(data.photoBase64)
     await this.getById(data.merchantId, data.workspaceId)
     await this.assertPushLinksAllowed(data.workspaceId, data)
     return this.pushes.create({
@@ -141,6 +142,7 @@ export class MerchantService {
     if (data.text !== undefined && !data.text?.trim()) {
       throw new AppError(400, "Push text cannot be empty")
     }
+    this.assertPhotoSize(data.photoBase64)
     const existing = await this.pushes.findById(id, workspaceId)
     if (!existing) throw new AppError(404, "Push not found")
     // Validate the RESULTING content, not just the changed fields: a new text
@@ -160,6 +162,19 @@ export class MerchantService {
   async deletePush(id: string, workspaceId: string) {
     const deleted = await this.pushes.softDelete(id, workspaceId)
     if (!deleted) throw new AppError(404, "Push not found")
+  }
+
+  /**
+   * Cap the uploaded creative photo at ~4MB decoded (WhatsApp providers cap
+   * image size around 5MB; base64 inflates by ~4/3). A clear 400 beats a
+   * silently truncated row or a provider rejection at send time.
+   */
+  private assertPhotoSize(photoBase64: string | null | undefined): void {
+    if (!photoBase64) return
+    const APPROX_MAX_BASE64_CHARS = 5_600_000 // ≈ 4MB decoded
+    if (photoBase64.length > APPROX_MAX_BASE64_CHARS) {
+      throw new AppError(400, "Photo is too large — maximum 4MB")
+    }
   }
 
   /**

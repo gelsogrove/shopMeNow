@@ -17,6 +17,8 @@ export interface CreateMerchantPushData {
   title: string
   text: string
   photoUrl?: string | null
+  /** Uploaded image (data URI or raw base64) — served publicly for WhatsApp. */
+  photoBase64?: string | null
   videoUrl?: string | null
   location?: string | null
   description?: string | null
