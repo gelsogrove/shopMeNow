@@ -53,9 +53,32 @@ export async function resolveMerchantCampaign(
   const parts = [`*${push.title}*`, push.text]
   if (push.location) parts.push(`📍 ${push.location}`)
   if (push.videoUrl) parts.push(push.videoUrl)
+
+  // Photo: an image uploaded from the admin's computer wins over an external
+  // URL — it is served by our own public endpoint so WhatsApp can fetch it.
+  const backendUrl =
+    process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`
+  const mediaUrl = push.photoBase64
+    ? `${backendUrl}/api/v1/public/merchant-pushes/${push.id}/photo.jpg`
+    : push.photoUrl ?? null
+
   return {
     message: parts.join("\n\n"),
-    mediaUrl: push.photoUrl ?? null,
+    mediaUrl,
     quotaRemaining: merchant.quotaRemaining,
+  }
+}
+
+/**
+ * True for URLs our own backend serves (uploaded creative photos): they are
+ * platform assets, not external content, so the campaign allow-list check
+ * must not reject them (in local dev the backend origin is localhost, which
+ * no allow-list would ever contain).
+ */
+export function isOwnMerchantPushPhotoUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.includes("/public/merchant-pushes/")
+  } catch {
+    return false
   }
 }

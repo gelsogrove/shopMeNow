@@ -698,10 +698,19 @@ export class WhatsAppQueueService {
       // Send message via provider. Markdown → WhatsApp formatting is applied
       // here exactly like the direct-send path does: queued content (push
       // campaigns) can contain rich Markdown that WhatsApp renders as raw text.
-      const sendResult = await provider.sendTextMessage(
-        message.phoneNumber,
-        mdToWhatsApp(message.messageContent)
-      )
+      // 📷 A queued image (merchant push creative) goes out as media with the
+      // text as caption; without media it is a plain text message.
+      const outboundText = mdToWhatsApp(message.messageContent)
+      const mediaUrl = (message as { mediaUrl?: string | null }).mediaUrl
+      const sendResult =
+        mediaUrl && provider.sendMediaMessage
+          ? await provider.sendMediaMessage(
+              message.phoneNumber,
+              mediaUrl,
+              outboundText,
+              "image"
+            )
+          : await provider.sendTextMessage(message.phoneNumber, outboundText)
 
       const whatsappDuration = Date.now() - whatsappStartTime
 

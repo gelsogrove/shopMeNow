@@ -13,7 +13,7 @@ import {
 } from "../../repositories/push-campaign.repository"
 import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
 import { findUnauthorizedUrls } from "../chat-engine/outbound-link-guard"
-import { resolveMerchantCampaign } from "./push-campaign-merchant"
+import { isOwnMerchantPushPhotoUrl, resolveMerchantCampaign } from "./push-campaign-merchant"
 import logger from "../../utils/logger"
 
 export interface CreatePushCampaignDTO {
@@ -201,7 +201,11 @@ export class PushCampaignService {
   ): void {
     const unauthorized = [
       ...findUnauthorizedUrls(message || "", workspaceAllowedDomains),
-      ...findUnauthorizedUrls(mediaUrl || "", workspaceAllowedDomains),
+      // Our own public creative-photo URLs are platform assets, not external
+      // content — never subject to the allow-list.
+      ...(mediaUrl && isOwnMerchantPushPhotoUrl(mediaUrl)
+        ? []
+        : findUnauthorizedUrls(mediaUrl || "", workspaceAllowedDomains)),
     ]
     if (unauthorized.length > 0) {
       throw new AppError(
