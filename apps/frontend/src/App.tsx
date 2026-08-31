@@ -52,6 +52,7 @@ import CheckoutSuccessPage from "./pages/checkout-success"
 import CheckoutPage from "./pages/CheckoutPage"
 import ExpiredPage from "./pages/expired"
 import { FAQPage } from "./pages/FAQPage"
+import { TouristContentPage } from "./pages/TouristContentPage"
 import { TouristRestaurantsPage } from "./pages/TouristRestaurantsPage"
 import { TouristHotelsPage } from "./pages/TouristHotelsPage"
 import { TouristExcursionsPage } from "./pages/TouristExcursionsPage"
@@ -603,7 +604,11 @@ function AppWithProviders() {
                   {/* PRO_LOCO-only tourism content pages (Andrea, 2026-08-31) —
                       same "no CustomChatbotGuard" treatment as FAQs: reached only
                       via the Settings dropdown for PRO_LOCO workspaces, but the
-                      route itself has no extra guard beyond auth. */}
+                      route itself has no extra guard beyond auth. /content is the
+                      hub of category cards; the five CRUD pages hang off it. */}
+                  <Route path="/content" element={<MinimalLayout />}>
+                    <Route index element={<TouristContentPage />} />
+                  </Route>
                   <Route path="/tourist-restaurants" element={<MinimalLayout />}>
                     <Route index element={<TouristRestaurantsPage />} />
                   </Route>

@@ -19,11 +19,7 @@ export type SectionKey =
   | "demorobot"
   | "faqs"
   | "system-prompt"
-  | "tourist-restaurants"
-  | "tourist-hotels"
-  | "tourist-excursions"
-  | "tourist-refuges"
-  | "tourist-events"
+  | "tourist-content"
   | "other"
 
 // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
@@ -81,34 +77,15 @@ export const SYSTEM_PROMPT_SECTION: SettingsSection = {
   description: "Edit the fixed system prompt this chatbot reads every turn",
 }
 
-// PRO_LOCO-only content sections (Andrea, 2026-08-31): structured tourism
-// content types, unlike FAQs/Flows/Main Prompt they only make sense for a
-// tourist-office chatbot (e.g. demosappada), so they are NOT added for every
-// custom-chatbot workspace — only when channelMode === 'PRO_LOCO'.
-export const TOURIST_RESTAURANTS_SECTION: SettingsSection = {
-  key: "tourist-restaurants",
-  label: "Ristoranti",
-  description: "Restaurants shown to customers by the chatbot",
-}
-export const TOURIST_HOTELS_SECTION: SettingsSection = {
-  key: "tourist-hotels",
-  label: "Alberghi",
-  description: "Hotels shown to customers by the chatbot",
-}
-export const TOURIST_EXCURSIONS_SECTION: SettingsSection = {
-  key: "tourist-excursions",
-  label: "Escursioni",
-  description: "Excursions shown to customers by the chatbot",
-}
-export const TOURIST_REFUGES_SECTION: SettingsSection = {
-  key: "tourist-refuges",
-  label: "Rifugi",
-  description: "Mountain refuges shown to customers by the chatbot",
-}
-export const TOURIST_EVENTS_SECTION: SettingsSection = {
-  key: "tourist-events",
-  label: "Eventi",
-  description: "Events shown to customers by the chatbot",
+// PRO_LOCO-only Content section (Andrea, 2026-08-31: "FACCIAMO UN MENU
+// CONTENT, POI DENTRO FACCIAMO DELLE CARD"): ONE dropdown entry opening a
+// hub page of category cards (Ristoranti, Alberghi, Escursioni, Rifugi,
+// Eventi) instead of five separate menu items. Only added when
+// channelMode === 'PRO_LOCO'.
+export const TOURIST_CONTENT_SECTION: SettingsSection = {
+  key: "tourist-content",
+  label: "Content",
+  description: "Tourism content shown to customers by the chatbot",
 }
 
 // Andrea 2026-07-31: Main Prompt / Flows / FAQs are visible for EVERY
@@ -128,15 +105,7 @@ export function getVisibleSections(
       s.key !== "ai-personality" &&
       !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
   )
-  const touristSections = isProLoco
-    ? [
-        TOURIST_RESTAURANTS_SECTION,
-        TOURIST_HOTELS_SECTION,
-        TOURIST_EXCURSIONS_SECTION,
-        TOURIST_REFUGES_SECTION,
-        TOURIST_EVENTS_SECTION,
-      ]
-    : []
+  const touristSections = isProLoco ? [TOURIST_CONTENT_SECTION] : []
   return [
     business,
     aiPersonality,
@@ -153,11 +122,7 @@ export function getVisibleSections(
 export const SECTION_ROUTES: Partial<Record<SectionKey, string>> = {
   demorobot: "/settings/demorobot",
   faqs: "/faq",
-  "tourist-restaurants": "/tourist-restaurants",
-  "tourist-hotels": "/tourist-hotels",
-  "tourist-excursions": "/tourist-excursions",
-  "tourist-refuges": "/tourist-refuges",
-  "tourist-events": "/tourist-events",
+  "tourist-content": "/content",
 }
 
 /**

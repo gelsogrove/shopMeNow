@@ -20,6 +20,10 @@ interface TouristCardListProps<T extends { id: string; isActive: boolean }> {
   // Type-specific body of each card (title, facts, etc). The isActive badge
   // and edit/delete actions are handled generically by this component.
   renderContent: (item: T) => ReactNode
+  // Optional thumbnail rendered to the left of the content block
+  // (e.g. <TouristThumb />). Kept as a render-prop so this list stays
+  // agnostic of content types and photo fetching.
+  renderThumb?: (item: T) => ReactNode
 }
 
 // Generic paginated card list shared by the PRO_LOCO tourist content pages
@@ -31,6 +35,7 @@ export function TouristCardList<T extends { id: string; isActive: boolean }>({
   onDelete,
   pagination,
   renderContent,
+  renderThumb,
 }: TouristCardListProps<T>) {
   const { currentPage, totalPages, startIndex, endIndex, totalCount, onPageChange } =
     pagination
@@ -41,6 +46,9 @@ export function TouristCardList<T extends { id: string; isActive: boolean }>({
         {items.map((item) => (
           <Card key={item.id} className="p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between gap-4">
+              {renderThumb && (
+                <div className="flex-shrink-0">{renderThumb(item)}</div>
+              )}
               <div className="flex-1 min-w-0">{renderContent(item)}</div>
               <div className="flex gap-4 flex-shrink-0 items-center">
                 <span

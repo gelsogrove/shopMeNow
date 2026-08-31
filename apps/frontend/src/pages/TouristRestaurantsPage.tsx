@@ -5,11 +5,13 @@ import { FormSheet } from "@/components/shared/FormSheet"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristRestaurantFormFields } from "@/components/tourist/TouristRestaurantFormFields"
+import { TouristThumb } from "@/components/tourist/TouristThumb"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/use-workspace"
-import { Plus, Utensils } from "lucide-react"
+import { ArrowLeft, Plus, Utensils } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
 import {
   TouristRestaurant,
@@ -17,6 +19,7 @@ import {
 } from "@/services/touristRestaurantApi"
 
 export function TouristRestaurantsPage() {
+  const navigate = useNavigate()
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
   const [restaurants, setRestaurants] = useState<TouristRestaurant[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -147,7 +150,19 @@ export function TouristRestaurantsPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <SettingsPageHeader currentSection="tourist-restaurants" />
+        <SettingsPageHeader currentSection="tourist-content" />
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/content")}
+            className="text-green-700 hover:text-green-800 hover:bg-green-50"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
+            Content
+          </Button>
+        </div>
 
         <Card>
           <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-white">
@@ -186,6 +201,13 @@ export function TouristRestaurantsPage() {
             totalCount: restaurants.length,
             onPageChange: setCurrentPage,
           }}
+          renderThumb={(item) => (
+            <TouristThumb
+              workspaceId={workspace.id}
+              contentType="RESTAURANT"
+              contentId={item.id}
+            />
+          )}
           renderContent={(item) => (
             <>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.name}</h3>
