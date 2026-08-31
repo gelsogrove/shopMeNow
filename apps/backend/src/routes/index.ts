@@ -649,6 +649,14 @@ logger.info(
 router.use("/invitations", publicInvitationRoutes)
 logger.info("✅ Registered PUBLIC invitation routes: /api/invitations (validate, accept)")
 
+// 🔓 PUBLIC TOURIST PHOTO IMAGES (NO AUTH REQUIRED)
+// Serves base64 gallery photos as real image URLs for the chatbot's media
+// pipeline (WhatsApp previews need a URL). Mounted HERE, before any pathless
+// router that applies authMiddleware internally — mounted lower down it gets
+// intercepted and answers 401 (found live, 2026-08-31).
+router.use("/public/tourist-photos", publicTouristPhotosRouter())
+logger.info("✅ Registered PUBLIC tourist photo route: /api/v1/public/tourist-photos/:id/image.jpg")
+
 router.use("/", agentConfigRoutes)
 logger.info(
   "✅ Registered agent config routes (/api/workspaces/:workspaceId/agent-config)"
@@ -834,9 +842,6 @@ router.use(
 router.use("/workspaces/:workspaceId/tourist-refuges", touristRefugesRouter())
 router.use("/workspaces/:workspaceId/tourist-events", touristEventsRouter())
 router.use("/workspaces/:workspaceId/tourist-photos", touristPhotosRouter())
-// Public image endpoint: turns each base64 gallery photo into a real URL the
-// chatbot can attach to a detail answer (WhatsApp preview needs a URL).
-router.use("/public/tourist-photos", publicTouristPhotosRouter())
 logger.info("Registered PRO_LOCO tourist content routers with workspace routes")
 
 // Mount billing routes (workspace-scoped) - Feature 185
