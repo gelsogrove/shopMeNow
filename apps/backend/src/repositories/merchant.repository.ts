@@ -33,10 +33,21 @@ export interface CreateMerchantData {
 
 export type UpdateMerchantData = Partial<Omit<CreateMerchantData, "workspaceId">>
 
-/** One row of the merchant's monthly send report ("this month you sent X"). */
+/**
+ * The merchant's monthly send report ("this month you sent X"), aggregated —
+ * never per-recipient (Andrea, 2026-09-01: "una lista enorme non aiuta").
+ * Each month breaks down by campaign, which is exactly the invoice line item.
+ */
+export interface MerchantMonthlyCampaign {
+  campaignId: string
+  name: string
+  pushTitle: string | null
+  sent: number
+}
 export interface MerchantMonthlySent {
   month: string // "2026-08"
   sent: number
+  campaigns: MerchantMonthlyCampaign[]
 }
 
 export class MerchantRepository {
@@ -151,21 +162,48 @@ export class MerchantRepository {
     id: string,
     workspaceId: string
   ): Promise<MerchantMonthlySent[]> {
-    const rows = await this.prisma.$queryRaw<Array<{ month: Date; sent: bigint }>>`
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        month: Date
+        campaignId: string
+        name: string
+        pushTitle: string | null
+        sent: bigint
+      }>
+    >`
       SELECT date_trunc('month', COALESCE(r."sentAt", r."updatedAt")) AS month,
+             c."id" AS "campaignId",
+             c."name" AS name,
+             mp."title" AS "pushTitle",
              COUNT(*) AS sent
       FROM "push_campaign_recipients" r
       JOIN "push_campaigns" c ON c."id" = r."campaignId"
+      LEFT JOIN "merchant_pushes" mp ON mp."id" = c."merchantPushId"
       WHERE r."workspaceId" = ${workspaceId}
         AND c."workspaceId" = ${workspaceId}
         AND c."merchantId" = ${id}
         AND r."status" = 'SENT'
-      GROUP BY 1
-      ORDER BY 1 DESC
+      GROUP BY 1, 2, 3, 4
+      ORDER BY 1 DESC, sent DESC
     `
-    return rows.map((r) => ({
-      month: r.month.toISOString().slice(0, 7),
-      sent: Number(r.sent),
-    }))
+    // Nest by month: months are few and campaigns per month fewer — the whole
+    // report stays readable at a glance, drill-down included.
+    const byMonth = new Map<string, MerchantMonthlySent>()
+    for (const r of rows) {
+      const month = r.month.toISOString().slice(0, 7)
+      if (!byMonth.has(month)) {
+        byMonth.set(month, { month, sent: 0, campaigns: [] })
+      }
+      const entry = byMonth.get(month)!
+      const sent = Number(r.sent)
+      entry.sent += sent
+      entry.campaigns.push({
+        campaignId: r.campaignId,
+        name: r.name,
+        pushTitle: r.pushTitle,
+        sent,
+      })
+    }
+    return [...byMonth.values()]
   }
 }

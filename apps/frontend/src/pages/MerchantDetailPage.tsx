@@ -43,7 +43,9 @@ function PushFormFields({ item }: { item: MerchantPush | null }) {
 
   useEffect(() => {
     if (!item) return
-    const url = `/api/v1/public/merchant-pushes/${item.id}/photo.jpg`
+    // Absolute URL on purpose: ImageCropUpload prepends IMG_BASE_URL to
+    // anything that does not start with "http", which would break this path.
+    const url = `${window.location.origin}/api/v1/public/merchant-pushes/${item.id}/photo.jpg`
     const probe = new Image()
     probe.onload = () => setExistingPhotoUrl(url)
     probe.src = url
@@ -92,10 +94,13 @@ function PushFormFields({ item }: { item: MerchantPush | null }) {
         </p>
       </div>
 
-      {/* Photo: same crop control used everywhere else in the app */}
+      {/* Photo: same crop control used everywhere else in the app. NEVER pass
+          the freshly-cropped data URI as currentImageUrl — the component
+          treats non-http values as storage keys and would mangle it; after a
+          crop it shows its own internal preview anyway. */}
       <ImageCropUpload
         label="Photo"
-        currentImageUrl={previewPhoto}
+        currentImageUrl={photoRemoved ? undefined : existingPhotoUrl}
         onImageSelected={handleCropped}
         onImageRemove={() => {
           setPhotoBase64("")
@@ -408,34 +413,82 @@ export function MerchantDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Monthly report — what the owner invoices on */}
+        {/* Sending activity — chart + per-campaign breakdown, always
+            AGGREGATED: never a per-recipient list (Andrea, 2026-09-01:
+            "una lista enorme non aiuta"). These are the invoice numbers. */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Monthly sent report</CardTitle>
+            <CardTitle className="text-base font-semibold">Sending activity</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             {stats.monthlySent.length === 0 ? (
-              <p className="text-sm text-gray-500">Nothing sent yet.</p>
+              <p className="text-sm text-gray-500">
+                Nothing sent yet — the chart and the monthly breakdown appear
+                after the first campaign run.
+              </p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b">
-                    <th className="py-2 font-medium">Month</th>
-                    <th className="py-2 font-medium text-right">Sent</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.monthlySent.map((row) => (
-                    <tr key={row.month} className="border-b last:border-0">
-                      <td className="py-2">{row.month}</td>
-                      <td className="py-2 text-right font-semibold">{row.sent}</td>
-                    </tr>
+              <>
+                {/* Single-series bar chart: sent per month. One hue, thin
+                    bars, rounded data-end, direct labels, recessive axis. */}
+                <div>
+                  <div className="flex items-end gap-2 h-36 pt-2">
+                    {[...stats.monthlySent].reverse().map((m) => {
+                      const maxSent = Math.max(...stats.monthlySent.map((x) => x.sent), 1)
+                      return (
+                        <div
+                          key={m.month}
+                          className="flex-1 max-w-16 flex flex-col items-center justify-end gap-1 h-full"
+                          title={`${m.month}: ${m.sent} sent`}
+                        >
+                          <span className="text-[11px] font-semibold text-slate-700">
+                            {m.sent}
+                          </span>
+                          <div
+                            className="w-full max-w-9 rounded-t-[4px] bg-emerald-500"
+                            style={{
+                              height: `${Math.max((m.sent / maxSent) * 100, 3)}%`,
+                            }}
+                          />
+                          <span className="text-[10px] text-slate-500">
+                            {m.month.slice(5, 7)}/{m.month.slice(2, 4)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="h-px bg-slate-200 mt-0" />
+                </div>
+
+                {/* Month → campaigns drill-down. Months are few, campaigns per
+                    month fewer: everything readable without expanding. */}
+                <div className="space-y-3">
+                  {stats.monthlySent.map((m) => (
+                    <div key={m.month}>
+                      <div className="flex items-baseline justify-between border-b pb-1">
+                        <span className="text-sm font-semibold text-slate-900">{m.month}</span>
+                        <span className="text-sm font-bold text-slate-900">{m.sent} sent</span>
+                      </div>
+                      <ul className="mt-1 space-y-0.5">
+                        {m.campaigns.map((c) => (
+                          <li
+                            key={c.campaignId}
+                            className="flex items-baseline justify-between text-xs text-slate-600 pl-3"
+                          >
+                            <span className="truncate">
+                              {c.name}
+                              {c.pushTitle ? ` · ${c.pushTitle}` : ""}
+                            </span>
+                            <span className="font-medium shrink-0 pl-2">{c.sent}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
             {stats.topups.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
+              <div className="pt-4 border-t">
                 <p className="text-xs font-semibold text-gray-500 mb-2">Package purchases</p>
                 <ul className="space-y-1 text-xs text-gray-600">
                   {stats.topups.map((t) => (

@@ -1945,6 +1945,11 @@ model PushCampaign {
   bodyPreview        String?                   @db.Text
   targetTags         String[]                  @default([]) // Deprecated in favor of tagId or targetCustomerIds
   mediaUrl           String?
+  // Image uploaded for a FREE-message campaign (Andrea, 2026-09-01) — served
+  // publicly at /api/public/push-campaigns/:id/media.jpg; the job derives the
+  // outbound mediaUrl from it at enqueue time. Merchant campaigns use the
+  // creative's photo instead.
+  mediaBase64        String?                   @db.Text
   expectedRecipients Int                       @default(0)
   actualSent         Int                       @default(0)
   actualFailed       Int                       @default(0)

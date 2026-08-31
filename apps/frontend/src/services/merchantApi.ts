@@ -57,7 +57,16 @@ export interface MerchantStats {
     note?: string | null
     createdAt: string
   }>
-  monthlySent: Array<{ month: string; sent: number }>
+  monthlySent: Array<{
+    month: string
+    sent: number
+    campaigns: Array<{
+      campaignId: string
+      name: string
+      pushTitle: string | null
+      sent: number
+    }>
+  }>
 }
 
 export type MerchantFormData = Partial<

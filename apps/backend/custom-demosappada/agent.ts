@@ -85,9 +85,9 @@ import {
   intakeQuestionFor,
   isStayOverAndClosed,
   rolloverStay,
-  TAG_INTEREST_EVENTS,
-  TAG_INTEREST_LODGING,
-  TAG_INTEREST_OFFERS,
+  ALL_INTEREST_TAGS,
+  TAG_PLANNED_VISIT,
+  TAG_WITH_CHILDREN,
   TAG_NOT_IN_LOCO,
   TAG_REMOTE_PROSPECT,
   type IntakeKey,
@@ -1034,7 +1034,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       await input.config.handlers.setCustomerTags({
         workspaceId: input.config.workspaceId,
         customerId,
-        remove: [TAG_INTEREST_EVENTS, TAG_INTEREST_LODGING, TAG_INTEREST_OFFERS],
+        remove: [...ALL_INTEREST_TAGS],
       })
     }
     // eslint-disable-next-line no-console
@@ -1195,13 +1195,42 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
         workspaceId: input.config.workspaceId,
         customerId,
         add: [TAG_REMOTE_PROSPECT],
-        remove: [TAG_IN_LOCO],
+        remove: [TAG_IN_LOCO, TAG_PLANNED_VISIT],
       })
     } else if (stayProfile?.presence === 'in_loco' || stayProfile?.presence === 'planned') {
       await input.config.handlers.setCustomerTags({
         workspaceId: input.config.workspaceId,
         customerId,
         remove: [TAG_REMOTE_PROSPECT],
+      })
+    }
+    // The pre-arrival segment (Andrea, 2026-09-01): booked but not here yet —
+    // the golden audience for "cosa trovi quando arrivi" pushes. Same
+    // discipline as INLOCO: derived from the state, never set by the model,
+    // and it leaves the moment the guest is actually in town.
+    if (stayProfile?.presence === 'planned' && inTown !== true) {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        add: [TAG_PLANNED_VISIT],
+      })
+    } else if (inTown === true || stayProfile?.presence === 'in_loco') {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        remove: [TAG_PLANNED_VISIT],
+      })
+    }
+    // Families: derived from the party in the stay profile (children count is
+    // intake data the code already owns) — a family-friendly push segments on
+    // this, and it corrects itself if the profile is amended.
+    if (typeof stayProfile?.children === 'number') {
+      await input.config.handlers.setCustomerTags({
+        workspaceId: input.config.workspaceId,
+        customerId,
+        ...(stayProfile.children > 0
+          ? { add: [TAG_WITH_CHILDREN] }
+          : { remove: [TAG_WITH_CHILDREN] }),
       })
     }
   }
@@ -2959,22 +2988,17 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
             stayProfile = { ...(stayProfile ?? {}), consentAsked: true }
           }
 
-          // The interests are what makes the consent usable: an offer on rooms
-          // goes only to whoever agreed to hear about rooms. Stored as tags so
-          // the campaign side can segment without knowing this module exists.
+          // ONE consent, ALL channels (Andrea, 2026-09-01: "non abbiamo
+          // distinzione — riceve tutto"): granted adds every interest tag,
+          // revoked removes every one. The per-topic bookkeeping is gone —
+          // a tourist on holiday wants to know, and the OFF switch (NO PUSH
+          // or granted=false) always kills everything at once.
           if (input.config.handlers.setCustomerTags) {
-            const topics = Array.isArray(args.topics) ? (args.topics as unknown[]) : []
-            const wanted = (topic: string): boolean => granted && topics.includes(topic)
-            const byTopic: Array<[string, string]> = [
-              ['events', TAG_INTEREST_EVENTS],
-              ['lodging', TAG_INTEREST_LODGING],
-              ['offers', TAG_INTEREST_OFFERS],
-            ]
-            // Two consents, two tags. DURING the stay it is INLOCO — kept in
-            // sync from the dates, so a "cena stasera" campaign only reaches
-            // whoever is actually here. On the way home it is the RENEWAL:
-            // "vuoi che ti invii offerte per la prossima vacanza?" — a
-            // different promise, for a guest who is leaving (contratto.md).
+            // Two consents, two presence tags. DURING the stay it is INLOCO —
+            // kept in sync from the dates, so a "cena stasera" campaign only
+            // reaches whoever is actually here. On the way home it is the
+            // RENEWAL: "vuoi che ti invii offerte per la prossima vacanza?" —
+            // a different promise, for a guest who is leaving (contratto.md).
             //
             // Told apart by the calendar, never by the model: the holiday is
             // over or on its last day.
@@ -2984,11 +3008,11 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               workspaceId: input.config.workspaceId,
               customerId,
               add: [
-                ...byTopic.filter(([topic]) => wanted(topic)).map(([, tag]) => tag),
+                ...(granted ? [...ALL_INTEREST_TAGS] : []),
                 ...(granted && isRenewal ? [TAG_NOT_IN_LOCO] : []),
               ],
               remove: [
-                ...byTopic.filter(([topic]) => !wanted(topic)).map(([, tag]) => tag),
+                ...(granted ? [] : [...ALL_INTEREST_TAGS]),
                 // The renewal replaces "is here now": they are on their way out.
                 ...(isRenewal ? [TAG_IN_LOCO] : []),
                 ...(granted ? [] : [TAG_NOT_IN_LOCO]),

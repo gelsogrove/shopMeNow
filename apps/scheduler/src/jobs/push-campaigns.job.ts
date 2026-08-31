@@ -250,6 +250,14 @@ export async function pushCampaignsJob(): Promise<void> {
       let processed = 0
       let creditExhausted = false
       let merchantQuotaExhausted = false
+
+      // 🖼️ Outbound image: an uploaded FREE-campaign image is served by our
+      // own public endpoint (derived here, at send time, so BACKEND_URL is
+      // the current one); otherwise the snapshot's mediaUrl (merchant photo).
+      const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`
+      const outboundMediaUrl = campaign.mediaBase64
+        ? `${backendUrl}/api/v1/public/push-campaigns/${campaign.id}/media.jpg`
+        : campaign.mediaUrl ?? null
       const costPerMessage = Number(campaign.costPerMessage)
       let availableBalance = 0
 
@@ -433,7 +441,7 @@ export async function pushCampaignsJob(): Promise<void> {
                 customerId: customer.id,
                 phoneNumber: phone,
                 messageContent,
-                mediaUrl: campaign.mediaUrl ?? null,
+                mediaUrl: outboundMediaUrl,
                 status: 'pending',
                 channel: 'whatsapp',
                 conversationMessageId: conversationMessage.id,
@@ -444,7 +452,7 @@ export async function pushCampaignsJob(): Promise<void> {
                 customerId: customer.id,
                 phoneNumber: phone,
                 messageContent,
-                mediaUrl: campaign.mediaUrl ?? null,
+                mediaUrl: outboundMediaUrl,
                 status: 'pending',
                 channel: 'whatsapp',
                 conversationMessageId: conversationMessage.id,

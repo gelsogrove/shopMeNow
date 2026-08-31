@@ -42,6 +42,8 @@ export interface CreatePushCampaignDTO {
   // Daily send window in the workspace timezone (default 8→19)
   sendWindowStart?: number
   sendWindowEnd?: number
+  /** Uploaded image for FREE-message campaigns (data URI or raw base64). */
+  mediaBase64?: string | null
 }
 
 export class PushCampaignService {
@@ -335,6 +337,15 @@ export class PushCampaignService {
       input.sendWindowEnd
     )
 
+    // 🖼️ Uploaded image for FREE campaigns (Andrea, 2026-09-01: "se è FREE
+    // manca l'immagine") — merchant campaigns take the creative's photo
+    // instead, so any stray upload is dropped there. Same 4MB cap as push
+    // photos; served publicly, attached by the queue as media+caption.
+    const mediaBase64 = input.merchantId ? null : (input.mediaBase64 ?? null)
+    if (mediaBase64 && mediaBase64.length > 5_600_000) {
+      throw new AppError(400, "Image is too large — maximum 4MB")
+    }
+
     // Fail fast on external links — before recipients are built or credits touched.
     this.assertLinksAllowed(
       input.message,
@@ -430,6 +441,7 @@ export class PushCampaignService {
         validTo,
         sendWindowStart,
         sendWindowEnd,
+        mediaBase64,
       },
       recipients
     )
@@ -494,6 +506,17 @@ export class PushCampaignService {
       }
       if (input.validFrom !== undefined) input.validFrom = mergedFrom
       if (input.validTo !== undefined) input.validTo = mergedTo
+    }
+
+    // 🖼️ Image changes: same cap as create; merchant campaigns never carry one.
+    if ((input as any).mediaBase64 !== undefined) {
+      const incoming = (input as any).mediaBase64 as string | null
+      if (incoming && incoming.length > 5_600_000) {
+        throw new AppError(400, "Image is too large — maximum 4MB")
+      }
+      if ((input.merchantId ?? (existing as any).merchantId) && incoming) {
+        ;(input as any).mediaBase64 = null
+      }
     }
 
     // 🕗 Send-window changes keep the start<end invariant against stored values.

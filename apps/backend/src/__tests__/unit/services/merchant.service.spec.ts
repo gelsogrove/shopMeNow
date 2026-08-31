@@ -240,9 +240,14 @@ describe("MerchantService", () => {
         { id: "t1", amount: 500, note: "Winter", createdAt: new Date() },
         { id: "t2", amount: 200, note: null, createdAt: new Date() },
       ])
+      // Raw rows come per month+campaign; the repository nests them so the
+      // report is aggregate-only — never per-recipient (Andrea, 2026-09-01:
+      // "una lista enorme non aiuta"), with the per-campaign drill-down that
+      // is the invoice line item.
       prisma.$queryRaw.mockResolvedValue([
-        { month: new Date("2026-08-01T00:00:00Z"), sent: BigInt(87) },
-        { month: new Date("2026-07-01T00:00:00Z"), sent: BigInt(141) },
+        { month: new Date("2026-08-01T00:00:00Z"), campaignId: "c1", name: "Promo Pizza", pushTitle: "Aperitivo", sent: BigInt(60) },
+        { month: new Date("2026-08-01T00:00:00Z"), campaignId: "c2", name: "Weekend", pushTitle: "Cena", sent: BigInt(27) },
+        { month: new Date("2026-07-01T00:00:00Z"), campaignId: "c1", name: "Promo Pizza", pushTitle: "Aperitivo", sent: BigInt(141) },
       ])
 
       const stats = await service.stats("merchant-1", WS)
@@ -250,10 +255,24 @@ describe("MerchantService", () => {
       expect(stats.quotaRemaining).toBe(100)
       expect(stats.totalPurchased).toBe(700)
       expect(stats.totalSent).toBe(228)
-      // "Questo mese hai inviato X" — one row per month, newest first.
+      // "Questo mese hai inviato X" — one row per month, newest first, with
+      // the campaign breakdown nested inside.
       expect(stats.monthlySent).toEqual([
-        { month: "2026-08", sent: 87 },
-        { month: "2026-07", sent: 141 },
+        {
+          month: "2026-08",
+          sent: 87,
+          campaigns: [
+            { campaignId: "c1", name: "Promo Pizza", pushTitle: "Aperitivo", sent: 60 },
+            { campaignId: "c2", name: "Weekend", pushTitle: "Cena", sent: 27 },
+          ],
+        },
+        {
+          month: "2026-07",
+          sent: 141,
+          campaigns: [
+            { campaignId: "c1", name: "Promo Pizza", pushTitle: "Aperitivo", sent: 141 },
+          ],
+        },
       ])
     })
   })

@@ -30,8 +30,13 @@ export class CustomersController {
     try {
       const { workspaceId } = req.params
 
+      // ALL non-deleted customers, not only the registered ones: the channel
+      // card's counter counts everyone, and a list that shows fewer people
+      // than its own badge reads as a bug (Andrea, 2026-09-01: "vedo 5 ma se
+      // clicco non vedo nessun utente"). Anonymous widget visitors carry the
+      // tags and push consent the campaign side segments on.
       const customers =
-        await this.customerService.getActiveForWorkspace(workspaceId)
+        await this.customerService.getAllForWorkspace(workspaceId)
 
       res.json({ data: customers })
     } catch (error) {

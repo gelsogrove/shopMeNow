@@ -41,6 +41,7 @@ import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Merchant, MerchantPush, merchantApi } from "@/services/merchantApi"
+import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
 
 interface Campaign {
   id: string
@@ -104,6 +105,22 @@ export function CampaignSheet({
   // 🕗 Daily send window (default 8→19): no notifications at night
   const [sendWindowStart, setSendWindowStart] = useState<number>(8)
   const [sendWindowEnd, setSendWindowEnd] = useState<number>(19)
+  // 🖼️ Image for FREE campaigns (merchant campaigns use the creative's photo)
+  const [mediaBase64, setMediaBase64] = useState<string>("")
+  const [mediaRemoved, setMediaRemoved] = useState(false)
+  const [existingMediaUrl, setExistingMediaUrl] = useState<string | undefined>()
+
+  useEffect(() => {
+    setMediaBase64("")
+    setMediaRemoved(false)
+    setExistingMediaUrl(undefined)
+    if (!campaign?.id || campaign.merchantId) return
+    // Absolute URL: ImageCropUpload prepends IMG_BASE_URL to non-http values.
+    const url = `${window.location.origin}/api/v1/public/push-campaigns/${campaign.id}/media.jpg`
+    const probe = new Image()
+    probe.onload = () => setExistingMediaUrl(url)
+    probe.src = url
+  }, [campaign?.id, campaign?.merchantId])
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [merchantPushes, setMerchantPushes] = useState<MerchantPush[]>([])
   // 📊 Reachable audience, from the backend with the SAME eligibility rules
@@ -374,6 +391,14 @@ export function CampaignSheet({
       validTo: validToIso,
       sendWindowStart,
       sendWindowEnd,
+      // New upload replaces; explicit remove clears; untouched otherwise.
+      ...(isMerchantCampaign
+        ? {}
+        : mediaBase64
+          ? { mediaBase64 }
+          : mediaRemoved
+            ? { mediaBase64: null }
+            : {}),
     }
 
     try {
@@ -634,6 +659,31 @@ export function CampaignSheet({
               <code className="px-1 py-0.5 rounded bg-white">{"{{lastName}}"}</code>
               <code className="px-1 py-0.5 rounded bg-white">{"{{email}}"}</code>
               <code className="px-1 py-0.5 rounded bg-white">{"{{company}}"}</code>
+            </div>
+            {/* 🖼️ Optional image, sent as media with the message as caption
+                (Andrea, 2026-09-01: "se è FREE manca l'immagine") */}
+            <div className="pt-2">
+              <ImageCropUpload
+                label="Image (optional)"
+                currentImageUrl={mediaRemoved ? undefined : existingMediaUrl}
+                onImageSelected={(file) => {
+                  if (file.size > 4 * 1024 * 1024) {
+                    toast.error("Image is too large — maximum 4MB")
+                    return
+                  }
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    setMediaBase64(String(reader.result || ""))
+                    setMediaRemoved(false)
+                  }
+                  reader.readAsDataURL(file)
+                }}
+                onImageRemove={() => {
+                  setMediaBase64("")
+                  setMediaRemoved(true)
+                }}
+                size="lg"
+              />
             </div>
           </div>
           )}

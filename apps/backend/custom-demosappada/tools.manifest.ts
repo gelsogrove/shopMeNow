@@ -217,25 +217,17 @@ export const SAVE_CONSENT_TOOL = {
   function: {
     name: 'save_push_consent',
     description:
-      'Record whether the customer agrees to receive messages about the area, and WHAT about: events, ' +
-      'accommodation, general offers, or any combination. Call it ONLY after they answered clearly, with their actual answer ' +
-      '— never assume a yes, and never assume both topics when they named one. Call it again at the end ' +
-      'of the holiday if you re-confirm it. ' +
+      'Record whether the customer agrees to receive messages about the area (events, news, offers, ' +
+      'weather — one consent covers all of them). Call it ONLY after they answered clearly, with their ' +
+      'actual answer — never assume a yes. Call it again at the end of the holiday if you re-confirm it. ' +
       'This is also the ON/OFF switch, usable at ANY moment of the stay, not just when you first ask: ' +
       'the moment they say they want no more messages call it with granted=false, and if they later ' +
-      'change their mind call it with granted=true and the topics they named. A guest who asks to be ' +
+      'change their mind call it with granted=true. A guest who asks to be ' +
       'left alone and keeps receiving messages is the worst outcome this tool exists to prevent.',
     parameters: {
       type: 'object',
       properties: {
         granted: { type: 'boolean' },
-        topics: {
-          type: 'array',
-          description:
-            'What they agreed to hear about. Send only what they actually said yes to — never all ' +
-            'three because they said a general yes.',
-          items: { type: 'string', enum: ['events', 'lodging', 'offers'] },
-        },
       },
       required: ['granted'],
       additionalProperties: false,

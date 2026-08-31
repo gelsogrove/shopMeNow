@@ -37,6 +37,30 @@ export const TAG_REMOTE_PROSPECT = 'NO-A-SAPPADA'
 export const TAG_INTEREST_EVENTS = 'INTERESSE-EVENTI'
 export const TAG_INTEREST_LODGING = 'INTERESSE-ALLOGGI'
 export const TAG_INTEREST_OFFERS = 'INTERESSE-OFFERTE'
+export const TAG_INTEREST_NEWS = 'INTERESSE-NEWS'
+export const TAG_INTEREST_WEATHER = 'INTERESSE-METEO'
+
+/**
+ * One consent, ALL channels (Andrea, 2026-09-01: "non abbiamo distinzione —
+ * riceve tutto"): a granted push consent adds every interest tag, a
+ * revocation removes every one. No per-topic bookkeeping.
+ */
+export const ALL_INTEREST_TAGS = [
+  TAG_INTEREST_EVENTS,
+  TAG_INTEREST_LODGING,
+  TAG_INTEREST_OFFERS,
+  TAG_INTEREST_NEWS,
+  TAG_INTEREST_WEATHER,
+] as const
+
+/**
+ * Presence tags beyond INLOCO: a booked stay that has not started yet — the
+ * pre-arrival segment ("veniamo il mese prossimo", contratto.md) — and the
+ * family flag derived from the party in the stay profile. Written by CODE
+ * from the state, never by the model.
+ */
+export const TAG_PLANNED_VISIT = 'VACANZA-PIANIFICATA'
+export const TAG_WITH_CHILDREN = 'CON-BAMBINI'
 
 // isCurrentlyInTown and TAG_IN_LOCO moved to shared/stay-inloco.ts: the
 // scheduler's stale-inloco-cleanup job needs the SAME derivation for guests
@@ -425,12 +449,9 @@ export function formatStayBlock(
           'In questo momento hai tre cose da fare, una per messaggio, senza affollarle:',
           '  1. Chiedi come è andata — cosa è piaciuto e cosa no — e salva con save_feedback.',
           '  2. Il consenso che avevano dato valeva SOLO per la permanenza, che ora è finita. Chiedi se ' +
-            'vogliono RINNOVARLO per la prossima volta: ' +
-            'gli eventi dell\'anno (il Carnevale, le feste d\'estate) e le offerte di alloggio. ' +
-            'SOLO QUESTE DUE: fuori stagione le promozioni generiche del territorio non servono a chi ' +
-            'non è qui, e un rinnovo più leggero si ottiene molto più facilmente. Chiedi su quale ' +
-            'delle due, o entrambe, e registra con save_push_consent indicando SOLO i topics che ' +
-            'hanno nominato — mai `offers` in questo momento. Ricorda anche qui, in una riga, che ' +
+            'vogliono RINNOVARLO per la prossima volta: gli eventi dell\'anno (il Carnevale, le feste ' +
+            'd\'estate), le novità e le offerte di alloggio. Se dicono sì, registra con ' +
+            'save_push_consent granted=true. Ricorda anche qui, in una riga, che ' +
             'possono farli smettere quando vogliono, basta che ce lo dicano. ' +
             'Chiederlo ADESSO ha senso: hanno appena vissuto il posto, e un sì dato ora vale più di uno ' +
             'dato all\'arrivo.',
@@ -644,8 +665,7 @@ export function formatStayBlock(
     'SE IN QUALSIASI MOMENTO ti dicono che non vogliono più ricevere messaggi — anche solo "basta ' +
       'notifiche", "non scriveteci più" — chiama SUBITO save_push_consent con granted=false, ' +
       'confermaglielo in una riga e non tornarci sopra. Se invece chiedono di ricevere di nuovo ' +
-      'qualcosa, chiama save_push_consent con granted=true e SOLO i topics che hanno nominato ' +
-      '(eventi, alloggi, offerte del territorio). Non chiedere loro di scrivere UNSUBSCRIBE: ' +
+      'qualcosa, chiama save_push_consent con granted=true. Non chiedere loro di scrivere UNSUBSCRIBE: ' +
       'basta che te lo dicano a parole.',
   )
 

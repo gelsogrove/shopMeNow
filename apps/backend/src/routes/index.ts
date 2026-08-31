@@ -116,6 +116,7 @@ import { touristApartmentsRouter } from "../interfaces/http/routes/tourist-apart
 import { touristEventsRouter } from "../interfaces/http/routes/tourist-events.routes"
 import { merchantsRouter } from "../interfaces/http/routes/merchants.routes"
 import { publicMerchantPushPhotosRouter } from "../interfaces/http/routes/public-merchant-push-photos.routes"
+import { publicCampaignMediaRouter } from "../interfaces/http/routes/public-campaign-media.routes"
 import { touristPhotosRouter } from "../interfaces/http/routes/tourist-photos.routes"
 import { publicTouristPhotosRouter } from "../interfaces/http/routes/public-tourist-photos.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
@@ -661,6 +662,8 @@ router.use("/public/tourist-photos", publicTouristPhotosRouter())
 logger.info("✅ Registered PUBLIC tourist photo route: /api/v1/public/tourist-photos/:id/image.jpg")
 router.use("/public/merchant-pushes", publicMerchantPushPhotosRouter())
 logger.info("✅ Registered PUBLIC merchant push photo route: /api/v1/public/merchant-pushes/:id/photo.jpg")
+router.use("/public/push-campaigns", publicCampaignMediaRouter())
+logger.info("✅ Registered PUBLIC campaign media route: /api/v1/public/push-campaigns/:id/media.jpg")
 
 router.use("/", agentConfigRoutes)
 logger.info(

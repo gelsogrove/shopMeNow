@@ -37,6 +37,8 @@ export interface CreatePushCampaignInput {
   // Daily send window, hours in the workspace timezone (default 8→19)
   sendWindowStart?: number
   sendWindowEnd?: number
+  /** Uploaded image for FREE-message campaigns (data URI or raw base64). */
+  mediaBase64?: string | null
 }
 
 export interface UpdatePushCampaignInput {
@@ -65,6 +67,8 @@ export interface UpdatePushCampaignInput {
   // Daily send window, hours in the workspace timezone (default 8→19)
   sendWindowStart?: number
   sendWindowEnd?: number
+  /** Uploaded image for FREE-message campaigns (data URI or raw base64). */
+  mediaBase64?: string | null
 }
 
 export interface RecipientCreateInput {
@@ -117,6 +121,7 @@ export class PushCampaignRepository {
         validTo: data.validTo,
         sendWindowStart: data.sendWindowStart,
         sendWindowEnd: data.sendWindowEnd,
+        mediaBase64: data.mediaBase64,
         expectedRecipients: recipients.length,
         recipients: {
           createMany: {

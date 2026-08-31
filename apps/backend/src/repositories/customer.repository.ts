@@ -55,7 +55,10 @@ export class CustomerRepository implements ICustomerRepository {
   async findAll(workspaceId: string): Promise<Customer[]> {
     try {
       const customers = await prisma.customers.findMany({
-        where: { workspaceId },
+        // Soft-deleted rows stay out; everyone else is a customer the UI can
+        // show — including anonymous widget visitors (isActive=false), who
+        // for a PRO_LOCO workspace ARE the audience (tags, push consent).
+        where: { workspaceId, deletedAt: null },
         orderBy: { createdAt: "desc" },
       })
 
