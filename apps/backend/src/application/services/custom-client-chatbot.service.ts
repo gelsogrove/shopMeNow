@@ -1148,7 +1148,7 @@ export class CustomClientChatbotService {
    */
   private async getTouristContentAsFaqs(workspaceId: string): Promise<FaqEntry[]> {
     try {
-      const [restaurants, hotels, excursions, refuges, events, photos] = await Promise.all([
+      const [restaurants, hotels, excursions, refuges, apartments, events, photos] = await Promise.all([
         defaultPrisma.touristRestaurant.findMany({
           where: { workspaceId, isActive: true },
           orderBy: { order: "asc" },
@@ -1162,6 +1162,10 @@ export class CustomClientChatbotService {
           orderBy: { order: "asc" },
         }),
         defaultPrisma.touristRefuge.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristApartment.findMany({
           where: { workspaceId, isActive: true },
           orderBy: { order: "asc" },
         }),
