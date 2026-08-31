@@ -60,6 +60,10 @@ export function TouristRefugeFormFields({ item, workspaceId }: TouristRefugeForm
         <Input id="phone" name="phone" defaultValue={item?.phone ?? ""} />
       </div>
       <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" name="email" type="email" defaultValue={item?.email ?? ""} />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="link">Link</Label>
         <Input id="link" name="link" defaultValue={item?.link ?? ""} />
       </div>

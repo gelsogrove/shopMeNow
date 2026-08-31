@@ -12,6 +12,7 @@ export interface TouristRefuge {
   openTo?: string | null
   location?: string | null
   phone?: string | null
+  email?: string | null
   link?: string | null
   videoUrl?: string | null
   order: number
@@ -29,6 +30,7 @@ export interface CreateTouristRefugeData {
   openTo?: string | null
   location?: string | null
   phone?: string | null
+  email?: string | null
   link?: string | null
   videoUrl?: string | null
   isActive?: boolean
@@ -43,6 +45,7 @@ export interface UpdateTouristRefugeData {
   openTo?: string | null
   location?: string | null
   phone?: string | null
+  email?: string | null
   link?: string | null
   videoUrl?: string | null
   isActive?: boolean

@@ -62,6 +62,7 @@ export function TouristRefugesPage() {
       openTo: (formData.get("openTo") as string) || null,
       location: (formData.get("location") as string) || null,
       phone: (formData.get("phone") as string) || null,
+      email: (formData.get("email") as string) || null,
       link: (formData.get("link") as string) || null,
       videoUrl: (formData.get("videoUrl") as string) || null,
       isActive: formData.get("isActive") === "on",
