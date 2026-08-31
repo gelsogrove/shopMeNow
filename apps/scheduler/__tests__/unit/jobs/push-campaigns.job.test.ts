@@ -1611,6 +1611,84 @@ describe('Push Campaigns Job', () => {
     })
   })
 
+  // 🕗 Daily send window (Andrea, 2026-09-01: "dalle 8 alle 19 di default").
+  // WHAT: hours are evaluated in the WORKSPACE timezone, never the dyno's UTC
+  // clock — a Heroku run at 07:30 UTC is 09:30 in Sappada and must send.
+  // WHY: a push at 3am is an unsubscribe (and a ban risk on an unofficial
+  // WhatsApp channel); the guard postpones, never drops.
+  describe('minutesUntilSendWindow', () => {
+    it('returns 0 inside the window, computed in the given timezone', () => {
+      // 08:30 UTC = 10:30 Europe/Rome (CEST, August): inside 8→19.
+      const now = new Date('2026-08-15T08:30:00Z')
+      expect(minutesUntilSendWindow(now, 'Europe/Rome', 8, 19)).toBe(0)
+    })
+
+    it('postpones to the same-day window start when too early', () => {
+      // 04:00 UTC = 06:00 Europe/Rome → 120 minutes until 08:00.
+      const now = new Date('2026-08-15T04:00:00Z')
+      expect(minutesUntilSendWindow(now, 'Europe/Rome', 8, 19)).toBe(120)
+    })
+
+    it('postpones to TOMORROW morning when the window already closed', () => {
+      // 20:00 UTC = 22:00 Europe/Rome → closed at 19:00 → 10h to 08:00.
+      const now = new Date('2026-08-15T20:00:00Z')
+      expect(minutesUntilSendWindow(now, 'Europe/Rome', 8, 19)).toBe(600)
+    })
+
+    it('the end hour itself is OUTSIDE the window (start ≤ t < end)', () => {
+      // Exactly 19:00 in Rome (17:00 UTC in August) must NOT send.
+      const now = new Date('2026-08-15T17:00:00Z')
+      expect(minutesUntilSendWindow(now, 'Europe/Rome', 8, 19)).toBeGreaterThan(0)
+    })
+
+    it('falls back to UTC on an invalid timezone instead of blocking forever', () => {
+      const now = new Date('2026-08-15T10:00:00Z')
+      expect(minutesUntilSendWindow(now, 'Not/AZone', 8, 19)).toBe(0)
+    })
+  })
+
+  describe('Send window gate in the job', () => {
+    it('🕗 postpones a due campaign outside its window: nextRunAt aimed at the window start, nothing processed', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T20:00:00Z')) // 22:00 Rome
+      try {
+        mockPrisma.pushCampaign.findMany.mockResolvedValue([
+          {
+            id: 'campaign-w1',
+            workspaceId: 'ws-1',
+            status: 'SCHEDULED',
+            isActive: true,
+            frequency: 'ONCE',
+            message: 'Ciao',
+            sendWindowStart: 8,
+            sendWindowEnd: 19,
+          },
+        ])
+        mockPrisma.workspace.findUnique.mockResolvedValue({
+          id: 'ws-1',
+          ownerId: 'owner-1',
+          name: 'Pro Loco',
+          enableWhatsapp: true,
+          timezone: 'Europe/Rome',
+        })
+
+        await pushCampaignsJob()
+
+        expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith({
+          where: { id: 'campaign-w1' },
+          data: { nextRunAt: expect.any(Date) },
+        })
+        // 600 minutes → 06:00 UTC next day (08:00 Rome).
+        const aimedAt = mockPrisma.pushCampaign.update.mock.calls[0][0].data.nextRunAt as Date
+        expect(aimedAt.toISOString()).toBe('2026-08-16T06:00:00.000Z')
+        // Nothing else ran: recipients never counted, nothing enqueued.
+        expect(mockPrisma.pushCampaignRecipient.count).not.toHaveBeenCalled()
+        expect(mockPrisma.whatsAppQueue.upsert).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+  })
+
   // 🏪 Merchant advertising (Andrea, 2026-08-31): the Pro Loco resells push
   // packages to local merchants. WHAT these tests lock: a merchant campaign
   // sends ONLY while the merchant is active and their package has quota, the
