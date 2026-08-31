@@ -66,10 +66,12 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
   }
 
   /**
-   * This strategy handles flow workspaces
+   * This strategy handles flow workspaces.
+   * PRO_LOCO is a FLOW workspace with extra tourism-office-only features
+   * gated in the custom chatbot module (e.g. demosappada) — same routing.
    */
   canHandle(workspace: Workspace): boolean {
-    return workspace.channelMode === ChannelMode.FLOW
+    return workspace.channelMode === ChannelMode.FLOW || workspace.channelMode === ChannelMode.PRO_LOCO
   }
 
   /**

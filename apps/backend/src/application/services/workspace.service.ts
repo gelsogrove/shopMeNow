@@ -500,7 +500,7 @@ For privacy inquiries, please contact our support team.`
         await this.seedSystemFunctions(tx, createdWorkspace.id, wsChannelMode === "ECOMMERCE");
 
         // 3c. 🆕 Auto-create router FlowNodeConfig for FLOW workspaces
-        if (wsChannelMode === "FLOW") {
+        if (wsChannelMode === "FLOW" || wsChannelMode === "PRO_LOCO") {
           try {
             const routerTemplatePath = path.join(__dirname, "../../../templates/flow/00-router.template.md")
             const routerSystemPrompt = fs.existsSync(routerTemplatePath)

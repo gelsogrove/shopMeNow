@@ -63,7 +63,7 @@ interface FormData {
   businessType: string
   currency: string
   defaultLanguage: string
-  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' // TODO: Switch toggle should become a dropdown for 3-way selection
+  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO' // TODO: Switch toggle should become a dropdown for 3-way selection
   // Channels
   channelStatus: boolean
   debugMode: boolean
@@ -174,8 +174,9 @@ export function SettingsPage() {
   // whatsapp-inbound.pipeline.ts, customClientChatbotService.invoke() always
   // intercepts and returns before the old FlowWorkspaceStrategy is reached
   // whenever customChatbotId is set.
-  const isCustomChatbot = currentWorkspace?.channelMode === "FLOW"
-  const SECTIONS = getVisibleSections(isCustomChatbot)
+  const isCustomChatbot = currentWorkspace?.channelMode === "FLOW" || currentWorkspace?.channelMode === "PRO_LOCO"
+  const isProLoco = currentWorkspace?.channelMode === "PRO_LOCO"
+  const SECTIONS = getVisibleSections(isCustomChatbot, isProLoco)
 
   // Load last opened section from localStorage. Business Config is visible for
   // every workspace type, so it is the default landing section for all of them.

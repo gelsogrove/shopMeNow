@@ -228,7 +228,7 @@ export class WhatsAppInboundPipeline {
         where: { id: workspaceId },
         select: { channelMode: true },
       })
-      if (wsMode?.channelMode === "FLOW") {
+      if (wsMode?.channelMode === "FLOW" || wsMode?.channelMode === "PRO_LOCO") {
         logger.info("[PIPELINE] 🛠️ DebugFlow - FLOW workspace bypasses WIP, processing normally", {
           workspaceId,
           customerId: customer.id,

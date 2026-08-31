@@ -52,6 +52,11 @@ import CheckoutSuccessPage from "./pages/checkout-success"
 import CheckoutPage from "./pages/CheckoutPage"
 import ExpiredPage from "./pages/expired"
 import { FAQPage } from "./pages/FAQPage"
+import { TouristRestaurantsPage } from "./pages/TouristRestaurantsPage"
+import { TouristHotelsPage } from "./pages/TouristHotelsPage"
+import { TouristExcursionsPage } from "./pages/TouristExcursionsPage"
+import { TouristRefugesPage } from "./pages/TouristRefugesPage"
+import { TouristEventsPage } from "./pages/TouristEventsPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
 import NotFoundPage from "./pages/not-found"
@@ -593,6 +598,26 @@ function AppWithProviders() {
                       no CustomChatbotGuard here, unlike most other platform pages. */}
                   <Route path="/faq" element={<MinimalLayout />}>
                     <Route index element={<FAQPage />} />
+                  </Route>
+
+                  {/* PRO_LOCO-only tourism content pages (Andrea, 2026-08-31) —
+                      same "no CustomChatbotGuard" treatment as FAQs: reached only
+                      via the Settings dropdown for PRO_LOCO workspaces, but the
+                      route itself has no extra guard beyond auth. */}
+                  <Route path="/tourist-restaurants" element={<MinimalLayout />}>
+                    <Route index element={<TouristRestaurantsPage />} />
+                  </Route>
+                  <Route path="/tourist-hotels" element={<MinimalLayout />}>
+                    <Route index element={<TouristHotelsPage />} />
+                  </Route>
+                  <Route path="/tourist-excursions" element={<MinimalLayout />}>
+                    <Route index element={<TouristExcursionsPage />} />
+                  </Route>
+                  <Route path="/tourist-refuges" element={<MinimalLayout />}>
+                    <Route index element={<TouristRefugesPage />} />
+                  </Route>
+                  <Route path="/tourist-events" element={<MinimalLayout />}>
+                    <Route index element={<TouristEventsPage />} />
                   </Route>
 
                   <Route path="/profile" element={<MinimalLayout />}>

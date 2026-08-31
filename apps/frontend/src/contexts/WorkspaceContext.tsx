@@ -59,7 +59,7 @@ export interface Workspace {
   enableWidget?: boolean
   sellsProducts?: boolean
   sellsServices?: boolean
-  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   speechToTextEnabled?: boolean // Widget composer shows a microphone; voice notes are transcribed to text

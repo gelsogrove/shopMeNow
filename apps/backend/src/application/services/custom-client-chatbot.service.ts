@@ -1105,6 +1105,16 @@ export class CustomClientChatbotService {
    * FAQs, injected as a fixed prompt block (never retrieval — FAQs are a
    * small, bounded set, see design.md). Reuses the same FAQ table/repository
    * as the standard chatbot agents.
+   *
+   * PRO_LOCO workspaces (Andrea, 2026-08-31): Ristoranti/Alberghi/Escursioni/
+   * Rifugi/Eventi are appended as SYNTHETIC FAQ entries (question = name,
+   * answer = the row's fields written as prose) rather than a parallel
+   * retrieval path. custom-demosappada's existing FAQ selection/budget/media
+   * logic (faq-media.ts) is IDF-based on question+answer text — it does not
+   * care where an entry came from, so this is the entire integration: no
+   * change needed inside the module itself. These tables are always
+   * workspace-scoped, so for a non-PRO_LOCO workspace all four queries simply
+   * return empty arrays — no channelMode check needed here.
    */
   private async getFaqs(p: GetFaqsParams): Promise<FaqEntry[]> {
     try {
@@ -1113,10 +1123,214 @@ export class CustomClientChatbotService {
         orderBy: { order: "asc" },
         select: { question: true, answer: true, keywords: true },
       })
-      return faqs
+      const touristEntries = await this.getTouristContentAsFaqs(p.workspaceId)
+      return [...faqs, ...touristEntries]
     } catch (error) {
       logger.error("[CustomClientChatbotService] getFaqs failed", {
         workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
+   * PRO_LOCO tourism content (Ristoranti, Alberghi, Escursioni, Rifugi,
+   * Eventi), converted to the same {question, answer} shape as a FAQ so it
+   * rides the module's existing FAQ retrieval/budget/media pipeline. Prose
+   * facts are built here, once, so every custom chatbot module that ever asks
+   * for FAQs gets tourism content for free without knowing these tables
+   * exist — the same boundary getFaqs/getCatalogue already keep (module never
+   * touches Prisma directly).
+   *
+   * Never throws: a failure to load one category degrades to fewer facts for
+   * the model, never a broken turn.
+   */
+  private async getTouristContentAsFaqs(workspaceId: string): Promise<FaqEntry[]> {
+    try {
+      const [restaurants, hotels, excursions, refuges, events, photos] = await Promise.all([
+        defaultPrisma.touristRestaurant.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristHotel.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristExcursion.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristRefuge.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristEvent.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristPhoto.findMany({
+          where: { workspaceId },
+          orderBy: { order: "asc" },
+          select: { id: true, contentType: true, contentId: true },
+        }),
+      ])
+
+      // First gallery photo per content item, as a public URL the module's
+      // media pipeline can attach to a detail answer. The path ends in .jpg
+      // because faq-media.ts recognises photos by extension.
+      const backendUrl =
+        process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`
+      const firstPhotoUrl = new Map<string, string>()
+      for (const p of photos) {
+        const key = `${p.contentType}:${p.contentId}`
+        if (!firstPhotoUrl.has(key)) {
+          firstPhotoUrl.set(key, `${backendUrl}/api/public/tourist-photos/${p.id}/image.jpg`)
+        }
+      }
+      const photoOf = (contentType: string, contentId: string): string | null =>
+        firstPhotoUrl.get(`${contentType}:${contentId}`) ?? null
+
+      const fact = (label: string, value: unknown): string | null => {
+        if (value === null || value === undefined || value === "") return null
+        if (typeof value === "boolean") return value ? label : null
+        return `${label}: ${value}`
+      }
+      const joinFacts = (parts: Array<string | null>): string => parts.filter(Boolean).join(". ")
+      const joinBlock = (parts: Array<string | null | undefined>): string =>
+        parts.filter((p): p is string => !!p).join("\n")
+
+      // The module's retrieval (selectRelevantFaqs → subjectScore) matches the
+      // guest's words against the entry's QUESTION only, never the answer. So
+      // the synthetic question must carry every word a guest would search by:
+      // the category in both plural and singular ("Ristoranti … ristorante"),
+      // the name, and the discriminating flags ("adatto a celiaci"). With a
+      // name-only question, "dammi i ristoranti per celiaci" scored zero
+      // against every restaurant entry and the model never saw them.
+      const searchableQuestion = (parts: Array<string | null | undefined>): string =>
+        parts.filter(Boolean).join(" — ")
+
+      const restaurantEntries: FaqEntry[] = restaurants.map((r) => ({
+        question: searchableQuestion([
+          `Ristoranti: ${r.name}`,
+          "ristorante, mangiare",
+          r.cuisineType,
+          r.celiacFriendly ? "adatto a celiaci, senza glutine" : null,
+          r.location,
+        ]),
+        answer: joinBlock([
+          r.description,
+          joinFacts([
+            fact("Cucina", r.cuisineType),
+            fact("Adatto a celiaci", r.celiacFriendly),
+            fact("Prenotazione consigliata", r.needsReservation),
+            fact("Località", r.location),
+            fact("Tel", r.phone),
+          ]),
+          r.link,
+          r.videoUrl,
+          photoOf("RESTAURANT", r.id),
+        ]),
+      }))
+
+      const hotelEntries: FaqEntry[] = hotels.map((h) => ({
+        question: searchableQuestion([
+          `Alberghi: ${h.name}`,
+          "albergo, hotel, dormire",
+          h.stars ? `${h.stars} stelle` : null,
+          h.location,
+        ]),
+        answer: joinBlock([
+          h.description,
+          joinFacts([
+            fact("Categoria", h.stars ? `${h.stars} stelle` : null),
+            fact("Località", h.location),
+            fact("Tel", h.phone),
+          ]),
+          h.link,
+          h.videoUrl,
+          photoOf("HOTEL", h.id),
+        ]),
+      }))
+
+      const excursionEntries: FaqEntry[] = excursions.map((e) => ({
+        question: searchableQuestion([
+          `Escursioni: ${e.name}`,
+          "escursione, sentiero, camminata",
+          e.difficulty,
+          e.location,
+        ]),
+        answer: joinBlock([
+          e.description,
+          joinFacts([
+            fact("Difficoltà", e.difficulty),
+            fact("Durata", e.duration),
+            fact("Località", e.location),
+          ]),
+          e.link,
+          e.videoUrl,
+          photoOf("EXCURSION", e.id),
+        ]),
+      }))
+
+      const refugeEntries: FaqEntry[] = refuges.map((r) => ({
+        question: searchableQuestion([
+          `Rifugi: ${r.name}`,
+          "rifugio, malga, baita",
+          r.difficulty,
+          r.location,
+        ]),
+        answer: joinBlock([
+          r.description,
+          joinFacts([
+            fact("Tempo di salita", r.climbTime),
+            fact("Difficoltà", r.difficulty),
+            fact("Aperto da", r.openFrom),
+            fact("Aperto a", r.openTo),
+            fact("Località", r.location),
+            fact("Tel", r.phone),
+          ]),
+          r.link,
+          r.videoUrl,
+          photoOf("REFUGE", r.id),
+        ]),
+      }))
+
+      const formatEventDate = (d: Date | null): string | null =>
+        d ? d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }) : null
+
+      const eventEntries: FaqEntry[] = events.map((e) => ({
+        question: searchableQuestion([
+          `Eventi: ${e.title}`,
+          "evento, manifestazione, festa",
+          e.location,
+        ]),
+        answer: joinBlock([
+          e.description,
+          joinFacts([
+            fact("Località", e.location),
+            fact("Dal", formatEventDate(e.startDate)),
+            fact("Al", formatEventDate(e.endDate)),
+            fact("Prezzo", e.price),
+            fact("Biglietti", e.ticketInfo),
+          ]),
+          e.link,
+          e.ticketLink,
+          e.videoUrl,
+          photoOf("EVENT", e.id),
+        ]),
+      }))
+
+      return [
+        ...restaurantEntries,
+        ...hotelEntries,
+        ...excursionEntries,
+        ...refugeEntries,
+        ...eventEntries,
+      ]
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] getTouristContentAsFaqs failed", {
+        workspaceId,
         error: error instanceof Error ? error.message : String(error),
       })
       return []

@@ -57,7 +57,7 @@ interface AIPersonalitySectionProps {
     chatbotName: string
     botIdentityResponse: string
     toneOfVoice: "formal" | "friendly" | "professional" | "casual"
-    channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+    channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
     welcomeMessage: string
     videoUrl: string
     /** Greeting for a returning customer we already know by name. */

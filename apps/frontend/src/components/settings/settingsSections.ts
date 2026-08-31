@@ -19,6 +19,11 @@ export type SectionKey =
   | "demorobot"
   | "faqs"
   | "system-prompt"
+  | "tourist-restaurants"
+  | "tourist-hotels"
+  | "tourist-excursions"
+  | "tourist-refuges"
+  | "tourist-events"
   | "other"
 
 // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
@@ -76,12 +81,45 @@ export const SYSTEM_PROMPT_SECTION: SettingsSection = {
   description: "Edit the fixed system prompt this chatbot reads every turn",
 }
 
+// PRO_LOCO-only content sections (Andrea, 2026-08-31): structured tourism
+// content types, unlike FAQs/Flows/Main Prompt they only make sense for a
+// tourist-office chatbot (e.g. demosappada), so they are NOT added for every
+// custom-chatbot workspace — only when channelMode === 'PRO_LOCO'.
+export const TOURIST_RESTAURANTS_SECTION: SettingsSection = {
+  key: "tourist-restaurants",
+  label: "Ristoranti",
+  description: "Restaurants shown to customers by the chatbot",
+}
+export const TOURIST_HOTELS_SECTION: SettingsSection = {
+  key: "tourist-hotels",
+  label: "Alberghi",
+  description: "Hotels shown to customers by the chatbot",
+}
+export const TOURIST_EXCURSIONS_SECTION: SettingsSection = {
+  key: "tourist-excursions",
+  label: "Escursioni",
+  description: "Excursions shown to customers by the chatbot",
+}
+export const TOURIST_REFUGES_SECTION: SettingsSection = {
+  key: "tourist-refuges",
+  label: "Rifugi",
+  description: "Mountain refuges shown to customers by the chatbot",
+}
+export const TOURIST_EVENTS_SECTION: SettingsSection = {
+  key: "tourist-events",
+  label: "Eventi",
+  description: "Events shown to customers by the chatbot",
+}
+
 // Andrea 2026-07-31: Main Prompt / Flows / FAQs are visible for EVERY
 // workspace, not just channelMode === 'FLOW' ones — the previous conditional
 // made the menu change shape between workspaces. Custom Tools follows the
 // same rule since 2026-08-22 (see HIDDEN_FOR_CUSTOM_CHATBOT above).
-// Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs -> rest.
-export function getVisibleSections(_isCustomChatbot: boolean): SettingsSection[] {
+// Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs -> PRO_LOCO content (if any) -> rest.
+export function getVisibleSections(
+  _isCustomChatbot: boolean,
+  isProLoco: boolean = false,
+): SettingsSection[] {
   const business = ALL_SECTIONS.find((s) => s.key === "business")!
   const aiPersonality = ALL_SECTIONS.find((s) => s.key === "ai-personality")!
   const remaining = ALL_SECTIONS.filter(
@@ -90,7 +128,24 @@ export function getVisibleSections(_isCustomChatbot: boolean): SettingsSection[]
       s.key !== "ai-personality" &&
       !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
   )
-  return [business, aiPersonality, SYSTEM_PROMPT_SECTION, DEMOROBOT_SECTION, FAQS_SECTION, ...remaining]
+  const touristSections = isProLoco
+    ? [
+        TOURIST_RESTAURANTS_SECTION,
+        TOURIST_HOTELS_SECTION,
+        TOURIST_EXCURSIONS_SECTION,
+        TOURIST_REFUGES_SECTION,
+        TOURIST_EVENTS_SECTION,
+      ]
+    : []
+  return [
+    business,
+    aiPersonality,
+    SYSTEM_PROMPT_SECTION,
+    DEMOROBOT_SECTION,
+    FAQS_SECTION,
+    ...touristSections,
+    ...remaining,
+  ]
 }
 
 // Sections that navigate to their own dedicated route instead of rendering
@@ -98,6 +153,11 @@ export function getVisibleSections(_isCustomChatbot: boolean): SettingsSection[]
 export const SECTION_ROUTES: Partial<Record<SectionKey, string>> = {
   demorobot: "/settings/demorobot",
   faqs: "/faq",
+  "tourist-restaurants": "/tourist-restaurants",
+  "tourist-hotels": "/tourist-hotels",
+  "tourist-excursions": "/tourist-excursions",
+  "tourist-refuges": "/tourist-refuges",
+  "tourist-events": "/tourist-events",
 }
 
 /**

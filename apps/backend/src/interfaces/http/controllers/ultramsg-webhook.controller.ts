@@ -798,7 +798,7 @@ export class UltraMsgWebhookController {
         // The duplicate user message makes the LLM classify the next turn as a CONTRADICTION
         // and call contactOperator. Fix: let ChatEngine handle the welcome for FLOW workspaces
         // (it combines welcome + first LLM response into a single message via welcomePrefix).
-        if (workspace.channelMode === 'FLOW') {
+        if (workspace.channelMode === 'FLOW' || workspace.channelMode === 'PRO_LOCO') {
           logger.info('[ULTRAMSG] 🔄 FLOW workspace — ChatEngine handles welcome + response combined, skipping here')
           // fall through to LLM processing below
         } else {
@@ -1278,7 +1278,7 @@ export class UltraMsgWebhookController {
       //   (a) create DUPLICATE user message in history → LLM sees contradiction
       //   (b) make WelcomeMessageHandler count=1 → isFirstMessage=false → no welcome prefix
       let savedUserMessage: { id: string } | null = null
-      if (workspace.channelMode !== 'FLOW') {
+      if (workspace.channelMode !== 'FLOW' && workspace.channelMode !== 'PRO_LOCO') {
         savedUserMessage = await prisma.conversationMessage.create({
           data: {
             workspaceId,

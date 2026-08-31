@@ -64,7 +64,7 @@ export function MinimalLayout() {
   // Signal is channelMode === 'FLOW', not customChatbotId — see the matching
   // comment in SettingsPage.tsx for why (Flow-type channels get the new UI
   // immediately on creation, before customChatbotId is configured).
-  const isCustomChatbot = workspace?.channelMode === "FLOW"
+  const isCustomChatbot = workspace?.channelMode === "FLOW" || workspace?.channelMode === "PRO_LOCO"
 
   // Load user profile from localStorage
   useEffect(() => {

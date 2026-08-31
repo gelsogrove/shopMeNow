@@ -146,7 +146,7 @@ export class CustomerSupportAgentLLM {
       // STEP 1.8: Load system prompt from template files (include FAQ presence for conditionals)
       // 🔧 FIX: Use correct agent type based on workspace type
       // Informational workspaces use INFO_AGENT template, ecommerce and FLOW use CUSTOMER_SUPPORT
-      const isEcommerceOrFlow = workspace?.channelMode === "ECOMMERCE" || workspace?.channelMode === "FLOW"
+      const isEcommerceOrFlow = workspace?.channelMode === "ECOMMERCE" || workspace?.channelMode === "FLOW" || workspace?.channelMode === "PRO_LOCO"
       const templateAgentType = isEcommerceOrFlow ? "CUSTOMER_SUPPORT" : "INFO_AGENT"
 
       let systemPrompt = await this.templateLoader.loadAndRenderTemplate(

@@ -923,7 +923,7 @@ export class WhatsAppWebhookController {
 
         // 🛠️ DebugFlow: FLOW workspaces process normally in debugMode
         // Strategy appends debug trace to response instead of blocking with WIP
-        if (!accessResult.canProcess && accessResult.blockReason === "DEBUG_MODE" && workspace.channelMode === "FLOW") {
+        if (!accessResult.canProcess && accessResult.blockReason === "DEBUG_MODE" && (workspace.channelMode === "FLOW" || workspace.channelMode === "PRO_LOCO")) {
           logger.info("[WEBHOOK] 🛠️ DebugFlow (new user) - FLOW workspace bypasses WIP, processing normally", { workspaceId })
           accessResult.canProcess = true
           accessResult.blockReason = null

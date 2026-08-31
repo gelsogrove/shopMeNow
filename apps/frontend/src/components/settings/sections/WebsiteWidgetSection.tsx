@@ -43,7 +43,7 @@ interface WebsiteWidgetSectionProps {
   errors: Record<string, string>
   canEdit: boolean
   /** 🚨 Widget unavailable for e-commerce workspaces (Andrea's rule) */
-  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   onFieldChange: (field: string, value: any) => void
   onFieldFocus?: (fieldKey: string) => void
 }

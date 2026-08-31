@@ -43,7 +43,7 @@ interface CustomerProfile {
     id: string
     name: string
     logoUrl?: string | null
-    channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+    channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   }
 }
 

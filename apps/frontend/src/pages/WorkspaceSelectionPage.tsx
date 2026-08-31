@@ -67,7 +67,7 @@ interface WizardFormData {
   alias: string
   channelType: 'WHATSAPP' | 'WIDGET'
   whatsappNumber: string // Only required if channelType === 'WHATSAPP'
-  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   // Step 3: Provider (WhatsApp only)
   whatsappProvider: 'meta' | 'ultramsg' | 'wasender'
   // Step 4: Bot Personality

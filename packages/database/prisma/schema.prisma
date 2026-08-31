@@ -67,7 +67,7 @@ model Workspace {
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
   enableWhatsapp                    Boolean     @default(true)
   enableWidget                      Boolean     @default(false)
-  channelMode                       ChannelMode @default(INFORMATIONAL) // Workspace mode: ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps)
+  channelMode                       ChannelMode @default(INFORMATIONAL) // Workspace mode: ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps), PRO_LOCO (flow + tourism-office-only features, e.g. Sappada)
   enableCalendarBooking             Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
   hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
   hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
@@ -161,6 +161,12 @@ model Workspace {
   chatSessions           ChatSession[]
   customers              Customers[]
   faqs                   FAQ[]
+  touristRestaurants     TouristRestaurant[]
+  touristHotels          TouristHotel[]
+  touristExcursions      TouristExcursion[]
+  touristRefuges         TouristRefuge[]
+  touristEvents          TouristEvent[]
+  touristPhotos          TouristPhoto[]
   gdprContent            GdprContent[]
   languages              Languages[]
   offers                 Offers[]
@@ -1148,6 +1154,149 @@ model FAQ {
   @@map("faqs")
 }
 
+// 🆕 PRO_LOCO tourism content (Andrea, 2026-08-31) — structured content types
+// only shown/used for channelMode=PRO_LOCO workspaces (e.g. demosappada).
+// Each row's photos live in TouristPhoto (a gallery, not a single field) —
+// Andrea, 2026-08-31: "non mi piace il concetto di foto [singola], mi
+// piacerebbe avere un concetto di fotogallery". Photos are base64 (his
+// explicit instruction), not file uploads — self-contained in the DB, no
+// separate asset storage for what is a small per-tenant dataset.
+model TouristRestaurant {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  name             String
+  description      String?   @db.Text
+  cuisineType      String? // e.g. "tipica", "pizzeria", "pesce"
+  celiacFriendly   Boolean   @default(false)
+  needsReservation Boolean   @default(false)
+  location         String? // borgata / frazione
+  phone            String?
+  link             String?
+  videoUrl         String?
+  order            Int       @default(0)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_restaurants")
+}
+
+model TouristHotel {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  stars       Int?
+  location    String? // borgata / frazione
+  phone       String?
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_hotels")
+}
+
+model TouristExcursion {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  difficulty  String? // e.g. "facile", "media", "difficile"
+  duration    String? // free text, e.g. "2h30"
+  location    String? // borgata / frazione / trailhead
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_excursions")
+}
+
+model TouristRefuge {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  climbTime   String? // "tempo_salita", free text e.g. "1h45"
+  difficulty  String? // "difficolta"
+  openFrom    String? // "aperto_da", free text (date/season)
+  openTo      String? // "aperto_a", free text (date/season)
+  location    String?
+  phone       String?
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_refuges")
+}
+
+model TouristEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  title       String
+  description String?   @db.Text
+  location    String? // borgata / frazione / venue
+  startDate   DateTime?
+  endDate     DateTime?
+  price       String? // free text: "Gratuito", "10€", "10-15€"
+  ticketInfo  String?
+  link        String?
+  ticketLink  String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_events")
+}
+
+enum TouristContentType {
+  RESTAURANT
+  HOTEL
+  EXCURSION
+  REFUGE
+  EVENT
+}
+
+/// Photo gallery for PRO_LOCO tourist content. Polymorphic on purpose — one
+/// CRUD, one FE gallery component, reused across all 5 content types instead
+/// of 5 near-identical photo tables. No DB-level FK to the owning row
+/// (Prisma has no native polymorphic relation): consistency + cascade
+/// delete-on-parent-delete are enforced in the service layer instead.
+model TouristPhoto {
+  id          String              @id @default(cuid())
+  workspaceId String
+  contentType TouristContentType
+  contentId   String
+  imageBase64 String              @db.Text
+  caption     String?
+  order       Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, contentType, contentId])
+  @@map("tourist_photos")
+}
+
 model Offers {
   id              String       @id @default(cuid())
   name            String
@@ -1235,6 +1384,7 @@ enum ChannelMode {
   ECOMMERCE
   INFORMATIONAL
   FLOW
+  PRO_LOCO
 }
 
 enum ProductStatus {

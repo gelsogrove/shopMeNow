@@ -16,8 +16,9 @@ interface SettingsPageHeaderProps {
 export function SettingsPageHeader({ currentSection }: SettingsPageHeaderProps) {
   const navigate = useNavigate()
   const { workspace } = useWorkspace()
-  const isCustomChatbot = workspace?.channelMode === "FLOW"
-  const sections = getVisibleSections(isCustomChatbot)
+  const isCustomChatbot = workspace?.channelMode === "FLOW" || workspace?.channelMode === "PRO_LOCO"
+  const isProLoco = workspace?.channelMode === "PRO_LOCO"
+  const sections = getVisibleSections(isCustomChatbot, isProLoco)
 
   return (
     <div className="flex items-center gap-4">

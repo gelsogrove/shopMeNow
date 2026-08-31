@@ -427,7 +427,7 @@ export class AgentConfigController {
       logger.info(`✅ Reset ${resetCount} agent configs from ${templateSource} for workspace ${workspaceId}`)
 
       // For FLOW workspaces: ensure router FlowNodeConfig exists with fresh template
-      if (wsChannelMode === "FLOW") {
+      if (wsChannelMode === "FLOW" || wsChannelMode === "PRO_LOCO") {
         try {
           const routerTemplatePath = path.join(__dirname, "../../../templates/flow/00-router.template.md")
           const routerSystemPrompt = fs.existsSync(routerTemplatePath)

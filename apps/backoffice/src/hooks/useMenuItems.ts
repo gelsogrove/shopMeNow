@@ -103,5 +103,6 @@ export function useMenuItems(): MenuItem[] {
 export function getChannelTypeLabel(channelMode?: string): string {
   if (channelMode === 'ECOMMERCE') return 'E-commerce'
   if (channelMode === 'FLOW') return 'Flow'
+  if (channelMode === 'PRO_LOCO') return 'Pro Loco'
   return 'Informational'
 }

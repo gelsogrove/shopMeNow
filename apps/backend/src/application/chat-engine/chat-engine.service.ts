@@ -1910,9 +1910,9 @@ export class ChatEngineService {
         customerMessage: input.message,
         conversationId: input.conversationId,
         channel: input.channel || "whatsapp",
-        // FLOW workspaces: skip save here — FlowWorkspaceStrategy saves the
-        // combined welcome+flow response as a single DB entry.
-        skipSave: workspaceConfig.channelMode === "FLOW",
+        // FLOW workspaces (incl. PRO_LOCO): skip save here — FlowWorkspaceStrategy
+        // saves the combined welcome+flow response as a single DB entry.
+        skipSave: workspaceConfig.channelMode === "FLOW" || workspaceConfig.channelMode === "PRO_LOCO",
       })
 
       if (welcomeResult.isWelcomeMessage) {
@@ -1938,7 +1938,7 @@ export class ChatEngineService {
         // 🆕 FLOW workspaces: Don't return early — combine welcome + response
         // For FLOW, the welcome message is prepended to the actual response
         // so the customer gets "Hi! I'm Sofia...\n\nTell me what's happening..."
-        if (workspaceConfig.channelMode === "FLOW") {
+        if (workspaceConfig.channelMode === "FLOW" || workspaceConfig.channelMode === "PRO_LOCO") {
           logger.info("🔄 [ChatEngine] FLOW workspace — continuing with welcome prefix", {
             channelMode: workspaceConfig.channelMode,
           })
@@ -1967,7 +1967,7 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.2: Non-ECOMMERCE Workspaces — Route to correct strategy
       // ========================================================================
-      if (workspaceConfig.channelMode === "FLOW") {
+      if (workspaceConfig.channelMode === "FLOW" || workspaceConfig.channelMode === "PRO_LOCO") {
         return await this.handleFlowMessage({
           input,
           workspaceConfig,

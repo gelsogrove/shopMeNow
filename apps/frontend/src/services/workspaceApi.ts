@@ -49,7 +49,7 @@ export interface Workspace {
   // 🆕 Feature 199: Channel Configuration
   enableWhatsapp?: boolean
   enableWidget?: boolean
-  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   speechToTextEnabled?: boolean // Widget composer shows a microphone; voice notes are transcribed to text
@@ -151,7 +151,7 @@ export interface ChecklistItem {
 export interface WorkspaceChecklist {
   workspaceId: string
   channelType: "WHATSAPP" | "WIDGET"
-  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   completedCount: number
   totalCount: number
   percent: number
@@ -167,7 +167,7 @@ export interface CreateWorkspaceData {
   welcomeBackMessage?: string
   humanSupportMessage?: string
   adminEmail?: string
-  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   hasHumanSupport?: boolean
   enableWhatsapp?: boolean
   enableWidget?: boolean
@@ -204,7 +204,7 @@ export interface UpdateWorkspaceData {
   // 🆕 Feature 199: Channel Configuration
   enableWhatsapp?: boolean
   enableWidget?: boolean
-  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   speechToTextEnabled?: boolean // Widget composer shows a microphone; voice notes are transcribed to text

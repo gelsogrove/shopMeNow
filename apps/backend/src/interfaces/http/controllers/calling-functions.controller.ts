@@ -367,7 +367,7 @@ export class CallingFunctionsController {
                 if (installedNames.has(name)) continue
                 if (APPOINTMENT_FN_NAMES.includes(name) && !workspace.enableCalendarBooking) continue
                 // FLOW workspaces never use ecommerce-specific agent delegates or sub-LLM agents
-                if (workspace.channelMode === 'FLOW' && ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent', 'customerSupportAgent', 'profileManagementAgent'].includes(name)) continue
+                if ((workspace.channelMode === 'FLOW' || workspace.channelMode === 'PRO_LOCO') && ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent', 'customerSupportAgent', 'profileManagementAgent'].includes(name)) continue
                 if (name === "productSearchAgent" && !workspace.hasProductCatalog) continue
                 if (name === "cartManagementAgent" && !workspace.hasCart) continue
                 if (name === "orderTrackingAgent" && !workspace.hasOrderTracking) continue

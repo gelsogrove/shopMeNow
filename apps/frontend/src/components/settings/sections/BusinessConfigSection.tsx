@@ -27,7 +27,7 @@ interface BusinessConfigSectionProps {
     url: string
     businessType: string
     currency: string
-    channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+    channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | 'PRO_LOCO'
     channelStatus: boolean
     whatsappPhoneNumber: string
     enableWhatsapp: boolean
@@ -248,6 +248,7 @@ export function BusinessConfigSection({
                   <SelectItem value="ECOMMERCE">Ecommerce</SelectItem>
                   <SelectItem value="INFORMATIONAL">Informational</SelectItem>
                   <SelectItem value="FLOW">Flow</SelectItem>
+                  <SelectItem value="PRO_LOCO">Pro Loco</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -13,7 +13,7 @@
  */
 
 // Use string literal type to avoid runtime dependency on Prisma enum (Jest compatibility)
-type ChannelMode = "ECOMMERCE" | "INFORMATIONAL" | "FLOW"
+type ChannelMode = "ECOMMERCE" | "INFORMATIONAL" | "FLOW" | "PRO_LOCO"
 
 // Minimal workspace shape needed by helper functions
 type WorkspaceWithMode = { channelMode: ChannelMode }
@@ -28,8 +28,10 @@ export function isInformational(workspace: WorkspaceWithMode): boolean {
   return workspace.channelMode === "INFORMATIONAL"
 }
 
+// PRO_LOCO is a FLOW workspace with extra tourism-office-only features
+// gated in the custom chatbot module — same templates as FLOW.
 export function isFlow(workspace: WorkspaceWithMode): boolean {
-  return workspace.channelMode === "FLOW"
+  return workspace.channelMode === "FLOW" || workspace.channelMode === "PRO_LOCO"
 }
 
 // 🗂️ ECOMMERCE TEMPLATE FILES (10 files — removed orphaned PRODUCT_CONTEXT, ORDER_OPTIMIZATION)
@@ -87,7 +89,9 @@ export function getTemplateFilesForMode(mode: ChannelMode): Record<string, strin
   switch (mode) {
     case "ECOMMERCE": return ECOMMERCE_TEMPLATE_FILES
     case "INFORMATIONAL": return INFORMATIONAL_TEMPLATE_FILES
-    case "FLOW": return FLOW_TEMPLATE_FILES
+    case "FLOW":
+    case "PRO_LOCO":
+      return FLOW_TEMPLATE_FILES
   }
 }
 
@@ -98,7 +102,9 @@ export function getValidAgentTypesForMode(mode: ChannelMode): string[] {
   switch (mode) {
     case "ECOMMERCE": return ECOMMERCE_AGENTS
     case "INFORMATIONAL": return INFORMATIONAL_AGENTS
-    case "FLOW": return FLOW_AGENTS
+    case "FLOW":
+    case "PRO_LOCO":
+      return FLOW_AGENTS
   }
 }
 
@@ -109,7 +115,9 @@ export function getTemplateFolder(mode: ChannelMode): string {
   switch (mode) {
     case "ECOMMERCE": return "ecommerce"
     case "INFORMATIONAL": return "informational"
-    case "FLOW": return "flow"
+    case "FLOW":
+    case "PRO_LOCO":
+      return "flow"
   }
 }
 

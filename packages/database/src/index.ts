@@ -90,6 +90,8 @@ export {
   CampaignTargetType,
   PushCampaignChannel,
   PushCampaignBillingStatus,
+  // Tourist (PRO_LOCO) content type enum
+  TouristContentType,
 } from './generated/prisma/index.js'
 
 // Export common types
@@ -151,6 +153,13 @@ export type {
   PushCampaignRecipient,
   WorkspaceCallingFunction, // 🆕 Dynamic calling functions from DB
   WorkspaceEnvironmentVariable, // 🔐 Secure encrypted credentials per workspace
+  // Tourist (PRO_LOCO) content types
+  TouristRestaurant,
+  TouristHotel,
+  TouristExcursion,
+  TouristRefuge,
+  TouristEvent,
+  TouristPhoto,
 } from './generated/prisma/index.js'
 
 // Shared billing math + aggregations (single source of truth for invoices)

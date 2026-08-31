@@ -108,6 +108,13 @@ import {
   workspaceCustomersRouter,
 } from "../interfaces/http/routes/customers.routes"
 import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
+import { touristRestaurantsRouter } from "../interfaces/http/routes/tourist-restaurants.routes"
+import { touristHotelsRouter } from "../interfaces/http/routes/tourist-hotels.routes"
+import { touristExcursionsRouter } from "../interfaces/http/routes/tourist-excursions.routes"
+import { touristRefugesRouter } from "../interfaces/http/routes/tourist-refuges.routes"
+import { touristEventsRouter } from "../interfaces/http/routes/tourist-events.routes"
+import { touristPhotosRouter } from "../interfaces/http/routes/tourist-photos.routes"
+import { publicTouristPhotosRouter } from "../interfaces/http/routes/public-tourist-photos.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 import { contactRoutes } from "../interfaces/http/routes/contact.routes"
 import { requestAccessRoutes } from "../interfaces/http/routes/request-access.routes"
@@ -813,6 +820,24 @@ const faqsRouterInstance = faqsRouter()
 router.use("/workspaces/:workspaceId/faqs", faqsRouterInstance)
 router.use("/faqs", faqsRouterInstance)
 logger.info("Registered FAQs router with workspace routes")
+
+// Mount PRO_LOCO tourist content routers (Andrea, 2026-08-31)
+router.use(
+  "/workspaces/:workspaceId/tourist-restaurants",
+  touristRestaurantsRouter()
+)
+router.use("/workspaces/:workspaceId/tourist-hotels", touristHotelsRouter())
+router.use(
+  "/workspaces/:workspaceId/tourist-excursions",
+  touristExcursionsRouter()
+)
+router.use("/workspaces/:workspaceId/tourist-refuges", touristRefugesRouter())
+router.use("/workspaces/:workspaceId/tourist-events", touristEventsRouter())
+router.use("/workspaces/:workspaceId/tourist-photos", touristPhotosRouter())
+// Public image endpoint: turns each base64 gallery photo into a real URL the
+// chatbot can attach to a detail answer (WhatsApp preview needs a URL).
+router.use("/public/tourist-photos", publicTouristPhotosRouter())
+logger.info("Registered PRO_LOCO tourist content routers with workspace routes")
 
 // Mount billing routes (workspace-scoped) - Feature 185
 router.use("/workspaces/:workspaceId/billing", subscriptionBillingRoutes)
