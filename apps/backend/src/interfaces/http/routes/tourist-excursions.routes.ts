@@ -32,6 +32,10 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
  *           type: string
  *           nullable: true
  *           description: Excursion duration
+ *         season:
+ *           type: string
+ *           nullable: true
+ *           description: Season (e.g. estiva, invernale, tutto l'anno)
  *         location:
  *           type: string
  *           nullable: true
@@ -136,6 +140,9 @@ export const touristExcursionsRouter = (): Router => {
    *               duration:
    *                 type: string
    *                 nullable: true
+   *               season:
+   *                 type: string
+   *                 nullable: true
    *               location:
    *                 type: string
    *                 nullable: true
@@ -230,6 +237,9 @@ export const touristExcursionsRouter = (): Router => {
    *                 type: string
    *                 nullable: true
    *               duration:
+   *                 type: string
+   *                 nullable: true
+   *               season:
    *                 type: string
    *                 nullable: true
    *               location:

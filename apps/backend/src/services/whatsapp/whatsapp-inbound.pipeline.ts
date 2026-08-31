@@ -33,6 +33,7 @@ import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
 import { sendFlowStepMedia } from "./flow-step-media.send"
 import { persistFlowStepMediaAttachments } from "../flow-step-media.persist"
 import { formatWelcomeReply } from "../../utils/welcome-video"
+import { formatDetailPhotoReply } from "../../utils/detail-photo-reply"
 import { detectLanguageFromPhonePrefix } from "../../utils/language-detector"
 import { ingestInboundWebhookMedia } from "../inbound-media-webhook.service"
 import { WhatsAppDirectSendService } from "../whatsapp-direct-send.service"
@@ -731,6 +732,26 @@ export class WhatsAppInboundPipeline {
               ? formatWelcomeReply(customerReply)
               : null
 
+          // Audio reply only when the customer sent audio AND the tenant's
+          // settings.json enables audioOutput (settings are law — iron rule 7).
+          // Never on turn 1 (see the welcome comment below). Hoisted here so
+          // the detail-photo split below can skip audio turns.
+          const replyAsAudio =
+            messageCount !== 0 &&
+            inboundWasAudio &&
+            customOutput.audioOutput === true
+
+          // 📷 Detail answer about ONE place carrying its gallery photo as the
+          // trailing URL (appended by the module's withFaqMedia — video wins
+          // over photo upstream, so a photo here means the place has no video).
+          // Delivered as a REAL image with the text as caption (photo on top,
+          // text below — Andrea, 2026-09-01), instead of a bare link. Skipped
+          // on audio turns: the reply goes out spoken there.
+          const detailPhoto =
+            welcome === null && !replyAsAudio
+              ? formatDetailPhotoReply(customerReply)
+              : null
+
           if (welcome?.type === "split") {
             // YouTube video → two messages: (1) greeting + intro text, then
             // (2) the YouTube thumbnail as a real image with the rest of the
@@ -752,6 +773,18 @@ export class WhatsAppInboundPipeline {
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true,
             })
+          } else if (detailPhoto) {
+            // Gallery photo of the one place the answer is about → image
+            // message, reply text as the caption. sendMedia applies
+            // mdToWhatsApp to the caption and works the same on all providers.
+            await directSend.sendMedia({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              mediaUrl: detailPhoto.imageUrl,
+              caption: detailPhoto.caption || undefined,
+              conversationMessageId: savedAssistantMessageId,
+            })
           } else {
             // No video, or non-YouTube video (.mp4, no resolvable thumbnail) →
             // single message. For a non-YouTube first-contact video, `inline`
@@ -767,14 +800,9 @@ export class WhatsAppInboundPipeline {
               // LLM-generated reply runs through the final Security Agent
               // (profanity/content firewall) before leaving the platform.
               skipSecurityCheck: welcome !== null,
-              // Audio reply only when the customer sent audio AND the tenant's
-              // settings.json enables audioOutput (settings are law — iron rule 7).
-              // Never on turn 1: the welcome (text/video) always goes out as
-              // text there, even if the customer's first message was audio.
-              replyAsAudio:
-                messageCount !== 0 &&
-                inboundWasAudio &&
-                customOutput.audioOutput === true,
+              // Never audio on turn 1: the welcome (text/video) always goes
+              // out as text there, even if the first message was audio.
+              replyAsAudio,
               // 🌍 Speak in the language the bot replied in, not the phone guess.
               customerLanguage: replyLanguage,
               // Per-language voice from settings.json (falls back to "default").

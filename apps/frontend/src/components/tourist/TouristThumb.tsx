@@ -3,7 +3,7 @@ import {
   TouristContentType,
   touristPhotoApi,
 } from "@/services/touristPhotoApi"
-import { Building2, CalendarDays, Home, KeyRound, Mountain, Utensils } from "lucide-react"
+import { Building2, CableCar, CalendarDays, Dumbbell, Home, KeyRound, Mountain, Utensils } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface TouristThumbProps {
@@ -30,6 +30,8 @@ const CATEGORY_STYLE: Record<
   REFUGE: { icon: Home, iconBg: "bg-amber-100", iconColor: "text-amber-700" },
   EVENT: { icon: CalendarDays, iconBg: "bg-purple-100", iconColor: "text-purple-600" },
   APARTMENT: { icon: KeyRound, iconBg: "bg-teal-100", iconColor: "text-teal-600" },
+  SPORTS_FACILITY: { icon: Dumbbell, iconBg: "bg-rose-100", iconColor: "text-rose-600" },
+  SKI_FACILITY: { icon: CableCar, iconBg: "bg-sky-100", iconColor: "text-sky-600" },
 }
 
 // Module-level cache so re-renders and pagination don't refetch the gallery

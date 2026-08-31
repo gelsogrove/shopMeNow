@@ -4,45 +4,48 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { FormSheet } from "@/components/shared/FormSheet"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
-import { TouristExcursionFormFields } from "@/components/tourist/TouristExcursionFormFields"
+import { TouristSkiFacilityFormFields } from "@/components/tourist/TouristSkiFacilityFormFields"
 import { TouristThumb } from "@/components/tourist/TouristThumb"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/use-workspace"
-import { ArrowLeft, Mountain, Plus } from "lucide-react"
+import { ArrowLeft, CableCar, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "../lib/toast"
-import { TouristExcursion, touristExcursionApi } from "@/services/touristExcursionApi"
+import {
+  TouristSkiFacility,
+  touristSkiFacilityApi,
+} from "@/services/touristSkiFacilityApi"
 
-export function TouristExcursionsPage() {
+export function TouristSkiFacilitiesPage() {
   const navigate = useNavigate()
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
-  const [excursions, setExcursions] = useState<TouristExcursion[]>([])
+  const [facilities, setFacilities] = useState<TouristSkiFacility[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<TouristExcursion | null>(null)
+  const [selectedItem, setSelectedItem] = useState<TouristSkiFacility | null>(null)
 
   const ITEMS_PER_PAGE = 10
 
-  const loadExcursions = async () => {
+  const loadFacilities = async () => {
     if (!workspace?.id) return
     try {
-      const data = await touristExcursionApi.getTouristExcursions(workspace.id)
-      setExcursions(data)
+      const data = await touristSkiFacilityApi.getTouristSkiFacilities(workspace.id)
+      setFacilities(data)
     } catch (error) {
-      logger.error("Error loading tourist excursions:", error)
-      toast.error("Failed to load excursions")
+      logger.error("Error loading tourist ski facilities:", error)
+      toast.error("Failed to load ski facilities")
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    if (!isLoadingWorkspace) loadExcursions()
+    if (!isLoadingWorkspace) loadFacilities()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace?.id, isLoadingWorkspace])
 
@@ -52,7 +55,7 @@ export function TouristExcursionsPage() {
   useEffect(() => {
     const editId = searchParams.get("edit")
     if (!editId || isLoading) return
-    const item = excursions.find((x) => x.id === editId)
+    const item = facilities.find((f) => f.id === editId)
     if (item) {
       setSelectedItem(item)
       setShowEditSheet(true)
@@ -61,19 +64,17 @@ export function TouristExcursionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading])
 
-  const totalPages = Math.ceil(excursions.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(facilities.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const endIndex = startIndex + ITEMS_PER_PAGE
-  const paginated = excursions.slice(startIndex, endIndex)
+  const paginated = facilities.slice(startIndex, endIndex)
 
   const readFormData = (form: HTMLFormElement) => {
     const formData = new FormData(form)
     return {
       name: String(formData.get("name") ?? ""),
       description: (formData.get("description") as string) || null,
-      difficulty: (formData.get("difficulty") as string) || null,
-      duration: (formData.get("duration") as string) || null,
-      season: (formData.get("season") as string) || null,
+      slopeType: (formData.get("slopeType") as string) || null,
       location: (formData.get("location") as string) || null,
       link: (formData.get("link") as string) || null,
       videoUrl: (formData.get("videoUrl") as string) || null,
@@ -86,17 +87,20 @@ export function TouristExcursionsPage() {
     if (!workspace?.id) return
     const data = readFormData(e.target as HTMLFormElement)
     try {
-      const created = await touristExcursionApi.createTouristExcursion(workspace.id, data)
-      setExcursions([...excursions, created])
+      const created = await touristSkiFacilityApi.createTouristSkiFacility(
+        workspace.id,
+        data
+      )
+      setFacilities([...facilities, created])
       setShowAddSheet(false)
       toast.success("Created successfully")
     } catch (error) {
-      logger.error("Error creating tourist excursion:", error)
+      logger.error("Error creating tourist ski facility:", error)
       toast.error("Failed to create")
     }
   }
 
-  const handleEdit = (item: TouristExcursion) => {
+  const handleEdit = (item: TouristSkiFacility) => {
     setSelectedItem(item)
     setShowEditSheet(true)
   }
@@ -106,22 +110,22 @@ export function TouristExcursionsPage() {
     if (!selectedItem || !workspace?.id) return
     const data = readFormData(e.target as HTMLFormElement)
     try {
-      const updated = await touristExcursionApi.updateTouristExcursion(
+      const updated = await touristSkiFacilityApi.updateTouristSkiFacility(
         workspace.id,
         selectedItem.id,
         data
       )
-      setExcursions(excursions.map((x) => (x.id === selectedItem.id ? updated : x)))
+      setFacilities(facilities.map((f) => (f.id === selectedItem.id ? updated : f)))
       setShowEditSheet(false)
       setSelectedItem(null)
       toast.success("Updated successfully")
     } catch (error) {
-      logger.error("Error updating tourist excursion:", error)
+      logger.error("Error updating tourist ski facility:", error)
       toast.error("Failed to update")
     }
   }
 
-  const handleDelete = (item: TouristExcursion) => {
+  const handleDelete = (item: TouristSkiFacility) => {
     setSelectedItem(item)
     setShowDeleteDialog(true)
   }
@@ -129,13 +133,16 @@ export function TouristExcursionsPage() {
   const handleDeleteConfirm = async () => {
     if (!selectedItem || !workspace?.id) return
     try {
-      await touristExcursionApi.deleteTouristExcursion(workspace.id, selectedItem.id)
-      setExcursions(excursions.filter((x) => x.id !== selectedItem.id))
+      await touristSkiFacilityApi.deleteTouristSkiFacility(
+        workspace.id,
+        selectedItem.id
+      )
+      setFacilities(facilities.filter((f) => f.id !== selectedItem.id))
       setShowDeleteDialog(false)
       setSelectedItem(null)
       toast.success("Deleted successfully")
     } catch (error) {
-      logger.error("Error deleting tourist excursion:", error)
+      logger.error("Error deleting tourist ski facility:", error)
       toast.error("Failed to delete")
     }
   }
@@ -173,13 +180,13 @@ export function TouristExcursionsPage() {
         </div>
 
         <Card>
-          <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-white">
+          <CardHeader className="border-b bg-gradient-to-r from-sky-50 to-white">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Mountain className="h-5 w-5 text-amber-500" />
-                Escursioni
+                <CableCar className="h-5 w-5 text-sky-500" />
+                Impianti di sci
                 <span className="text-sm font-normal text-gray-500">
-                  ({excursions.length} items)
+                  ({facilities.length} items)
                 </span>
               </CardTitle>
             </div>
@@ -191,7 +198,7 @@ export function TouristExcursionsPage() {
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Excursion
+                Add Ski Facility
               </Button>
             </div>
           </CardContent>
@@ -206,13 +213,13 @@ export function TouristExcursionsPage() {
             totalPages,
             startIndex,
             endIndex,
-            totalCount: excursions.length,
+            totalCount: facilities.length,
             onPageChange: setCurrentPage,
           }}
           renderThumb={(item) => (
             <TouristThumb
               workspaceId={workspace.id}
-              contentType="EXCURSION"
+              contentType="SKI_FACILITY"
               contentId={item.id}
             />
           )}
@@ -225,9 +232,7 @@ export function TouristExcursionsPage() {
                 </p>
               )}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                {item.difficulty && <span>{item.difficulty}</span>}
-                {item.duration && <span>{item.duration}</span>}
-                {item.season && <span>{item.season}</span>}
+                {item.slopeType && <span>Pista {item.slopeType}</span>}
                 {item.location && <span>{item.location}</span>}
               </div>
             </>
@@ -238,29 +243,29 @@ export function TouristExcursionsPage() {
       <FormSheet
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
-        title="Add Excursion"
-        description="Add a new excursion shown to customers by the chatbot."
+        title="Add Ski Facility"
+        description="Add a new ski facility shown to customers by the chatbot."
         onSubmit={handleAdd}
       >
-        <TouristExcursionFormFields item={null} workspaceId={workspace.id} />
+        <TouristSkiFacilityFormFields item={null} workspaceId={workspace.id} />
       </FormSheet>
 
       <FormSheet
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
-        title="Edit Excursion"
-        description="Update this excursion's details."
+        title="Edit Ski Facility"
+        description="Update this ski facility's details."
         onSubmit={handleEditSubmit}
       >
         {selectedItem && (
-          <TouristExcursionFormFields item={selectedItem} workspaceId={workspace.id} />
+          <TouristSkiFacilityFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
       </FormSheet>
 
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Delete Excursion"
+        title="Delete Ski Facility"
         description={`Are you sure you want to delete "${selectedItem?.name}"? This action cannot be undone.`}
         onConfirm={handleDeleteConfirm}
       />

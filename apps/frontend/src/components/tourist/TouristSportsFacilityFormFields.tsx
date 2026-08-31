@@ -2,28 +2,26 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { TouristExcursion } from "@/services/touristExcursionApi"
+import { TouristSportsFacility } from "@/services/touristSportsFacilityApi"
 import { PhotoGallery } from "./PhotoGallery"
 
-interface TouristExcursionFormFieldsProps {
-  /** null = Add form, otherwise the excursion being edited. */
-  item: TouristExcursion | null
+interface TouristSportsFacilityFormFieldsProps {
+  /** null = Add form, otherwise the sports facility being edited. */
+  item: TouristSportsFacility | null
   workspaceId: string
 }
-
-const DIFFICULTY_OPTIONS = ["facile", "media", "difficile"]
 
 // Free-text suggestions (Andrea, 2026-09-01): the chatbot reads the value as
 // an explicit "Stagione" fact and checks it against the runtime season.
 const SEASON_OPTIONS = ["estiva", "invernale", "tutto l'anno"]
 
 // Presentational form body shared by the Add and Edit sheets on
-// TouristExcursionsPage. Uncontrolled inputs: the parent reads values via
-// FormData on submit.
-export function TouristExcursionFormFields({
+// TouristSportsFacilitiesPage. Uncontrolled inputs: the parent reads values
+// via FormData on submit.
+export function TouristSportsFacilityFormFields({
   item,
   workspaceId,
-}: TouristExcursionFormFieldsProps) {
+}: TouristSportsFacilityFormFieldsProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -40,26 +38,12 @@ export function TouristExcursionFormFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="difficulty">Difficulty</Label>
+        <Label htmlFor="sport">Sport</Label>
         <Input
-          id="difficulty"
-          name="difficulty"
-          list="excursion-difficulty-options"
-          defaultValue={item?.difficulty ?? ""}
-        />
-        <datalist id="excursion-difficulty-options">
-          {DIFFICULTY_OPTIONS.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="duration">Duration</Label>
-        <Input
-          id="duration"
-          name="duration"
-          placeholder="es. 2h30"
-          defaultValue={item?.duration ?? ""}
+          id="sport"
+          name="sport"
+          placeholder="es. golf, tennis"
+          defaultValue={item?.sport ?? ""}
         />
       </div>
       <div className="space-y-2">
@@ -67,11 +51,11 @@ export function TouristExcursionFormFields({
         <Input
           id="season"
           name="season"
-          list="excursion-season-options"
+          list="sports-facility-season-options"
           placeholder="es. estiva, invernale, tutto l'anno"
           defaultValue={item?.season ?? ""}
         />
-        <datalist id="excursion-season-options">
+        <datalist id="sports-facility-season-options">
           {SEASON_OPTIONS.map((option) => (
             <option key={option} value={option} />
           ))}
@@ -92,7 +76,7 @@ export function TouristExcursionFormFields({
 
       <PhotoGallery
         workspaceId={workspaceId}
-        contentType="EXCURSION"
+        contentType="SPORTS_FACILITY"
         contentId={item?.id ?? null}
       />
 

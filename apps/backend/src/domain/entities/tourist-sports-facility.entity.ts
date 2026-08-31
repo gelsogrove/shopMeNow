@@ -10,6 +10,7 @@ export class TouristSportsFacilityEntity {
   name: string;
   description?: string | null;
   sport?: string | null;
+  season?: string | null;
   location?: string | null;
   link?: string | null;
   videoUrl?: string | null;

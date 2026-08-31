@@ -1220,6 +1220,7 @@ model TouristExcursion {
   description String?   @db.Text
   difficulty  String? // e.g. "facile", "media", "difficile"
   duration    String? // free text, e.g. "2h30"
+  season      String? // e.g. "estiva", "invernale", "tutto l'anno" (Andrea, 2026-09-01)
   location    String? // borgata / frazione / trailhead
   link        String?
   videoUrl    String?
@@ -1320,6 +1321,7 @@ model TouristSportsFacility {
   name        String
   description String?   @db.Text
   sport       String? // e.g. "golf", "tennis", "calcetto"
+  season      String? // e.g. "estiva", "invernale", "tutto l'anno" (Andrea, 2026-09-01)
   location    String? // borgata / frazione
   link        String?
   videoUrl    String?

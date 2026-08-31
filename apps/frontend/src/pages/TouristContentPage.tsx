@@ -9,12 +9,16 @@ import { touristHotelApi } from "@/services/touristHotelApi"
 import { touristExcursionApi } from "@/services/touristExcursionApi"
 import { touristRefugeApi } from "@/services/touristRefugeApi"
 import { touristEventApi } from "@/services/touristEventApi"
+import { touristSportsFacilityApi } from "@/services/touristSportsFacilityApi"
+import { touristSkiFacilityApi } from "@/services/touristSkiFacilityApi"
 import { faqApi } from "@/services/faqApi"
 import { flowApi } from "@/services/flowBuilderApi"
 import {
   Building2,
+  CableCar,
   CalendarDays,
   ChevronRight,
+  Dumbbell,
   HelpCircle,
   Home,
   Mountain,
@@ -95,6 +99,27 @@ const CATEGORIES: CategoryCard[] = [
     iconBg: "bg-purple-100",
     iconColor: "text-purple-600",
   },
+  // Andrea 2026-09-01 ("con la stessa struttura voglio poter aggiungere
+  // strutture sportive... e poi anche impianti di sci"): two more categories,
+  // same shape as the original five.
+  {
+    key: "sportsFacilities",
+    title: "Strutture sportive",
+    description: "Sports facilities like golf, tennis and gyms",
+    route: "/tourist-sports-facilities",
+    icon: Dumbbell,
+    iconBg: "bg-rose-100",
+    iconColor: "text-rose-600",
+  },
+  {
+    key: "skiFacilities",
+    title: "Impianti di sci",
+    description: "Ski lifts and slopes with their difficulty",
+    route: "/tourist-ski-facilities",
+    icon: CableCar,
+    iconBg: "bg-sky-100",
+    iconColor: "text-sky-600",
+  },
   // Andrea 2026-08-31 ("FAQ METTILO DENTRO CONTENT"): for PRO_LOCO the FAQs
   // entry moved from the Settings dropdown into this hub as one more card.
   {
@@ -143,12 +168,14 @@ export function TouristContentPage() {
     const loadContent = async () => {
       if (!workspace?.id) return
       try {
-        const [restaurants, hotels, excursions, refuges, events, faqs, flows] = await Promise.all([
+        const [restaurants, hotels, excursions, refuges, events, sportsFacilities, skiFacilities, faqs, flows] = await Promise.all([
           touristRestaurantApi.getTouristRestaurants(workspace.id),
           touristHotelApi.getTouristHotels(workspace.id),
           touristExcursionApi.getTouristExcursions(workspace.id),
           touristRefugeApi.getTouristRefuges(workspace.id),
           touristEventApi.getTouristEvents(workspace.id),
+          touristSportsFacilityApi.getTouristSportsFacilities(workspace.id),
+          touristSkiFacilityApi.getTouristSkiFacilities(workspace.id),
           faqApi.getFAQs(workspace.id),
           flowApi.listAll(workspace.id),
         ])
@@ -158,6 +185,8 @@ export function TouristContentPage() {
           excursions: excursions.length,
           refuges: refuges.length,
           events: events.length,
+          sportsFacilities: sportsFacilities.length,
+          skiFacilities: skiFacilities.length,
           faqs: faqs.length,
           flows: flows.length,
         })
@@ -196,6 +225,20 @@ export function TouristContentPage() {
             snippet: ev.description ?? undefined,
             categoryKey: "events",
             editPath: `/tourist-events?edit=${ev.id}`,
+          })),
+          ...sportsFacilities.map((sf) => ({
+            id: sf.id,
+            label: sf.name,
+            snippet: sf.description ?? sf.sport ?? undefined,
+            categoryKey: "sportsFacilities",
+            editPath: `/tourist-sports-facilities?edit=${sf.id}`,
+          })),
+          ...skiFacilities.map((sk) => ({
+            id: sk.id,
+            label: sk.name,
+            snippet: sk.description ?? sk.slopeType ?? undefined,
+            categoryKey: "skiFacilities",
+            editPath: `/tourist-ski-facilities?edit=${sk.id}`,
           })),
           ...faqs.map((f) => ({
             id: f.id,

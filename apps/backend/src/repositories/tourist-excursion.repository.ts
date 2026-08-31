@@ -72,6 +72,7 @@ export class TouristExcursionRepository {
     description?: string
     difficulty?: string
     duration?: string
+    season?: string
     location?: string
     link?: string
     videoUrl?: string
@@ -86,6 +87,7 @@ export class TouristExcursionRepository {
           description: data.description,
           difficulty: data.difficulty,
           duration: data.duration,
+          season: data.season,
           location: data.location,
           link: data.link,
           videoUrl: data.videoUrl,
@@ -119,6 +121,7 @@ export class TouristExcursionRepository {
       description: string
       difficulty: string
       duration: string
+      season: string
       location: string
       link: string
       videoUrl: string

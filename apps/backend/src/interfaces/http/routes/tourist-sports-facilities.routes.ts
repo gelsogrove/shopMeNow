@@ -28,6 +28,10 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
  *           type: string
  *           nullable: true
  *           description: Sport practised (e.g. golf, tennis)
+ *         season:
+ *           type: string
+ *           nullable: true
+ *           description: Season (e.g. estiva, invernale, tutto l'anno)
  *         location:
  *           type: string
  *           nullable: true
@@ -129,6 +133,9 @@ export const touristSportsFacilitiesRouter = (): Router => {
    *               sport:
    *                 type: string
    *                 nullable: true
+   *               season:
+   *                 type: string
+   *                 nullable: true
    *               location:
    *                 type: string
    *                 nullable: true
@@ -220,6 +227,9 @@ export const touristSportsFacilitiesRouter = (): Router => {
    *                 type: string
    *                 nullable: true
    *               sport:
+   *                 type: string
+   *                 nullable: true
+   *               season:
    *                 type: string
    *                 nullable: true
    *               location:

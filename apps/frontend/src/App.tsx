@@ -60,6 +60,8 @@ import { TouristHotelsPage } from "./pages/TouristHotelsPage"
 import { TouristExcursionsPage } from "./pages/TouristExcursionsPage"
 import { TouristRefugesPage } from "./pages/TouristRefugesPage"
 import { TouristEventsPage } from "./pages/TouristEventsPage"
+import { TouristSportsFacilitiesPage } from "./pages/TouristSportsFacilitiesPage"
+import { TouristSkiFacilitiesPage } from "./pages/TouristSkiFacilitiesPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
 import NotFoundPage from "./pages/not-found"
@@ -625,6 +627,12 @@ function AppWithProviders() {
                   </Route>
                   <Route path="/tourist-events" element={<MinimalLayout />}>
                     <Route index element={<TouristEventsPage />} />
+                  </Route>
+                  <Route path="/tourist-sports-facilities" element={<MinimalLayout />}>
+                    <Route index element={<TouristSportsFacilitiesPage />} />
+                  </Route>
+                  <Route path="/tourist-ski-facilities" element={<MinimalLayout />}>
+                    <Route index element={<TouristSkiFacilitiesPage />} />
                   </Route>
 
                   <Route path="/profile" element={<MinimalLayout />}>

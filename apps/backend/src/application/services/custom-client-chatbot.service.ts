@@ -1263,6 +1263,10 @@ export class CustomClientChatbotService {
         ]),
       }))
 
+      // Season (Andrea, 2026-09-01) rides the ANSWER, not the question: an
+      // explicit "Stagione: invernale" fact the model checks against the
+      // runtime Season line, instead of relying on it inferring seasonality
+      // from the description.
       const excursionEntries: FaqEntry[] = excursions.map((e) => ({
         question: searchableQuestion([`Escursioni: ${e.name}`]),
         answer: joinBlock([
@@ -1270,6 +1274,7 @@ export class CustomClientChatbotService {
           joinFacts([
             fact("Difficoltà", e.difficulty),
             fact("Durata", e.duration),
+            fact("Stagione", e.season),
             fact("Località", e.location),
           ]),
           e.link,
@@ -1357,6 +1362,7 @@ export class CustomClientChatbotService {
           s.description,
           joinFacts([
             fact("Sport", s.sport),
+            fact("Stagione", s.season),
             fact("Località", s.location),
           ]),
           s.link,

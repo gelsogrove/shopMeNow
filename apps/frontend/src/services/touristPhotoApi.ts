@@ -8,6 +8,8 @@ export type TouristContentType =
   | "REFUGE"
   | "EVENT"
   | "APARTMENT"
+  | "SPORTS_FACILITY"
+  | "SKI_FACILITY"
 
 export interface TouristPhoto {
   id: string

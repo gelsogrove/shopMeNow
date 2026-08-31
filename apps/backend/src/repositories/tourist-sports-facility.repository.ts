@@ -71,6 +71,7 @@ export class TouristSportsFacilityRepository {
     name: string
     description?: string
     sport?: string
+    season?: string
     location?: string
     link?: string
     videoUrl?: string
@@ -84,6 +85,7 @@ export class TouristSportsFacilityRepository {
           name: data.name,
           description: data.description,
           sport: data.sport,
+          season: data.season,
           location: data.location,
           link: data.link,
           videoUrl: data.videoUrl,
@@ -116,6 +118,7 @@ export class TouristSportsFacilityRepository {
       name: string
       description: string
       sport: string
+      season: string
       location: string
       link: string
       videoUrl: string

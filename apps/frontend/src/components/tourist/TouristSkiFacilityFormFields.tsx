@@ -2,28 +2,26 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { TouristExcursion } from "@/services/touristExcursionApi"
+import { TouristSkiFacility } from "@/services/touristSkiFacilityApi"
 import { PhotoGallery } from "./PhotoGallery"
 
-interface TouristExcursionFormFieldsProps {
-  /** null = Add form, otherwise the excursion being edited. */
-  item: TouristExcursion | null
+interface TouristSkiFacilityFormFieldsProps {
+  /** null = Add form, otherwise the ski facility being edited. */
+  item: TouristSkiFacility | null
   workspaceId: string
 }
 
-const DIFFICULTY_OPTIONS = ["facile", "media", "difficile"]
-
-// Free-text suggestions (Andrea, 2026-09-01): the chatbot reads the value as
-// an explicit "Stagione" fact and checks it against the runtime season.
-const SEASON_OPTIONS = ["estiva", "invernale", "tutto l'anno"]
+// Free-text suggestions like the excursion difficulty field — the value stays
+// free text in the DB, the LLM reads it as prose.
+const SLOPE_TYPE_OPTIONS = ["blu", "rossa", "nera"]
 
 // Presentational form body shared by the Add and Edit sheets on
-// TouristExcursionsPage. Uncontrolled inputs: the parent reads values via
+// TouristSkiFacilitiesPage. Uncontrolled inputs: the parent reads values via
 // FormData on submit.
-export function TouristExcursionFormFields({
+export function TouristSkiFacilityFormFields({
   item,
   workspaceId,
-}: TouristExcursionFormFieldsProps) {
+}: TouristSkiFacilityFormFieldsProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -40,39 +38,16 @@ export function TouristExcursionFormFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="difficulty">Difficulty</Label>
+        <Label htmlFor="slopeType">Slope type</Label>
         <Input
-          id="difficulty"
-          name="difficulty"
-          list="excursion-difficulty-options"
-          defaultValue={item?.difficulty ?? ""}
+          id="slopeType"
+          name="slopeType"
+          list="ski-slope-type-options"
+          placeholder="es. blu, rossa, nera"
+          defaultValue={item?.slopeType ?? ""}
         />
-        <datalist id="excursion-difficulty-options">
-          {DIFFICULTY_OPTIONS.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="duration">Duration</Label>
-        <Input
-          id="duration"
-          name="duration"
-          placeholder="es. 2h30"
-          defaultValue={item?.duration ?? ""}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="season">Season</Label>
-        <Input
-          id="season"
-          name="season"
-          list="excursion-season-options"
-          placeholder="es. estiva, invernale, tutto l'anno"
-          defaultValue={item?.season ?? ""}
-        />
-        <datalist id="excursion-season-options">
-          {SEASON_OPTIONS.map((option) => (
+        <datalist id="ski-slope-type-options">
+          {SLOPE_TYPE_OPTIONS.map((option) => (
             <option key={option} value={option} />
           ))}
         </datalist>
@@ -92,7 +67,7 @@ export function TouristExcursionFormFields({
 
       <PhotoGallery
         workspaceId={workspaceId}
-        contentType="EXCURSION"
+        contentType="SKI_FACILITY"
         contentId={item?.id ?? null}
       />
 

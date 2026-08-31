@@ -160,6 +160,8 @@ export type {
   TouristRefuge,
   TouristApartment,
   TouristEvent,
+  TouristSportsFacility,
+  TouristSkiFacility,
   TouristPhoto,
   // Merchant advertising (esercenti) types
   Merchant,

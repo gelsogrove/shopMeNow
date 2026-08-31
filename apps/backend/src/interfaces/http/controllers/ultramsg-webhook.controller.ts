@@ -61,6 +61,7 @@ import { sendFlowStepMedia } from '../../../services/whatsapp/flow-step-media.se
 import { persistFlowStepMediaAttachments } from '../../../services/flow-step-media.persist'
 import { splitCustomChatbotReply } from '../../../utils/custom-chatbot-reply'
 import { formatWelcomeReply } from '../../../utils/welcome-video'
+import { formatDetailPhotoReply } from '../../../utils/detail-photo-reply'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -1561,6 +1562,13 @@ export class UltraMsgWebhookController {
                 ? formatWelcomeReply(customerReply)
                 : null
 
+            // 📷 Detail answer about ONE place with its gallery photo as the
+            // trailing URL (appended by the module's withFaqMedia — video wins
+            // over photo upstream) → real image with the text as caption
+            // (photo on top, text below — Andrea, 2026-09-01).
+            const detailPhoto =
+              welcome === null ? formatDetailPhotoReply(customerReply) : null
+
             if (welcome?.type === 'split') {
               // YouTube → two messages: (1) greeting + intro, then (2) the
               // thumbnail as an image with the rest + clickable link as caption.
@@ -1580,6 +1588,19 @@ export class UltraMsgWebhookController {
                 caption: welcome.caption,
                 conversationMessageId: assistantMessageId,
                 skipSecurityCheck: true,
+              })
+            } else if (detailPhoto) {
+              // Gallery photo of the one place the answer is about → image
+              // message, reply text as the caption (mdToWhatsApp applied by
+              // sendMedia).
+              await directSend.sendMedia({
+                workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                mediaUrl: detailPhoto.imageUrl,
+                caption: detailPhoto.caption || undefined,
+                conversationMessageId: assistantMessageId,
+                skipSecurityCheck: true, // bot-generated content, not user input
               })
             } else {
               // No video, or non-YouTube video (.mp4) → single message. For a

@@ -11,6 +11,7 @@ export class TouristExcursionEntity {
   description?: string | null;
   difficulty?: string | null;
   duration?: string | null;
+  season?: string | null;
   location?: string | null;
   link?: string | null;
   videoUrl?: string | null;

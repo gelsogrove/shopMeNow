@@ -16,9 +16,9 @@ const VALID_CONTENT_TYPES: TouristContentType[] = [
 /**
  * Service layer for TouristPhoto
  * Thin wrapper (like FaqService) around TouristPhotoRepository. Shared by all
- * 6 PRO_LOCO tourist content types (Restaurant, Hotel, Excursion, Refuge,
- * Event, Apartment) — one gallery implementation instead of 6 near-identical
- * ones.
+ * 8 PRO_LOCO tourist content types (Restaurant, Hotel, Excursion, Refuge,
+ * Event, Apartment, SportsFacility, SkiFacility) — one gallery implementation
+ * instead of 8 near-identical ones.
  */
 export class TouristPhotoService {
   private touristPhotoRepository: TouristPhotoRepository

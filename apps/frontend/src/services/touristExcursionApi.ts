@@ -8,6 +8,7 @@ export interface TouristExcursion {
   description?: string | null
   difficulty?: string | null
   duration?: string | null
+  season?: string | null
   location?: string | null
   link?: string | null
   videoUrl?: string | null
@@ -22,6 +23,7 @@ export interface CreateTouristExcursionData {
   description?: string | null
   difficulty?: string | null
   duration?: string | null
+  season?: string | null
   location?: string | null
   link?: string | null
   videoUrl?: string | null
@@ -33,6 +35,7 @@ export interface UpdateTouristExcursionData {
   description?: string | null
   difficulty?: string | null
   duration?: string | null
+  season?: string | null
   location?: string | null
   link?: string | null
   videoUrl?: string | null
