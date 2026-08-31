@@ -103,6 +103,7 @@ import { ReactionPicker } from "@/components/ReactionPicker"
 import { ChatSurface } from "@/components/chat/ChatSurface"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { extractVideoUrl } from "@/lib/welcome-video"
+import { extractTrailingPhoto } from "@/lib/detail-photo"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import {
@@ -251,6 +252,7 @@ interface Message {
   suggestions?: string[]
   welcomeVideoUrl?: string // 📺 presentation video on the first bot reply (parity with WhatsApp)
   welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (text before → video → text after)
+  detailPhotoUrl?: string // 📷 gallery photo of a detail answer — photo on top, text below (parity with WhatsApp)
   attachments?: ChatAttachment[] // 📎 operator-sent images / PDFs / audio (handoff)
   serverId?: string // 😀 DB ConversationMessage id — needed to anchor a reaction server-side
   reaction?: string | null // 😀 visitor's reaction emoji on this message (server-synced)
@@ -613,17 +615,27 @@ export function ChatWidget({
   // per-message) so it also shows for messages restored from localStorage.
   const displayMessages = useMemo<Message[]>(() => {
     const firstBotIdx = messages.findIndex((m) => m.role === "bot")
-    if (firstBotIdx === -1) return messages
-    const found = extractVideoUrl(messages[firstBotIdx].content)
-    if (!found) return messages
+    const found =
+      firstBotIdx === -1 ? null : extractVideoUrl(messages[firstBotIdx].content)
     return messages.map((m, i) => {
-      if (i !== firstBotIdx) return m
-      return {
-        ...m,
-        content: found.before, // greeting + intro line (authored in the reply language)
-        welcomeRest: found.after, // the rest of the reply, below the video
-        welcomeVideoUrl: found.url,
+      if (i === firstBotIdx && found) {
+        return {
+          ...m,
+          content: found.before, // greeting + intro line (authored in the reply language)
+          welcomeRest: found.after, // the rest of the reply, below the video
+          welcomeVideoUrl: found.url,
+        }
       }
+      // 📷 Detail answer carrying its gallery photo as the trailing URL
+      // (appended by the module's withFaqMedia) → photo on top, text below,
+      // like the WhatsApp image+caption delivery (Andrea, 2026-09-01).
+      if (m.role === "bot") {
+        const photo = extractTrailingPhoto(m.content)
+        if (photo) {
+          return { ...m, content: photo.caption, detailPhotoUrl: photo.imageUrl }
+        }
+      }
+      return m
     })
   }, [messages])
 
@@ -2596,6 +2608,21 @@ export function ChatWidget({
                           >
                             {msg.pushCard.cta || msg.pushCard.link} →
                           </a>
+                        )}
+                      </div>
+                    ) : msg.detailPhotoUrl ? (
+                      // 📷 Detail answer with its gallery photo: image on top,
+                      // reply text below — same order as the WhatsApp
+                      // image+caption message.
+                      <div className="flex flex-col gap-2 py-0.5">
+                        <img
+                          src={msg.detailPhotoUrl}
+                          alt=""
+                          loading="lazy"
+                          className="w-full max-w-[300px] rounded-xl object-cover shadow-sm"
+                        />
+                        {msg.content && (
+                          <MessageRenderer content={msg.content} variant="chat" />
                         )}
                       </div>
                     ) : null

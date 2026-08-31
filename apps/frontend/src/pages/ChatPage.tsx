@@ -10,6 +10,7 @@ import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { MessageTicks } from "@/components/chat/MessageTicks"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { extractVideoUrl } from "@/lib/welcome-video"
+import { extractTrailingPhoto } from "@/lib/detail-photo"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { useChat } from "@/contexts/ChatContext"
@@ -2234,11 +2235,32 @@ export function ChatPage() {
                               ? extractVideoUrl(rawCustomerText)
                               : null
                             const isWelcomeWithVideo = !!foundVideo
-                            const greetingPart = foundVideo ? foundVideo.before : rawCustomerText
+                            // 📷 Detail answer carrying its gallery photo as the
+                            // trailing URL (appended by the module's withFaqMedia;
+                            // video wins over photo, so only checked when there is
+                            // no video) → photo on top, text below, mirroring the
+                            // WhatsApp image+caption delivery (Andrea, 2026-09-01).
+                            const foundPhoto =
+                              isAgentMessage && !foundVideo
+                                ? extractTrailingPhoto(rawCustomerText)
+                                : null
+                            const greetingPart = foundVideo
+                              ? foundVideo.before
+                              : foundPhoto
+                                ? foundPhoto.caption
+                                : rawCustomerText
                             const restPart = foundVideo ? foundVideo.after : ""
                             const welcomeVideoUrl = foundVideo?.url
                             return (
                               <>
+                                {foundPhoto && (
+                                  <img
+                                    src={foundPhoto.imageUrl}
+                                    alt=""
+                                    loading="lazy"
+                                    className="mb-2 w-full max-w-[300px] rounded-xl object-cover shadow-sm"
+                                  />
+                                )}
                                 <div
                                   className="break-words"
                                   style={{ lineHeight: "1.7", fontSize: "0.95rem" }}
