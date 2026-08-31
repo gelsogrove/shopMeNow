@@ -212,14 +212,6 @@ export function CampaignSheet({
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 
-  const availableTags = Array.from(
-    new Set(
-      customers.flatMap((customer) =>
-        (customer.tags || []).map((tag) => tag.toLowerCase())
-      )
-    )
-  ).sort()
-
   const loadCustomers = async () => {
     try {
       setLoading(true)
@@ -272,14 +264,19 @@ export function CampaignSheet({
     }
 
     // EITHER a free message OR a merchant push — never both (Andrea,
-    // 2026-09-01: "o mandiamo il messaggio o mandiamo il push"). With a
-    // merchant selected the content is the push's snapshot, server-side.
-    const trimmedMessage = merchantId ? "" : message.trim()
-    if (!merchantId && !trimmedMessage) {
+    // 2026-09-01: "o mandiamo il messaggio o mandiamo il push"). The
+    // contentType choice decides which set of fields counts.
+    const isMerchantCampaign = contentType === "MERCHANT"
+    const trimmedMessage = isMerchantCampaign ? "" : message.trim()
+    if (!isMerchantCampaign && !trimmedMessage) {
       toast.error("Please enter campaign message")
       return
     }
-    if (merchantId && !merchantPushId) {
+    if (isMerchantCampaign && !merchantId) {
+      toast.error("Please select a merchant")
+      return
+    }
+    if (isMerchantCampaign && !merchantPushId) {
       toast.error("Please select which push to send for this merchant")
       return
     }
@@ -316,9 +313,12 @@ export function CampaignSheet({
       }
       return parsed.toISOString()
     }
-    const validFromIso = toIsoOrNull(validFrom, "start")
+    // The validity window only exists for recurring campaigns — a ONCE
+    // campaign runs at sendAt and the window fields are hidden.
+    const isRecurring = (frequency || "ONCE").toUpperCase() !== "ONCE"
+    const validFromIso = isRecurring ? toIsoOrNull(validFrom, "start") : null
     if (validFromIso === undefined) return
-    const validToIso = toIsoOrNull(validTo, "end")
+    const validToIso = isRecurring ? toIsoOrNull(validTo, "end") : null
     if (validToIso === undefined) return
     if (validFromIso && validToIso && validToIso <= validFromIso) {
       toast.error("End date must be after start date")
@@ -334,8 +334,8 @@ export function CampaignSheet({
       targetCustomerIds,
       tagId,
       sendAt: sendAtDate,
-      merchantId,
-      merchantPushId,
+      merchantId: isMerchantCampaign ? merchantId : null,
+      merchantPushId: isMerchantCampaign ? merchantPushId : null,
       validFrom: validFromIso,
       validTo: validToIso,
     }
@@ -446,97 +446,126 @@ export function CampaignSheet({
             </div>
           </div>
 
-          {/* 🏪 Merchant campaign (optional): content comes from the selected
-              push (snapshotted at save), sends debited from the package */}
+          {/* ── STEP 1 · WHAT to send ─────────────────────────────────────
+              One explicit choice (Andrea, 2026-09-01: "o mandiamo il
+              messaggio o mandiamo il push"): merchant creative OR free
+              message. Each shows only its own fields. */}
           <div className="space-y-4 pt-4 border-t">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Merchant (optional)</Label>
-                <Select
-                  value={merchantId ?? "none"}
-                  onValueChange={(v) => {
-                    setMerchantId(v === "none" ? null : v)
-                    setMerchantPushId(null)
-                  }}
-                  disabled={!isEditMode}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="No merchant — free message" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No merchant — free message</SelectItem>
-                    {merchants.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name} · {m.quotaRemaining} push left
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {merchantId && (
-                <div className="space-y-2">
-                  <Label>
-                    Push <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={merchantPushId ?? ""}
-                    onValueChange={(v) => setMerchantPushId(v || null)}
-                    disabled={!isEditMode}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a creative" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {merchantPushes.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <Label className="text-sm font-semibold">1 · What to send</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={!isEditMode}
+                onClick={() => setContentType("FREE")}
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  contentType === "FREE"
+                    ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
+                    : "border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <div className="text-sm font-semibold">Free message</div>
+                <div className="text-xs text-slate-500">
+                  Your own text, e.g. a Pro Loco announcement
                 </div>
-              )}
+              </button>
+              <button
+                type="button"
+                disabled={!isEditMode}
+                onClick={() => setContentType("MERCHANT")}
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  contentType === "MERCHANT"
+                    ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
+                    : "border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <div className="text-sm font-semibold">Merchant push</div>
+                <div className="text-xs text-slate-500">
+                  A creative from a merchant — debits their package
+                </div>
+              </button>
             </div>
-            {merchantPushId && (
-              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 whitespace-pre-wrap">
-                {(() => {
-                  const p = merchantPushes.find((x) => x.id === merchantPushId)
-                  if (!p) return "The campaign will send the selected push content."
-                  return `*${p.title}*\n\n${p.text}${p.location ? `\n\n📍 ${p.location}` : ""}`
-                })()}
-              </div>
+
+            {contentType === "MERCHANT" && (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>
+                      Merchant <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={merchantId ?? ""}
+                      onValueChange={(v) => {
+                        setMerchantId(v || null)
+                        setMerchantPushId(null)
+                      }}
+                      disabled={!isEditMode}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a merchant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {merchants.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name} · {m.quotaRemaining} push left
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {merchants.length === 0 && (
+                      <p className="text-xs text-amber-600">
+                        No active merchants yet — create one in Merchants first.
+                      </p>
+                    )}
+                  </div>
+                  {merchantId && (
+                    <div className="space-y-2">
+                      <Label>
+                        Push <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={merchantPushId ?? ""}
+                        onValueChange={(v) => setMerchantPushId(v || null)}
+                        disabled={!isEditMode}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a creative" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {merchantPushes.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {merchantPushes.length === 0 && (
+                        <p className="text-xs text-amber-600">
+                          This merchant has no active pushes — add one in their page first.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {merchantPushId && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500">
+                      This is what customers will receive:
+                    </p>
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 whitespace-pre-wrap">
+                      {(() => {
+                        const p = merchantPushes.find((x) => x.id === merchantPushId)
+                        if (!p) return "The campaign will send the selected push content."
+                        return `*${p.title}*\n\n${p.text}${p.location ? `\n\n📍 ${p.location}` : ""}`
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="valid-from">Valid from</Label>
-                <Input
-                  id="valid-from"
-                  type="datetime-local"
-                  value={validFrom}
-                  onChange={(e) => setValidFrom(e.target.value)}
-                  disabled={!isEditMode}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valid-to">Valid to</Label>
-                <Input
-                  id="valid-to"
-                  type="datetime-local"
-                  value={validTo}
-                  onChange={(e) => setValidTo(e.target.value)}
-                  disabled={!isEditMode}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Recurring campaigns stop by themselves after this date.
-                </p>
-              </div>
-            </div>
           </div>
 
-          {/* Message — free-text campaigns only. With a merchant selected the
-              content IS the chosen push (previewed above), so this whole
-              section disappears: either message OR push, never both. */}
-          {!merchantId && (
+          {/* Message — free-text campaigns only: either message OR push. */}
+          {contentType === "FREE" && (
           <div className="space-y-2">
             <Label htmlFor="campaign-message">
               Message <span className="text-red-500">*</span>
@@ -590,24 +619,51 @@ export function CampaignSheet({
             {targetingType === "TAGS" && (
               <div className="space-y-2">
                 <Label>Select Tag</Label>
-                <Select
-                  value={tagId || ""}
-                  onValueChange={setTagId}
-                  disabled={!isEditMode}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a tag" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTags.map((tag) => (
-                      <SelectItem key={tag} value={tag}>
-                        {tag}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {audienceTags.length === 0 ? (
+                  <p className="text-xs text-slate-500 rounded-md border border-dashed p-3">
+                    No tagged customers with push consent yet. Tags (e.g. INLOCO) are
+                    added automatically by the chatbot during conversations — as guests
+                    opt in, they will appear here with their counts.
+                  </p>
+                ) : (
+                  <Select
+                    value={tagId || ""}
+                    onValueChange={setTagId}
+                    disabled={!isEditMode}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a tag" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Exact-case values from the backend: array targeting is
+                          case-sensitive, a lowercased tag would match nobody. */}
+                      {audienceTags.map(({ tag, count }) => (
+                        <SelectItem key={tag} value={tag}>
+                          {tag} · {count} customer{count === 1 ? "" : "s"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
+
+            {/* Live estimate, from the same eligibility rules the send job uses */}
+            <div className="rounded-md bg-slate-50 border px-3 py-2 text-sm text-slate-700">
+              {(() => {
+                if (targetingType === "MANUAL")
+                  return <>Will reach <b>{targetCustomerIds.length}</b> selected customer{targetCustomerIds.length === 1 ? "" : "s"}.</>
+                if (targetingType === "TAGS") {
+                  const t = audienceTags.find((x) => x.tag === tagId)
+                  return tagId
+                    ? <>Will reach <b>{t?.count ?? 0}</b> customer{(t?.count ?? 0) === 1 ? "" : "s"} tagged {tagId}.</>
+                    : <>Pick a tag to see how many customers it reaches.</>
+                }
+                return audienceTotal === null
+                  ? <>Estimating reachable customers…</>
+                  : <>Will reach <b>{audienceTotal}</b> customer{audienceTotal === 1 ? "" : "s"} with push consent.</>
+              })()}
+            </div>
 
             {targetingType === "MANUAL" && (
               <div className="space-y-2">
@@ -708,7 +764,40 @@ export function CampaignSheet({
                 onChange={(e) => setSendAt(e.target.value)}
                 disabled={!isEditMode}
               />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to send at the next scheduler run.
+              </p>
             </div>
+            {/* Validity window matters only when the campaign repeats — a
+                one-time campaign just runs at First Send At. */}
+            {frequency !== "ONCE" && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="valid-from">Valid from</Label>
+                  <Input
+                    id="valid-from"
+                    type="datetime-local"
+                    value={validFrom}
+                    onChange={(e) => setValidFrom(e.target.value)}
+                    disabled={!isEditMode}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valid-to">Valid to</Label>
+                  <Input
+                    id="valid-to"
+                    type="datetime-local"
+                    value={validTo}
+                    onChange={(e) => setValidTo(e.target.value)}
+                    disabled={!isEditMode}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The campaign stops by itself after this date (e.g. a winter
+                    campaign: 01/12 → 31/03).
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer Actions */}

@@ -1371,4 +1371,49 @@ describe('PushCampaignService', () => {
       expect(sanitized).toBe('+393331234567')
     })
   })
+
+  describe('audience', () => {
+    // WHAT: the numbers the campaign form is built on — total eligible
+    // customers and per-tag counts, with the SAME eligibility rules the send
+    // job applies, and tag names EXACTLY as stored.
+    // WHY (Andrea, 2026-09-01: "tag vuoti non capisco"): the old form derived
+    // tags client-side and LOWERCASED them — array targeting (`tags has X`)
+    // is case-sensitive, so a campaign on "inloco" would have matched nobody
+    // tagged "INLOCO". The backend is now the single source for these counts.
+    it('🚨 counts eligible customers per tag, preserving tag case, sorted by count', async () => {
+      ;(mockPrisma.customers.findMany as jest.Mock).mockResolvedValue([
+        { tags: ['INLOCO', 'PREF-MONTAGNA'] },
+        { tags: ['INLOCO'] },
+        { tags: [] },
+        { tags: ['CON-BAMBINI'] },
+      ])
+
+      const result = await service.audience('workspace-1')
+
+      // Eligibility filters mirror the job: consent + active + not blacklisted.
+      expect(mockPrisma.customers.findMany).toHaveBeenCalledWith({
+        where: {
+          workspaceId: 'workspace-1',
+          isActive: true,
+          activeChatbot: true,
+          isBlacklisted: false,
+          deletedAt: null,
+          push_notifications_consent: true,
+        },
+        select: { tags: true },
+      })
+      expect(result.total).toBe(4)
+      expect(result.tags).toEqual([
+        { tag: 'INLOCO', count: 2 },
+        { tag: 'CON-BAMBINI', count: 1 },
+        { tag: 'PREF-MONTAGNA', count: 1 },
+      ])
+    })
+
+    it('returns an empty audience cleanly when nobody has consented yet', async () => {
+      ;(mockPrisma.customers.findMany as jest.Mock).mockResolvedValue([])
+      const result = await service.audience('workspace-1')
+      expect(result).toEqual({ total: 0, tags: [] })
+    })
+  })
 })
