@@ -59,7 +59,6 @@ import { TouristRestaurantsPage } from "./pages/TouristRestaurantsPage"
 import { TouristHotelsPage } from "./pages/TouristHotelsPage"
 import { TouristExcursionsPage } from "./pages/TouristExcursionsPage"
 import { TouristRefugesPage } from "./pages/TouristRefugesPage"
-import { TouristApartmentsPage } from "./pages/TouristApartmentsPage"
 import { TouristEventsPage } from "./pages/TouristEventsPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
@@ -623,9 +622,6 @@ function AppWithProviders() {
                   </Route>
                   <Route path="/tourist-refuges" element={<MinimalLayout />}>
                     <Route index element={<TouristRefugesPage />} />
-                  </Route>
-                  <Route path="/tourist-apartments" element={<MinimalLayout />}>
-                    <Route index element={<TouristApartmentsPage />} />
                   </Route>
                   <Route path="/tourist-events" element={<MinimalLayout />}>
                     <Route index element={<TouristEventsPage />} />
