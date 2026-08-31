@@ -47,8 +47,13 @@ for (const p of PHOTOS) {
     continue
   }
 
+  // Polite pacing: Commons rate-limits burst downloads (429 on the first run).
+  await new Promise((r) => setTimeout(r, 5000))
   const url = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(p.file)}?width=800`
-  const res = await fetch(url, { redirect: "follow" })
+  const res = await fetch(url, {
+    redirect: "follow",
+    headers: { "User-Agent": "eChatbot-Sappada-content-loader/1.0 (contact: echatbotai@gmail.com)" },
+  })
   if (!res.ok) {
     console.log(`skip (download failed ${res.status}): ${p.file}`)
     continue
