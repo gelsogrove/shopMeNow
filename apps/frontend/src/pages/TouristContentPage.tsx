@@ -8,10 +8,12 @@ import { touristHotelApi } from "@/services/touristHotelApi"
 import { touristExcursionApi } from "@/services/touristExcursionApi"
 import { touristRefugeApi } from "@/services/touristRefugeApi"
 import { touristEventApi } from "@/services/touristEventApi"
+import { faqApi } from "@/services/faqApi"
 import {
   Building2,
   CalendarDays,
   ChevronRight,
+  HelpCircle,
   Home,
   Mountain,
   Utensils,
@@ -82,6 +84,17 @@ const CATEGORIES: CategoryCard[] = [
     iconBg: "bg-purple-100",
     iconColor: "text-purple-600",
   },
+  // Andrea 2026-08-31 ("FAQ METTILO DENTRO CONTENT"): for PRO_LOCO the FAQs
+  // entry moved from the Settings dropdown into this hub as one more card.
+  {
+    key: "faqs",
+    title: "FAQs",
+    description: "Quick answers always included in the chatbot's prompt",
+    route: "/faq",
+    icon: HelpCircle,
+    iconBg: "bg-yellow-100",
+    iconColor: "text-amber-500",
+  },
 ]
 
 export function TouristContentPage() {
@@ -93,12 +106,13 @@ export function TouristContentPage() {
     const loadCounts = async () => {
       if (!workspace?.id) return
       try {
-        const [restaurants, hotels, excursions, refuges, events] = await Promise.all([
+        const [restaurants, hotels, excursions, refuges, events, faqs] = await Promise.all([
           touristRestaurantApi.getTouristRestaurants(workspace.id),
           touristHotelApi.getTouristHotels(workspace.id),
           touristExcursionApi.getTouristExcursions(workspace.id),
           touristRefugeApi.getTouristRefuges(workspace.id),
           touristEventApi.getTouristEvents(workspace.id),
+          faqApi.getFAQs(workspace.id),
         ])
         setCounts({
           restaurants: restaurants.length,
@@ -106,6 +120,7 @@ export function TouristContentPage() {
           excursions: excursions.length,
           refuges: refuges.length,
           events: events.length,
+          faqs: faqs.length,
         })
       } catch (error) {
         logger.error("Error loading tourist content counts:", error)

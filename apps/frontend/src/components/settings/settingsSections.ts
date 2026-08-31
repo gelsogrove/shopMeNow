@@ -92,7 +92,10 @@ export const TOURIST_CONTENT_SECTION: SettingsSection = {
 // workspace, not just channelMode === 'FLOW' ones — the previous conditional
 // made the menu change shape between workspaces. Custom Tools follows the
 // same rule since 2026-08-22 (see HIDDEN_FOR_CUSTOM_CHATBOT above).
-// Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs -> PRO_LOCO content (if any) -> rest.
+// Andrea 2026-08-31 ("FAQ METTILO DENTRO CONTENT"): for PRO_LOCO workspaces
+// FAQs is NOT a dropdown entry — it is a card inside the Content hub
+// (TouristContentPage). Other workspaces keep the FAQs dropdown entry.
+// Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs (non PRO_LOCO) -> PRO_LOCO content (if any) -> rest.
 export function getVisibleSections(
   _isCustomChatbot: boolean,
   isProLoco: boolean = false,
@@ -111,7 +114,7 @@ export function getVisibleSections(
     aiPersonality,
     SYSTEM_PROMPT_SECTION,
     DEMOROBOT_SECTION,
-    FAQS_SECTION,
+    ...(isProLoco ? [] : [FAQS_SECTION]),
     ...touristSections,
     ...remaining,
   ]
