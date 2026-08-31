@@ -26,7 +26,7 @@ export class TouristPhotoService {
   }
 
   /**
-   * Validate that contentType is one of the 5 known enum values
+   * Validate that contentType is one of the known enum values
    */
   private validateContentType(contentType: string): void {
     if (!VALID_CONTENT_TYPES.includes(contentType as TouristContentType)) {
