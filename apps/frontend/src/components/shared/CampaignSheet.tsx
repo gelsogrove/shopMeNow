@@ -248,10 +248,11 @@ export function CampaignSheet({
       return
     }
 
-    // Merchant campaign: content is snapshotted server-side from the selected
-    // push, so a typed message is not required.
-    const trimmedMessage = message.trim()
-    if (!trimmedMessage && !merchantPushId) {
+    // EITHER a free message OR a merchant push — never both (Andrea,
+    // 2026-09-01: "o mandiamo il messaggio o mandiamo il push"). With a
+    // merchant selected the content is the push's snapshot, server-side.
+    const trimmedMessage = merchantId ? "" : message.trim()
+    if (!merchantId && !trimmedMessage) {
       toast.error("Please enter campaign message")
       return
     }
@@ -509,24 +510,23 @@ export function CampaignSheet({
             </div>
           </div>
 
-          {/* Message */}
+          {/* Message — free-text campaigns only. With a merchant selected the
+              content IS the chosen push (previewed above), so this whole
+              section disappears: either message OR push, never both. */}
+          {!merchantId && (
           <div className="space-y-2">
             <Label htmlFor="campaign-message">
-              Message {!merchantPushId && <span className="text-red-500">*</span>}
+              Message <span className="text-red-500">*</span>
             </Label>
             <Textarea
               id="campaign-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
-              placeholder={
-                merchantPushId
-                  ? "Content comes from the selected push"
-                  : "Hello {{name}}! Check out our new offers..."
-              }
+              placeholder="Hello {{name}}! Check out our new offers..."
               className="font-mono text-sm"
-              disabled={!isEditMode || Boolean(merchantPushId)}
-              required={!merchantPushId}
+              disabled={!isEditMode}
+              required
             />
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex flex-wrap gap-2">
               <code className="px-1 py-0.5 rounded bg-white">{"{{name}}"}</code>
@@ -536,6 +536,7 @@ export function CampaignSheet({
               <code className="px-1 py-0.5 rounded bg-white">{"{{company}}"}</code>
             </div>
           </div>
+          )}
 
           {/* Targeting */}
           <div className="space-y-4 pt-4 border-t">
