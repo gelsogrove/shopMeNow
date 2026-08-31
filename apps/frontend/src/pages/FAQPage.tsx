@@ -11,6 +11,7 @@ import { FAQ, faqApi } from "@/services/faqApi"
 import { commonStyles } from "@/styles/common"
 import { ArrowLeft, HelpCircle, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { toast } from "../lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { resolveLogoUrl } from "@/config"
@@ -86,6 +87,22 @@ export function FAQPage() {
       loadFAQs()
     }
   }, [workspace?.id, isLoadingWorkspace])
+
+  // Deep-link from the Content hub search (?edit=<id>): once the list is
+  // loaded, open that FAQ's folder and edit sheet, then drop the param.
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    const editId = searchParams.get("edit")
+    if (!editId || isLoading) return
+    const faq = faqs.find((f) => f.id === editId)
+    if (faq) {
+      setOpenCategory(faq.category?.trim() || UNCATEGORIZED_ID)
+      setSelectedFAQ(faq)
+      setShowEditSheet(true)
+    }
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading])
 
   // FAQs inside the currently open folder.
   const filteredFAQs =

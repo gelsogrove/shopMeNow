@@ -9,6 +9,8 @@ const VALID_CONTENT_TYPES: TouristContentType[] = [
   "REFUGE",
   "EVENT",
   "APARTMENT",
+  "SPORTS_FACILITY",
+  "SKI_FACILITY",
 ] as TouristContentType[]
 
 /**

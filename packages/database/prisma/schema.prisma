@@ -168,6 +168,8 @@ model Workspace {
   touristRefuges         TouristRefuge[]
   touristApartments      TouristApartment[]
   touristEvents          TouristEvent[]
+  touristSportsFacilities TouristSportsFacility[]
+  touristSkiFacilities   TouristSkiFacility[]
   touristPhotos          TouristPhoto[]
   gdprContent            GdprContent[]
   languages              Languages[]
@@ -1309,6 +1311,50 @@ model TouristEvent {
   @@map("tourist_events")
 }
 
+// Sports facilities (Andrea, 2026-09-01: "strutture sportive, per esempio il
+// golf di Sappada") — same shape as the other tourist content types, photos
+// in TouristPhoto.
+model TouristSportsFacility {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  sport       String? // e.g. "golf", "tennis", "calcetto"
+  location    String? // borgata / frazione
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_sports_facilities")
+}
+
+// Ski facilities / slopes (Andrea, 2026-09-01: "impianti di sci... tipo di
+// pista blu rossa nera") — slopeType is free text like the other difficulty
+// fields, the form suggests blu/rossa/nera.
+model TouristSkiFacility {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  slopeType   String? // "tipo di pista": e.g. "blu", "rossa", "nera"
+  location    String? // borgata / frazione
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_ski_facilities")
+}
+
 enum TouristContentType {
   RESTAURANT
   HOTEL
@@ -1316,6 +1362,8 @@ enum TouristContentType {
   REFUGE
   EVENT
   APARTMENT
+  SPORTS_FACILITY
+  SKI_FACILITY
 }
 
 /// Photo gallery for PRO_LOCO tourist content. Polymorphic on purpose — one

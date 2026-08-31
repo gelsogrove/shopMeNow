@@ -95,7 +95,10 @@ export const TOURIST_CONTENT_SECTION: SettingsSection = {
 // Andrea 2026-08-31 ("FAQ METTILO DENTRO CONTENT"): for PRO_LOCO workspaces
 // FAQs is NOT a dropdown entry — it is a card inside the Content hub
 // (TouristContentPage). Other workspaces keep the FAQs dropdown entry.
-// Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs (non PRO_LOCO) -> PRO_LOCO content (if any) -> rest.
+// Andrea 2026-09-01 ("mi piacerebbe mettere qui dentro anche flow"): same
+// treatment for Flows — for PRO_LOCO it is a Content hub card, not a
+// dropdown entry.
+// Order: Preferences -> AI Personality -> Main Prompt -> Flows + FAQs (non PRO_LOCO) -> PRO_LOCO content (if any) -> rest.
 export function getVisibleSections(
   _isCustomChatbot: boolean,
   isProLoco: boolean = false,
@@ -113,8 +116,7 @@ export function getVisibleSections(
     business,
     aiPersonality,
     SYSTEM_PROMPT_SECTION,
-    DEMOROBOT_SECTION,
-    ...(isProLoco ? [] : [FAQS_SECTION]),
+    ...(isProLoco ? [] : [DEMOROBOT_SECTION, FAQS_SECTION]),
     ...touristSections,
     ...remaining,
   ]

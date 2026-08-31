@@ -171,13 +171,33 @@ export function MultiImageCropUpload({
   }
 
   const handleCropComplete = async () => {
-    if (!completedCrop || !imgRef.current || !canvasRef.current) {
+    const image = imgRef.current
+    const canvas = canvasRef.current
+    if (!image || !canvas) {
       return
     }
 
-    const image = imgRef.current
-    const canvas = canvasRef.current
-    const crop = completedCrop
+    // react-image-crop fires onComplete only after the user drags the crop
+    // box: a plain click leaves completedCrop unset or zero-sized, and a
+    // zero-sized canvas makes toBlob hand back null ("Failed to crop image").
+    // Fall back to the initial centered selection, or the whole image.
+    let pixelCrop: PixelCrop | undefined = completedCrop
+    if (!pixelCrop || pixelCrop.width < 1 || pixelCrop.height < 1) {
+      if (crop && crop.width > 0 && crop.height > 0) {
+        pixelCrop =
+          crop.unit === "%"
+            ? {
+                unit: "px",
+                x: (crop.x / 100) * image.width,
+                y: (crop.y / 100) * image.height,
+                width: (crop.width / 100) * image.width,
+                height: (crop.height / 100) * image.height,
+              }
+            : (crop as PixelCrop)
+      } else {
+        pixelCrop = { unit: "px", x: 0, y: 0, width: image.width, height: image.height }
+      }
+    }
 
     const scaleX = image.naturalWidth / image.width
     const scaleY = image.naturalHeight / image.height
@@ -187,26 +207,44 @@ export function MultiImageCropUpload({
       return
     }
 
-    const pixelRatio = window.devicePixelRatio || 1
+    // Export at natural resolution capped at 4096px. Multiplying by
+    // devicePixelRatio here (as before) inflated the canvas 2-4× on retina
+    // screens; oversized canvases are another way toBlob returns null.
+    const MAX_OUTPUT = 4096
+    let outputWidth = Math.round(pixelCrop.width * scaleX)
+    let outputHeight = Math.round(pixelCrop.height * scaleY)
+    if (
+      !Number.isFinite(outputWidth) ||
+      !Number.isFinite(outputHeight) ||
+      outputWidth < 1 ||
+      outputHeight < 1
+    ) {
+      setError("Failed to crop image")
+      return
+    }
+    if (Math.max(outputWidth, outputHeight) > MAX_OUTPUT) {
+      const ratio = MAX_OUTPUT / Math.max(outputWidth, outputHeight)
+      outputWidth = Math.round(outputWidth * ratio)
+      outputHeight = Math.round(outputHeight * ratio)
+    }
 
-    // Set canvas size
-    canvas.width = crop.width * pixelRatio * scaleX
-    canvas.height = crop.height * pixelRatio * scaleY
+    canvas.width = outputWidth
+    canvas.height = outputHeight
 
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.imageSmoothingQuality = "high"
 
     // Draw cropped image
     ctx.drawImage(
       image,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
+      pixelCrop.x * scaleX,
+      pixelCrop.y * scaleY,
+      pixelCrop.width * scaleX,
+      pixelCrop.height * scaleY,
       0,
       0,
-      crop.width * scaleX,
-      crop.height * scaleY
+      outputWidth,
+      outputHeight
     )
 
     // Convert canvas to blob

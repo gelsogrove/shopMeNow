@@ -1136,7 +1136,8 @@ export class CustomClientChatbotService {
 
   /**
    * PRO_LOCO tourism content (Ristoranti, Alberghi, Escursioni, Rifugi,
-   * Case e appartamenti, Eventi), converted to the same {question, answer}
+   * Case e appartamenti, Eventi, Strutture sportive, Impianti di sci),
+   * converted to the same {question, answer}
    * shape as a FAQ so it
    * rides the module's existing FAQ retrieval/budget/media pipeline. Prose
    * facts are built here, once, so every custom chatbot module that ever asks
@@ -1149,7 +1150,7 @@ export class CustomClientChatbotService {
    */
   private async getTouristContentAsFaqs(workspaceId: string): Promise<FaqEntry[]> {
     try {
-      const [restaurants, hotels, excursions, refuges, apartments, events, photos] = await Promise.all([
+      const [restaurants, hotels, excursions, refuges, apartments, events, sportsFacilities, skiFacilities, photos] = await Promise.all([
         defaultPrisma.touristRestaurant.findMany({
           where: { workspaceId, isActive: true },
           orderBy: { order: "asc" },
@@ -1171,6 +1172,14 @@ export class CustomClientChatbotService {
           orderBy: { order: "asc" },
         }),
         defaultPrisma.touristEvent.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristSportsFacility.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristSkiFacility.findMany({
           where: { workspaceId, isActive: true },
           orderBy: { order: "asc" },
         }),
@@ -1336,6 +1345,45 @@ export class CustomClientChatbotService {
         ]),
       }))
 
+      // Sports facilities (Andrea, 2026-09-01): question stays category +
+      // name + sport — the sport name ("golf", "tennis") carries the IDF
+      // that wins "c'è un campo da golf?" (see the dilution note above).
+      const sportsFacilityEntries: FaqEntry[] = sportsFacilities.map((s) => ({
+        question: searchableQuestion([
+          `Strutture sportive: ${s.name}`,
+          s.sport,
+        ]),
+        answer: joinBlock([
+          s.description,
+          joinFacts([
+            fact("Sport", s.sport),
+            fact("Località", s.location),
+          ]),
+          s.link,
+          s.videoUrl,
+          photoOf("SPORTS_FACILITY", s.id),
+        ]),
+      }))
+
+      // Ski facilities (Andrea, 2026-09-01): slope type (blu/rossa/nera) in
+      // the question so "piste nere" style requests match the right cards.
+      const skiFacilityEntries: FaqEntry[] = skiFacilities.map((s) => ({
+        question: searchableQuestion([
+          `Impianti di sci: ${s.name}`,
+          s.slopeType ? `pista ${s.slopeType}` : null,
+        ]),
+        answer: joinBlock([
+          s.description,
+          joinFacts([
+            fact("Tipo di pista", s.slopeType),
+            fact("Località", s.location),
+          ]),
+          s.link,
+          s.videoUrl,
+          photoOf("SKI_FACILITY", s.id),
+        ]),
+      }))
+
       return [
         ...restaurantEntries,
         ...hotelEntries,
@@ -1343,6 +1391,8 @@ export class CustomClientChatbotService {
         ...refugeEntries,
         ...apartmentEntries,
         ...eventEntries,
+        ...sportsFacilityEntries,
+        ...skiFacilityEntries,
       ]
     } catch (error) {
       logger.error("[CustomClientChatbotService] getTouristContentAsFaqs failed", {

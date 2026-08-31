@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { ArrowLeft, Plus, Utensils } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "../lib/toast"
 import {
   TouristRestaurant,
@@ -48,6 +48,21 @@ export function TouristRestaurantsPage() {
     if (!isLoadingWorkspace) loadRestaurants()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace?.id, isLoadingWorkspace])
+
+  // Deep-link from the Content hub search (?edit=<id>): once the list is
+  // loaded, open that item's edit sheet and drop the param from the URL.
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    const editId = searchParams.get("edit")
+    if (!editId || isLoading) return
+    const item = restaurants.find((r) => r.id === editId)
+    if (item) {
+      setSelectedItem(item)
+      setShowEditSheet(true)
+    }
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading])
 
   const totalPages = Math.ceil(restaurants.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE

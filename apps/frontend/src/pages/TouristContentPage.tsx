@@ -1,6 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { touristRestaurantApi } from "@/services/touristRestaurantApi"
@@ -9,6 +10,7 @@ import { touristExcursionApi } from "@/services/touristExcursionApi"
 import { touristRefugeApi } from "@/services/touristRefugeApi"
 import { touristEventApi } from "@/services/touristEventApi"
 import { faqApi } from "@/services/faqApi"
+import { flowApi } from "@/services/flowBuilderApi"
 import {
   Building2,
   CalendarDays,
@@ -16,9 +18,11 @@ import {
   HelpCircle,
   Home,
   Mountain,
+  Search,
   Utensils,
+  Workflow,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 /**
@@ -26,6 +30,13 @@ import { useNavigate } from "react-router-dom"
  * CONTENT, POI DENTRO FACCIAMO DELLE CARD DI RISTORANTI ALBERGHI RIFUGI —
  * CARD CON ICONA"): one card per tourism content category, each opening its
  * own CRUD page.
+ *
+ * Andrea 2026-09-01 ("voglio un cerca che mi tira fuori l'elemento e mi
+ * faccia capire dove e'... e possibilita di cliccare e editare"): the hub
+ * also carries a global search across every category. Each result shows the
+ * category it belongs to and clicking it deep-links to that item's edit form
+ * (the CRUD pages open their edit sheet from an ?edit=<id> query param; flows
+ * go straight to the flow editor).
  */
 
 interface CategoryCard {
@@ -95,24 +106,51 @@ const CATEGORIES: CategoryCard[] = [
     iconBg: "bg-yellow-100",
     iconColor: "text-amber-500",
   },
+  // Andrea 2026-09-01 ("mi piacerebbe mettere qui dentro anche flow"): same
+  // treatment as FAQs — for PRO_LOCO the Flows entry moved from the Settings
+  // dropdown into this hub as one more card.
+  {
+    key: "flows",
+    title: "Flows",
+    description: "Visual flow-builder for this chatbot's diagnostic conversations",
+    route: "/settings/demorobot",
+    icon: Workflow,
+    iconBg: "bg-indigo-100",
+    iconColor: "text-indigo-600",
+  },
 ]
+
+// One searchable entry across all categories. `editPath` is where clicking
+// the result lands: the item's edit form, not just the category list.
+interface SearchItem {
+  id: string
+  label: string
+  snippet?: string
+  categoryKey: string
+  editPath: string
+}
+
+const MAX_SEARCH_RESULTS = 30
 
 export function TouristContentPage() {
   const navigate = useNavigate()
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
   const [counts, setCounts] = useState<Record<string, number>>({})
+  const [searchItems, setSearchItems] = useState<SearchItem[]>([])
+  const [query, setQuery] = useState("")
 
   useEffect(() => {
-    const loadCounts = async () => {
+    const loadContent = async () => {
       if (!workspace?.id) return
       try {
-        const [restaurants, hotels, excursions, refuges, events, faqs] = await Promise.all([
+        const [restaurants, hotels, excursions, refuges, events, faqs, flows] = await Promise.all([
           touristRestaurantApi.getTouristRestaurants(workspace.id),
           touristHotelApi.getTouristHotels(workspace.id),
           touristExcursionApi.getTouristExcursions(workspace.id),
           touristRefugeApi.getTouristRefuges(workspace.id),
           touristEventApi.getTouristEvents(workspace.id),
           faqApi.getFAQs(workspace.id),
+          flowApi.listAll(workspace.id),
         ])
         setCounts({
           restaurants: restaurants.length,
@@ -121,14 +159,80 @@ export function TouristContentPage() {
           refuges: refuges.length,
           events: events.length,
           faqs: faqs.length,
+          flows: flows.length,
         })
+        setSearchItems([
+          ...restaurants.map((r) => ({
+            id: r.id,
+            label: r.name,
+            snippet: r.description ?? undefined,
+            categoryKey: "restaurants",
+            editPath: `/tourist-restaurants?edit=${r.id}`,
+          })),
+          ...hotels.map((h) => ({
+            id: h.id,
+            label: h.name,
+            snippet: h.description ?? undefined,
+            categoryKey: "hotels",
+            editPath: `/tourist-hotels?edit=${h.id}`,
+          })),
+          ...excursions.map((x) => ({
+            id: x.id,
+            label: x.name,
+            snippet: x.description ?? undefined,
+            categoryKey: "excursions",
+            editPath: `/tourist-excursions?edit=${x.id}`,
+          })),
+          ...refuges.map((rf) => ({
+            id: rf.id,
+            label: rf.name,
+            snippet: rf.description ?? undefined,
+            categoryKey: "refuges",
+            editPath: `/tourist-refuges?edit=${rf.id}`,
+          })),
+          ...events.map((ev) => ({
+            id: ev.id,
+            label: ev.title,
+            snippet: ev.description ?? undefined,
+            categoryKey: "events",
+            editPath: `/tourist-events?edit=${ev.id}`,
+          })),
+          ...faqs.map((f) => ({
+            id: f.id,
+            label: f.question,
+            snippet: f.answer,
+            categoryKey: "faqs",
+            editPath: `/faq?edit=${f.id}`,
+          })),
+          // Flows have a full-page editor, so the result links straight to it
+          // ("generic" is the URL segment for category-less flows, see
+          // FlowsPage).
+          ...flows.map((fl) => ({
+            id: fl.id,
+            label: fl.title,
+            categoryKey: "flows",
+            editPath: `/settings/demorobot/${fl.flowCategoryId ?? "generic"}/flows/${fl.id}/edit`,
+          })),
+        ])
       } catch (error) {
-        logger.error("Error loading tourist content counts:", error)
+        logger.error("Error loading tourist content:", error)
       }
     }
-    if (!isLoadingWorkspace) loadCounts()
+    if (!isLoadingWorkspace) loadContent()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace?.id, isLoadingWorkspace])
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return searchItems
+      .filter(
+        (item) =>
+          item.label.toLowerCase().includes(q) ||
+          (item.snippet ?? "").toLowerCase().includes(q)
+      )
+      .slice(0, MAX_SEARCH_RESULTS)
+  }, [query, searchItems])
 
   if (!workspace?.id) {
     return (
@@ -137,6 +241,8 @@ export function TouristContentPage() {
       </PageLayout>
     )
   }
+
+  const isSearching = query.trim().length > 0
 
   return (
     <PageLayout>
@@ -151,35 +257,95 @@ export function TouristContentPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CATEGORIES.map((category) => {
-            const Icon = category.icon
-            const count = counts[category.key]
-            return (
-              <Card
-                key={category.key}
-                className="p-6 cursor-pointer hover:shadow-md hover:border-green-300 transition-all group"
-                onClick={() => navigate(category.route)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className={`w-12 h-12 rounded-xl ${category.iconBg} flex items-center justify-center`}>
-                    <Icon className={`w-6 h-6 ${category.iconColor}`} />
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-green-600 transition-colors" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mt-4">
-                  {category.title}
-                  {count !== undefined && (
-                    <span className="ml-2 text-sm font-normal text-gray-500">
-                      ({count})
-                    </span>
-                  )}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-              </Card>
-            )
-          })}
+        <div className="relative max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search all content (restaurants, hotels, events, FAQs, flows...)"
+            className="pl-9"
+          />
         </div>
+
+        {isSearching && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500">
+              {results.length === 0
+                ? "No content matches your search."
+                : `${results.length} result${results.length === 1 ? "" : "s"}`}
+            </p>
+            {results.map((item) => {
+              const category = CATEGORIES.find((c) => c.key === item.categoryKey)
+              const Icon = category?.icon ?? Search
+              return (
+                <Card
+                  key={`${item.categoryKey}-${item.id}`}
+                  className="p-4 cursor-pointer hover:shadow-md hover:border-green-300 transition-all group"
+                  onClick={() => navigate(item.editPath)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-lg ${category?.iconBg ?? "bg-gray-100"} flex items-center justify-center flex-shrink-0`}
+                    >
+                      <Icon className={`w-5 h-5 ${category?.iconColor ?? "text-gray-500"}`} />
+                    </div>
+                    <div className="min-w-0 flex-grow">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          {item.label}
+                        </h3>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${category?.iconBg ?? "bg-gray-100"} ${category?.iconColor ?? "text-gray-500"} flex-shrink-0`}
+                        >
+                          {category?.title ?? item.categoryKey}
+                        </span>
+                      </div>
+                      {item.snippet && (
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {item.snippet}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-green-600 transition-colors flex-shrink-0" />
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        {!isSearching && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {CATEGORIES.map((category) => {
+              const Icon = category.icon
+              const count = counts[category.key]
+              return (
+                <Card
+                  key={category.key}
+                  className="p-6 cursor-pointer hover:shadow-md hover:border-green-300 transition-all group"
+                  onClick={() => navigate(category.route)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className={`w-12 h-12 rounded-xl ${category.iconBg} flex items-center justify-center`}>
+                      <Icon className={`w-6 h-6 ${category.iconColor}`} />
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-green-600 transition-colors" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mt-4">
+                    {category.title}
+                    {count !== undefined && (
+                      <span className="ml-2 text-sm font-normal text-gray-500">
+                        ({count})
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">{category.description}</p>
+                </Card>
+              )
+            })}
+          </div>
+        )}
       </div>
     </PageLayout>
   )
