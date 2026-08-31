@@ -34,6 +34,8 @@ export interface MerchantPush {
   title: string
   text: string
   photoUrl?: string | null
+  /** Uploaded image as data URI. Sent on create/update; never returned in listings. */
+  photoBase64?: string | null
   videoUrl?: string | null
   location?: string | null
   description?: string | null

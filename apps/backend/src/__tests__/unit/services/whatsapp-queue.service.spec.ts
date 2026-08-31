@@ -58,6 +58,7 @@ describe("WhatsAppQueueService", () => {
     // Create mock WhatsApp provider
     mockProvider = {
       sendTextMessage: jest.fn(),
+      sendMediaMessage: jest.fn(),
       getProviderName: jest.fn().mockReturnValue("ultramsg"),
     }
 
@@ -277,6 +278,47 @@ describe("WhatsAppQueueService", () => {
 
       // Verify timeline updated with failure
       expect(mockPrisma.conversationMessage.update).toHaveBeenCalled()
+    })
+
+    it("📷 sends a queued message WITH mediaUrl as media + caption, not as plain text", async () => {
+      // SCENARIO: a push-campaign creative has an uploaded photo — the
+      // campaign snapshot put its public URL on the queue row (mediaUrl).
+      // RULE (Andrea, 2026-09-01): the image must actually reach WhatsApp —
+      // provider.sendMediaMessage with the text as caption, never a text-only
+      // send that silently drops the creative's photo.
+      const mockMessage = {
+        id: "msg_media",
+        workspaceId: "ws_abc",
+        customerId: "cust_xyz",
+        phoneNumber: "+34654728753",
+        // Markdown bold, as the campaign snapshot writes it — mdToWhatsApp
+        // turns it into WhatsApp's single-asterisk bold on the way out.
+        messageContent: "**Pizza Night**\n\nStasera sconto 10%",
+        mediaUrl: "https://www.echatbot.ai/api/v1/public/merchant-pushes/p1/photo.jpg",
+        conversationMessageId: "conv_456",
+        status: "pending",
+      }
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: "ws_abc",
+        whatsappProvider: "ultramsg",
+        ultraMsgInstanceId: "161048",
+        ultraMsgToken: "test_token",
+      })
+      mockPrisma.conversationMessage.findUnique.mockResolvedValue({ id: "conv_456", debugInfo: null })
+      mockPrisma.conversationMessage.update.mockResolvedValue({})
+      mockProvider.sendMediaMessage.mockResolvedValue({ success: true, messageId: "wamid_m1" })
+
+      const result = await service.validateAndSend(mockMessage as any) // mock: partial WhatsAppQueue row (schema gained push-campaign fields)
+
+      expect(mockProvider.sendMediaMessage).toHaveBeenCalledWith(
+        "+34654728753",
+        "https://www.echatbot.ai/api/v1/public/merchant-pushes/p1/photo.jpg",
+        "*Pizza Night*\n\nStasera sconto 10%",
+        "image"
+      )
+      expect(mockProvider.sendTextMessage).not.toHaveBeenCalled()
+      expect(result.success).toBe(true)
+      expect(result.messageId).toBe("wamid_m1")
     })
 
     it("🚨 blocks a message carrying a URL outside the workspace allow-list, even when SecurityAgent says safe", async () => {

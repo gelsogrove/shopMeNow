@@ -48,9 +48,13 @@ export async function resolveMerchantCampaign(
   if (!push) throw new AppError(404, "Merchant push not found")
   if (!push.isActive) throw new AppError(400, "Merchant push is not active")
 
-  // Snapshot format is mechanism, not copy: title bold (WhatsApp style),
-  // then the creative's own text/location/video — all tenant-authored.
-  const parts = [`*${push.title}*`, push.text]
+  // Snapshot format is mechanism, not copy: title bold, then the creative's
+  // own text/location/video — all tenant-authored. MARKDOWN bold (**…**) on
+  // purpose: the queue runs mdToWhatsApp before sending, which converts it to
+  // WhatsApp's single-asterisk bold — a single asterisk here would be read as
+  // Markdown italic and reach the guest as _corsivo_ (caught by the queue
+  // media test, 2026-09-01).
+  const parts = [`**${push.title}**`, push.text]
   if (push.location) parts.push(`📍 ${push.location}`)
   if (push.videoUrl) parts.push(push.videoUrl)
 

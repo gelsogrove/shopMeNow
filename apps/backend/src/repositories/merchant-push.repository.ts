@@ -41,9 +41,12 @@ export class MerchantPushRepository {
   async findAllForMerchant(
     merchantId: string,
     workspaceId: string
-  ): Promise<MerchantPush[]> {
+  ): Promise<Array<Omit<MerchantPush, "photoBase64">>> {
+    // The uploaded photo can be megabytes of base64 — never shipped in
+    // listings. The public photo endpoint serves it by id when needed.
     return this.prisma.merchantPush.findMany({
       where: { merchantId, workspaceId, deletedAt: null },
+      omit: { photoBase64: true },
       orderBy: { createdAt: "desc" },
     })
   }

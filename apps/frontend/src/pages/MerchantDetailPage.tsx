@@ -27,6 +27,22 @@ import {
  */
 
 function PushFormFields({ item }: { item: MerchantPush | null }) {
+  // Uploaded photo: the file picker reads the image as a data URI into a
+  // hidden field, so the plain FormData submit carries it. Empty = keep the
+  // photo already stored (on edit) / no photo (on create).
+  const [photoPreview, setPhotoPreview] = useState<string>("")
+
+  const handlePhotoFile = (file: File | undefined) => {
+    if (!file) return
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Photo is too large — maximum 4MB")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setPhotoPreview(String(reader.result || ""))
+    reader.readAsDataURL(file)
+  }
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -41,7 +57,29 @@ function PushFormFields({ item }: { item: MerchantPush | null }) {
         </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="photoUrl">Photo URL</Label>
+        <Label htmlFor="photoFile">Photo</Label>
+        <Input
+          id="photoFile"
+          type="file"
+          accept="image/*"
+          onChange={(e) => handlePhotoFile(e.target.files?.[0])}
+        />
+        <input type="hidden" name="photoBase64" value={photoPreview} />
+        {photoPreview && (
+          <img
+            src={photoPreview}
+            alt="Selected photo preview"
+            className="mt-2 max-h-40 rounded-md border object-contain"
+          />
+        )}
+        <p className="text-xs text-gray-500">
+          {item
+            ? "Pick a file to replace the current photo; leave empty to keep it."
+            : "Sent to WhatsApp with the push text as caption. Max 4MB."}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="photoUrl">Photo URL (alternative to upload)</Label>
         <Input id="photoUrl" name="photoUrl" defaultValue={item?.photoUrl ?? ""} />
       </div>
       <div className="space-y-2">
@@ -115,10 +153,14 @@ export function MerchantDetailPage() {
   const readPushForm = (form: HTMLFormElement) => {
     const formData = new FormData(form)
     const optional = (key: string) => (formData.get(key) as string) || null
+    const photoBase64 = (formData.get("photoBase64") as string) || ""
     return {
       title: String(formData.get("title") ?? ""),
       text: String(formData.get("text") ?? ""),
       photoUrl: optional("photoUrl"),
+      // Only sent when a new file was picked — an empty value must NOT wipe
+      // the photo already stored on the push.
+      ...(photoBase64 ? { photoBase64 } : {}),
       videoUrl: optional("videoUrl"),
       location: optional("location"),
       description: optional("description"),
