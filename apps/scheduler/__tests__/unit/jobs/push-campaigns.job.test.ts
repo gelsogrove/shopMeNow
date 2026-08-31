@@ -136,7 +136,7 @@ jest.mock('../../../src/config/database', () => ({
   },
 }))
 
-import { pushCampaignsJob, __test } from '../../../src/jobs/push-campaigns.job'
+import { pushCampaignsJob, minutesUntilSendWindow, __test } from '../../../src/jobs/push-campaigns.job'
 import { Prisma } from '../../../src/config/database'
 
 describe('Push Campaigns Job', () => {

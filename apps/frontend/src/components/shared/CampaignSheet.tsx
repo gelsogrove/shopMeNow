@@ -354,6 +354,10 @@ export function CampaignSheet({
       toast.error("End date must be after start date")
       return
     }
+    if (sendWindowStart >= sendWindowEnd) {
+      toast.error("Send window: 'from' hour must be before 'to' hour")
+      return
+    }
 
     const formData = {
       name: name.trim(),
@@ -368,6 +372,8 @@ export function CampaignSheet({
       merchantPushId: isMerchantCampaign ? merchantPushId : null,
       validFrom: validFromIso,
       validTo: validToIso,
+      sendWindowStart,
+      sendWindowEnd,
     }
 
     try {
@@ -812,6 +818,52 @@ export function CampaignSheet({
                 Leave empty to send at the next scheduler run.
               </p>
             </div>
+            {/* 🕗 Daily send window (Andrea, 2026-09-01: "dalle 8 alle 19 di
+                default") — hours in the workspace timezone; the scheduler
+                postpones anything outside them. */}
+            <div className="space-y-2">
+              <Label>Send between</Label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={String(sendWindowStart)}
+                  onValueChange={(v) => setSendWindowStart(Number(v))}
+                  disabled={!isEditMode}
+                >
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {String(h).padStart(2, "0")}:00
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-slate-500">and</span>
+                <Select
+                  value={String(sendWindowEnd)}
+                  onValueChange={(v) => setSendWindowEnd(Number(v))}
+                  disabled={!isEditMode}
+                >
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {String(h).padStart(2, "0")}:00
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Nothing is sent outside these hours — a run due at night waits
+                for the window to open.
+              </p>
+            </div>
+
             {/* Validity window — for EVERY campaign: when the event is over,
                 nothing goes out anymore, whatever happened in between. */}
             <div className="grid gap-4 md:grid-cols-2">
