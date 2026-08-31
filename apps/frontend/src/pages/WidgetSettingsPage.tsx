@@ -35,6 +35,7 @@ export default function WidgetSettingsPage() {
   const [primaryColor, setPrimaryColor] = useState<string>("#22c55e");
   const [icon, setIcon] = useState<string>("chat");
   const [useChannelLogo, setUseChannelLogo] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +49,7 @@ export default function WidgetSettingsPage() {
       setPrimaryColor((workspace as any).widgetPrimaryColor || "#22c55e");
       setIcon((workspace as any).widgetIcon || "chat");
       setUseChannelLogo((workspace as any).widgetUseChannelLogo ?? false);
+      setErrorMessage((workspace as any).widgetErrorMessage || "");
     }
   }, [workspace]);
 
@@ -175,6 +177,7 @@ export default function WidgetSettingsPage() {
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
         widgetUseChannelLogo: useChannelLogo,
+        widgetErrorMessage: errorMessage.trim() || null,
       });
       setCurrentWorkspace(response.data as any);
       toast.success("Widget configuration saved!");
@@ -254,6 +257,17 @@ export default function WidgetSettingsPage() {
                     placeholder="e.g. Support Chat"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="widget-error-message">Error Message</Label>
+                  <Input
+                    id="widget-error-message"
+                    type="text"
+                    placeholder="Shown when the chat cannot deliver a reply. Leave empty to show nothing."
+                    value={errorMessage}
+                    onChange={(e) => setErrorMessage(e.target.value)}
                     className="h-9"
                   />
                 </div>

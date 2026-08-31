@@ -115,6 +115,7 @@ export interface WorkspaceProps {
   widgetAutoSuggestionsEnabled?: boolean | null
   widgetQuickReplies?: string[] | null
   widgetSuggestionsModel?: string | null
+  widgetErrorMessage?: string | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -542,6 +543,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get widgetUseChannelLogo(): boolean | null | undefined {
     return this.props.widgetUseChannelLogo
+  }
+
+  get widgetErrorMessage(): string | null | undefined {
+    return this.props.widgetErrorMessage
   }
 
   get widgetAutoSuggestionsEnabled(): boolean | null | undefined {

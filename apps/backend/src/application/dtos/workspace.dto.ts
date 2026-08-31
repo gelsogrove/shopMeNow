@@ -197,6 +197,10 @@ export class WorkspaceDTO extends BaseDTO {
   @IsOptional()
   widgetUseChannelLogo?: boolean;
 
+  @IsString()
+  @IsOptional()
+  widgetErrorMessage?: string;
+
   @IsBoolean()
   @IsOptional()
   widgetAutoSuggestionsEnabled?: boolean;
@@ -317,6 +321,10 @@ export class CreateWorkspaceDTO {
   @IsOptional()
   widgetUseChannelLogo?: boolean;
 
+  @IsString()
+  @IsOptional()
+  widgetErrorMessage?: string;
+
   @IsBoolean()
   @IsOptional()
   widgetAutoSuggestionsEnabled?: boolean;
@@ -413,6 +421,10 @@ export class UpdateWorkspaceDTO {
   @IsBoolean()
   @IsOptional()
   widgetUseChannelLogo?: boolean;
+
+  @IsString()
+  @IsOptional()
+  widgetErrorMessage?: string;
 
   @IsBoolean()
   @IsOptional()

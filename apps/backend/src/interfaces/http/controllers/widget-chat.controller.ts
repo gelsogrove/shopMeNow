@@ -40,6 +40,7 @@ import {
 import { CustomClientChatbotService, applyCustomerPatches, applyEscalationSideEffects } from "../../../application/services/custom-client-chatbot.service"
 import { persistFlowStepMediaAttachments } from "../../../services/flow-step-media.persist"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
+import { startHeartbeat, HeartbeatFinisher } from "../utils/heartbeat-response"
 
 const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
@@ -553,6 +554,7 @@ export class WidgetChatController {
           termsAndConditions: true, // 📄 T&C text shown in the widget registration form
           speechToTextEnabled: true, // 🎤 Widget composer shows a microphone for voice notes
           enabledLanguages: true, // 🌐 Filters the registration-form language dropdown
+          widgetErrorMessage: true, // 🛟 Tenant-authored copy the widget shows when a turn fails client-side
         },
       })
 
@@ -695,6 +697,7 @@ export class WidgetChatController {
           allowedOrigins: workspace.allowedExternalLinks,
           termsAndConditions: workspace.termsAndConditions,
           enabledLanguages: workspace.enabledLanguages ?? [],
+          errorMessage: workspace.widgetErrorMessage ?? null,
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
@@ -725,6 +728,7 @@ export class WidgetChatController {
           termsAndConditions: workspace.termsAndConditions,
           speechToTextEnabled: workspace.speechToTextEnabled ?? false,
           enabledLanguages: workspace.enabledLanguages ?? [],
+          errorMessage: workspace.widgetErrorMessage ?? null,
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
@@ -1540,6 +1544,9 @@ export class WidgetChatController {
    * shows a "voice message" bubble; the bot reasons on the transcription.
    */
   async sendAudioMessage(req: Request, res: Response): Promise<Response> {
+    // Same H12 protection as sendMessage: transcription + LLM turn + TTS is
+    // the slowest widget path of all. Committed before transcription starts.
+    let heartbeat: HeartbeatFinisher | null = null
     const file = (req as any).file as Express.Multer.File | undefined
     const cleanup = () => {
       if (file?.path) {
@@ -1589,6 +1596,13 @@ export class WidgetChatController {
           ? this.normalizeLanguage(detectLanguageFromHeader(req.headers["accept-language"]))
           : null)
 
+      // ⏱️ HEARTBEAT: from here on the slow work begins (Whisper + LLM turn +
+      // TTS). The inner sendMessage below receives a capture shim, on which
+      // startHeartbeat degrades to a plain json() — only THIS outer response
+      // streams. Every exit below must go through hb.finish().
+      const hb = startHeartbeat(res)
+      heartbeat = hb
+
       const transcription = await transcribeAudio({
         audioBuffer: buffer,
         declaredMime,
@@ -1598,7 +1612,7 @@ export class WidgetChatController {
       })
       cleanup()
       if (!transcription?.text) {
-        return res.status(422).json({ error: "Could not transcribe audio" })
+        return hb.finish(422, { error: "Could not transcribe audio" })
       }
 
       // Hand off to the normal text turn — the transcription IS the message.
@@ -1661,11 +1675,15 @@ export class WidgetChatController {
           logger.error("[WIDGET] TTS reply failed", { error: ttsErr?.message })
         }
       }
-      return res.status(out.code).json(body)
+      return heartbeat.finish(out.code, body)
     } catch (error: any) {
       cleanup()
       logger.error("[WIDGET] audio message error", { error: error?.message })
-      return res.status(500).json({ error: "Failed to process audio message" })
+      const errorPayload = { error: "Failed to process audio message" }
+      if (heartbeat) {
+        return heartbeat.finish(500, errorPayload)
+      }
+      return res.status(500).json(errorPayload)
     }
   }
 
@@ -1674,8 +1692,11 @@ export class WidgetChatController {
    * Send a message from widget
    */
   async sendMessage(req: Request, res: Response): Promise<Response> {
+    // Set once the LLM turn begins (see startHeartbeat below); the outer catch
+    // uses it to deliver errors on the already-committed streaming response.
+    let heartbeat: HeartbeatFinisher | null = null
     try {
-      logger.info("🎯 WidgetChatController.sendMessage called", { 
+      logger.info("🎯 WidgetChatController.sendMessage called", {
         workspaceId: req.params.workspaceId,
         body: req.body 
       })
@@ -2318,6 +2339,16 @@ export class WidgetChatController {
         normalizedExplicitLanguage: explicitLanguage,
       })
 
+      // ⏱️ HEARTBEAT: everything up to here is fast (validation + DB reads);
+      // what follows is the LLM turn, which can legitimately exceed Heroku's
+      // 30s H12 window (live incident 2026-08-31: a demosappada turn finished
+      // in 33s — the reply was ready but the router had already cut the
+      // connection, and the visitor saw the widget's generic error instead).
+      // Commit the response now and keep the socket alive; every exit below
+      // MUST go through hb.finish() instead of res.status().json().
+      const hb = startHeartbeat(res)
+      heartbeat = hb
+
       // 🎯 CUSTOM CLIENT: Check if this workspace uses a custom chatbot function (e.g. ecolaundry)
       // Wrapped in try-catch: any failure falls through gracefully to the normal LLM pipeline.
       try {
@@ -2392,7 +2423,7 @@ export class WidgetChatController {
           // and skip persistence + billing (no real conversation happened).
           if (customOutput.error === "llm_unavailable") {
             const wipText = customOutput.wipMessage || workspace.wipMessage || ""
-            return res.status(200).json({
+            return hb.finish(200, {
               success: true,
               messageId: `widget-${visitorId}-${Date.now()}`,
               sessionId: chatSession.id,
@@ -2463,7 +2494,7 @@ export class WidgetChatController {
             customerReply
           )
           if (outboundBlock) {
-            return res.status(200).json({
+            return hb.finish(200, {
               success: false,
               blocked: true,
               reason: "SECURITY_BLOCKED",
@@ -2549,7 +2580,7 @@ export class WidgetChatController {
           // welcome) must stay text-only. Do NOT add a "speak every reply" demo
           // here — it attaches audio to the welcome message, which is wrong.
 
-          return res.status(200).json({
+          return hb.finish(200, {
             success: true,
             messageId: `widget-${visitorId}-${Date.now()}`,
             sessionId: chatSession.id,
@@ -2633,7 +2664,7 @@ export class WidgetChatController {
           llmResult.response
         )
         if (engineOutboundBlock) {
-          return res.status(200).json({
+          return hb.finish(200, {
             success: false,
             blocked: true,
             reason: "SECURITY_BLOCKED",
@@ -2721,7 +2752,7 @@ export class WidgetChatController {
       }
 
       // Return response directly (immediate delivery, no WhatsApp queue)
-      return res.status(200).json({
+      return hb.finish(200, {
         success: true,
         messageId: `widget-${visitorId}-${Date.now()}`,
         assistantMessageId,
@@ -2748,10 +2779,17 @@ export class WidgetChatController {
         workspaceId: req.params.workspaceId,
         body: req.body,
       })
-      return res.status(500).json({
+      const errorPayload = {
         error: "INTERNAL_ERROR",
         message: "Failed to process message",
-      })
+      }
+      // After the heartbeat committed the response, the error travels in the
+      // body (no `response` field) — the widget adapter treats that exactly
+      // like a non-2xx used to be treated.
+      if (heartbeat) {
+        return heartbeat.finish(500, errorPayload)
+      }
+      return res.status(500).json(errorPayload)
     }
   }
 

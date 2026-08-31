@@ -135,7 +135,13 @@ logger.info("🔧 Widget POST /register/:workspaceId route registered")
  *                 example: optional-session-uuid
  *     responses:
  *       200:
- *         description: Message queued successfully
+ *         description: >
+ *           Bot reply. The endpoint streams whitespace heartbeats before the
+ *           JSON body while the LLM turn runs (keeps the connection alive past
+ *           router timeouts, e.g. Heroku H12) — parse the full body as JSON.
+ *           Once streaming starts the status is committed to 200, so a
+ *           mid-turn failure is delivered as an error body WITHOUT the
+ *           `response` field (error, message) instead of a 5xx status.
  *         content:
  *           application/json:
  *             schema:
@@ -145,11 +151,17 @@ logger.info("🔧 Widget POST /register/:workspaceId route registered")
  *                   type: boolean
  *                 messageId:
  *                   type: string
+ *                 sessionId:
+ *                   type: string
+ *                 response:
+ *                   type: string
+ *                   description: The bot reply. Absent on mid-turn errors.
  *                 status:
  *                   type: string
- *                   enum: [pending]
- *                 retryAfter:
- *                   type: number
+ *                   enum: [ready, wip]
+ *                 error:
+ *                   type: string
+ *                   description: Present only on mid-turn failures (e.g. INTERNAL_ERROR)
  *       400:
  *         description: Invalid input
  *       429:
@@ -283,6 +295,55 @@ logger.info("🔧 Widget POST /chat-reaction/:workspaceId route registered")
 /**
  * GET /api/v1/widget/status/:workspaceId
  * Get widget availability status
+ *
+ * @swagger
+ * /api/v1/widget/status/{workspaceId}:
+ *   get:
+ *     summary: Widget availability + workspace-facing widget config
+ *     tags: [Widget]
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: visitorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Widget status and config
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [active, wip, disabled]
+ *                 workspace:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     whatsappPhoneNumber:
+ *                       type: string
+ *                       nullable: true
+ *                     termsAndConditions:
+ *                       type: string
+ *                       nullable: true
+ *                     speechToTextEnabled:
+ *                       type: boolean
+ *                     enabledLanguages:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     errorMessage:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Tenant-authored copy the widget shows when a turn fails client-side (Workspace.widgetErrorMessage); null = show nothing
  */
 router.get(
   "/status/:workspaceId",

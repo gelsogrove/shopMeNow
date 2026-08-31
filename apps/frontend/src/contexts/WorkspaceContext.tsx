@@ -92,6 +92,7 @@ export interface Workspace {
   widgetLanguage?: string
   widgetPrimaryColor?: string
   widgetIcon?: string
+  widgetErrorMessage?: string | null
   widgetUseChannelLogo?: boolean
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]

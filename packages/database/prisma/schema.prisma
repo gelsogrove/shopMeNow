@@ -62,6 +62,7 @@ model Workspace {
   widgetAutoSuggestionsEnabled Boolean   @default(false) // Show quick reply suggestions in widget
   widgetQuickReplies           String[]  @default([])    // Up to 4 quick replies shown in widget
   widgetSuggestionsModel       String?               // Optional custom model for widget suggestions
+  widgetErrorMessage           String?   @db.Text    // Shown by the widget when a turn fails client-side (network/transport error). Tenant-authored, one language (rule 1A); null = the widget shows nothing
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget

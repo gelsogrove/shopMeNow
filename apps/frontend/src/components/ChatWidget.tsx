@@ -706,6 +706,10 @@ export function ChatWidget({
     // 🌐 Workspace.enabledLanguages — restricts the registration-form
     // language dropdown to the languages this workspace actually serves.
     enabledLanguages?: string[]
+    // 🛟 Workspace.widgetErrorMessage — tenant-authored copy shown when a
+    // send fails client-side. No configured copy → no error bubble (rule 1A:
+    // silence beats hardcoded English).
+    errorMessage?: string | null
   } | null>(null)
 
   // 🌐 Languages offered in the registration form: only the ones enabled on
@@ -783,6 +787,7 @@ export function ChatWidget({
               termsAndConditions: statusResp.workspace.termsAndConditions,
               speechToTextEnabled: statusResp.workspace.speechToTextEnabled === true,
               enabledLanguages: statusResp.workspace.enabledLanguages,
+              errorMessage: statusResp.workspace.errorMessage ?? null,
             })
           }
         } catch (err) {
@@ -810,6 +815,7 @@ export function ChatWidget({
               termsAndConditions: statusResp.workspace.termsAndConditions,
               speechToTextEnabled: statusResp.workspace.speechToTextEnabled === true,
               enabledLanguages: statusResp.workspace.enabledLanguages,
+              errorMessage: statusResp.workspace.errorMessage ?? null,
             })
           }
 
@@ -1269,16 +1275,20 @@ export function ChatWidget({
       }
     } catch (error) {
       console.error("Failed to send message:", error)
-      const errorMessage: Message = {
-        role: "bot",
-        content:
-          "Sorry, I couldn't process your message. Please try again or refresh the page.",
-        timestamp: new Date().toISOString(),
-      }
-      const errorMessages = [...updatedMessages, errorMessage]
-      setMessages(errorMessages)
-      if (resolvedWorkspaceId) {
-        saveWidgetMessages(localStorage, resolvedWorkspaceId, errorMessages)
+      // 🛟 Error copy comes from Workspace.widgetErrorMessage (rule 1A: no
+      // customer-facing copy in code). Not configured → no error bubble.
+      const configuredError = workspaceConfig?.errorMessage?.trim()
+      if (configuredError) {
+        const errorMessage: Message = {
+          role: "bot",
+          content: configuredError,
+          timestamp: new Date().toISOString(),
+        }
+        const errorMessages = [...updatedMessages, errorMessage]
+        setMessages(errorMessages)
+        if (resolvedWorkspaceId) {
+          saveWidgetMessages(localStorage, resolvedWorkspaceId, errorMessages)
+        }
       }
     } finally {
       setIsLoading(false)
@@ -1338,6 +1348,12 @@ export function ChatWidget({
       const data = await resp.json().catch(() => ({}))
       if (!resp.ok) {
         throw new Error(data?.message || data?.error || "Failed to send voice note")
+      }
+      // The endpoint streams heartbeats and commits 200 before the turn runs,
+      // so a mid-turn failure arrives as an error body: no reply text, no
+      // audio, and not the intentional operator-handoff case.
+      if (!data?.response && !data?.audioUrl && data?.activeChatbot !== false) {
+        throw new Error(data?.message || data?.error || "Voice turn failed")
       }
 
       if (data.sessionId && resolvedWorkspaceId) {
@@ -1406,14 +1422,18 @@ export function ChatWidget({
       if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
     } catch (error) {
       console.error("Failed to send voice note:", error)
-      const errorMessage: Message = {
-        role: "bot",
-        content: "Sorry, I couldn't process your voice message. Please try again.",
-        timestamp: new Date().toISOString(),
+      // 🛟 Same rule as the text path: only tenant-authored copy is shown.
+      const configuredError = workspaceConfig?.errorMessage?.trim()
+      if (configuredError) {
+        const errorMessage: Message = {
+          role: "bot",
+          content: configuredError,
+          timestamp: new Date().toISOString(),
+        }
+        const errorMessages = [...updatedMessages, errorMessage]
+        setMessages(errorMessages)
+        if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, errorMessages)
       }
-      const errorMessages = [...updatedMessages, errorMessage]
-      setMessages(errorMessages)
-      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, errorMessages)
     } finally {
       setIsLoading(false)
     }

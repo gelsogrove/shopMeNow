@@ -488,10 +488,20 @@ describe('ChatWidget', () => {
     const sendBtn = screen.getByRole('button', { name: /send message/i })
     await user.click(sendBtn)
 
-    // Should show error message (non-blocking)
+    // The send must not crash the widget: the user's own message stays visible.
     await waitFor(() => {
-      // Error should be displayed in UI
-      expect(screen.queryByText(/couldn't process/i)).toBeInTheDocument()
+      expect(screen.getByText('Test')).toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    // RULE 1A (CLAUDE.md): customer-facing copy never lives in code. Error
+    // copy comes from Workspace.widgetErrorMessage (served by /widget/status
+    // as workspace.errorMessage); with none configured — as in this test —
+    // a failed turn shows NO error bubble at all. This assertion locks the
+    // old hardcoded English fallback ("Sorry, I couldn't process...") out
+    // of the codebase for good. (Approved by Andrea, 2026-08-31: error copy
+    // moved to the workspace column.)
+    await waitFor(() => {
+      expect(screen.queryByText(/couldn't process/i)).not.toBeInTheDocument()
     }, { timeout: 3000 })
   })
 

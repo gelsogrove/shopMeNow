@@ -307,6 +307,7 @@ For privacy inquiries, please contact our support team.`
       widgetUseChannelLogo: (w as any).widgetUseChannelLogo ?? false,
       widgetLogoUrl: (w as any).widgetLogoUrl ?? undefined,
       widgetLogoKey: (w as any).widgetLogoKey ?? undefined,
+      widgetErrorMessage: (w as any).widgetErrorMessage ?? undefined,
     }))
   }
 
