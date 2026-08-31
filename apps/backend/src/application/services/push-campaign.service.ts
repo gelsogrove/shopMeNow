@@ -13,6 +13,7 @@ import {
 } from "../../repositories/push-campaign.repository"
 import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
 import { findUnauthorizedUrls } from "../chat-engine/outbound-link-guard"
+import { resolveMerchantCampaign } from "./push-campaign-merchant"
 import logger from "../../utils/logger"
 
 export interface CreatePushCampaignDTO {
@@ -221,50 +222,6 @@ export class PushCampaignService {
     return parsed
   }
 
-  /**
-   * Resolve a merchant campaign: merchant + creative must exist in THIS
-   * workspace, be active, and the package must have quota. Returns the
-   * content SNAPSHOT — the campaign freezes the creative's content at
-   * creation, so editing the creative never rewrites a scheduled campaign.
-   */
-  private async resolveMerchantCampaign(
-    workspaceId: string,
-    merchantId: string,
-    merchantPushId: string | null | undefined
-  ): Promise<{ message: string; mediaUrl: string | null; quotaRemaining: number }> {
-    const merchant = await this.prisma.merchant.findFirst({
-      where: { id: merchantId, workspaceId, deletedAt: null },
-      select: { isActive: true, quotaRemaining: true },
-    })
-    if (!merchant) throw new AppError(404, "Merchant not found")
-    if (!merchant.isActive) throw new AppError(400, "Merchant is not active")
-    if (merchant.quotaRemaining <= 0) {
-      throw new AppError(
-        400,
-        "Merchant push quota exhausted — top up the package before scheduling a campaign"
-      )
-    }
-    if (!merchantPushId) {
-      throw new AppError(400, "merchantPushId is required for a merchant campaign")
-    }
-    const push = await this.prisma.merchantPush.findFirst({
-      where: { id: merchantPushId, workspaceId, merchantId, deletedAt: null },
-    })
-    if (!push) throw new AppError(404, "Merchant push not found")
-    if (!push.isActive) throw new AppError(400, "Merchant push is not active")
-
-    // Snapshot format is mechanism, not copy: title bold (WhatsApp style),
-    // then the creative's own text/location/video — all tenant-authored.
-    const parts = [`*${push.title}*`, push.text]
-    if (push.location) parts.push(`📍 ${push.location}`)
-    if (push.videoUrl) parts.push(push.videoUrl)
-    return {
-      message: parts.join("\n\n"),
-      mediaUrl: push.photoUrl ?? null,
-      quotaRemaining: merchant.quotaRemaining,
-    }
-  }
-
   private calculateNextRunAt(
     frequency: CampaignFrequency,
     lastRun: Date = new Date()
@@ -325,7 +282,8 @@ export class PushCampaignService {
     // will actually be sent.
     let merchantQuotaRemaining: number | null = null
     if (input.merchantId) {
-      const snapshot = await this.resolveMerchantCampaign(
+      const snapshot = await resolveMerchantCampaign(
+        this.prisma,
         input.workspaceId,
         input.merchantId,
         input.merchantPushId
@@ -474,7 +432,8 @@ export class PushCampaignService {
       if (!merchantId) {
         throw new AppError(400, "merchantId is required when merchantPushId is provided")
       }
-      const snapshot = await this.resolveMerchantCampaign(
+      const snapshot = await resolveMerchantCampaign(
+        this.prisma,
         workspaceId,
         merchantId,
         input.merchantPushId

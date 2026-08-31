@@ -1,0 +1,61 @@
+/**
+ * Merchant-campaign resolution — the ONLY bridge between the campaign domain
+ * and the merchant domain (Andrea, 2026-09-01: "chi fa che cosa").
+ *
+ * Responsibility: given a merchant + creative chosen for a campaign, verify
+ * they are usable (same workspace, active, package not empty) and produce the
+ * content SNAPSHOT the campaign will freeze. Nothing else: quota moves are
+ * owned elsewhere (top-up: MerchantRepository.topUpQuota; debit: the
+ * push-campaigns scheduler job), and link validation stays with the caller,
+ * which validates the snapshot like any other campaign content.
+ */
+
+import { PrismaClient } from "@echatbot/database"
+import { AppError } from "../../interfaces/http/middlewares/error.middleware"
+
+export interface MerchantCampaignSnapshot {
+  /** The frozen message: title (WhatsApp bold), text, optional location/video. */
+  message: string
+  mediaUrl: string | null
+  /** Balance at resolution time — the caller warns when it won't cover the segment. */
+  quotaRemaining: number
+}
+
+export async function resolveMerchantCampaign(
+  prisma: PrismaClient,
+  workspaceId: string,
+  merchantId: string,
+  merchantPushId: string | null | undefined
+): Promise<MerchantCampaignSnapshot> {
+  const merchant = await prisma.merchant.findFirst({
+    where: { id: merchantId, workspaceId, deletedAt: null }, // tenant boundary (rule 2)
+    select: { isActive: true, quotaRemaining: true },
+  })
+  if (!merchant) throw new AppError(404, "Merchant not found")
+  if (!merchant.isActive) throw new AppError(400, "Merchant is not active")
+  if (merchant.quotaRemaining <= 0) {
+    throw new AppError(
+      400,
+      "Merchant push quota exhausted — top up the package before scheduling a campaign"
+    )
+  }
+  if (!merchantPushId) {
+    throw new AppError(400, "merchantPushId is required for a merchant campaign")
+  }
+  const push = await prisma.merchantPush.findFirst({
+    where: { id: merchantPushId, workspaceId, merchantId, deletedAt: null },
+  })
+  if (!push) throw new AppError(404, "Merchant push not found")
+  if (!push.isActive) throw new AppError(400, "Merchant push is not active")
+
+  // Snapshot format is mechanism, not copy: title bold (WhatsApp style),
+  // then the creative's own text/location/video — all tenant-authored.
+  const parts = [`*${push.title}*`, push.text]
+  if (push.location) parts.push(`📍 ${push.location}`)
+  if (push.videoUrl) parts.push(push.videoUrl)
+  return {
+    message: parts.join("\n\n"),
+    mediaUrl: push.photoUrl ?? null,
+    quotaRemaining: merchant.quotaRemaining,
+  }
+}
