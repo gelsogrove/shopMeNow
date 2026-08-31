@@ -678,6 +678,9 @@ export function ChatWidget({
   // so Andrea can watch each message update the state (2026-08-25: "mostramelo
   // così vedo se si aggiorna").
   const [debugState, setDebugState] = useState<Record<string, unknown> | null>(null)
+  // 🔬 The state strip is hidden by default (it eats header space during
+  // demos) — the 📊 header button toggles it (Andrea, 2026-08-31).
+  const [showDebugState, setShowDebugState] = useState(false)
   // operatorHasReplied: true when operator sent at least one message — unlocks input so customer can reply
   const [operatorHasReplied, setOperatorHasReplied] = useState(false)
   const lastOperatorMsgAt = useRef<string>(new Date().toISOString())
@@ -2243,7 +2246,20 @@ export function ChatWidget({
               </div>
             <div className="flex items-center gap-2">
               {workspaceConfig?.debugMode === true && debugState && (
-                <span className="sr-only">debug state attached below</span>
+                <button
+                  onClick={() => setShowDebugState((v) => !v)}
+                  className="hover:brightness-95 p-2 rounded-lg transition-colors"
+                  style={{
+                    backgroundColor: showDebugState
+                      ? "rgba(255,255,255,0.35)"
+                      : "rgba(255,255,255,0.2)",
+                  }}
+                  title={showDebugState ? "Hide state" : "Show state"}
+                  aria-label={showDebugState ? "Hide state" : "Show state"}
+                  aria-pressed={showDebugState}
+                >
+                  <span className="text-xl">📊</span>
+                </button>
               )}
               {!instantChat && workspaceConfig?.debugMode === true && (
                 <button
@@ -2287,8 +2303,9 @@ export function ChatWidget({
           </div>
 
           {/* 🔬 Live stay-state strip (debugMode only): what the LAST reply
-              wrote, key by key — so each message visibly updates the state. */}
-          {workspaceConfig?.debugMode === true && debugState && (
+              wrote, key by key — so each message visibly updates the state.
+              Collapsed by default; the 📊 header button toggles it. */}
+          {workspaceConfig?.debugMode === true && debugState && showDebugState && (
             <div className="bg-slate-900 text-emerald-300 font-mono text-[11px] leading-relaxed px-3 py-1.5 flex flex-wrap gap-x-3 gap-y-0.5 border-b border-slate-700">
               {(() => {
                 const d = debugState as Record<string, unknown>
