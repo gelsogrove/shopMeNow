@@ -210,6 +210,16 @@ export class PushCampaignRepository {
         costPerMessage: true,
         createdAt: true,
         updatedAt: true,
+        lastError: true,
+        // 🏪 Merchant campaign context for the list cards: whose campaign it
+        // is, which creative, and the validity window — the at-a-glance facts
+        // the Pro Loco reads before anything else (Andrea, 2026-08-31).
+        merchantId: true,
+        merchantPushId: true,
+        validFrom: true,
+        validTo: true,
+        merchant: { select: { name: true, quotaRemaining: true } },
+        merchantPush: { select: { title: true } },
       },
     })
   }

@@ -22,7 +22,10 @@ import {
   AlertCircle,
   Ban,
   FileText,
+  Store,
+  CalendarRange,
 } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { CampaignSheet } from "@/components/shared/CampaignSheet"
 import { Badge } from "@/components/ui/badge"
@@ -81,6 +84,13 @@ interface Campaign {
   messageContent?: string
   createdAt?: string
   updatedAt?: string
+  // 🏪 Merchant campaign context (list cards)
+  merchantId?: string | null
+  merchantPushId?: string | null
+  validFrom?: string | null
+  validTo?: string | null
+  merchant?: { name: string; quotaRemaining: number } | null
+  merchantPush?: { title: string } | null
 }
 
 // Status configuration
@@ -394,6 +404,19 @@ export default function CampaignsPage() {
               )}
             </div>
             
+            {/* 🏪 Whose campaign: merchant + creative + package left — the
+                first thing the Pro Loco reads on a card */}
+            {campaign.merchant && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-700">
+                <Store className="w-3.5 h-3.5 text-teal-600" />
+                <span className="font-medium">{campaign.merchant.name}</span>
+                {campaign.merchantPush?.title && (
+                  <span className="text-slate-500">· {campaign.merchantPush.title}</span>
+                )}
+                <span className="text-slate-400">· {campaign.merchant.quotaRemaining} push left</span>
+              </div>
+            )}
+
             {/* Targeting + Frequency */}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <Badge variant="outline" className="flex items-center gap-1">
@@ -405,8 +428,31 @@ export default function CampaignsPage() {
                 <Clock className="w-3 h-3" />
                 {formatDate(date)}
               </div>
+              {/* Validity window "from → to" (Andrea: "le date dal-al") */}
+              {(campaign.validFrom || campaign.validTo) && (
+                <div className="flex items-center gap-1 text-slate-600">
+                  <CalendarRange className="w-3 h-3" />
+                  {campaign.validFrom ? formatDate(campaign.validFrom) : "…"}
+                  {" → "}
+                  {campaign.validTo ? formatDate(campaign.validTo) : "…"}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Visible on/off switch (Andrea: "che si possa attivare disattivare"):
+              running/scheduled → pause; paused → resume. Other states have no
+              meaningful toggle and show none. */}
+          {(isCampaignActive || campaign.status === "PAUSED") && (
+            <Switch
+              checked={isCampaignActive}
+              onCheckedChange={() =>
+                isCampaignActive ? handlePause(campaign) : handleResume(campaign)
+              }
+              title={isCampaignActive ? "Pause campaign" : "Resume campaign"}
+              aria-label={isCampaignActive ? "Pause campaign" : "Resume campaign"}
+            />
+          )}
 
           {/* Action Dropdown */}
           <DropdownMenu>

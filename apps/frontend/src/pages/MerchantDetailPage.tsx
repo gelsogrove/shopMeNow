@@ -413,6 +413,16 @@ export function MerchantDetailPage() {
               <div className="divide-y">
                 {pushes.map((p) => (
                   <div key={p.id} className="flex items-start gap-3 py-3">
+                    {/* Thumbnail from the public photo endpoint; hides itself
+                        when the push has no uploaded photo (404). */}
+                    <img
+                      src={`/api/v1/public/merchant-pushes/${p.id}/photo.jpg`}
+                      alt=""
+                      className="w-14 h-14 rounded-md border object-cover shrink-0"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).style.display = "none"
+                      }}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-gray-900">{p.title}</span>

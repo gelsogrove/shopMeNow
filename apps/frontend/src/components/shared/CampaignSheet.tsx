@@ -255,6 +255,27 @@ export function CampaignSheet({
     }
   }
 
+  // Tag options: the audience endpoint first (exact-case names + counts with
+  // the job's own eligibility rules); when it returns nothing (older backend,
+  // network error) derive the same thing from the loaded eligible customers.
+  // NEVER lowercased: array targeting (`tags has X`) is case-sensitive.
+  const tagOptions =
+    audienceTags.length > 0
+      ? audienceTags
+      : (() => {
+          const counts = new Map<string, number>()
+          for (const c of customers) {
+            for (const raw of c.tags || []) {
+              const tag = raw.trim()
+              if (!tag) continue
+              counts.set(tag, (counts.get(tag) || 0) + 1)
+            }
+          }
+          return Array.from(counts.entries())
+            .map(([tag, count]) => ({ tag, count }))
+            .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+        })()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -313,12 +334,12 @@ export function CampaignSheet({
       }
       return parsed.toISOString()
     }
-    // The validity window only exists for recurring campaigns — a ONCE
-    // campaign runs at sendAt and the window fields are hidden.
-    const isRecurring = (frequency || "ONCE").toUpperCase() !== "ONCE"
-    const validFromIso = isRecurring ? toIsoOrNull(validFrom, "start") : null
+    // The validity window applies to EVERY campaign (Andrea, 2026-09-01: "se
+    // è finito l'evento non deve più mandare") — also a ONCE campaign paused
+    // and resumed after the event must find the closed window and stop.
+    const validFromIso = toIsoOrNull(validFrom, "start")
     if (validFromIso === undefined) return
-    const validToIso = isRecurring ? toIsoOrNull(validTo, "end") : null
+    const validToIso = toIsoOrNull(validTo, "end")
     if (validToIso === undefined) return
     if (validFromIso && validToIso && validToIso <= validFromIso) {
       toast.error("End date must be after start date")
@@ -551,12 +572,24 @@ export function CampaignSheet({
                     <p className="text-xs font-medium text-slate-500">
                       This is what customers will receive:
                     </p>
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 whitespace-pre-wrap">
-                      {(() => {
-                        const p = merchantPushes.find((x) => x.id === merchantPushId)
-                        if (!p) return "The campaign will send the selected push content."
-                        return `*${p.title}*\n\n${p.text}${p.location ? `\n\n📍 ${p.location}` : ""}`
-                      })()}
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 space-y-2">
+                      {/* Uploaded creative photo, when there is one — same
+                          public URL WhatsApp will fetch; hidden if none. */}
+                      <img
+                        src={`/api/v1/public/merchant-pushes/${merchantPushId}/photo.jpg`}
+                        alt="Push photo"
+                        className="max-h-40 rounded-md border border-emerald-200 object-contain"
+                        onError={(e) => {
+                          ;(e.target as HTMLImageElement).style.display = "none"
+                        }}
+                      />
+                      <div className="whitespace-pre-wrap">
+                        {(() => {
+                          const p = merchantPushes.find((x) => x.id === merchantPushId)
+                          if (!p) return "The campaign will send the selected push content."
+                          return `*${p.title}*\n\n${p.text}${p.location ? `\n\n📍 ${p.location}` : ""}`
+                        })()}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -590,8 +623,9 @@ export function CampaignSheet({
           </div>
           )}
 
-          {/* Targeting */}
+          {/* ── STEP 2 · WHO receives it ── */}
           <div className="space-y-4 pt-4 border-t">
+            <Label className="text-sm font-semibold">2 · Who receives it</Label>
             <div className="space-y-2">
               <Label>Targeting Type</Label>
               <Select
@@ -619,7 +653,7 @@ export function CampaignSheet({
             {targetingType === "TAGS" && (
               <div className="space-y-2">
                 <Label>Select Tag</Label>
-                {audienceTags.length === 0 ? (
+                {tagOptions.length === 0 ? (
                   <p className="text-xs text-slate-500 rounded-md border border-dashed p-3">
                     No tagged customers with push consent yet. Tags (e.g. INLOCO) are
                     added automatically by the chatbot during conversations — as guests
@@ -637,7 +671,7 @@ export function CampaignSheet({
                     <SelectContent>
                       {/* Exact-case values from the backend: array targeting is
                           case-sensitive, a lowercased tag would match nobody. */}
-                      {audienceTags.map(({ tag, count }) => (
+                      {tagOptions.map(({ tag, count }) => (
                         <SelectItem key={tag} value={tag}>
                           {tag} · {count} customer{count === 1 ? "" : "s"}
                         </SelectItem>
@@ -654,7 +688,7 @@ export function CampaignSheet({
                 if (targetingType === "MANUAL")
                   return <>Will reach <b>{targetCustomerIds.length}</b> selected customer{targetCustomerIds.length === 1 ? "" : "s"}.</>
                 if (targetingType === "TAGS") {
-                  const t = audienceTags.find((x) => x.tag === tagId)
+                  const t = tagOptions.find((x) => x.tag === tagId)
                   return tagId
                     ? <>Will reach <b>{t?.count ?? 0}</b> customer{(t?.count ?? 0) === 1 ? "" : "s"} tagged {tagId}.</>
                     : <>Pick a tag to see how many customers it reaches.</>
@@ -753,8 +787,9 @@ export function CampaignSheet({
             )}
           </div>
 
-          {/* Schedule Controls */}
+          {/* ── STEP 3 · WHEN ── */}
           <div className="grid gap-4 pt-4 border-t">
+            <Label className="text-sm font-semibold">3 · When</Label>
             <div className="space-y-2">
               <Label htmlFor="sendAt">First Send At</Label>
               <Input
@@ -768,10 +803,9 @@ export function CampaignSheet({
                 Leave empty to send at the next scheduler run.
               </p>
             </div>
-            {/* Validity window matters only when the campaign repeats — a
-                one-time campaign just runs at First Send At. */}
-            {frequency !== "ONCE" && (
-              <div className="grid gap-4 md:grid-cols-2">
+            {/* Validity window — for EVERY campaign: when the event is over,
+                nothing goes out anymore, whatever happened in between. */}
+            <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="valid-from">Valid from</Label>
                   <Input
@@ -792,12 +826,11 @@ export function CampaignSheet({
                     disabled={!isEditMode}
                   />
                   <p className="text-xs text-muted-foreground">
-                    The campaign stops by itself after this date (e.g. a winter
-                    campaign: 01/12 → 31/03).
+                    The campaign stops by itself after this date — e.g. when the
+                    event is over, nothing more is sent.
                   </p>
                 </div>
               </div>
-            )}
           </div>
 
           {/* Footer Actions */}
