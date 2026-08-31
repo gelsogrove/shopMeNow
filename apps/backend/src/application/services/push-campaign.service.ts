@@ -39,6 +39,9 @@ export interface CreatePushCampaignDTO {
   merchantPushId?: string | null
   validFrom?: Date | string | null
   validTo?: Date | string | null
+  // Daily send window in the workspace timezone (default 8→19)
+  sendWindowStart?: number
+  sendWindowEnd?: number
 }
 
 export class PushCampaignService {
@@ -216,6 +219,26 @@ export class PushCampaignService {
     }
   }
 
+  /**
+   * Daily send window: integer hours 0–23, start strictly before end, both
+   * defaulting to the platform-wide 8→19 (Andrea, 2026-09-01). No overnight
+   * windows: a tourist push has no business crossing midnight.
+   */
+  private normalizeSendWindow(
+    start: number | undefined,
+    end: number | undefined
+  ): { sendWindowStart: number; sendWindowEnd: number } {
+    const s = start === undefined ? 8 : Number(start)
+    const e = end === undefined ? 19 : Number(end)
+    if (!Number.isInteger(s) || !Number.isInteger(e) || s < 0 || s > 23 || e < 1 || e > 24) {
+      throw new AppError(400, "Send window hours must be integers between 0 and 24")
+    }
+    if (s >= e) {
+      throw new AppError(400, "Send window start must be before its end")
+    }
+    return { sendWindowStart: s, sendWindowEnd: e }
+  }
+
   /** Accepts Date | string | null, throws a clean 400 on garbage. */
   private parseDateInput(value: Date | string | null | undefined, label: string): Date | null {
     if (value === undefined || value === null) return null
@@ -305,6 +328,12 @@ export class PushCampaignService {
     if (validFrom && validTo && validTo <= validFrom) {
       throw new AppError(400, "validTo must be after validFrom")
     }
+
+    // 🕗 Daily send window (Andrea, 2026-09-01: "dalle 8 alle 19 di default")
+    const { sendWindowStart, sendWindowEnd } = this.normalizeSendWindow(
+      input.sendWindowStart,
+      input.sendWindowEnd
+    )
 
     // Fail fast on external links — before recipients are built or credits touched.
     this.assertLinksAllowed(
@@ -399,6 +428,8 @@ export class PushCampaignService {
         merchantPushId: input.merchantPushId ?? null,
         validFrom,
         validTo,
+        sendWindowStart,
+        sendWindowEnd,
       },
       recipients
     )
@@ -463,6 +494,16 @@ export class PushCampaignService {
       }
       if (input.validFrom !== undefined) input.validFrom = mergedFrom
       if (input.validTo !== undefined) input.validTo = mergedTo
+    }
+
+    // 🕗 Send-window changes keep the start<end invariant against stored values.
+    if (input.sendWindowStart !== undefined || input.sendWindowEnd !== undefined) {
+      const normalized = this.normalizeSendWindow(
+        input.sendWindowStart ?? (existing as any).sendWindowStart,
+        input.sendWindowEnd ?? (existing as any).sendWindowEnd
+      )
+      input.sendWindowStart = normalized.sendWindowStart
+      input.sendWindowEnd = normalized.sendWindowEnd
     }
 
     // Same link validation as create, when the content is being changed.

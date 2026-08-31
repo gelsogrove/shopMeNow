@@ -23,6 +23,39 @@ class MerchantQuotaExhaustedError extends Error {
   }
 }
 
+/**
+ * Minutes until the campaign's daily send window opens in the given timezone
+ * — 0 when we are already inside it (start ≤ local time < end).
+ *
+ * The dyno clock is UTC; the guests' clock is not. Falls back to UTC when the
+ * timezone string is invalid rather than blocking sends forever.
+ */
+export function minutesUntilSendWindow(
+  now: Date,
+  timeZone: string,
+  startHour: number,
+  endHour: number
+): number {
+  let hour: number
+  let minute: number
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    }).formatToParts(now)
+    hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0') % 24
+    minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0')
+  } catch {
+    hour = now.getUTCHours()
+    minute = now.getUTCMinutes()
+  }
+  const nowMin = hour * 60 + minute
+  if (nowMin >= startHour * 60 && nowMin < endHour * 60) return 0
+  return (startHour * 60 - nowMin + 1440) % 1440
+}
+
 // Initialize billing service for credit deduction
 const billingService = new BillingService()
 
@@ -53,7 +86,7 @@ export async function pushCampaignsJob(): Promise<void> {
     try {
       const workspace = await prisma.workspace.findUnique({
         where: { id: campaign.workspaceId },
-        select: { ownerId: true, name: true, enableWhatsapp: true, defaultLanguage: true },
+        select: { ownerId: true, name: true, enableWhatsapp: true, defaultLanguage: true, timezone: true },
       })
 
       if (!workspace?.enableWhatsapp) {
@@ -88,6 +121,34 @@ export async function pushCampaignsJob(): Promise<void> {
           data: { status: 'COMPLETED', isActive: false, nextRunAt: null },
         })
         logger.info(`[PUSH-CAMPAIGN] Campaign ${campaign.id} completed — validity window ended`)
+        continue
+      }
+
+      // 🕗 DAILY SEND WINDOW (Andrea, 2026-09-01: "dalle 8 alle 19 di
+      // default"): no notifications outside the campaign's hours, computed in
+      // the WORKSPACE timezone (the dyno runs UTC, Sappada does not). Outside
+      // the window the campaign is simply postponed to the next window start.
+      // The columns are NOT NULL with defaults, so real rows always carry a
+      // window; the null-guard only matters for partial rows in tests.
+      const hasWindow =
+        campaign.sendWindowStart != null && campaign.sendWindowEnd != null
+      const windowDelayMin = hasWindow
+        ? minutesUntilSendWindow(
+            new Date(),
+            workspace.timezone || 'Europe/Rome',
+            campaign.sendWindowStart,
+            campaign.sendWindowEnd
+          )
+        : 0
+      if (windowDelayMin > 0) {
+        const resumeAt = new Date(Date.now() + windowDelayMin * 60_000)
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: { nextRunAt: resumeAt },
+        })
+        logger.info(
+          `[PUSH-CAMPAIGN] Campaign ${campaign.id} outside send window (${campaign.sendWindowStart}→${campaign.sendWindowEnd} ${workspace.timezone || 'Europe/Rome'}) — postponed to ${resumeAt.toISOString()}`
+        )
         continue
       }
 

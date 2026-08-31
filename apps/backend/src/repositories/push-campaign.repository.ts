@@ -34,6 +34,9 @@ export interface CreatePushCampaignInput {
   merchantPushId?: string | null
   validFrom?: Date | null
   validTo?: Date | null
+  // Daily send window, hours in the workspace timezone (default 8→19)
+  sendWindowStart?: number
+  sendWindowEnd?: number
 }
 
 export interface UpdatePushCampaignInput {
@@ -59,6 +62,9 @@ export interface UpdatePushCampaignInput {
   merchantPushId?: string | null
   validFrom?: Date | null
   validTo?: Date | null
+  // Daily send window, hours in the workspace timezone (default 8→19)
+  sendWindowStart?: number
+  sendWindowEnd?: number
 }
 
 export interface RecipientCreateInput {
@@ -109,6 +115,8 @@ export class PushCampaignRepository {
         merchantPushId: data.merchantPushId,
         validFrom: data.validFrom,
         validTo: data.validTo,
+        sendWindowStart: data.sendWindowStart,
+        sendWindowEnd: data.sendWindowEnd,
         expectedRecipients: recipients.length,
         recipients: {
           createMany: {
@@ -218,6 +226,8 @@ export class PushCampaignRepository {
         merchantPushId: true,
         validFrom: true,
         validTo: true,
+        sendWindowStart: true,
+        sendWindowEnd: true,
         merchant: { select: { name: true, quotaRemaining: true } },
         merchantPush: { select: { title: true } },
       },

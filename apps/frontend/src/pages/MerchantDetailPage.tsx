@@ -13,6 +13,7 @@ import { ArrowLeft, Coins, ImageIcon, Plus, Video } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "../lib/toast"
+import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
 import {
   MerchantPush,
   MerchantStats,
@@ -27,68 +28,105 @@ import {
  */
 
 function PushFormFields({ item }: { item: MerchantPush | null }) {
-  // Uploaded photo: the file picker reads the image as a data URI into a
-  // hidden field, so the plain FormData submit carries it. Empty = keep the
-  // photo already stored (on edit) / no photo (on create).
-  const [photoPreview, setPhotoPreview] = useState<string>("")
+  // Controlled fields: the live WhatsApp-style preview below re-renders as
+  // the operator types. FormData submit still works — inputs keep `name`.
+  const [title, setTitle] = useState(item?.title ?? "")
+  const [text, setText] = useState(item?.text ?? "")
+  const [location, setLocation] = useState(item?.location ?? "")
+  const [videoUrl, setVideoUrl] = useState(item?.videoUrl ?? "")
+  // New cropped photo as data URI; photoRemoved clears the stored one.
+  const [photoBase64, setPhotoBase64] = useState<string>("")
+  const [photoRemoved, setPhotoRemoved] = useState(false)
+  // The stored photo, only when it actually exists (the endpoint 404s
+  // otherwise — probing avoids a broken image in the crop control).
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | undefined>()
 
-  const handlePhotoFile = (file: File | undefined) => {
-    if (!file) return
+  useEffect(() => {
+    if (!item) return
+    const url = `/api/v1/public/merchant-pushes/${item.id}/photo.jpg`
+    const probe = new Image()
+    probe.onload = () => setExistingPhotoUrl(url)
+    probe.src = url
+  }, [item?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCropped = (file: File) => {
     if (file.size > 4 * 1024 * 1024) {
       toast.error("Photo is too large — maximum 4MB")
       return
     }
     const reader = new FileReader()
-    reader.onload = () => setPhotoPreview(String(reader.result || ""))
+    reader.onload = () => {
+      setPhotoBase64(String(reader.result || ""))
+      setPhotoRemoved(false)
+    }
     reader.readAsDataURL(file)
   }
+
+  const previewPhoto =
+    photoBase64 || (!photoRemoved ? existingPhotoUrl : undefined)
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
-        <Input id="title" name="title" required defaultValue={item?.title ?? ""} />
+        <Input
+          id="title"
+          name="title"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="text">Text *</Label>
-        <Textarea id="text" name="text" required rows={4} defaultValue={item?.text ?? ""} />
+        <Textarea
+          id="text"
+          name="text"
+          required
+          rows={8}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
         <p className="text-xs text-gray-500">
           Links must belong to the workspace allowed external links, or saving will be rejected.
         </p>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="photoFile">Photo</Label>
-        <Input
-          id="photoFile"
-          type="file"
-          accept="image/*"
-          onChange={(e) => handlePhotoFile(e.target.files?.[0])}
-        />
-        <input type="hidden" name="photoBase64" value={photoPreview} />
-        {photoPreview && (
-          <img
-            src={photoPreview}
-            alt="Selected photo preview"
-            className="mt-2 max-h-40 rounded-md border object-contain"
-          />
-        )}
-        <p className="text-xs text-gray-500">
-          {item
-            ? "Pick a file to replace the current photo; leave empty to keep it."
-            : "Sent to WhatsApp with the push text as caption. Max 4MB."}
-        </p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="photoUrl">Photo URL (alternative to upload)</Label>
-        <Input id="photoUrl" name="photoUrl" defaultValue={item?.photoUrl ?? ""} />
-      </div>
+
+      {/* Photo: same crop control used everywhere else in the app */}
+      <ImageCropUpload
+        label="Photo"
+        currentImageUrl={previewPhoto}
+        onImageSelected={handleCropped}
+        onImageRemove={() => {
+          setPhotoBase64("")
+          setPhotoRemoved(true)
+        }}
+        size="lg"
+      />
+      <input type="hidden" name="photoBase64" value={photoBase64} />
+      <input type="hidden" name="photoRemove" value={photoRemoved ? "1" : ""} />
+
       <div className="space-y-2">
         <Label htmlFor="videoUrl">Video URL</Label>
-        <Input id="videoUrl" name="videoUrl" defaultValue={item?.videoUrl ?? ""} />
+        <Input
+          id="videoUrl"
+          name="videoUrl"
+          value={videoUrl}
+          onChange={(e) => setVideoUrl(e.target.value)}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
-        <Input id="location" name="location" defaultValue={item?.location ?? ""} />
+        <Input
+          id="location"
+          name="location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Leave empty to use the merchant's location"
+        />
+        <p className="text-xs text-gray-500">
+          Empty = the merchant's own location is sent automatically.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Internal notes</Label>
@@ -108,6 +146,27 @@ function PushFormFields({ item }: { item: MerchantPush | null }) {
           className="h-4 w-4"
         />
         <Label htmlFor="isActive">Active</Label>
+      </div>
+
+      {/* Live preview — the WhatsApp bubble as customers will see it */}
+      <div className="space-y-1 pt-2 border-t">
+        <Label>Preview</Label>
+        <div className="max-w-sm rounded-xl border border-emerald-200 bg-[#e7ffdb] p-3 space-y-2 shadow-sm">
+          {previewPhoto && (
+            <img
+              src={previewPhoto}
+              alt="Push photo"
+              className="w-full max-h-44 rounded-lg object-cover"
+            />
+          )}
+          <div className="text-sm text-slate-900 whitespace-pre-wrap">
+            <span className="font-bold">{title || "Title"}</span>
+            {"\n\n"}
+            {text || "Push text…"}
+            {(location || "").trim() ? `\n\n📍 ${location}` : "\n\n📍 (merchant's location)"}
+            {videoUrl ? `\n\n${videoUrl}` : ""}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -154,13 +213,17 @@ export function MerchantDetailPage() {
     const formData = new FormData(form)
     const optional = (key: string) => (formData.get(key) as string) || null
     const photoBase64 = (formData.get("photoBase64") as string) || ""
+    const photoRemoved = (formData.get("photoRemove") as string) === "1"
     return {
       title: String(formData.get("title") ?? ""),
       text: String(formData.get("text") ?? ""),
-      photoUrl: optional("photoUrl"),
-      // Only sent when a new file was picked — an empty value must NOT wipe
-      // the photo already stored on the push.
-      ...(photoBase64 ? { photoBase64 } : {}),
+      // New photo replaces; explicit remove clears; otherwise the stored
+      // photo is untouched.
+      ...(photoBase64
+        ? { photoBase64 }
+        : photoRemoved
+          ? { photoBase64: null }
+          : {}),
       videoUrl: optional("videoUrl"),
       location: optional("location"),
       description: optional("description"),

@@ -29,7 +29,7 @@ export async function resolveMerchantCampaign(
 ): Promise<MerchantCampaignSnapshot> {
   const merchant = await prisma.merchant.findFirst({
     where: { id: merchantId, workspaceId, deletedAt: null }, // tenant boundary (rule 2)
-    select: { isActive: true, quotaRemaining: true },
+    select: { isActive: true, quotaRemaining: true, location: true },
   })
   if (!merchant) throw new AppError(404, "Merchant not found")
   if (!merchant.isActive) throw new AppError(400, "Merchant is not active")
@@ -55,7 +55,11 @@ export async function resolveMerchantCampaign(
   // Markdown italic and reach the guest as _corsivo_ (caught by the queue
   // media test, 2026-09-01).
   const parts = [`**${push.title}**`, push.text]
-  if (push.location) parts.push(`📍 ${push.location}`)
+  // Location: the creative's own when set, otherwise the merchant's — the
+  // push is usually AT the business, so the anagrafica is the default and
+  // the per-push field only overrides it (Andrea, 2026-09-01).
+  const location = push.location || merchant.location
+  if (location) parts.push(`📍 ${location}`)
   if (push.videoUrl) parts.push(push.videoUrl)
 
   // Photo: an image uploaded from the admin's computer wins over an external

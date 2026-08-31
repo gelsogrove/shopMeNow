@@ -63,6 +63,8 @@ interface Campaign {
   merchantPushId?: string | null
   validFrom?: string | null
   validTo?: string | null
+  sendWindowStart?: number | null
+  sendWindowEnd?: number | null
 }
 
 interface CampaignSheetProps {
@@ -99,6 +101,9 @@ export function CampaignSheet({
   const [merchantPushId, setMerchantPushId] = useState<string | null>(null)
   const [validFrom, setValidFrom] = useState<string>("")
   const [validTo, setValidTo] = useState<string>("")
+  // 🕗 Daily send window (default 8→19): no notifications at night
+  const [sendWindowStart, setSendWindowStart] = useState<number>(8)
+  const [sendWindowEnd, setSendWindowEnd] = useState<number>(19)
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [merchantPushes, setMerchantPushes] = useState<MerchantPush[]>([])
   // 📊 Reachable audience, from the backend with the SAME eligibility rules
@@ -186,6 +191,8 @@ export function CampaignSheet({
       setMerchantPushId(campaign.merchantPushId || null)
       setValidFrom(campaign.validFrom ? toLocalInputValue(campaign.validFrom) : "")
       setValidTo(campaign.validTo ? toLocalInputValue(campaign.validTo) : "")
+      setSendWindowStart(campaign.sendWindowStart ?? 8)
+      setSendWindowEnd(campaign.sendWindowEnd ?? 19)
     } else {
       // Reset form for new campaign
       setName("")
@@ -201,6 +208,8 @@ export function CampaignSheet({
       setMerchantPushId(null)
       setValidFrom("")
       setValidTo("")
+      setSendWindowStart(8)
+      setSendWindowEnd(19)
     }
   }, [campaign])
 

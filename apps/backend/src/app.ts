@@ -437,6 +437,11 @@ app.use(
         }
       }
     },
+    // Base64 image payloads (merchant push photos, tourist gallery) exceed
+    // express's 100kb default and made saves fail silently with a 413
+    // (Andrea, 2026-09-01: "non salva"). 6mb covers the 4MB decoded photo cap
+    // (base64 inflates ~4/3) with headroom.
+    limit: "6mb",
   })
 )
 

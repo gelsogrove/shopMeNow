@@ -1935,6 +1935,11 @@ model PushCampaign {
   // recurring runs stop by themselves after validTo.
   validFrom          DateTime?
   validTo            DateTime?
+  // Daily send window in the workspace's timezone (Andrea, 2026-09-01:
+  // "dalle 8 alle 19 di default") — no notifications at 3am. The scheduler
+  // postpones a due campaign to the next window start when outside.
+  sendWindowStart    Int                       @default(8)
+  sendWindowEnd      Int                       @default(19)
   templateId         String?
   templateLocale     String?
   bodyPreview        String?                   @db.Text
