@@ -4,6 +4,7 @@
  * 
  * Pipeline Order (CRITICAL - must execute in sequence):
  * 1. Rate Limiting - Prevent abuse (10 msg/min per visitorId)
+ * 1b. Daily Limit - per-customer cap (Workspace.messageLimit, default 50/24h)
  * 2. Content Safety - XSS, SQL injection, malware detection
  * 3. Business Rules - Hours of operation, maintenance windows
  * 4. Channel Validation - Format, length, charset
@@ -16,7 +17,7 @@ import logger from "../../utils/logger"
 import { prisma } from "@echatbot/database"
 
 export interface SecurityCheckResult {
-  step: "RATE_LIMIT" | "CONTENT_SAFETY" | "BUSINESS_RULES" | "CHANNEL_VALIDATION" | "ANTI_SPAM"
+  step: "RATE_LIMIT" | "DAILY_LIMIT" | "CONTENT_SAFETY" | "BUSINESS_RULES" | "CHANNEL_VALIDATION" | "ANTI_SPAM"
   passed: boolean
   reason?: string
   retryAfter?: number // Milliseconds to wait before retry
@@ -61,6 +62,23 @@ export class SecurityCheckService {
         reason: rateLimitResult.reason,
       })
       return results // Fail fast
+    }
+
+    // Step 1b: Daily message cap per customer (Andrea, 2026-09-01: "dopo 50
+    // messaggi al giorno c'è un blocco") — every LLM turn costs money, and
+    // the per-minute limits above cannot stop a slow-but-endless conversation.
+    // The cap is Workspace.messageLimit (default 50, editable in backoffice;
+    // <= 0 disables it). Skipped for page-access validation: no message there.
+    if (!context.accessValidationOnly) {
+      const dailyLimitResult = await this.checkDailyLimit(context)
+      results.push(dailyLimitResult)
+      if (!dailyLimitResult.passed) {
+        logger.warn("❌ Security Step 1b FAILED: Daily Limit", {
+          visitorId: context.visitorId,
+          reason: dailyLimitResult.reason,
+        })
+        return results // Fail fast
+      }
     }
 
     // Step 2: Content Safety
@@ -146,6 +164,42 @@ export class SecurityCheckService {
       step: "RATE_LIMIT",
       passed: true,
     }
+  }
+
+  /**
+   * Step 1b: Daily cap per customer, both channels.
+   *
+   * Rolling 24h window on the same counters the per-minute checks use — no
+   * timezone math, and "50 al giorno" stays true on any clock. The limit is
+   * DB-first (Workspace.messageLimit, default 50): each workspace tunes or
+   * disables (<= 0) its own cap from the backoffice, never from code.
+   */
+  private static async checkDailyLimit(
+    context: SecurityCheckContext
+  ): Promise<SecurityCheckResult> {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: context.workspaceId },
+      select: { messageLimit: true },
+    })
+    const limit = workspace?.messageLimit ?? 0
+    if (limit <= 0) {
+      return { step: "DAILY_LIMIT", passed: true }
+    }
+
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const messagesToday = await this.countRecentMessages(context, dayAgo)
+
+    if (messagesToday >= limit) {
+      return {
+        step: "DAILY_LIMIT",
+        passed: false,
+        reason: `Daily message limit reached: ${messagesToday}/${limit} in the last 24 hours`,
+        // The rolling window frees up gradually — an hour is an honest retry.
+        retryAfter: 60 * 60 * 1000,
+      }
+    }
+
+    return { step: "DAILY_LIMIT", passed: true }
   }
 
   /**
