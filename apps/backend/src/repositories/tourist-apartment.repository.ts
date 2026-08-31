@@ -1,15 +1,15 @@
 /**
- * TouristRefugeRepository
+ * TouristApartmentRepository
  *
- * Repository for managing tourist mountain refuge recommendations.
+ * Repository for managing vacation house/apartment recommendations.
  *
  * Security: ALL queries filtered by workspaceId (multi-tenant isolation)
  */
 
-import { PrismaClient, TouristRefuge } from "@echatbot/database"
+import { PrismaClient, TouristApartment } from "@echatbot/database"
 import logger from "../utils/logger"
 
-export class TouristRefugeRepository {
+export class TouristApartmentRepository {
   private prisma: PrismaClient
 
   constructor(prisma: PrismaClient) {
@@ -17,33 +17,33 @@ export class TouristRefugeRepository {
   }
 
   /**
-   * Find TouristRefuge by ID
-   * @param id - TouristRefuge ID
+   * Find TouristApartment by ID
+   * @param id - TouristApartment ID
    * @param workspaceId - Workspace ID (security filter)
-   * @returns TouristRefuge or null
+   * @returns TouristApartment or null
    */
-  async findById(id: string, workspaceId: string): Promise<TouristRefuge | null> {
+  async findById(id: string, workspaceId: string): Promise<TouristApartment | null> {
     try {
-      return await this.prisma.touristRefuge.findFirst({
+      return await this.prisma.touristApartment.findFirst({
         where: {
           id,
           workspaceId,
         },
       })
     } catch (error) {
-      logger.error(`Error finding TouristRefuge by ID ${id}:`, error)
+      logger.error(`Error finding TouristApartment by ID ${id}:`, error)
       throw error
     }
   }
 
   /**
-   * Find all active TouristRefuges for a workspace
+   * Find all active TouristApartments for a workspace
    * @param workspaceId - Workspace ID (security filter)
-   * @returns Array of active TouristRefuges sorted by order
+   * @returns Array of active TouristApartments sorted by order
    */
-  async findAll(workspaceId: string): Promise<TouristRefuge[]> {
+  async findAll(workspaceId: string): Promise<TouristApartment[]> {
     try {
-      return await this.prisma.touristRefuge.findMany({
+      return await this.prisma.touristApartment.findMany({
         where: {
           workspaceId,
           isActive: true,
@@ -53,45 +53,49 @@ export class TouristRefugeRepository {
         },
       })
     } catch (error) {
-      logger.error("Error finding all TouristRefuges:", error)
+      logger.error("Error finding all TouristApartments:", error)
       throw error
     }
   }
 
   /**
-   * Create new TouristRefuge
-   * @param data - TouristRefuge data
-   * @returns Created TouristRefuge
+   * Create new TouristApartment
+   * @param data - TouristApartment data
+   * @returns Created TouristApartment
    */
   async create(data: {
     workspaceId: string
     name: string
     description?: string
-    climbTime?: string
-    difficulty?: string
-    openFrom?: string
-    openTo?: string
+    category?: string
     location?: string
+    streetNumber?: string
     phone?: string
+    mobile?: string
     email?: string
+    rooms?: number
+    beds?: number
+    bathrooms?: number
     link?: string
     videoUrl?: string
     order?: number
     isActive?: boolean
-  }): Promise<TouristRefuge> {
+  }): Promise<TouristApartment> {
     try {
-      const touristRefuge = await this.prisma.touristRefuge.create({
+      const touristApartment = await this.prisma.touristApartment.create({
         data: {
           workspaceId: data.workspaceId,
           name: data.name,
           description: data.description,
-          climbTime: data.climbTime,
-          difficulty: data.difficulty,
-          openFrom: data.openFrom,
-          openTo: data.openTo,
+          category: data.category,
           location: data.location,
+          streetNumber: data.streetNumber,
           phone: data.phone,
+          mobile: data.mobile,
           email: data.email,
+          rooms: data.rooms,
+          beds: data.beds,
+          bathrooms: data.bathrooms,
           link: data.link,
           videoUrl: data.videoUrl,
           order: data.order ?? 999,
@@ -100,21 +104,21 @@ export class TouristRefugeRepository {
       })
 
       logger.info(
-        `Created TouristRefuge "${touristRefuge.name}" for workspace ${data.workspaceId}`
+        `Created TouristApartment "${touristApartment.name}" for workspace ${data.workspaceId}`
       )
-      return touristRefuge
+      return touristApartment
     } catch (error) {
-      logger.error("Error creating TouristRefuge:", error)
+      logger.error("Error creating TouristApartment:", error)
       throw error
     }
   }
 
   /**
-   * Update TouristRefuge
-   * @param id - TouristRefuge ID
+   * Update TouristApartment
+   * @param id - TouristApartment ID
    * @param workspaceId - Workspace ID (security filter)
    * @param data - Updated fields
-   * @returns Updated TouristRefuge
+   * @returns Updated TouristApartment
    */
   async update(
     id: string,
@@ -122,21 +126,23 @@ export class TouristRefugeRepository {
     data: Partial<{
       name: string
       description: string
-      climbTime: string
-      difficulty: string
-      openFrom: string
-      openTo: string
+      category: string
       location: string
+      streetNumber: string
       phone: string
+      mobile: string
       email: string
+      rooms: number
+      beds: number
+      bathrooms: number
       link: string
       videoUrl: string
       order: number
       isActive: boolean
     }>
-  ): Promise<TouristRefuge> {
+  ): Promise<TouristApartment> {
     try {
-      const result = await this.prisma.touristRefuge.updateMany({
+      const result = await this.prisma.touristApartment.updateMany({
         where: {
           id,
           workspaceId,
@@ -146,42 +152,42 @@ export class TouristRefugeRepository {
 
       if (result.count === 0) {
         throw new Error(
-          `TouristRefuge ${id} not found in workspace ${workspaceId}`
+          `TouristApartment ${id} not found in workspace ${workspaceId}`
         )
       }
 
-      logger.info(`Updated TouristRefuge ${id} for workspace ${workspaceId}`)
+      logger.info(`Updated TouristApartment ${id} for workspace ${workspaceId}`)
 
       const updated = await this.findById(id, workspaceId)
       if (!updated) {
-        throw new Error(`Failed to retrieve updated TouristRefuge ${id}`)
+        throw new Error(`Failed to retrieve updated TouristApartment ${id}`)
       }
 
       return updated
     } catch (error) {
-      logger.error(`Error updating TouristRefuge ${id}:`, error)
+      logger.error(`Error updating TouristApartment ${id}:`, error)
       throw error
     }
   }
 
   /**
-   * Soft delete TouristRefuge (set isActive = false)
-   * @param id - TouristRefuge ID
+   * Soft delete TouristApartment (set isActive = false)
+   * @param id - TouristApartment ID
    * @param workspaceId - Workspace ID (security filter)
-   * @returns Deleted TouristRefuge
+   * @returns Deleted TouristApartment
    */
-  async softDelete(id: string, workspaceId: string): Promise<TouristRefuge> {
+  async softDelete(id: string, workspaceId: string): Promise<TouristApartment> {
     try {
       return await this.update(id, workspaceId, { isActive: false })
     } catch (error) {
-      logger.error(`Error soft deleting TouristRefuge ${id}:`, error)
+      logger.error(`Error soft deleting TouristApartment ${id}:`, error)
       throw error
     }
   }
 
   /**
-   * Delete TouristRefuge (alias for softDelete to match interface)
-   * @param id - TouristRefuge ID
+   * Delete TouristApartment (alias for softDelete to match interface)
+   * @param id - TouristApartment ID
    * @param workspaceId - Workspace ID (security filter)
    * @returns true if deleted successfully
    */
@@ -195,20 +201,20 @@ export class TouristRefugeRepository {
   }
 
   /**
-   * Count active TouristRefuges for a workspace
+   * Count active TouristApartments for a workspace
    * @param workspaceId - Workspace ID (security filter)
-   * @returns Number of active TouristRefuges
+   * @returns Number of active TouristApartments
    */
   async countActive(workspaceId: string): Promise<number> {
     try {
-      return await this.prisma.touristRefuge.count({
+      return await this.prisma.touristApartment.count({
         where: {
           workspaceId,
           isActive: true,
         },
       })
     } catch (error) {
-      logger.error("Error counting active TouristRefuges:", error)
+      logger.error("Error counting active TouristApartments:", error)
       throw error
     }
   }

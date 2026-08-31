@@ -1,21 +1,24 @@
 /**
- * TouristRefuge Entity
- * Represents a mountain refuge recommendation in the tourist domain
+ * TouristApartment Entity
+ * Represents a vacation house/apartment (or affittacamere, residence, rental
+ * agency, consortium) from the Pro Loco's official accommodation list
  */
-export class TouristRefugeEntity {
+export class TouristApartmentEntity {
   /**
    * Properties
    */
   id: string;
   name: string;
   description?: string | null;
-  climbTime?: string | null;
-  difficulty?: string | null;
-  openFrom?: string | null;
-  openTo?: string | null;
+  category?: string | null;
   location?: string | null;
+  streetNumber?: string | null;
   phone?: string | null;
+  mobile?: string | null;
   email?: string | null;
+  rooms?: number | null;
+  beds?: number | null;
+  bathrooms?: number | null;
   link?: string | null;
   videoUrl?: string | null;
   order: number;
@@ -24,12 +27,12 @@ export class TouristRefugeEntity {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(props: Partial<TouristRefugeEntity>) {
+  constructor(props: Partial<TouristApartmentEntity>) {
     Object.assign(this, props);
   }
 
   /**
-   * Validate TouristRefuge
+   * Validate TouristApartment
    */
   public validate(): boolean {
     // Basic validation
@@ -45,9 +48,9 @@ export class TouristRefugeEntity {
   }
 
   /**
-   * Check if TouristRefuge is active
+   * Check if TouristApartment is active
    */
-  public isActiveTouristRefuge(): boolean {
+  public isActiveTouristApartment(): boolean {
     return this.isActive;
   }
 }

@@ -165,6 +165,7 @@ model Workspace {
   touristHotels          TouristHotel[]
   touristExcursions      TouristExcursion[]
   touristRefuges         TouristRefuge[]
+  touristApartments      TouristApartment[]
   touristEvents          TouristEvent[]
   touristPhotos          TouristPhoto[]
   gdprContent            GdprContent[]
@@ -1234,6 +1235,7 @@ model TouristRefuge {
   openTo      String? // "aperto_a", free text (date/season)
   location    String?
   phone       String?
+  email       String? // Andrea, 2026-08-31: refuges also need an email contact
   link        String?
   videoUrl    String?
   order       Int       @default(0)
@@ -1244,6 +1246,37 @@ model TouristRefuge {
 
   @@index([workspaceId, isActive])
   @@map("tourist_refuges")
+}
+
+// Vacation houses and apartments (plus affittacamere, residences, rental
+// agencies and consortia) from the Pro Loco's official list — one row per
+// rentable unit, so the same owner appears once per apartment exactly as the
+// official PDF lists them. Numeric capacity fields (rooms/beds/bathrooms) are
+// Int so the LLM can reason about party size ("siamo in 6").
+model TouristApartment {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  name         String
+  description  String?   @db.Text
+  category     String? // "Appartamento", "Affittacamere", "Residence", "Agenzia", "Consorzio"
+  location     String? // borgata / frazione
+  streetNumber String? // civico, free text ("118/A" exists)
+  phone        String? // landline
+  mobile       String? // cellulare
+  email        String?
+  rooms        Int? // "N. Camere"
+  beds         Int? // "Posti letto"
+  bathrooms    Int? // "N. bagni"
+  link         String?
+  videoUrl     String?
+  order        Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_apartments")
 }
 
 model TouristEvent {
@@ -1275,6 +1308,7 @@ enum TouristContentType {
   EXCURSION
   REFUGE
   EVENT
+  APARTMENT
 }
 
 /// Photo gallery for PRO_LOCO tourist content. Polymorphic on purpose — one

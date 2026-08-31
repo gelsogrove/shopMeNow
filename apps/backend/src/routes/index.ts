@@ -112,6 +112,7 @@ import { touristRestaurantsRouter } from "../interfaces/http/routes/tourist-rest
 import { touristHotelsRouter } from "../interfaces/http/routes/tourist-hotels.routes"
 import { touristExcursionsRouter } from "../interfaces/http/routes/tourist-excursions.routes"
 import { touristRefugesRouter } from "../interfaces/http/routes/tourist-refuges.routes"
+import { touristApartmentsRouter } from "../interfaces/http/routes/tourist-apartments.routes"
 import { touristEventsRouter } from "../interfaces/http/routes/tourist-events.routes"
 import { touristPhotosRouter } from "../interfaces/http/routes/tourist-photos.routes"
 import { publicTouristPhotosRouter } from "../interfaces/http/routes/public-tourist-photos.routes"
@@ -840,6 +841,10 @@ router.use(
   touristExcursionsRouter()
 )
 router.use("/workspaces/:workspaceId/tourist-refuges", touristRefugesRouter())
+router.use(
+  "/workspaces/:workspaceId/tourist-apartments",
+  touristApartmentsRouter()
+)
 router.use("/workspaces/:workspaceId/tourist-events", touristEventsRouter())
 router.use("/workspaces/:workspaceId/tourist-photos", touristPhotosRouter())
 logger.info("Registered PRO_LOCO tourist content routers with workspace routes")
