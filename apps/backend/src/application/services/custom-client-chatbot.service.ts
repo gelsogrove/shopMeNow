@@ -14,6 +14,7 @@ import { runRetrieval } from "../flow-builder/flow-retrieval-orchestrator.servic
 import { WebhookDispatchService } from "../../services/webhook-dispatch.service"
 import { WorkspaceEnvironmentVariableService } from "./workspace-environment-variable.service"
 import { OpenRouterEmbeddingProvider } from "../flow-builder/embedding-provider"
+import { buildTouristIndexCards } from "./tourist-index-cards"
 
 type ChatChannel = string
 
