@@ -7,6 +7,7 @@ import { touristRestaurantApi } from "@/services/touristRestaurantApi"
 import { touristHotelApi } from "@/services/touristHotelApi"
 import { touristExcursionApi } from "@/services/touristExcursionApi"
 import { touristRefugeApi } from "@/services/touristRefugeApi"
+import { touristApartmentApi } from "@/services/touristApartmentApi"
 import { touristEventApi } from "@/services/touristEventApi"
 import { faqApi } from "@/services/faqApi"
 import {
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   HelpCircle,
   Home,
+  KeyRound,
   Mountain,
   Utensils,
 } from "lucide-react"
@@ -76,6 +78,15 @@ const CATEGORIES: CategoryCard[] = [
     iconColor: "text-amber-700",
   },
   {
+    key: "apartments",
+    title: "Case e appartamenti",
+    description: "Vacation houses, apartments, residences and rental agencies",
+    route: "/tourist-apartments",
+    icon: KeyRound,
+    iconBg: "bg-teal-100",
+    iconColor: "text-teal-600",
+  },
+  {
     key: "events",
     title: "Eventi",
     description: "Festivals, traditions and local events",
@@ -106,11 +117,12 @@ export function TouristContentPage() {
     const loadCounts = async () => {
       if (!workspace?.id) return
       try {
-        const [restaurants, hotels, excursions, refuges, events, faqs] = await Promise.all([
+        const [restaurants, hotels, excursions, refuges, apartments, events, faqs] = await Promise.all([
           touristRestaurantApi.getTouristRestaurants(workspace.id),
           touristHotelApi.getTouristHotels(workspace.id),
           touristExcursionApi.getTouristExcursions(workspace.id),
           touristRefugeApi.getTouristRefuges(workspace.id),
+          touristApartmentApi.getTouristApartments(workspace.id),
           touristEventApi.getTouristEvents(workspace.id),
           faqApi.getFAQs(workspace.id),
         ])
@@ -119,6 +131,7 @@ export function TouristContentPage() {
           hotels: hotels.length,
           excursions: excursions.length,
           refuges: refuges.length,
+          apartments: apartments.length,
           events: events.length,
           faqs: faqs.length,
         })
