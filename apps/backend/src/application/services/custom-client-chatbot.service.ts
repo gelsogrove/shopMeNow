@@ -1107,7 +1107,7 @@ export class CustomClientChatbotService {
    * as the standard chatbot agents.
    *
    * PRO_LOCO workspaces (Andrea, 2026-08-31): Ristoranti/Alberghi/Escursioni/
-   * Rifugi/Eventi are appended as SYNTHETIC FAQ entries (question = name,
+   * Rifugi/Case e appartamenti/Eventi are appended as SYNTHETIC FAQ entries (question = name,
    * answer = the row's fields written as prose) rather than a parallel
    * retrieval path. custom-demosappada's existing FAQ selection/budget/media
    * logic (faq-media.ts) is IDF-based on question+answer text — it does not
@@ -1279,10 +1279,38 @@ export class CustomClientChatbotService {
             fact("Aperto a", r.openTo),
             fact("Località", r.location),
             fact("Tel", r.phone),
+            fact("Email", r.email),
           ]),
           r.link,
           r.videoUrl,
           photoOf("REFUGE", r.id),
+        ]),
+      }))
+
+      // One card per rentable unit, as the official list has it. The question
+      // stays category + name only (see the dilution note above): owner
+      // surnames carry the IDF that wins "avete l'appartamento di Kratter
+      // Sara?", while generic "dove posso dormire" remains the index FAQ's /
+      // accommodation tool's job, not these cards'.
+      const apartmentEntries: FaqEntry[] = apartments.map((a) => ({
+        question: searchableQuestion([
+          `${a.category || "Case e appartamenti"}: ${a.name}`,
+        ]),
+        answer: joinBlock([
+          a.description,
+          joinFacts([
+            fact("Borgata", a.location),
+            fact("Civico", a.streetNumber),
+            fact("Tel", a.phone),
+            fact("Cell", a.mobile),
+            fact("Email", a.email),
+            fact("Camere", a.rooms),
+            fact("Posti letto", a.beds),
+            fact("Bagni", a.bathrooms),
+          ]),
+          a.link,
+          a.videoUrl,
+          photoOf("APARTMENT", a.id),
         ]),
       }))
 
@@ -1312,6 +1340,7 @@ export class CustomClientChatbotService {
         ...hotelEntries,
         ...excursionEntries,
         ...refugeEntries,
+        ...apartmentEntries,
         ...eventEntries,
       ]
     } catch (error) {
