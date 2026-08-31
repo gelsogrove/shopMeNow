@@ -24,7 +24,7 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
  *           description: ID of the workspace this tourist photo belongs to
  *         contentType:
  *           type: string
- *           enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+ *           enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
  *           description: Type of tourist content this photo belongs to
  *         contentId:
  *           type: string
@@ -75,7 +75,7 @@ export const touristPhotosRouter = (): Router => {
    *         required: true
    *         schema:
    *           type: string
-   *           enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+   *           enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
    *       - in: query
    *         name: contentId
    *         required: true
@@ -121,7 +121,7 @@ export const touristPhotosRouter = (): Router => {
    *             properties:
    *               contentType:
    *                 type: string
-   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
    *               contentId:
    *                 type: string
    *               imageBase64:
@@ -169,7 +169,7 @@ export const touristPhotosRouter = (): Router => {
    *             properties:
    *               contentType:
    *                 type: string
-   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
    *               contentId:
    *                 type: string
    *               orderedIds:

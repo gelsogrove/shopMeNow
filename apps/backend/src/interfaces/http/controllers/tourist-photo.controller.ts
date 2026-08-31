@@ -33,7 +33,7 @@ export class TouristPhotoController {
    *         required: true
    *         schema:
    *           type: string
-   *           enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+   *           enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
    *         description: Type of tourist content the gallery belongs to
    *       - in: query
    *         name: contentId
@@ -115,7 +115,7 @@ export class TouristPhotoController {
    *             properties:
    *               contentType:
    *                 type: string
-   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
    *               contentId:
    *                 type: string
    *               imageBase64:
@@ -252,7 +252,7 @@ export class TouristPhotoController {
    *             properties:
    *               contentType:
    *                 type: string
-   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT]
+   *                 enum: [RESTAURANT, HOTEL, EXCURSION, REFUGE, EVENT, APARTMENT]
    *               contentId:
    *                 type: string
    *               orderedIds:

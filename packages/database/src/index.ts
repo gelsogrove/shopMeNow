@@ -158,6 +158,7 @@ export type {
   TouristHotel,
   TouristExcursion,
   TouristRefuge,
+  TouristApartment,
   TouristEvent,
   TouristPhoto,
 } from './generated/prisma/index.js'
