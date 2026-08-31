@@ -75,11 +75,31 @@ CREATE INDEX IF NOT EXISTS "merchant_pushes_workspaceId_merchantId_isActive_idx"
 CREATE INDEX IF NOT EXISTS "merchant_quota_topups_workspaceId_merchantId_idx" ON "merchant_quota_topups"("workspaceId", "merchantId");
 CREATE INDEX IF NOT EXISTS "push_campaigns_workspaceId_merchantId_idx" ON "push_campaigns"("workspaceId", "merchantId");
 
--- AddForeignKey
-ALTER TABLE "merchants" ADD CONSTRAINT "merchants_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "merchant_pushes" ADD CONSTRAINT "merchant_pushes_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "merchant_pushes" ADD CONSTRAINT "merchant_pushes_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "merchant_quota_topups" ADD CONSTRAINT "merchant_quota_topups_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "merchant_quota_topups" ADD CONSTRAINT "merchant_quota_topups_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "push_campaigns" ADD CONSTRAINT "push_campaigns_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "push_campaigns" ADD CONSTRAINT "push_campaigns_merchantPushId_fkey" FOREIGN KEY ("merchantPushId") REFERENCES "merchant_pushes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- AddForeignKey — wrapped for idempotency: this migration may be applied by
+-- hand (Andrea, 2026-08-31: "fai la migrazione") BEFORE the release-phase
+-- `prisma migrate deploy` runs the same file, and ADD CONSTRAINT has no
+-- IF NOT EXISTS of its own.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchants_workspaceId_fkey') THEN
+    ALTER TABLE "merchants" ADD CONSTRAINT "merchants_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_pushes_workspaceId_fkey') THEN
+    ALTER TABLE "merchant_pushes" ADD CONSTRAINT "merchant_pushes_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_pushes_merchantId_fkey') THEN
+    ALTER TABLE "merchant_pushes" ADD CONSTRAINT "merchant_pushes_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_quota_topups_workspaceId_fkey') THEN
+    ALTER TABLE "merchant_quota_topups" ADD CONSTRAINT "merchant_quota_topups_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'merchant_quota_topups_merchantId_fkey') THEN
+    ALTER TABLE "merchant_quota_topups" ADD CONSTRAINT "merchant_quota_topups_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'push_campaigns_merchantId_fkey') THEN
+    ALTER TABLE "push_campaigns" ADD CONSTRAINT "push_campaigns_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'push_campaigns_merchantPushId_fkey') THEN
+    ALTER TABLE "push_campaigns" ADD CONSTRAINT "push_campaigns_merchantPushId_fkey" FOREIGN KEY ("merchantPushId") REFERENCES "merchant_pushes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
