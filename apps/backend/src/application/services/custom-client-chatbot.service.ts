@@ -1136,7 +1136,8 @@ export class CustomClientChatbotService {
 
   /**
    * PRO_LOCO tourism content (Ristoranti, Alberghi, Escursioni, Rifugi,
-   * Eventi), converted to the same {question, answer} shape as a FAQ so it
+   * Case e appartamenti, Eventi), converted to the same {question, answer}
+   * shape as a FAQ so it
    * rides the module's existing FAQ retrieval/budget/media pipeline. Prose
    * facts are built here, once, so every custom chatbot module that ever asks
    * for FAQs gets tourism content for free without knowing these tables
