@@ -104,6 +104,21 @@ export class MerchantRepository {
         await tx.merchantQuotaTopup.create({
           data: { workspaceId, merchantId: id, amount, note, createdByUserId },
         })
+        // 🔁 The target flow end-to-end (Andrea, 2026-09-01): a campaign that
+        // paused because the package ran out RESUMES by itself when the
+        // merchant buys more pushes — the Pro Loco tops up and everything
+        // moves again, no forgotten Resume click. Only quota-paused campaigns
+        // are touched (credit- or manually-paused ones keep their state), and
+        // nextRunAt is re-armed so the scheduler picks them up.
+        await tx.pushCampaign.updateMany({
+          where: {
+            workspaceId,
+            merchantId: id,
+            status: "PAUSED",
+            lastError: { contains: "quota exhausted" },
+          },
+          data: { status: "SCHEDULED", nextRunAt: new Date(), lastError: null },
+        })
         return tx.merchant.findFirst({ where: { id, workspaceId } })
       })
     } catch (error) {

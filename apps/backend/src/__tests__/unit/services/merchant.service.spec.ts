@@ -35,6 +35,9 @@ const buildMockPrisma = () => ({
     findMany: jest.fn(),
     create: jest.fn(),
   },
+  pushCampaign: {
+    updateMany: jest.fn(),
+  },
   workspace: {
     findUnique: jest.fn(),
   },
@@ -132,6 +135,35 @@ describe("MerchantService", () => {
         },
       })
       expect(result.quotaRemaining).toBe(600)
+    })
+
+    it("🔁 auto-resumes ONLY the campaigns paused for quota exhaustion, re-arming the scheduler pickup", () => {
+      // WHY (Andrea, 2026-09-01, the target flow): "se non ha più crediti si
+      // ferma la campagna" — and when the merchant buys more pushes it must
+      // MOVE AGAIN without a forgotten Resume click. The WHERE is surgical:
+      // status PAUSED + the quota reason. A campaign paused by hand or for
+      // platform credit ("Insufficient credit") must stay paused.
+      return (async () => {
+        prisma.$transaction.mockImplementation(async (cb: any) => cb(prisma))
+        prisma.merchant.updateMany.mockResolvedValue({ count: 1 })
+        prisma.merchant.findFirst.mockResolvedValue({ ...MERCHANT, quotaRemaining: 600 })
+
+        await service.topUpQuota({ id: "merchant-1", workspaceId: WS, amount: 500 })
+
+        expect(prisma.pushCampaign.updateMany).toHaveBeenCalledWith({
+          where: {
+            workspaceId: WS,
+            merchantId: "merchant-1",
+            status: "PAUSED",
+            lastError: { contains: "quota exhausted" },
+          },
+          data: {
+            status: "SCHEDULED",
+            nextRunAt: expect.any(Date), // re-armed: the job picks by nextRunAt
+            lastError: null,
+          },
+        })
+      })()
     })
   })
 

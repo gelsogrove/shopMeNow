@@ -231,7 +231,19 @@ export class PushCampaignRepository {
   ) {
     return this.prisma.pushCampaign.updateMany({
       where: { id, workspaceId },
-      data: { status, sendAt },
+      data: {
+        status,
+        sendAt,
+        // Re-arm the scheduler pickup on SCHEDULED: the job selects
+        // `(sendAt<=now AND lastRunAt null) OR nextRunAt<=now`, so a campaign
+        // paused MID-run (lastRunAt set, nextRunAt null for ONCE) would never
+        // be picked again after a resume (found 2026-09-01 tracing Andrea's
+        // target flow: "si ferma... e riparte"). nextRunAt = sendAt when a
+        // schedule provides one, otherwise now.
+        ...(status === PushCampaignStatus.SCHEDULED
+          ? { nextRunAt: sendAt ?? new Date() }
+          : {}),
+      },
     })
   }
 
