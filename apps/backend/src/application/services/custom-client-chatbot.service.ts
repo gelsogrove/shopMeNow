@@ -1201,22 +1201,23 @@ export class CustomClientChatbotService {
         parts.filter((p): p is string => !!p).join("\n")
 
       // The module's retrieval (selectRelevantFaqs → subjectScore) matches the
-      // guest's words against the entry's QUESTION only, never the answer. So
-      // the synthetic question must carry every word a guest would search by:
-      // the category in both plural and singular ("Ristoranti … ristorante"),
-      // the name, and the discriminating flags ("adatto a celiaci"). With a
-      // name-only question, "dammi i ristoranti per celiaci" scored zero
-      // against every restaurant entry and the model never saw them.
+      // guest's words against the entry's QUESTION only, never the answer —
+      // and the score is matched/total over the question's OWN terms, so every
+      // extra word DILUTES a specific match. Live lesson (2026-08-31): with
+      // synonyms and the location packed in, "Cos'è il Carnevale?" scored the
+      // Carnevale card at ~0.2, it missed the 24-entry budget, and the
+      // anti-invention guards stripped the factless reply — the guest got
+      // only the intake question, twice. Short question = category label +
+      // name (+ a discriminating flag): proper names carry high IDF and win
+      // specific questions; generic "what restaurants/events are there"
+      // questions are the INDEX FAQ's job, not these cards'.
       const searchableQuestion = (parts: Array<string | null | undefined>): string =>
         parts.filter(Boolean).join(" — ")
 
       const restaurantEntries: FaqEntry[] = restaurants.map((r) => ({
         question: searchableQuestion([
           `Ristoranti: ${r.name}`,
-          "ristorante, mangiare",
-          r.cuisineType,
           r.celiacFriendly ? "adatto a celiaci, senza glutine" : null,
-          r.location,
         ]),
         answer: joinBlock([
           r.description,
@@ -1234,12 +1235,7 @@ export class CustomClientChatbotService {
       }))
 
       const hotelEntries: FaqEntry[] = hotels.map((h) => ({
-        question: searchableQuestion([
-          `Alberghi: ${h.name}`,
-          "albergo, hotel, dormire",
-          h.stars ? `${h.stars} stelle` : null,
-          h.location,
-        ]),
+        question: searchableQuestion([`Alberghi: ${h.name}`]),
         answer: joinBlock([
           h.description,
           joinFacts([
@@ -1254,12 +1250,7 @@ export class CustomClientChatbotService {
       }))
 
       const excursionEntries: FaqEntry[] = excursions.map((e) => ({
-        question: searchableQuestion([
-          `Escursioni: ${e.name}`,
-          "escursione, sentiero, camminata",
-          e.difficulty,
-          e.location,
-        ]),
+        question: searchableQuestion([`Escursioni: ${e.name}`]),
         answer: joinBlock([
           e.description,
           joinFacts([
@@ -1274,12 +1265,7 @@ export class CustomClientChatbotService {
       }))
 
       const refugeEntries: FaqEntry[] = refuges.map((r) => ({
-        question: searchableQuestion([
-          `Rifugi: ${r.name}`,
-          "rifugio, malga, baita",
-          r.difficulty,
-          r.location,
-        ]),
+        question: searchableQuestion([`Rifugi: ${r.name}`]),
         answer: joinBlock([
           r.description,
           joinFacts([
@@ -1300,11 +1286,7 @@ export class CustomClientChatbotService {
         d ? d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }) : null
 
       const eventEntries: FaqEntry[] = events.map((e) => ({
-        question: searchableQuestion([
-          `Eventi: ${e.title}`,
-          "evento, manifestazione, festa",
-          e.location,
-        ]),
+        question: searchableQuestion([`Eventi: ${e.title}`]),
         answer: joinBlock([
           e.description,
           joinFacts([
