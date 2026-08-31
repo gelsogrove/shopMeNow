@@ -48,6 +48,10 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
  *           type: string
  *           nullable: true
  *           description: Refuge phone number
+ *         email:
+ *           type: string
+ *           nullable: true
+ *           description: Refuge contact email
  *         link:
  *           type: string
  *           nullable: true
@@ -160,6 +164,9 @@ export const touristRefugesRouter = (): Router => {
    *               phone:
    *                 type: string
    *                 nullable: true
+   *               email:
+   *                 type: string
+   *                 nullable: true
    *               link:
    *                 type: string
    *                 nullable: true
@@ -263,6 +270,9 @@ export const touristRefugesRouter = (): Router => {
    *                 type: string
    *                 nullable: true
    *               phone:
+   *                 type: string
+   *                 nullable: true
+   *               email:
    *                 type: string
    *                 nullable: true
    *               link:
