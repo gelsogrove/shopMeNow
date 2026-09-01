@@ -1,11 +1,27 @@
-// Runner for _dedupe_sappada_faqs.sql (Andrea, 2026-09-01: "ma lancialo tu").
-// Same predicate as the reviewed SQL, verbatim: a FAQ is a duplicate when the
-// NAME of a record in one of the 8 structured tables (length >= 5) appears
-// case-insensitively in the FAQ's question or answer.
+// FAQ dedupe for demosappada (Andrea, 2026-09-01: "non voglio doppioni" +
+// "ma lancialo tu").
+//
+// The reviewed SQL's predicate (record name anywhere in question OR answer)
+// over-matched on the dry-run: 96/145 FAQs, including safety, history and
+// culture entries that merely MENTION a place in their answer. Refined rule:
+//
+//   DELETE when the FAQ's SUBJECT is a structured record — the record's name
+//   appears in the QUESTION ("Com'è l'escursione al Passo Elbel?") — these
+//   are true duplicates of tourist_* detail cards;
+//   DELETE the category-index FAQs now replaced by the generated index cards
+//   ("Quali eventi ci sono?", "Quali rifugi?", ...);
+//   KEEP everything that matches only in the ANSWER (safety, history,
+//   culture), plus two by-hand exceptions where a record name sits in the
+//   question but the subject is something else (the "Sorgenti del Piave"
+//   CHOIR concert; the Palco Vaia in Val Visdende).
+//
+// Deleted rows are dumped to _sappada_faqs_deleted_backup.json BEFORE the
+// delete, so the operation is reversible.
 //
 // Usage:
-//   node _run_dedupe_sappada_faqs.mjs            # dry-run: list matches + pending migrations check
-//   APPLY=1 node _run_dedupe_sappada_faqs.mjs    # delete the matched FAQs
+//   node _run_dedupe_sappada_faqs.mjs            # dry-run
+//   node _run_dedupe_sappada_faqs.mjs --apply    # backup + delete
+import { writeFileSync } from "node:fs"
 import { PrismaClient } from "./src/generated/prisma/index.js"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
@@ -22,69 +38,85 @@ const pool = new Pool({
 })
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
 
-const RECORDS_CTE = `
-  SELECT 'Ristoranti' AS tabella, name AS record_name
-    FROM tourist_restaurants WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Alberghi', name FROM tourist_hotels WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Escursioni', name FROM tourist_excursions WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Rifugi', name FROM tourist_refuges WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Case e appartamenti', name FROM tourist_apartments WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Eventi', title FROM tourist_events WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Strutture sportive', name FROM tourist_sports_facilities WHERE "workspaceId" = $1
-  UNION ALL SELECT 'Impianti di sci', name FROM tourist_ski_facilities WHERE "workspaceId" = $1
-`
+// FAQs whose question contains one of these stay, even though a record name
+// appears in it: the subject is NOT the record.
+const KEEP_EXCEPTIONS = ["concerto del coro", "palco vaia"]
+
+// Index FAQs replaced by the generated per-category index cards
+// (tourist-index-cards.ts) — kept in the DB they would be doppioni of those.
+const INDEX_REPLACED = [
+  "quali eventi e manifestazioni ci sono",
+  "quali rifugi ci sono a sappada",
+  "dove posso mangiare a sappada",
+  "che escursioni e sentieri posso fare",
+  "si può sciare a sappada",
+  "c'è un campo da golf a sappada",
+]
 
 async function main() {
-  // Sanity: no half-applied migrations after the deploy's `migrate deploy`.
-  const pending = await prisma.$queryRawUnsafe(
-    `SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NULL ORDER BY started_at DESC LIMIT 5`
-  )
-  console.log(
-    pending.length === 0
-      ? "Migrations: OK, none pending/unfinished."
-      : `⚠️ Unfinished migrations: ${pending.map((m) => m.migration_name).join(", ")}`
-  )
+  const [restaurants, hotels, excursions, refuges, apartments, events, sports, ski] =
+    await Promise.all([
+      prisma.touristRestaurant.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+      prisma.touristHotel.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+      prisma.touristExcursion.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+      prisma.touristRefuge.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+      prisma.touristApartment.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+      prisma.touristEvent.findMany({ where: { workspaceId: WS }, select: { title: true } }),
+      prisma.touristSportsFacility.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+      prisma.touristSkiFacility.findMany({ where: { workspaceId: WS }, select: { name: true } }),
+    ])
+  const names = [
+    ...restaurants, ...hotels, ...excursions, ...refuges, ...apartments,
+    ...events.map((e) => ({ name: e.title })), ...sports, ...ski,
+  ]
+    .map((r) => r.name.trim().toLowerCase())
+    .filter((n) => n.length >= 5)
 
-  const matches = await prisma.$queryRawUnsafe(
-    `WITH records AS (${RECORDS_CTE})
-     SELECT DISTINCT f.id, f.question, r.tabella, r.record_name
-     FROM faqs f
-     JOIN records r
-       ON length(r.record_name) >= 5
-      AND (lower(f.question) LIKE '%' || lower(r.record_name) || '%'
-        OR lower(f.answer)   LIKE '%' || lower(r.record_name) || '%')
-     WHERE f."workspaceId" = $1
-     ORDER BY r.tabella, f.question`,
-    WS
-  )
+  const faqs = await prisma.fAQ.findMany({
+    where: { workspaceId: WS },
+    select: { id: true, question: true, answer: true },
+  })
 
-  const totalFaqs = await prisma.fAQ.count({ where: { workspaceId: WS } })
-  const uniqueIds = new Set(matches.map((m) => m.id))
-  console.log(`\nFAQ totali nel workspace: ${totalFaqs}`)
-  console.log(`FAQ duplicate da rimuovere: ${uniqueIds.size} (${matches.length} match)\n`)
-  for (const m of matches) {
-    console.log(`- [${m.tabella}] "${m.record_name}" → FAQ: ${m.question.slice(0, 90)}`)
+  const toDelete = []
+  const keptDespiteMatch = []
+  for (const f of faqs) {
+    const q = f.question.toLowerCase()
+    if (KEEP_EXCEPTIONS.some((k) => q.includes(k))) {
+      keptDespiteMatch.push(`(eccezione) ${f.question}`)
+      continue
+    }
+    if (INDEX_REPLACED.some((k) => q.includes(k))) {
+      toDelete.push({ ...f, reason: "indice sostituito dalle schede generate" })
+      continue
+    }
+    const hit = names.find((n) => q.includes(n))
+    if (hit) {
+      toDelete.push({ ...f, reason: `soggetto = record "${hit}"` })
+      continue
+    }
+    if (names.some((n) => f.answer.toLowerCase().includes(n))) {
+      keptDespiteMatch.push(`(solo answer) ${f.question}`)
+    }
   }
 
-  if (process.env.APPLY !== "1") {
-    console.log("\nDry-run: nessuna cancellazione. Rilancia con APPLY=1 per eliminare.")
+  console.log(`FAQ totali: ${faqs.length} | da eliminare: ${toDelete.length} | tenute pur matchando: ${keptDespiteMatch.length}\n`)
+  console.log("── DA ELIMINARE ──")
+  for (const f of toDelete) console.log(`- ${f.question.slice(0, 85)}  [${f.reason}]`)
+  console.log("\n── TENUTE (matchano solo nella risposta, o eccezioni) ──")
+  for (const k of keptDespiteMatch) console.log(`- ${k.slice(0, 95)}`)
+
+  if (!process.argv.includes("--apply")) {
+    console.log("\nDry-run: nessuna cancellazione. Rilancia con --apply per eliminare (con backup).")
     return
   }
 
-  const result = await prisma.$executeRawUnsafe(
-    `WITH records AS (${RECORDS_CTE})
-     DELETE FROM faqs f
-     WHERE f."workspaceId" = $1
-       AND EXISTS (
-         SELECT 1 FROM records r
-         WHERE length(r.record_name) >= 5
-           AND (lower(f.question) LIKE '%' || lower(r.record_name) || '%'
-             OR lower(f.answer)   LIKE '%' || lower(r.record_name) || '%')
-       )`,
-    WS
-  )
+  const backupPath = new URL("./_sappada_faqs_deleted_backup.json", import.meta.url).pathname
+  writeFileSync(backupPath, JSON.stringify(toDelete, null, 2))
+  const result = await prisma.fAQ.deleteMany({
+    where: { workspaceId: WS, id: { in: toDelete.map((f) => f.id) } },
+  })
   const remaining = await prisma.fAQ.count({ where: { workspaceId: WS } })
-  console.log(`\n✅ Eliminate ${result} FAQ. Rimaste: ${remaining}.`)
+  console.log(`\n✅ Eliminate ${result.count} FAQ (backup: ${backupPath}). Rimaste: ${remaining}.`)
 }
 
 main()
