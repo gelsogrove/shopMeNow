@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { TouristSportsFacility } from "@/services/touristSportsFacilityApi"
+import { LocationField } from "./LocationField"
 import { PhotoGallery } from "./PhotoGallery"
 
 interface TouristSportsFacilityFormFieldsProps {
@@ -61,10 +62,7 @@ export function TouristSportsFacilityFormFields({
           ))}
         </datalist>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input id="location" name="location" defaultValue={item?.location ?? ""} />
-      </div>
+      <LocationField defaultValue={item?.location} />
       <div className="space-y-2">
         <Label htmlFor="link">Link</Label>
         <Input id="link" name="link" defaultValue={item?.link ?? ""} />

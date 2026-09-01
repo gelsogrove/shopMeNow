@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { TouristRestaurant } from "@/services/touristRestaurantApi"
+import { LocationField } from "./LocationField"
 import { PhotoGallery } from "./PhotoGallery"
 
 interface TouristRestaurantFormFieldsProps {
@@ -58,10 +59,7 @@ export function TouristRestaurantFormFields({
         />
         <Label htmlFor="needsReservation">Needs reservation</Label>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input id="location" name="location" defaultValue={item?.location ?? ""} />
-      </div>
+      <LocationField defaultValue={item?.location} />
       <div className="space-y-2">
         <Label htmlFor="phone">Phone</Label>
         <Input id="phone" name="phone" defaultValue={item?.phone ?? ""} />

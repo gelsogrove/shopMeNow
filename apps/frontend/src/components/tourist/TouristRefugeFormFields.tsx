@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { TouristRefuge } from "@/services/touristRefugeApi"
+import { LocationField } from "./LocationField"
 import { PhotoGallery } from "./PhotoGallery"
 
 interface TouristRefugeFormFieldsProps {
@@ -51,10 +52,7 @@ export function TouristRefugeFormFields({ item, workspaceId }: TouristRefugeForm
         <Label htmlFor="openTo">Aperto a</Label>
         <Input id="openTo" name="openTo" defaultValue={item?.openTo ?? ""} />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input id="location" name="location" defaultValue={item?.location ?? ""} />
-      </div>
+      <LocationField defaultValue={item?.location} />
       <div className="space-y-2">
         <Label htmlFor="phone">Phone</Label>
         <Input id="phone" name="phone" defaultValue={item?.phone ?? ""} />
