@@ -96,6 +96,7 @@ export interface WorkspaceProps {
   customChatbotEmailSubjectPrefix?: string | null
   customChatbotAudioOutput?: boolean | null
   customChatbotAudioVoices?: Record<string, string> | null
+  customChatbotAdvancedSettings?: Record<string, unknown> | null
   registrationPage?: string | null
   requireManualApproval?: boolean
   // 🆕 Chatbot Personalization
@@ -495,6 +496,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get customChatbotAudioVoices(): Record<string, string> | null | undefined {
     return this.props.customChatbotAudioVoices
+  }
+
+  get customChatbotAdvancedSettings(): Record<string, unknown> | null | undefined {
+    return this.props.customChatbotAdvancedSettings
   }
 
   get registrationPage(): string | null | undefined {

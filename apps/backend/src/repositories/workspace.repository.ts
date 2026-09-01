@@ -107,6 +107,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       customChatbotEmailSubjectPrefix: data.customChatbotEmailSubjectPrefix ?? null,
       customChatbotAudioOutput: data.customChatbotAudioOutput ?? null,
       customChatbotAudioVoices: (data.customChatbotAudioVoices as Record<string, string> | null) ?? null,
+      // Missing here meant the Settings UI always showed {} while the column
+      // held the tenant's keys — and a hand edit of that blind field REPLACED
+      // the whole column (Andrea, 2026-09-01: "perché non lo vedo?").
+      customChatbotAdvancedSettings:
+        (data.customChatbotAdvancedSettings as Record<string, unknown> | null) ?? null,
       registrationPage: data.registrationPage || null,
       requireManualApproval: data.requireManualApproval ?? false,
       chatbotName: data.chatbotName || data.name || null,
