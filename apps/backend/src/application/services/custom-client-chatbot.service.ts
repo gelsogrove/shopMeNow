@@ -1187,7 +1187,7 @@ export class CustomClientChatbotService {
         defaultPrisma.touristPhoto.findMany({
           where: { workspaceId },
           orderBy: { order: "asc" },
-          select: { id: true, contentType: true, contentId: true },
+          select: { id: true, contentType: true, contentId: true, caption: true },
         }),
       ])
 
@@ -1219,14 +1219,20 @@ export class CustomClientChatbotService {
 
       // First gallery photo per content item, as a public URL the module's
       // media pipeline can attach to a detail answer. The path ends in .jpg
-      // because faq-media.ts recognises photos by extension.
+      // because faq-media.ts recognises photos by extension. The caption
+      // (e.g. "foto: Wikimedia Commons") rides the SAME line as the URL —
+      // CC BY-SA requires attribution wherever the photo is shown, and
+      // faq-media.ts picks up a credit in parentheses right after the link
+      // it selects (Andrea, 2026-09-01: only on the message that actually
+      // carries the photo, never appended on its own).
       const backendUrl =
         process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`
       const firstPhotoUrl = new Map<string, string>()
       for (const p of photos) {
         const key = `${p.contentType}:${p.contentId}`
         if (!firstPhotoUrl.has(key)) {
-          firstPhotoUrl.set(key, `${backendUrl}/api/public/tourist-photos/${p.id}/image.jpg`)
+          const url = `${backendUrl}/api/public/tourist-photos/${p.id}/image.jpg`
+          firstPhotoUrl.set(key, p.caption ? `${url} (${p.caption})` : url)
         }
       }
       const photoOf = (contentType: string, contentId: string): string | null =>

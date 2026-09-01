@@ -49,6 +49,20 @@ function trimUrlPunctuation(raw: string): string {
 }
 
 /**
+ * A photo credit riding the same line as its URL — "<url> (<credit>)" — as
+ * written by photoOf() in custom-client-chatbot.service.ts. Returned only
+ * when `link` is the chosen media AND that exact line carries a credit, so
+ * attribution goes out on the message that actually carries the photo, never
+ * bolted onto a video or page link (Andrea, 2026-09-01).
+ */
+function creditFor(link: string, answer: string): string | null {
+  if (!PHOTO_LINK_RE.test(link)) return null
+  const escaped = link.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = answer.match(new RegExp(escaped + '\\s*\\(([^)]+)\\)'))
+  return m ? m[1] : null
+}
+
+/**
  * Append the media of the ONE place the reply is about.
  *
  * Andrea's rule, 2026-08-23: media belong to a detail answer, never to a list.
@@ -280,7 +294,9 @@ export function withFaqMedia(
 
   const links = mediaLinksIn(top.faq.answer).filter((l) => !skip.has(l))
   if (links.length === 0) return reply
-  return [reply, '', links[0]].join('\n')
+  const chosen = links[0]
+  const credit = creditFor(chosen, top.faq.answer)
+  return [reply, '', credit ? `${chosen} (${credit})` : chosen].join('\n')
 }
 
 /**

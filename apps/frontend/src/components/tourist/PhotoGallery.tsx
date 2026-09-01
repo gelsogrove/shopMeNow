@@ -136,6 +136,11 @@ export function PhotoGallery({ workspaceId, contentType, contentId }: PhotoGalle
                   alt={photo.caption ?? ""}
                   className="h-full w-full object-cover"
                 />
+                {photo.caption && (
+                  <div className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+                    {photo.caption}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => handleDelete(photo)}
