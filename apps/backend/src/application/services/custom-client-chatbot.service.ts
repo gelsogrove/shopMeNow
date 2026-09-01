@@ -1391,7 +1391,26 @@ export class CustomClientChatbotService {
         ]),
       }))
 
+      // INDEX cards close the retrieval gap the detail cards cannot cover:
+      // on a generic question ("che eventi ci sono?") the category word is in
+      // EVERY detail question so its IDF weight tends to zero, and no detail
+      // card ever wins a FAQ_BUDGET slot — the bot answered "non ho i
+      // dettagli" while the DB held the whole calendar (live, 2026-09-01).
+      // One generated card per category, question = bare category label,
+      // answer = every row with all its short fields. See
+      // tourist-index-cards.ts for why the question must stay bare.
+      const indexEntries = buildTouristIndexCards({
+        restaurants,
+        hotels,
+        excursions,
+        refuges,
+        events,
+        sportsFacilities,
+        skiFacilities,
+      })
+
       return [
+        ...indexEntries,
         ...restaurantEntries,
         ...hotelEntries,
         ...excursionEntries,
