@@ -17,7 +17,7 @@ import { Merchant, merchantApi } from "@/services/merchantApi"
 
 /**
  * Merchants (esercenti) — the resale side of push campaigns: the workspace
- * owner (e.g. a Pro Loco) sells push packages to local businesses. This page
+ * owner (e.g. a Consorzio) sells push packages to local businesses. This page
  * manages the registry: identity, invoicing data, active state, and the
  * always-visible package balance the owner checks before approving a new
  * campaign. Details (creatives, quota history, monthly report) live in the

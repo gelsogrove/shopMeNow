@@ -274,7 +274,7 @@ export interface FaqEntry {
 export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEntry[]>
 
 /**
- * An accommodation the Pro Loco keeps on file: who they are and how to reach
+ * An accommodation the Consorzio keeps on file: who they are and how to reach
  * them.
  *
  * Deliberately WITHOUT a live availability count. Andrea, 2026-08-22: how
@@ -320,7 +320,7 @@ export interface CustomToolResult {
  * Structured, not a sentence in `notes`: the days remaining are recomputed
  * from `departureDate` on EVERY turn, and parsing that back out of prose
  * would break the first time the wording changed. The human-readable summary
- * for the Pro Loco's customer card is derived from this, never the reverse.
+ * for the Consorzio's customer card is derived from this, never the reverse.
  */
 export interface StayProfile {
   adults?: number
@@ -348,7 +348,7 @@ export interface StayProfile {
    */
   interests?: string
   /**
-   * What a person at the Pro Loco wrote on this guest's card. Read-only:
+   * What a person at the Consorzio wrote on this guest's card. Read-only:
    * the module never writes here, it only takes it into account.
    */
   operatorNotes?: string
@@ -465,7 +465,7 @@ export interface StayProfile {
    */
   doneAlready?: string
   /**
-   * The holiday in prose, for the Pro Loco's customer card.
+   * The holiday in prose, for the Consorzio's customer card.
    *
    * Derived from the structured fields, never the reverse (see the note on
    * this interface): the days remaining are still computed from
@@ -1304,7 +1304,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     constraints: stayProfile?.constraints?.trim() ?? '',
     interests: stayProfile?.interests?.trim() ?? '',
     doneAlready: stayProfile?.doneAlready?.trim() ?? '',
-    // Written by a person at the Pro Loco.
+    // Written by a person at the Consorzio.
     operatorNotes: stayProfile?.operatorNotes?.trim() ?? '',
     // The season, so the crossing rule can forbid the impossible: skiing was
     // recommended at 17°C in August (Andrea, 2026-08-25: "con 17 gradi vado a
@@ -2585,7 +2585,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
           // Asked nothing more than "Ciao", the model called save_preferences
           // with adults:1 and a departure date it had made up — and everything
           // downstream believed it: the intake skipped its first question, and
-          // the card the Pro Loco reads described a holiday nobody had
+          // the card the Consorzio reads described a holiday nobody had
           // described (Andrea, 2026-08-25).
           //
           // A greeting carries no facts. Measured on LENGTH alone — one or two

@@ -248,7 +248,7 @@ export function BusinessConfigSection({
                   <SelectItem value="ECOMMERCE">Ecommerce</SelectItem>
                   <SelectItem value="INFORMATIONAL">Informational</SelectItem>
                   <SelectItem value="FLOW">Flow</SelectItem>
-                  <SelectItem value="PRO_LOCO">Pro Loco</SelectItem>
+                  <SelectItem value="PRO_LOCO">Consorzio</SelectItem>
                 </SelectContent>
               </Select>
             </div>

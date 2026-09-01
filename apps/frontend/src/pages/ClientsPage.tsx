@@ -834,7 +834,7 @@ export default function ClientsPage(): JSX.Element {
                       {/* 🏔️ Guest profile: who they are, how long they stay,
                           what they have already done, and how it went. Built
                           by the assistant during the conversation — this is
-                          what the Pro Loco keeps once the tourist has left. */}
+                          what the Consorzio keeps once the tourist has left. */}
                       {(client.stayProfile || client.feedback?.comment) && (
                         <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-600">
                           {client.stayProfile && (

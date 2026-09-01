@@ -23,7 +23,7 @@ import {
 /**
  * Per-merchant view: the creatives (pushes) the merchant provided, the push
  * package balance with its top-up history, and the monthly sent report — the
- * exact numbers the owner (Pro Loco) invoices on. Quantities only: prices
+ * exact numbers the owner (Consorzio) invoices on. Quantities only: prices
  * live outside the system by design (Andrea, 2026-08-31).
  */
 

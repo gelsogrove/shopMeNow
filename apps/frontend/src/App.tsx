@@ -329,19 +329,29 @@ export function App() {
 
         {/* Demosappada — "Visit Sappada Dolomiti" mountain-tourism demo. Same
             DemoWidgetPage, branded by slug ("demosappada"). Resolves the workspace
-            via customChatbotId="demosappada". */}
+            via customChatbotId="demosappada".
+            Behind a username+password gate (Andrea, 2026-09-01): the demo is
+            being presented to the Consorzio, so it is not left wide open.
+            Light barrier only — the credentials ship in the bundle. */}
         <Route
           path="/demo/demosappada/*"
           element={
-            <Suspense
-              fallback={
-                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
-                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-                </div>
-              }
+            <DemoPasswordGate
+              username="demo"
+              password="Admin@123"
+              unlockHours={24}
+              storageScope="demosappada"
             >
-              <DemoWidgetPage />
-            </Suspense>
+              <Suspense
+                fallback={
+                  <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                    <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  </div>
+                }
+              >
+                <DemoWidgetPage />
+              </Suspense>
+            </DemoPasswordGate>
           }
         />
 

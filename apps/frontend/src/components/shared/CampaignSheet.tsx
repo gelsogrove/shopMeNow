@@ -526,7 +526,7 @@ export function CampaignSheet({
               >
                 <div className="text-sm font-semibold">Free message</div>
                 <div className="text-xs text-slate-500">
-                  Your own text, e.g. a Pro Loco announcement
+                  Your own text, e.g. a Consorzio announcement
                 </div>
               </button>
               <button

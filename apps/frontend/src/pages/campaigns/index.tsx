@@ -405,7 +405,7 @@ export default function CampaignsPage() {
             </div>
             
             {/* 🏪 Whose campaign: merchant + creative + package left — the
-                first thing the Pro Loco reads on a card */}
+                first thing the Consorzio reads on a card */}
             {campaign.merchant && (
               <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-700">
                 <Store className="w-3.5 h-3.5 text-teal-600" />
