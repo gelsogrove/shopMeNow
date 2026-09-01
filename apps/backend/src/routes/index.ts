@@ -120,6 +120,7 @@ import { merchantsRouter } from "../interfaces/http/routes/merchants.routes"
 import { publicMerchantPushPhotosRouter } from "../interfaces/http/routes/public-merchant-push-photos.routes"
 import { publicCampaignMediaRouter } from "../interfaces/http/routes/public-campaign-media.routes"
 import { touristPhotosRouter } from "../interfaces/http/routes/tourist-photos.routes"
+import { geocodingRouter } from "../interfaces/http/routes/geocoding.routes"
 import { publicTouristPhotosRouter } from "../interfaces/http/routes/public-tourist-photos.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 import { contactRoutes } from "../interfaces/http/routes/contact.routes"
@@ -865,6 +866,8 @@ router.use(
 )
 router.use("/workspaces/:workspaceId/tourist-photos", touristPhotosRouter())
 logger.info("Registered PRO_LOCO tourist content routers with workspace routes")
+router.use("/geocoding", geocodingRouter())
+logger.info("✅ Registered geocoding route: /api/geocoding/search")
 
 // 🆕 Merchant advertising (Andrea, 2026-08-31): merchants (esercenti),
 // their creatives and push-package quota — the resale side of push campaigns.

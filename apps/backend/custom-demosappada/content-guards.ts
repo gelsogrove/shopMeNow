@@ -39,8 +39,36 @@ const MD_LINK_RE = /\[([^\]\n]*)\]\(\s*(https?:\/\/[^\s)]*)?\s*\)/g
  */
 const PHONE_RE = /(?:\+39[ .-]?)?\d(?:[ .-]?\d){5,10}/g
 
-/** Short numbers that are facts about the world, not tenant data. */
-const EMERGENCY_NUMBERS = new Set(['112', '113', '115', '116', '117', '118', '1515', '1530'])
+/**
+ * Short public-service numbers (112, 118, 116117, ...) used to be exempt from
+ * verification, on the reasoning that they are "facts about the world, not
+ * tenant data". That reasoning guaranteed the number EXISTS. It did not
+ * guarantee the number is the right one for what the reply says it is.
+ *
+ * Live, 2026-09-01: a guest wrote that their little girl had a fever and the
+ * reply offered "Guardia medica - 118". The number is real; the label is
+ * false. In Italy 118 is the ambulance and 116117 is the out-of-hours doctor,
+ * so a parent with a feverish child was pointed at the emergency line. The
+ * exemption let it through twice over - three digits is under the 6-digit
+ * floor AND it sat in the whitelist - while `116117`, the correct number, was
+ * never whitelisted at all: the bot could emit the wrong number freely and
+ * would have had the right one stripped.
+ *
+ * So there is no exemption any more. EVERY number in a reply must appear in
+ * the approved content, emergency numbers included (CLAUDE.md ss16 iron rule 1:
+ * a guarantee is code, not a sentence in the prompt asking the model to be
+ * careful). If a public-service number should be reachable, it belongs in the
+ * FAQ content - which is where a tenant can also state which service it is.
+ */
+
+/**
+ * Short numbers are matched too - the 6-digit floor below used to let any
+ * 1-5 digit number through unverified, which is how "118" escaped. They are
+ * checked as standalone VALUES rather than as a digit substring: at three
+ * digits a substring test against ~2300 concatenated digits approves almost
+ * anything (the same collision that broke times and prices, see timesIn).
+ */
+const SHORT_NUMBER_RE = /(?<![\d.,:\-])\d{3,5}(?![\d.,:\-])/g
 
 function normalizeUrl(raw: string): string {
   return raw.replace(/[)\].,;:!?]+$/, '').toLowerCase()
@@ -200,9 +228,20 @@ export function stripUnverifiableContacts(reply: string, approvedContent: string
 
   text = text.replace(PHONE_RE, (match) => {
     const digits = digitsOf(match)
+    // Below 6 digits PHONE_RE cannot match anyway; short numbers are handled
+    // by the pass below, which verifies them as standalone values.
     if (digits.length < 6) return match
-    if (EMERGENCY_NUMBERS.has(digits)) return match
     if (haystackDigits.includes(digits)) return match
+    removed.push(match)
+    return ''
+  })
+
+  // Short public-service numbers (112, 118, 116117 written as 116 117...):
+  // verified against the source like everything else, no exemption. Run AFTER
+  // PHONE_RE so a long number's fragments are never re-examined here.
+  text = text.replace(SHORT_NUMBER_RE, (match) => {
+    if (approvedNumbers.has(priceValue(match))) return match
+    if (approvedTimes.has(match)) return match
     removed.push(match)
     return ''
   })

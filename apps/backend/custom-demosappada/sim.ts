@@ -44,6 +44,21 @@ if (process.env.SIM_TURN_ENGINE) settings.turnEngine = process.env.SIM_TURN_ENGI
 
 // ── In-memory host stand-ins ───────────────────────────────────────────────
 
+/**
+ * SIM_FAQ_FILE=<path.json> replaces the fixtures below with a real catalogue
+ * dumped from a workspace ([{question, answer}, ...]).
+ *
+ * WHY (Andrea, 2026-09-01): the fixtures are eight entries and contain no
+ * health content, so they cannot reproduce a retrieval failure that only
+ * appears against the tenant's real 82. Verifying the "bimba ha la febbre"
+ * regression needs the entry that actually carries 116117. The dump is test
+ * input, never shipped content (CLAUDE.md §1 untouched).
+ */
+const faqOverridePath = process.env.SIM_FAQ_FILE
+const FAQ_OVERRIDE: FaqEntry[] | null = faqOverridePath
+  ? (JSON.parse(readFileSync(faqOverridePath, 'utf8')) as FaqEntry[])
+  : null
+
 const FAQS: FaqEntry[] = [
   {
     question: 'Dove si buttano i rifiuti? Raccolta differenziata a Sappada',
@@ -150,7 +165,7 @@ async function main(): Promise<void> {
         settings,
         messages: null,
         handlers: {
-          getFaqs: async () => FAQS,
+          getFaqs: async () => FAQ_OVERRIDE ?? FAQS,
           getCatalogue: async () => CATALOGUE,
           getCustomTools: async () => customTools,
           getStayProfile: async () => (stayProfile ? ({ ...stayProfile } as StayProfile) : null),

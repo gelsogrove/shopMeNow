@@ -311,10 +311,9 @@ function subjectScore(
   faq: FaqEntry,
   text: string,
   faqs: FaqEntry[],
-  canon: Canon = identityCanon,
 ): number {
-  const words = wordsOf(text, canon)
-  const terms = distinctiveTerms(faq.question, canon)
+  const words = wordsOf(text)
+  const terms = distinctiveTerms(faq.question)
   if (terms.length === 0) return 0
 
   // Terms are weighted by how rare they are across THIS tenant's FAQ set.
@@ -332,7 +331,7 @@ function subjectScore(
   let total = 0
   let matched = 0
   for (const term of terms) {
-    const weight = termWeight(term, faqs, canon)
+    const weight = termWeight(term, faqs)
     total += weight
     if (words.has(term)) matched += weight
   }
@@ -371,59 +370,21 @@ function answerOverlap(faq: FaqEntry, reply: string, faqs: FaqEntry[]): number {
  * description said "il FONDO è ghiaioso" — same letters, opposite meaning
  * (2026-08-23).
  */
-function termWeight(term: string, faqs: FaqEntry[], canon: Canon = identityCanon): number {
+function termWeight(term: string, faqs: FaqEntry[]): number {
   let documents = 0
   for (const faq of faqs) {
-    if (wordsOf(faq.question, canon).has(term)) documents++
+    if (wordsOf(faq.question).has(term)) documents++
   }
   return documents <= 1 ? 1 : 1 / documents
 }
 
-/**
- * Word-equivalence canonicalizer built from the tenant's `searchSynonyms`
- * configuration (advanced settings → settings.json → agent, CLAUDE.md §1A —
- * the groups are CONTENT, never code). Each group lists one concept in every
- * language and inflection the tenant cares about ("pista, piste, Pisten,
- * slopes"); every member is rewritten to the group's first word before
- * comparison, so "dammi le piste nere" matches a card that says "pista nera".
- *
- * WHY a table and not a stemmer (Andrea, 2026-09-01: "è impossibile calcolare
- * tutti i casi" / "all'embedding ci dobbiamo pensare bene... tira fuori cose
- * che non c'entrano nulla"): a curated table can never surface an unrelated
- * card — matching stays exact, only the alphabet of "equal" widens — and the
- * tenant extends it from the app when a miss shows up, no deploy needed.
- */
-type Canon = (word: string) => string
-const identityCanon: Canon = (w) => w
-
-export function buildSynonymCanon(groups: unknown): Canon {
-  if (!Array.isArray(groups)) return identityCanon
-  const map = new Map<string, string>()
-  for (const group of groups) {
-    if (!Array.isArray(group)) continue
-    const words = group
-      .filter((w): w is string => typeof w === 'string')
-      .map((w) => w.trim().toLowerCase())
-      .filter((w) => w.length >= 2)
-    if (words.length < 2) continue
-    for (const w of words) {
-      // First registration wins: a word listed in two groups keeps its first
-      // meaning instead of silently flipping with configuration order.
-      if (!map.has(w)) map.set(w, words[0])
-    }
-  }
-  if (map.size === 0) return identityCanon
-  return (w) => map.get(w) ?? w
-}
-
-function wordsOf(text: string, canon: Canon = identityCanon): Set<string> {
+function wordsOf(text: string): Set<string> {
   return new Set(
     text
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .split(/\s+/)
-      .filter(Boolean)
-      .map(canon),
+      .filter(Boolean),
   )
 }
 
@@ -439,68 +400,84 @@ const GENERIC_QUESTION_WORDS = new Set([
   'gli', 'le', 'la', 'il', 'lo', 'un', 'and', 'the', 'what', 'where', 'how', 'there',
 ])
 
-function distinctiveTerms(question: string, canon: Canon = identityCanon): string[] {
+function distinctiveTerms(question: string): string[] {
   return Array.from(
     new Set(
       question
         .toLowerCase()
         .replace(/[^\p{L}\p{N}\s]/gu, ' ')
         .split(/\s+/)
-        // Length/generic filters run on the RAW word, before canonicalization:
-        // a group's canonical token must not smuggle a short word past them.
-        .filter((w) => w.length > 3 && !GENERIC_QUESTION_WORDS.has(w))
-        .map(canon),
+        .filter((w) => w.length > 3 && !GENERIC_QUESTION_WORDS.has(w)),
     ),
   )
 }
 
 /**
- * How many FAQ entries travel with a turn.
+ * The ceiling that must never be crossed silently.
  *
- * All 85 of this tenant's entries used to go out on EVERY message — ~31k
- * tokens to answer "ciao" — which is most of what a turn costs and is what
- * pushed the prompt past the provider's per-request ceiling (Andrea,
- * 2026-08-25: "non va in locale").
+ * Not a selection budget - every active entry is sent (see below). This is the
+ * point at which the catalogue has outgrown "send everything" and a human has
+ * to decide what happens next. Crossing it logs loudly rather than quietly
+ * dropping content, because silent dropping is exactly the failure this
+ * replaced.
  *
- * Twenty-four, not five: the entries are the assistant's ONLY source of facts,
- * so a relevant one left out is a question it can no longer answer. The number
- * is generous on purpose — the saving comes from dropping the long tail, not
- * from cutting close to the bone.
+ * 82 entries = ~25k tokens = 12% of Haiku 4.5's 200k window.
  */
-const FAQ_BUDGET = 24
+const FAQ_ALARM_TOKENS = 60000
+
+/** Rough token estimate for Italian prose (~3.6 characters per token). */
+const CHARS_PER_TOKEN = 3.6
 
 /**
- * The FAQ entries worth sending for THIS message.
+ * Every active FAQ entry, always.
  *
- * Ranked by the same topic-overlap measurement the media guard uses — no
- * phrasing or intent is read (CLAUDE.md §14), only how much an entry's
- * distinctive words overlap the conversation.
+ * WHY THE RANKER IS GONE (Andrea, live 2026-09-01: "scrivo bimba ha la febbre
+ * e mi trovi cosa fare a Sappada con i bimbi"):
  *
- * Scored against the guest's message AND the recent history, because a
- * follow-up ("e gli orari?") carries almost no words of its own: the subject
- * lives in what was said before.
+ * A guest wrote that their little girl had a fever. The health entry - which
+ * carries 116117, the out-of-hours doctor - scored 0.000 and finished 27th,
+ * three places outside the 24-entry budget. The model never saw it and
+ * answered from its own knowledge: "Guardia medica - 118", the ambulance line.
  *
- * Under the budget nothing is selected at all — with a short catalogue the
- * whole thing is cheaper than deciding what to leave out.
+ * The measurement was not mistuned, it was inapplicable. Ranking compared the
+ * guest's words against each entry's QUESTION, and the word "febbre" appears
+ * in NO question and NO answer across all 82 entries. No lexical score can
+ * connect a word to a text that does not contain it. Measured over realistic
+ * guest wordings, 11 of 17 scored 0.000 on EVERY entry - a total tie, in which
+ * the "top 24" were simply the first 24 in list order, which is why "Storia e
+ * origini di Sappada" kept winning.
+ *
+ * Synonyms were tried first and made it worse: mapping "bimba" onto "bambini"
+ * handed the win to "Cosa faccio a Sappada con i bambini?" at 0.818 - things
+ * to do with kids, for a child who is ill.
+ *
+ * So the selection is gone, and with it the reason for the synonym table.
+ * The budget was introduced when the prompt hit a per-request ceiling
+ * (2026-08-25); the whole catalogue is ~25k tokens against a 200k window, and
+ * the FAQ block is byte-identical every turn, so prompt caching charges it at
+ * 0.1x after the first call. Fifteen thousand saved tokens were being paid for
+ * with wrong answers to people who are unwell.
+ *
+ * The tenant controls what is sent by activating or deactivating entries in
+ * the app - the DB is the source of truth (CLAUDE.md ss1), not a scorer's guess
+ * about what the guest meant.
  */
-export function selectRelevantFaqs(
-  faqs: FaqEntry[],
-  context: string,
-  synonymGroups?: unknown,
-): FaqEntry[] {
-  if (faqs.length <= FAQ_BUDGET) return faqs
-  // Synonyms widen SELECTION only. The media guards above keep the identity
-  // alphabet: they decide whether a reply is "about" a place, where the
-  // configured equivalences have no lesson to teach and a widened match could
-  // only loosen a contract rule that was tuned against live failures.
-  const canon = buildSynonymCanon(synonymGroups)
-  const ranked = faqs
-    .map((faq) => ({ faq, score: subjectScore(faq, context, faqs, canon) }))
-    .sort((a, b) => b.score - a.score)
-  const chosen = ranked.slice(0, FAQ_BUDGET).map((r) => r.faq)
-  // eslint-disable-next-line no-console
-  console.error(`[demosappada][faq-budget] ${chosen.length}/${faqs.length} entries sent`)
-  return chosen
+export function selectRelevantFaqs(faqs: FaqEntry[]): FaqEntry[] {
+  const chars = faqs.reduce((n, f) => n + f.question.length + f.answer.length, 0)
+  const tokens = Math.round(chars / CHARS_PER_TOKEN)
+  if (tokens > FAQ_ALARM_TOKENS) {
+    // Loud, and still sends everything: dropping entries is what caused the
+    // 118 incident. A human decides what to do about the size.
+    // eslint-disable-next-line no-console
+    console.error(
+      `[demosappada][faq] ALARM: ${faqs.length} entries ~${tokens} tokens exceeds ${FAQ_ALARM_TOKENS}. ` +
+        `Sending all anyway - deactivate entries in the app or revisit the strategy.`,
+    )
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(`[demosappada][faq] ${faqs.length} entries ~${tokens} tokens (all sent)`)
+  }
+  return faqs
 }
 
 export function formatFaqBlock(faqs: FaqEntry[]): string {

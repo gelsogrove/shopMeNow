@@ -124,13 +124,6 @@ export interface Settings {
   rateLimitedMessage?: string
   /** Confirmation sent after an UNSUBSCRIBE. Authored in ONE language; the host translates. */
   unsubscribedMessage?: string
-  /**
-   * Word-equivalence groups for FAQ selection (advanced settings key
-   * `searchSynonyms`): each group is one concept in every language and
-   * inflection the tenant cares about — ["pista","piste","pisten","slopes"].
-   * Content, not code (CLAUDE.md §1A): extended from the app, no deploy.
-   */
-  searchSynonyms?: string[][]
   sessionTooLongMessage?: string
   /** Presentation video shown once, on the first turn of a new conversation. */
   welcomeVideoUrl?: string
@@ -1131,14 +1124,10 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     ? await input.config.handlers.getFaqs({ workspaceId: input.config.workspaceId })
     : []
 
-  // Only the entries this turn can plausibly need. The subject often lives in
-  // the previous turns rather than in the message itself ("e gli orari?"), so
-  // the last exchanges are part of what is scored against.
-  const faqContext = [
-    userMessage,
-    ...history.slice(-4).map((h) => h.content),
-  ].join(' ')
-  const relevantFaqs = selectRelevantFaqs(faqs, faqContext, settings.searchSynonyms)
+  // EVERY active entry, every turn. Selecting a subset is what sent a guest
+  // with a feverish child to the ambulance line (see selectRelevantFaqs):
+  // the health entry lost its slot and the model answered from memory.
+  const relevantFaqs = selectRelevantFaqs(faqs)
   const faqBlock = formatFaqBlock(relevantFaqs)
   const accommodationEnabled = !!input.config.handlers?.getCatalogue
 
@@ -1315,18 +1304,26 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   const mainPromptRendered = renderPromptVariables(settings.mainPrompt?.trim() || '', promptVariables)
 
   // Ordered by stability for prompt caching (llm.ts CACHE_BREAK): what is
-  // the same every turn first — the tenant's prompt and the operating rules
-  // — then what changes with the turn: the FAQ subset, the clock, the guest.
-  // The tenant prompt carries the guest's variables ({{party}}, {{interests}}
-  // …), so it is stable across hops always and across turns whenever the
-  // state did not change — most of a conversation once the intake is done.
+  // the same every turn first — the tenant's prompt, the operating rules and
+  // now the FAQ block — then what changes with the turn: the clock and the
+  // guest. The tenant prompt carries the guest's variables ({{party}},
+  // {{interests}}…), so it is stable across hops always and across turns
+  // whenever the state did not change — most of a conversation once the
+  // intake is done.
+  //
+  // The FAQ block moved ABOVE the breakpoint when selection was removed
+  // (faq-media.ts selectRelevantFaqs): it used to be a per-turn subset, and a
+  // block that changes every turn cannot be cached. Now it is every active
+  // entry, byte-identical on every call, so those ~25k tokens are written
+  // once and read at 0.1x for the rest of the TTL — which is what makes
+  // sending the whole catalogue cheaper than the ranker it replaced.
   const systemPrompt = [
     mainPromptRendered,
     '',
     OPERATING_RULES,
-    CACHE_BREAK,
-    faqBlock,
     '',
+    faqBlock,
+    CACHE_BREAK,
     runtimeBlock,
     stayBlock.text,
     formatStateForPrompt(getState(sessionId)),

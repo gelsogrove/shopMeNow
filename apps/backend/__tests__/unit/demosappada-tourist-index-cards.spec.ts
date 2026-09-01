@@ -191,11 +191,24 @@ describe("buildTouristIndexCards — languages from workspace configuration", ()
   })
 })
 
-describe("index cards win the FAQ budget on generic questions (real selectRelevantFaqs)", () => {
-  // A tenant-shaped catalogue LARGER than FAQ_BUDGET (24), so selection
-  // actually ranks instead of passing everything through. Detail questions
-  // use the exact prefixes the service builds ("Eventi: X", "Ristoranti: Y"),
-  // which is what floors the category word's IDF weight.
+/**
+ * WHAT: selection no longer drops anything - every active entry reaches the
+ * model, index cards and detail cards alike.
+ *
+ * WHY the old "index cards win a budget slot" tests are gone: they locked a
+ * ranker that has been removed. It scored the guest's words against each
+ * entry's QUESTION, and on 2026-09-01 a guest wrote that their little girl had
+ * a fever: "febbre" appears in no question and no answer of all 82 entries, so
+ * every entry scored 0.000, the top 24 were simply the first 24 in list order,
+ * and the health entry carrying 116117 finished 27th. The model never saw it
+ * and offered "Guardia medica - 118" - the ambulance - to a parent with a sick
+ * child.
+ *
+ * The index cards themselves remain valuable: they are how a generic question
+ * gets a COMPACT list of catalogue rows instead of prose scattered across
+ * detail cards. What is no longer needed is their fight for a slot.
+ */
+describe("every entry reaches the model - nothing is dropped", () => {
   const detailCards = [
     ...Array.from({ length: 12 }, (_, i) => ({
       question: `Ristoranti: Locanda Numero ${i} — adatto a celiaci, senza glutine`,
@@ -227,42 +240,31 @@ describe("index cards win the FAQ budget on generic questions (real selectReleva
     }
   )
   const catalogue = [...indexCards, ...detailCards]
-  const eventsIndex = indexCards.find((c) => c.question === "Eventi")!
-  const restaurantsIndex = indexCards.find((c) => c.question === "Ristoranti")!
 
-  it("sanity: the fixture is over budget, so ranking is actually exercised", () => {
+  it("sanity: the fixture is larger than the old 24-entry budget", () => {
     expect(catalogue.length).toBeGreaterThan(24)
   })
 
-  it('generic "che eventi ci sono?" selects the Eventi index (no detail card can win this)', () => {
-    const chosen = selectRelevantFaqs(catalogue, "che eventi ci sono questa settimana?")
-    expect(chosen).toContain(eventsIndex)
+  it("🚨 a catalogue over the old budget passes through COMPLETE", () => {
+    // The regression that matters: under the old ranker this returned 24 of
+    // ~31 entries and the ones dropped were chosen by an arbitrary tie.
+    const chosen = selectRelevantFaqs(catalogue)
+    expect(chosen).toHaveLength(catalogue.length)
+    expect(chosen).toEqual(catalogue)
   })
 
-  it('typo "dammi ristoranti celicaci" still selects the Ristoranti index (live miss, 2026-09-01)', () => {
-    // "celicaci" matches nothing (whole-word matching, by design against the
-    // FONDO substring bug of 2026-08-23) — the category word alone must be
-    // enough to bring the list, celiac flags included, to the model.
-    const chosen = selectRelevantFaqs(catalogue, "dammi ristoranti celicaci")
-    expect(chosen).toContain(restaurantsIndex)
-  })
-
-  it('English "what events are there?" selects the settings-labelled Events card', () => {
-    // The guest's language never touches the Italian labels: the translated
-    // card from `touristIndexLabels` carries the match. Retrieval runs before
-    // any LLM call, so this is the ONLY way an English generic question can
-    // reach the events list.
-    const englishIndex = indexCards.find((c) => c.question === "Events")!
-    const chosen = selectRelevantFaqs(catalogue, "what events are there this week?")
-    expect(chosen).toContain(englishIndex)
-  })
-
-  it('specific "quando è il carnevale?" still selects the DETAIL card (index never competes on names)', () => {
-    const chosen = selectRelevantFaqs(catalogue, "quando è il carnevale?")
+  it("🚨 wording that matches NO entry still gets everything", () => {
+    // The live bug, generalised: the guest's words need not appear anywhere in
+    // the catalogue. Under the old ranker every score was 0.000 and list order
+    // silently decided what the model saw.
+    const chosen = selectRelevantFaqs(catalogue)
+    for (const card of indexCards) expect(chosen).toContain(card)
     expect(chosen).toContainEqual(
-      expect.objectContaining({
-        question: "Eventi: Carnevale di Sappada (Plodar Vosenòcht)",
-      })
+      expect.objectContaining({ question: "Eventi: Carnevale di Sappada (Plodar Vosenòcht)" })
     )
+  })
+
+  it("an empty catalogue stays empty", () => {
+    expect(selectRelevantFaqs([])).toEqual([])
   })
 })

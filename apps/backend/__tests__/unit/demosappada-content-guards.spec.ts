@@ -265,3 +265,81 @@ describe("demosappada — the phone number is the last line, alone", () => {
     expect(phoneOnLastLine(p)).toBe("A.\nTel. 0435 469265\n\nB e basta.\nTel. 0435 469909")
   })
 })
+
+/**
+ * WHAT: short public-service numbers (112, 118, 116117) are verified against
+ * the approved content exactly like every other number. No whitelist, no
+ * exemption for being "a fact about the world".
+ *
+ * WHY (🚨 live, 2026-09-01): a guest wrote that their little girl had a fever.
+ * The reply offered "Guardia medica — 118". The number is real; the LABEL is
+ * false — in Italy 118 is the ambulance and 116117 is the out-of-hours doctor
+ * (continuità assistenziale). A parent with a feverish child was pointed at
+ * the emergency line.
+ *
+ * The old guard let it through TWICE: "118" is three digits, under the
+ * 6-digit floor, AND it sat in an EMERGENCY_NUMBERS whitelist. Meanwhile
+ * `116117` — the correct number — was never whitelisted, so the bot could
+ * emit the wrong number freely and would have had the right one stripped.
+ *
+ * The exemption guaranteed the number EXISTS. It never guaranteed the number
+ * matches what the reply claims it is, and only the source can settle that
+ * (CLAUDE.md §16 iron rule 1: the fix is code, not a prompt sentence).
+ */
+describe("demosappada — no number is exempt from verification", () => {
+  // The health FAQ as Andrea wrote it: 116117 is the out-of-hours doctor,
+  // 112/118 are the emergency lines, and both are STATED here.
+  const HEALTH =
+    "Q: A chi mi rivolgo se sto male a Sappada?\n" +
+    "A: Se è un'emergenza chiama il 112 o il 118. Se non è urgente ma non può " +
+    "aspettare, il 116117 è la continuità assistenziale, attivo dalle 20:00 " +
+    "alle 8:00. Farmacia Loaldi, tel. 0435 469109."
+
+  it("🚨 strips a public-service number the source never states", () => {
+    // The live bug, reduced: the health entry never reached the model (it lost
+    // its retrieval slot), so nothing in the approved content mentions 118.
+    // An unverifiable emergency number must not survive.
+    const reply = "Guardia medica — 118\nChiama e spiega la situazione."
+    const { text, removed } = stripUnverifiableContacts(reply, APPROVED)
+    expect(text).not.toContain("118")
+    expect(removed).toContain("118")
+  })
+
+  it("keeps 116117 when the source states it", () => {
+    // The mirror case, and the one that matters most: the CORRECT number must
+    // pass untouched when the content backs it. Under the old whitelist —
+    // which listed 116 and 117 separately but never 116117 — this was the
+    // number at risk of being stripped.
+    const reply = "Per la guardia medica chiama il 116117, attivo dalle 20:00."
+    const { text, removed } = stripUnverifiableContacts(reply, HEALTH)
+    expect(text).toContain("116117")
+    expect(removed).not.toContain("116117")
+  })
+
+  it("keeps 112 and 118 when the source states them", () => {
+    // No over-correction: with the health entry in context the emergency
+    // numbers are legitimate and must reach the guest.
+    const reply = "Se è un'emergenza chiama subito il 112 o il 118."
+    const { text } = stripUnverifiableContacts(reply, HEALTH)
+    expect(text).toContain("112")
+    expect(text).toContain("118")
+  })
+
+  it("does not disturb a long phone number the source approves", () => {
+    // Regression: the short-number pass runs after PHONE_RE and must not
+    // re-examine the fragments of an already-approved long number.
+    const reply = "Farmacia Loaldi\nTel. 0435 469109"
+    const { text, removed } = stripUnverifiableContacts(reply, HEALTH)
+    expect(text).toContain("0435 469109")
+    expect(removed).toHaveLength(0)
+  })
+
+  it("leaves approved clock times alone", () => {
+    // "20:00" is a time, not a number to verify here — TIME_RE already
+    // approved it against the source, and the short-number pass must not
+    // strip it a second time.
+    const reply = "La continuità assistenziale è attiva dalle 20:00 alle 8:00."
+    const { text } = stripUnverifiableContacts(reply, HEALTH)
+    expect(text).toContain("20:00")
+  })
+})
