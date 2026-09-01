@@ -124,6 +124,13 @@ export interface Settings {
   rateLimitedMessage?: string
   /** Confirmation sent after an UNSUBSCRIBE. Authored in ONE language; the host translates. */
   unsubscribedMessage?: string
+  /**
+   * Word-equivalence groups for FAQ selection (advanced settings key
+   * `searchSynonyms`): each group is one concept in every language and
+   * inflection the tenant cares about — ["pista","piste","pisten","slopes"].
+   * Content, not code (CLAUDE.md §1A): extended from the app, no deploy.
+   */
+  searchSynonyms?: string[][]
   sessionTooLongMessage?: string
   /** Presentation video shown once, on the first turn of a new conversation. */
   welcomeVideoUrl?: string
@@ -1131,7 +1138,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
     userMessage,
     ...history.slice(-4).map((h) => h.content),
   ].join(' ')
-  const relevantFaqs = selectRelevantFaqs(faqs, faqContext)
+  const relevantFaqs = selectRelevantFaqs(faqs, faqContext, settings.searchSynonyms)
   const faqBlock = formatFaqBlock(relevantFaqs)
   const accommodationEnabled = !!input.config.handlers?.getCatalogue
 

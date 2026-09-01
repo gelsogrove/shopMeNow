@@ -291,9 +291,14 @@ export function withFaqMedia(
  * INTENT from phrasing (CLAUDE.md §14): it measures topic overlap, so it works
  * the same in Italian, German and English.
  */
-function subjectScore(faq: FaqEntry, text: string, faqs: FaqEntry[]): number {
-  const words = wordsOf(text)
-  const terms = distinctiveTerms(faq.question)
+function subjectScore(
+  faq: FaqEntry,
+  text: string,
+  faqs: FaqEntry[],
+  canon: Canon = identityCanon,
+): number {
+  const words = wordsOf(text, canon)
+  const terms = distinctiveTerms(faq.question, canon)
   if (terms.length === 0) return 0
 
   // Terms are weighted by how rare they are across THIS tenant's FAQ set.
@@ -311,7 +316,7 @@ function subjectScore(faq: FaqEntry, text: string, faqs: FaqEntry[]): number {
   let total = 0
   let matched = 0
   for (const term of terms) {
-    const weight = termWeight(term, faqs)
+    const weight = termWeight(term, faqs, canon)
     total += weight
     if (words.has(term)) matched += weight
   }
@@ -350,21 +355,59 @@ function answerOverlap(faq: FaqEntry, reply: string, faqs: FaqEntry[]): number {
  * description said "il FONDO è ghiaioso" — same letters, opposite meaning
  * (2026-08-23).
  */
-function termWeight(term: string, faqs: FaqEntry[]): number {
+function termWeight(term: string, faqs: FaqEntry[], canon: Canon = identityCanon): number {
   let documents = 0
   for (const faq of faqs) {
-    if (wordsOf(faq.question).has(term)) documents++
+    if (wordsOf(faq.question, canon).has(term)) documents++
   }
   return documents <= 1 ? 1 : 1 / documents
 }
 
-function wordsOf(text: string): Set<string> {
+/**
+ * Word-equivalence canonicalizer built from the tenant's `searchSynonyms`
+ * configuration (advanced settings → settings.json → agent, CLAUDE.md §1A —
+ * the groups are CONTENT, never code). Each group lists one concept in every
+ * language and inflection the tenant cares about ("pista, piste, Pisten,
+ * slopes"); every member is rewritten to the group's first word before
+ * comparison, so "dammi le piste nere" matches a card that says "pista nera".
+ *
+ * WHY a table and not a stemmer (Andrea, 2026-09-01: "è impossibile calcolare
+ * tutti i casi" / "all'embedding ci dobbiamo pensare bene... tira fuori cose
+ * che non c'entrano nulla"): a curated table can never surface an unrelated
+ * card — matching stays exact, only the alphabet of "equal" widens — and the
+ * tenant extends it from the app when a miss shows up, no deploy needed.
+ */
+type Canon = (word: string) => string
+const identityCanon: Canon = (w) => w
+
+export function buildSynonymCanon(groups: unknown): Canon {
+  if (!Array.isArray(groups)) return identityCanon
+  const map = new Map<string, string>()
+  for (const group of groups) {
+    if (!Array.isArray(group)) continue
+    const words = group
+      .filter((w): w is string => typeof w === 'string')
+      .map((w) => w.trim().toLowerCase())
+      .filter((w) => w.length >= 2)
+    if (words.length < 2) continue
+    for (const w of words) {
+      // First registration wins: a word listed in two groups keeps its first
+      // meaning instead of silently flipping with configuration order.
+      if (!map.has(w)) map.set(w, words[0])
+    }
+  }
+  if (map.size === 0) return identityCanon
+  return (w) => map.get(w) ?? w
+}
+
+function wordsOf(text: string, canon: Canon = identityCanon): Set<string> {
   return new Set(
     text
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .split(/\s+/)
-      .filter(Boolean),
+      .filter(Boolean)
+      .map(canon),
   )
 }
 
@@ -380,14 +423,17 @@ const GENERIC_QUESTION_WORDS = new Set([
   'gli', 'le', 'la', 'il', 'lo', 'un', 'and', 'the', 'what', 'where', 'how', 'there',
 ])
 
-function distinctiveTerms(question: string): string[] {
+function distinctiveTerms(question: string, canon: Canon = identityCanon): string[] {
   return Array.from(
     new Set(
       question
         .toLowerCase()
         .replace(/[^\p{L}\p{N}\s]/gu, ' ')
         .split(/\s+/)
-        .filter((w) => w.length > 3 && !GENERIC_QUESTION_WORDS.has(w)),
+        // Length/generic filters run on the RAW word, before canonicalization:
+        // a group's canonical token must not smuggle a short word past them.
+        .filter((w) => w.length > 3 && !GENERIC_QUESTION_WORDS.has(w))
+        .map(canon),
     ),
   )
 }
@@ -421,10 +467,19 @@ const FAQ_BUDGET = 24
  * Under the budget nothing is selected at all — with a short catalogue the
  * whole thing is cheaper than deciding what to leave out.
  */
-export function selectRelevantFaqs(faqs: FaqEntry[], context: string): FaqEntry[] {
+export function selectRelevantFaqs(
+  faqs: FaqEntry[],
+  context: string,
+  synonymGroups?: unknown,
+): FaqEntry[] {
   if (faqs.length <= FAQ_BUDGET) return faqs
+  // Synonyms widen SELECTION only. The media guards above keep the identity
+  // alphabet: they decide whether a reply is "about" a place, where the
+  // configured equivalences have no lesson to teach and a widened match could
+  // only loosen a contract rule that was tuned against live failures.
+  const canon = buildSynonymCanon(synonymGroups)
   const ranked = faqs
-    .map((faq) => ({ faq, score: subjectScore(faq, context, faqs) }))
+    .map((faq) => ({ faq, score: subjectScore(faq, context, faqs, canon) }))
     .sort((a, b) => b.score - a.score)
   const chosen = ranked.slice(0, FAQ_BUDGET).map((r) => r.faq)
   // eslint-disable-next-line no-console

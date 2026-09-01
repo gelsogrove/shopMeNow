@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { MerchantController } from "../controllers/merchant.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 /**
@@ -79,7 +80,11 @@ export const merchantsRouter = (): Router => {
   const router = Router({ mergeParams: true })
   const controller = new MerchantController()
 
+  // Full 3-layer chain (CLAUDE.md security pattern): merchants move money
+  // (push quotas → invoices), so they get the same protection as
+  // push-campaign.routes. Session gap found in the 2026-09-01 security QA.
   router.use(authMiddleware)
+  router.use(sessionValidationMiddleware)
   router.use(workspaceValidationMiddleware)
 
   /**
