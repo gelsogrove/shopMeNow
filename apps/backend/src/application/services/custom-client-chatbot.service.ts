@@ -1191,6 +1191,32 @@ export class CustomClientChatbotService {
         }),
       ])
 
+      // Language config for the index cards (Andrea, 2026-09-01: "è dinamico,
+      // dentro la app si gestisce tutto"): enabled/default languages are
+      // workspace columns, the translated category labels live in the
+      // advanced-settings JSON under `touristIndexLabels` — all app-managed,
+      // nothing hardcoded here. Fetched ONLY when tourist rows exist, so
+      // non-PRO_LOCO workspaces (every other custom chatbot shares this
+      // getFaqs) pay no extra query and see no behavior change.
+      const hasTouristContent =
+        restaurants.length + hotels.length + excursions.length + refuges.length +
+        apartments.length + events.length + sportsFacilities.length + skiFacilities.length > 0
+      const workspaceLang = hasTouristContent
+        ? await defaultPrisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: {
+              enabledLanguages: true,
+              defaultLanguage: true,
+              customChatbotAdvancedSettings: true,
+            },
+          })
+        : null
+      const advanced = workspaceLang?.customChatbotAdvancedSettings
+      const touristIndexLabels =
+        advanced && typeof advanced === "object" && !Array.isArray(advanced)
+          ? (advanced as Record<string, unknown>).touristIndexLabels
+          : undefined
+
       // First gallery photo per content item, as a public URL the module's
       // media pipeline can attach to a detail answer. The path ends in .jpg
       // because faq-media.ts recognises photos by extension.
@@ -1399,15 +1425,22 @@ export class CustomClientChatbotService {
       // One generated card per category, question = bare category label,
       // answer = every row with all its short fields. See
       // tourist-index-cards.ts for why the question must stay bare.
-      const indexEntries = buildTouristIndexCards({
-        restaurants,
-        hotels,
-        excursions,
-        refuges,
-        events,
-        sportsFacilities,
-        skiFacilities,
-      })
+      const indexEntries = buildTouristIndexCards(
+        {
+          restaurants,
+          hotels,
+          excursions,
+          refuges,
+          events,
+          sportsFacilities,
+          skiFacilities,
+        },
+        {
+          enabledLanguages: workspaceLang?.enabledLanguages,
+          defaultLanguage: workspaceLang?.defaultLanguage,
+          labels: touristIndexLabels,
+        }
+      )
 
       return [
         ...indexEntries,

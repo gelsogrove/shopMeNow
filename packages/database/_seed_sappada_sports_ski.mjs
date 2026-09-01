@@ -18,9 +18,14 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
 
 const WS = process.env.WORKSPACE_ID || "7ba9d5ac-21bf-48bc-bfce-4fb0b838f55c"
+// DATABASE_URL, or the production one from Heroku when unset (never printed).
+const { execFileSync } = await import("node:child_process")
+const DB_URL =
+  process.env.DATABASE_URL ||
+  execFileSync("heroku", ["config:get", "DATABASE_URL", "-a", "echatbot-app"], { encoding: "utf8" }).trim()
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes("localhost") ? undefined : { rejectUnauthorized: false },
+  connectionString: DB_URL,
+  ssl: DB_URL.includes("localhost") ? undefined : { rejectUnauthorized: false },
 })
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
 

@@ -119,6 +119,78 @@ describe("buildTouristIndexCards — card content", () => {
   })
 })
 
+describe("buildTouristIndexCards — languages from workspace configuration", () => {
+  // WHAT: retrieval runs BEFORE any LLM call, so "what events are there?"
+  // can never match the Italian label. Translated labels are CONTENT and come
+  // from configuration (`touristIndexLabels` in the workspace's advanced
+  // settings), never from code (Andrea, 2026-09-01: "è dinamico, dentro la
+  // app si gestisce tutto... il settings sono per i contenuti dinamici").
+  const oneEvent = () => ({
+    ...emptyContent(),
+    events: [{ title: "Carnevale di Sappada" }],
+  })
+
+  it("builds one EXTRA card per enabled language that has a configured label", () => {
+    const cards = buildTouristIndexCards(oneEvent(), {
+      enabledLanguages: ["it", "en", "de"],
+      defaultLanguage: "it",
+      labels: { en: { events: "Events" }, de: { events: "Veranstaltungen" } },
+    })
+    // Same answer, three questions: the base label + the two translations.
+    expect(cards.map((c) => c.question)).toEqual(["Eventi", "Events", "Veranstaltungen"])
+    expect(new Set(cards.map((c) => c.answer)).size).toBe(1)
+  })
+
+  it("no configured label → only the default-language card (the fallback Andrea asked for)", () => {
+    const cards = buildTouristIndexCards(oneEvent(), {
+      enabledLanguages: ["it", "en", "fr"],
+      defaultLanguage: "it",
+      labels: { en: { events: "Events" } }, // fr has no labels
+    })
+    expect(cards.map((c) => c.question)).toEqual(["Eventi", "Events"])
+  })
+
+  it("ignores labels for languages NOT in enabledLanguages (settings govern, not the label file)", () => {
+    const cards = buildTouristIndexCards(oneEvent(), {
+      enabledLanguages: ["it", "en"],
+      defaultLanguage: "it",
+      labels: { en: { events: "Events" }, de: { events: "Veranstaltungen" } },
+    })
+    expect(cards.map((c) => c.question)).toEqual(["Eventi", "Events"])
+  })
+
+  it("dedupes identical labels — es/pt sharing 'Eventos' must not produce twin cards", () => {
+    // Twin cards would share every question term and halve each other's IDF
+    // weight, weakening the very match they exist for.
+    const cards = buildTouristIndexCards(oneEvent(), {
+      enabledLanguages: ["it", "es", "pt"],
+      defaultLanguage: "it",
+      labels: { es: { events: "Eventos" }, pt: { events: "Eventos" } },
+    })
+    expect(cards.map((c) => c.question)).toEqual(["Eventi", "Eventos"])
+  })
+
+  it("the default language never adds a translated card (the base card IS that card)", () => {
+    const cards = buildTouristIndexCards(oneEvent(), {
+      enabledLanguages: ["it", "en"],
+      defaultLanguage: "it",
+      labels: { it: { events: "Eventi in paese" }, en: { events: "Events" } },
+    })
+    expect(cards.map((c) => c.question)).toEqual(["Eventi", "Events"])
+  })
+
+  it("malformed configuration degrades to the base card, never a broken turn", () => {
+    for (const labels of [null, "not-an-object", 42, { en: "not-an-object" }]) {
+      const cards = buildTouristIndexCards(oneEvent(), {
+        enabledLanguages: ["it", "en"],
+        defaultLanguage: "it",
+        labels,
+      })
+      expect(cards.map((c) => c.question)).toEqual(["Eventi"])
+    }
+  })
+})
+
 describe("index cards win the FAQ budget on generic questions (real selectRelevantFaqs)", () => {
   // A tenant-shaped catalogue LARGER than FAQ_BUDGET (24), so selection
   // actually ranks instead of passing everything through. Detail questions
@@ -142,11 +214,18 @@ describe("index cards win the FAQ budget on generic questions (real selectReleva
       answer: `Dettagli del sentiero ${i}`,
     })),
   ]
-  const indexCards = buildTouristIndexCards({
-    ...emptyContent(),
-    events: [{ title: "Carnevale di Sappada (Plodar Vosenòcht)" }],
-    restaurants: [{ name: "Locanda Numero 1", celiacFriendly: true }],
-  })
+  const indexCards = buildTouristIndexCards(
+    {
+      ...emptyContent(),
+      events: [{ title: "Carnevale di Sappada (Plodar Vosenòcht)" }],
+      restaurants: [{ name: "Locanda Numero 1", celiacFriendly: true }],
+    },
+    {
+      enabledLanguages: ["it", "en"],
+      defaultLanguage: "it",
+      labels: { en: { events: "Events", restaurants: "Restaurants" } },
+    }
+  )
   const catalogue = [...indexCards, ...detailCards]
   const eventsIndex = indexCards.find((c) => c.question === "Eventi")!
   const restaurantsIndex = indexCards.find((c) => c.question === "Ristoranti")!
@@ -166,6 +245,16 @@ describe("index cards win the FAQ budget on generic questions (real selectReleva
     // enough to bring the list, celiac flags included, to the model.
     const chosen = selectRelevantFaqs(catalogue, "dammi ristoranti celicaci")
     expect(chosen).toContain(restaurantsIndex)
+  })
+
+  it('English "what events are there?" selects the settings-labelled Events card', () => {
+    // The guest's language never touches the Italian labels: the translated
+    // card from `touristIndexLabels` carries the match. Retrieval runs before
+    // any LLM call, so this is the ONLY way an English generic question can
+    // reach the events list.
+    const englishIndex = indexCards.find((c) => c.question === "Events")!
+    const chosen = selectRelevantFaqs(catalogue, "what events are there this week?")
+    expect(chosen).toContain(englishIndex)
   })
 
   it('specific "quando è il carnevale?" still selects the DETAIL card (index never competes on names)', () => {
