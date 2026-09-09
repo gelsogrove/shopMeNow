@@ -64,6 +64,10 @@ interface Settings {
   // (ChatbotSettingsJson in chatbot-settings-json.service.ts).
   rateLimitedMessage: string
   sessionTooLongMessage: string
+  /** Shown instead of a reply the location-leak guard could not clear even
+   *  after one retry (see agentTurnInternal). Empty = the guard stays silent
+   *  (no reply) rather than emitting copy hardcoded here. */
+  dataUnavailableMessage: string
   /** Opening line for a customer we have never seen. Written in one language;
    *  the LLM renders it in the customer's. Empty = no greeting at all. */
   welcomeMessage: string
@@ -91,6 +95,7 @@ const DEFAULT_SETTINGS: Settings = {
   maxTurnsPerSession: 50,
   rateLimitedMessage: '',
   sessionTooLongMessage: '',
+  dataUnavailableMessage: '',
   welcomeMessage: '',
   welcomeBackMessage: '',
   enabledLanguages: [],
@@ -321,6 +326,7 @@ interface ToolContext {
   guardMessages?: {
     rateLimited?: string | null
     sessionTooLong?: string | null
+    dataUnavailable?: string | null
   } | null
   /** Operator briefing produced by escalate_to_operator this turn, with PII
    *  placeholders already resolved. chatbotFn hands it to the host, which owns
@@ -743,6 +749,7 @@ interface TurnResult {
 async function agentTurnInternal(
   ctx: ToolContext,
   cachedSystemPrompt: string,
+  locations: Array<{ name: string; content: string }>,
   history: Message[],
   sanitizedMessage: string,
   greeting?: string,
@@ -751,6 +758,7 @@ async function agentTurnInternal(
 
   let tokensUsed = 0
   let escalated = false
+  let leakRetried = false
   const maxToolHops = ctx.settings.maxToolHops
 
   for (let hop = 0; hop < maxToolHops; hop++) {
@@ -776,6 +784,39 @@ async function agentTurnInternal(
         })
         console.error('[empty_reply_nudge] retrying with explicit instruction')
         continue
+      }
+
+      // Cross-location leak guard: the cached prompt bundles ALL 6 sedes, so
+      // nothing in the request stops the model from citing another sede's
+      // price/schedule/payment method. Deterministic post-check (Andrea,
+      // 2026-09-09) — verifies the reply only cites data documented for the
+      // customer's OWN active location before it ever reaches them.
+      if (text && state.location) {
+        const leak = checkLocationLeak(text, state.location, locations)
+        if (leak && !leakRetried && hop < maxToolHops - 1) {
+          leakRetried = true
+          history.push({ role: 'assistant', content: text })
+          history.push({
+            role: 'user',
+            content:
+              `[system] Your previous reply mentioned "${leak.value}", which is not documented for the customer's active location (${state.location}). ` +
+              `Re-answer using ONLY the data in the LOCATIONS block for "${state.location}". ` +
+              `If you cannot find this data for "${state.location}" in the prompt, say so honestly instead of reusing another sede's value — do not invent or approximate it.`,
+          })
+          console.error(`[location_leak] location=${state.location} value=${leak.value} — retrying`)
+          continue
+        }
+        if (leak) {
+          // Retry already used (or no hops left) and the leak persists.
+          // Iron rule #0 (common.md): never let a wrong/foreign-sede value
+          // reach the customer — fall back to an honest "don't know" instead.
+          console.error(
+            `[location_leak] location=${state.location} value=${leak.value} — unresolved after retry, falling back`,
+          )
+          const fallback = ctx.guardMessages?.dataUnavailable ?? ctx.settings.dataUnavailableMessage
+          history.push({ role: 'assistant', content: fallback || '' })
+          return { reply: fallback || '', tokensUsed, escalated }
+        }
       }
 
       history.push({ role: 'assistant', content: text })
@@ -850,6 +891,7 @@ async function agentTurnInternal(
 async function agentTurn(
   ctx: ToolContext,
   cachedSystemPrompt: string,
+  locations: Array<{ name: string; content: string }>,
   history: Message[],
   rawMessage: string,
   greeting?: string,
@@ -893,7 +935,7 @@ async function agentTurn(
   }
 
   return withSessionLock(ctx.sessionId, () =>
-    agentTurnInternal(ctx, cachedSystemPrompt, history, cleanText, greeting),
+    agentTurnInternal(ctx, cachedSystemPrompt, locations, history, cleanText, greeting),
   )
 }
 
@@ -903,7 +945,17 @@ async function agentTurn(
 // (alphabetical) order so the resulting blob is byte-identical across boots
 // → cache hit always.
 
-async function buildSystemPrompt(): Promise<string> {
+interface SystemPromptBundle {
+  prompt: string
+  // Per-location source text, keyed by canonical location name (file name
+  // without extension, e.g. "hortes"). Used by checkLocationLeak() to verify
+  // a reply only cites data that actually belongs to the customer's sede —
+  // kept separate from `prompt` (the single cached blob) so the leak check
+  // doesn't need to re-parse the concatenated prompt on every turn.
+  locations: Array<{ name: string; content: string }>
+}
+
+async function buildSystemPrompt(): Promise<SystemPromptBundle> {
   const common = await readFile(path.join(PROMPTS_DIR, 'common.md'), 'utf8')
   const faqs = await readFileOrEmpty(path.join(PROMPTS_DIR, 'faqs.md'))
   const machines = await loadDir(path.join(PROMPTS_DIR, 'machines'))
@@ -929,7 +981,7 @@ async function buildSystemPrompt(): Promise<string> {
     }
   }
 
-  return parts.join('\n')
+  return { prompt: parts.join('\n'), locations }
 }
 
 /**
@@ -1008,6 +1060,64 @@ function formatMissingFactsBlock(state: SessionState): string {
     'de esos datos falta arriba, PREGÚNTALO en vez de responder con un importe.',
     '',
   ].join('\n')
+}
+
+// Canonical sede names, matched case-insensitively against reply text to
+// catch the model naming a sede other than the customer's own (forbidden by
+// common.md → "NUNCA promociones otras sedes"). Kept in sync with
+// prompts/locations/*.md file names.
+const LOCATION_DISPLAY_NAMES: Record<string, string> = {
+  hortes: 'Hortes',
+  goya: 'Goya',
+  alemanya: 'Alemanya',
+  pineda: 'Pineda',
+  escala: "L'Escala",
+  'platja-daro': "Platja d'Aro",
+}
+
+/**
+ * Deterministic post-check: does this reply cite a per-sede value (price,
+ * schedule) that is not documented for the customer's active location, but
+ * IS documented for a different one? Also flags another sede's name showing
+ * up in the text. Returns the offending value, or null when the reply looks
+ * clean.
+ *
+ * Only flags values ABSENT from the active sede's own block — a price that
+ * happens to match another sede too (coincidence, e.g. both charging 8€) is
+ * not a leak as long as it's also correct for the customer's sede.
+ */
+function checkLocationLeak(
+  replyText: string,
+  activeLocation: string,
+  locations: Array<{ name: string; content: string }>,
+): { value: string } | null {
+  const active = locations.find(
+    (l) => l.name.toLowerCase() === activeLocation.toLowerCase(),
+  )
+  if (!active) return null // unknown location key — nothing to check against
+
+  // 1) Another sede's name mentioned in the reply.
+  for (const [key, display] of Object.entries(LOCATION_DISPLAY_NAMES)) {
+    if (key === active.name.toLowerCase()) continue
+    const nameRe = new RegExp(`\\b${display.replace(/'/g, "['’]?")}\\b`, 'i')
+    if (nameRe.test(replyText)) {
+      return { value: display }
+    }
+  }
+
+  // 2) Euro amounts and clock times not documented for the active sede.
+  const valueRe = /\b\d{1,3}([.,]\d{1,2})?\s*€|\b\d{1,2}:\d{2}\b/g
+  const values = replyText.match(valueRe) ?? []
+  for (const raw of values) {
+    const value = raw.trim()
+    if (active.content.includes(value)) continue // documented for this sede
+    const foundElsewhere = locations.some(
+      (l) => l.name !== active.name && l.content.includes(value),
+    )
+    if (foundElsewhere) return { value }
+  }
+
+  return null
 }
 
 function formatRuntimeBlock(settings: Settings, greeting?: string): string {
@@ -1100,6 +1210,9 @@ export interface ChatbotInput {
     messages?: {
       rateLimited?: string | null
       sessionTooLong?: string | null
+      /** Shown when the location-leak guard can't clear a reply even after
+       *  one retry — see agentTurnInternal. */
+      dataUnavailable?: string | null
       /** Greeting for a customer we already know by name. */
       welcomeBack?: string | null
     } | null
@@ -1138,8 +1251,8 @@ export interface ChatbotOutput {
 
 // Build the system prompt once at module load. Cached across all backend
 // invocations because the file content doesn't change at runtime.
-let cachedSystemPromptPromise: Promise<string> | null = null
-function getCachedSystemPrompt(): Promise<string> {
+let cachedSystemPromptPromise: Promise<SystemPromptBundle> | null = null
+function getCachedSystemPrompt(): Promise<SystemPromptBundle> {
   if (!cachedSystemPromptPromise) cachedSystemPromptPromise = buildSystemPrompt()
   return cachedSystemPromptPromise
 }
@@ -1156,7 +1269,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       }
     }
 
-    const systemPrompt = await getCachedSystemPrompt()
+    const { prompt: systemPrompt, locations } = await getCachedSystemPrompt()
     const sessionId = input.context.sessionId
 
     // 🌐 LANGUAGE = decided by the CUSTOMER'S MESSAGE, never by the phone
@@ -1218,7 +1331,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       input.config.messages,
     )
 
-    const result = await agentTurn(ctx, systemPrompt, history, input.userMessage, greeting)
+    const result = await agentTurn(ctx, systemPrompt, locations, history, input.userMessage, greeting)
     const patches = drainPatches(sessionId)
 
     // Silence is never an acceptable answer: after the retries inside the turn
@@ -1268,7 +1381,10 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
 
-async function runInteractive(systemPrompt: string): Promise<void> {
+async function runInteractive(
+  systemPrompt: string,
+  locations: Array<{ name: string; content: string }>,
+): Promise<void> {
   const sessionId = 'cli-interactive'
   const history: Message[] = []
   const rl = createInterface({ input: process.stdin, output: process.stdout })
@@ -1298,7 +1414,7 @@ async function runInteractive(systemPrompt: string): Promise<void> {
       continue
     }
     try {
-      const result = await agentTurn(ctx, systemPrompt, history, input)
+      const result = await agentTurn(ctx, systemPrompt, locations, history, input)
       console.log(`\n${result.reply}\n`)
     } catch (err) {
       console.error(`[error] ${err instanceof Error ? err.message : String(err)}`)
@@ -1308,7 +1424,11 @@ async function runInteractive(systemPrompt: string): Promise<void> {
   rl.close()
 }
 
-async function runBatch(systemPrompt: string, rawJson: string): Promise<void> {
+async function runBatch(
+  systemPrompt: string,
+  locations: Array<{ name: string; content: string }>,
+  rawJson: string,
+): Promise<void> {
   let plan: Array<string[] | string>
   try {
     plan = JSON.parse(rawJson)
@@ -1342,7 +1462,7 @@ async function runBatch(systemPrompt: string, rawJson: string): Promise<void> {
       const turn = entry[i]
       console.log(`\n[USER T${i + 1}] ${turn}`)
       try {
-        const result = await agentTurn(ctx, systemPrompt, history, turn)
+        const result = await agentTurn(ctx, systemPrompt, locations, history, turn)
         console.log(`[BOT T${i + 1}] ${result.reply}`)
       } catch (err) {
         console.log(`[ERROR T${i + 1}] ${err instanceof Error ? err.message : String(err)}`)
@@ -1384,12 +1504,12 @@ if (isDirectExecution()) {
     process.exit(1)
   }
   const main = async () => {
-    const systemPrompt = await buildSystemPrompt()
+    const { prompt: systemPrompt, locations } = await buildSystemPrompt()
     const batch = findBatchArg()
     if (batch !== null) {
-      await runBatch(systemPrompt, batch)
+      await runBatch(systemPrompt, locations, batch)
     } else {
-      await runInteractive(systemPrompt)
+      await runInteractive(systemPrompt, locations)
     }
   }
   main().catch((err) => {

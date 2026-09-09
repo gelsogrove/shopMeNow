@@ -29,6 +29,14 @@
 - Devolución de cambio: **Sí, si corresponde**
 - Cobro datáfono: **Precio exacto**
 
+### Procedimiento — Pago en efectivo
+
+1. Introduzca el billete o las monedas. Verá **SALDO DISPONIBLE** en la pantalla.
+2. Apriete bien el **BOTÓN** de la máquina que desea usar. Escuchará un pitido y la luz parpadeará.
+3. Si el importe introducido es menor que el coste de la máquina, debe dársele el cambio en monedas. Si no lo hace, presione de nuevo más firmemente el botón de la máquina. Si aún así no lo hace → ESCALAR.
+4. Diríjase a la máquina: la pantalla pondrá `PUSH PROG` (lavadora) o empezará a funcionar directamente (secadora).
+5. Apriete bien el programa que desea (según etiqueta y características de la ropa).
+
 ## Programas lavadora
 
 | Botón | Programa     | Temperatura |

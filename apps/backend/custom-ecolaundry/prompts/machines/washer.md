@@ -20,9 +20,11 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 
 ## Procedimiento de pago (antes de arrancar la lavadora)
 
-Cuando el cliente pregunta cómo pagar / cómo empezar, aplica el procedimiento según el método elegido. Recuerda que **no todas las sedes aceptan efectivo o tarjeta de fidelización** — consulta `locations/<sede>.md` → "Métodos de pago" antes de indicar el paso de efectivo.
+Cuando el cliente pregunta cómo pagar / cómo empezar, aplica el procedimiento según el método elegido.
 
 ### Pago con tarjeta
+
+Disponible en **todas las sedes**.
 
 1. Pulse **STAR**.
 2. Siga las instrucciones del datáfono. Cuando diga **ACEPTADA**, espere a ver **SALDO DISPONIBLE** en la pantalla (importe fijo en las sedes con pago unitario, ver `locations/<sede>.md`).
@@ -33,14 +35,7 @@ Cuando el cliente pregunta cómo pagar / cómo empezar, aplica el procedimiento 
 7. Apriete bien el programa que desea (según etiqueta y características de la ropa).
 8. La pantalla pondrá `ON`, luego `T-28` (minutos, tiempo orientativo).
 
-### Pago en efectivo
-
-1. Introduzca el billete o las monedas. Verá **SALDO DISPONIBLE** en la pantalla.
-2. Apriete bien el **BOTÓN** de la máquina que desea usar. Escuchará un pitido y la luz parpadeará.
-3. Si el importe introducido es menor que el coste de la máquina, debe dársele el cambio en monedas. Si no lo hace, presione de nuevo más firmemente el botón de la máquina. Si aún así no lo hace → ESCALAR.
-4. Diríjase a la lavadora: la pantalla pondrá `PUSH PROG`.
-5. Apriete bien el programa que desea (según etiqueta y características de la ropa).
-6. La pantalla pondrá `ON`, luego `T-28` (minutos, tiempo orientativo).
+**Pago en efectivo**: no es común a todas las sedes — el procedimiento está documentado en `locations/<sede>.md` de cada sede que lo acepta (Hortes, Goya, Alemanya, Pineda). Si la sede activa no tiene esa sección, no acepta efectivo: no lo ofrezcas como opción.
 
 ## Procedimiento DOOR
 
