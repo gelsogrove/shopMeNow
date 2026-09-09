@@ -18,6 +18,30 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 | `001`         | Selección del programa antes del pago                    | Procedimiento 001 (ver abajo). |
 | `ALM`/`ALN`   | Fallo técnico de la máquina                              | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. |
 
+## Procedimiento de pago (antes de arrancar la lavadora)
+
+Cuando el cliente pregunta cómo pagar / cómo empezar, aplica el procedimiento según el método elegido. Recuerda que **no todas las sedes aceptan efectivo o tarjeta de fidelización** — consulta `locations/<sede>.md` → "Métodos de pago" antes de indicar el paso de efectivo.
+
+### Pago con tarjeta
+
+1. Pulse **STAR**.
+2. Siga las instrucciones del datáfono. Cuando diga **ACEPTADA**, espere a ver **SALDO DISPONIBLE** en la pantalla (importe fijo en las sedes con pago unitario, ver `locations/<sede>.md`).
+3. Apriete firmemente el **BOTÓN** de la máquina que desea usar. La central pitará y la luz del botón parpadeará.
+4. Si corresponde devolución de cambio en monedas, saldrá automáticamente. Si no sale, apriete de nuevo el botón de la máquina seleccionada firmemente. Si aún así no lo hace → ESCALAR.
+5. Recoja el cambio.
+6. Diríjase a la lavadora: la pantalla pondrá `PUSH PROG`.
+7. Apriete bien el programa que desea (según etiqueta y características de la ropa).
+8. La pantalla pondrá `ON`, luego `T-28` (minutos, tiempo orientativo).
+
+### Pago en efectivo
+
+1. Introduzca el billete o las monedas. Verá **SALDO DISPONIBLE** en la pantalla.
+2. Apriete bien el **BOTÓN** de la máquina que desea usar. Escuchará un pitido y la luz parpadeará.
+3. Si el importe introducido es menor que el coste de la máquina, debe dársele el cambio en monedas. Si no lo hace, presione de nuevo más firmemente el botón de la máquina. Si aún así no lo hace → ESCALAR.
+4. Diríjase a la lavadora: la pantalla pondrá `PUSH PROG`.
+5. Apriete bien el programa que desea (según etiqueta y características de la ropa).
+6. La pantalla pondrá `ON`, luego `T-28` (minutos, tiempo orientativo).
+
 ## Procedimiento DOOR
 
 > "Abre la puerta con cuidado, revisa si hay alguna prenda atrapada en la goma y vuelve a cerrarla bien hasta que oigas el clic. ¿Ha desaparecido el mensaje?"

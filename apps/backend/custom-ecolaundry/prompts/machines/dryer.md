@@ -8,6 +8,15 @@ Los mismos que la lavadora: `SEL`, `PUSH PROG`, `ON`, `T-28`, `STOP:`, `END:`, `
 
 Aplica los mismos procedimientos descritos en `washer.md`, con dos diferencias:
 
+## Procedimiento de pago (antes de arrancar la secadora)
+
+Igual que en la lavadora (ver `washer.md` → "Procedimiento de pago") hasta el paso "recoja el cambio". A partir de ahí:
+
+5. Diríjase a la secadora y apriete el programa que desea (según etiqueta y características de la ropa).
+6. La secadora empezará a funcionar.
+
+Si no funciona tras seguir los pasos → ESCALAR.
+
 ### Diferencia 1 — Alargar el tiempo de secado
 
 > "Puedes alargar el tiempo de secado hasta 5 minutos antes de que termine el secado, añadiendo dinero en la central de pago."
