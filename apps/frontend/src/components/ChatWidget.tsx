@@ -179,7 +179,7 @@ const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
 // 📣 A simulated promotional push (demo only). Rendered as a rich card: bold
 // badge, body text, optional big image, optional link/CTA.
 export interface PushDemoCase {
-  badge?: string // e.g. "📣 PROMO · DemoWash" — omitted for ad cards that open with the title
+  badge?: string // e.g. "📣 PROMO · DemoRealEstate" — omitted for ad cards that open with the title
   title?: string // bold headline under the badge (e.g. the advertised venue's name)
   body: string // promo text (may contain newlines)
   image?: string // optional image URL (served from the frontend origin)
@@ -572,7 +572,7 @@ export function ChatWidget({
     useChannelLogo === true
   const resolvedIcon = widgetConfig?.icon || icon || "chat"
   // 🔤 Two-letter monogram derived from the title (WhatsApp-style avatar logo).
-  // "DemoWash" → "DW", "Demo Wash" → "DW", "eChatbot HQ" → "EH". Empty when we
+  // "DemoRobot" → "DR", "Demo Robot" → "DR", "eChatbot HQ" → "EH". Empty when we
   // can't extract exactly two letters, so the avatar falls back to the icon glyph.
   const titleMonogram = useMemo(() => {
     // Explicit `monogram` prop wins (the /demo page forces "DW"); otherwise we

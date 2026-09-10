@@ -190,8 +190,8 @@ function buildContent(lang: Lang) {
       feature: 0,
       msgs: [
         { role: "in", text: p("Ciao, non mi funziona la lavatrice 😩", "Hi, my washer isn't working 😩", "Hola, mi lavadora no funciona 😩", "Hallo, meine Waschmaschine funktioniert nicht 😩") },
-        { role: "out", text: p("Ciao e benvenuto in DemoWash! 👋 Sono il tuo assistente e sono qui per aiutarti 24/7 😊", "Hi and welcome to DemoWash! 👋 I'm your assistant, here to help you 24/7 😊", "¡Hola y bienvenido a DemoWash! 👋 Soy tu asistente y estoy aquí para ayudarte 24/7 😊", "Hallo und willkommen bei DemoWash! 👋 Ich bin dein Assistent und helfe dir rund um die Uhr 😊") },
-        { role: "out", video: true, text: p("Ti mando una nostra presentazione 🎥 Guarda come funziona DemoWash", "I'll send you a quick presentation 🎥 See how DemoWash works", "Te envío una presentación 🎥 Mira cómo funciona DemoWash", "Ich schicke dir eine kurze Präsentation 🎥 Sieh dir an, wie DemoWash funktioniert") },
+        { role: "out", text: p("Ciao e benvenuto in eChatbot! 👋 Sono il tuo assistente e sono qui per aiutarti 24/7 😊", "Hi and welcome to eChatbot! 👋 I'm your assistant, here to help you 24/7 😊", "¡Hola y bienvenido a eChatbot! 👋 Soy tu asistente y estoy aquí para ayudarte 24/7 😊", "Hallo und willkommen bei eChatbot! 👋 Ich bin dein Assistent und helfe dir rund um die Uhr 😊") },
+        { role: "out", video: true, text: p("Ti mando una nostra presentazione 🎥 Guarda come funziona eChatbot", "I'll send you a quick presentation 🎥 See how eChatbot works", "Te envío una presentación 🎥 Mira cómo funciona eChatbot", "Ich schicke dir eine kurze Präsentation 🎥 Sieh dir an, wie eChatbot funktioniert") },
       ],
     },
     // 2 — API connect (unlock the machine)
@@ -297,7 +297,7 @@ function buildContent(lang: Lang) {
         {
           role: "out",
           image: true,
-          imgTitle: p("DemoWash · Promo del mese", "DemoWash · Monthly promo", "DemoWash · Promo del mes", "DemoWash · Aktion des Monats"),
+          imgTitle: p("eChatbot · Promo del mese", "eChatbot · Monthly promo", "eChatbot · Promo del mes", "eChatbot · Aktion des Monats"),
           imgBig: "-20%",
           imgSmall: p("sul prossimo lavaggio 🧺", "on your next wash 🧺", "en tu próximo lavado 🧺", "auf deine nächste Wäsche 🧺"),
           text: p("📣 La nostra promo del mese, per te! Ti aspettiamo 💚", "📣 Our promo of the month, just for you! See you soon 💚", "📣 ¡Nuestra promo del mes, para ti! Te esperamos 💚", "📣 Unsere Aktion des Monats, nur für dich! Wir freuen uns auf dich 💚"),
@@ -423,13 +423,13 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
               {/* header */}
               <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: "#075E54" }}>
-                {/* DW monogram logo — "D" white, "W" black */}
+                {/* eC monogram logo — "e" white, "C" black */}
                 <div className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-extrabold tracking-tight sm:h-9 sm:w-9 sm:text-sm" style={{ background: WA_GREEN }}>
-                  <span className="text-white">D</span>
-                  <span className="text-slate-900">W</span>
+                  <span className="text-white">e</span>
+                  <span className="text-slate-900">C</span>
                 </div>
                 <div className="leading-tight">
-                  <p className="text-sm font-semibold">DemoWash</p>
+                  <p className="text-sm font-semibold">eChatbot</p>
                   <p className="flex items-center gap-1 text-[11px] text-white/70">
                     <MapPin className="h-3 w-3" /> {c.online}
                   </p>

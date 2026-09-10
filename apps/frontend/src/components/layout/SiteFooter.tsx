@@ -17,7 +17,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integrazione CRM",
     solutions: "Soluzioni",
-    laundries: "Lavanderie",
     realEstate: "Agenzie Immobiliari",
     beauty: "Centri Estetici",
     company: "Azienda",
@@ -44,7 +43,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM Integration",
     solutions: "Solutions",
-    laundries: "Laundries",
     realEstate: "Real Estate Agencies",
     beauty: "Beauty Centers",
     company: "Company",
@@ -71,7 +69,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integración CRM",
     solutions: "Soluciones",
-    laundries: "Lavanderías",
     realEstate: "Agencias Inmobiliarias",
     beauty: "Centros de Estética",
     company: "Empresa",
@@ -98,7 +95,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM-Integration",
     solutions: "Lösungen",
-    laundries: "Wäschereien",
     realEstate: "Immobilienagenturen",
     beauty: "Kosmetikstudios",
     company: "Unternehmen",
@@ -142,7 +138,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             </ul>
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
             <ul className="space-y-3">
-              <li><Link to="/laundries" className="text-sm hover:text-green-500 transition-colors">{t.laundries}</Link></li>
               <li><Link to="/real-estate" className="text-sm hover:text-green-500 transition-colors">{t.realEstate}</Link></li>
               <li><Link to="/beauty" className="text-sm hover:text-green-500 transition-colors">{t.beauty}</Link></li>
             </ul>

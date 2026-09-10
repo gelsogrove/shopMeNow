@@ -319,8 +319,8 @@ export function MessageRenderer({
         )}
 
         {operatorText && (
-          // WhatsApp-style operator bubble (matches the homepage DemowashShowcase
-          // look): light bubble, blue operator label, WhatsApp top-left notch.
+          // WhatsApp-style operator bubble: light bubble, blue operator label,
+          // WhatsApp top-left notch.
           // The blue label makes it unmistakable this is the internal hand-off
           // the operator receives — not a message shown to the customer.
           <div className="mt-2 rounded-2xl rounded-tl-sm border border-blue-200 bg-blue-50/70 px-3 py-2.5 shadow-sm">

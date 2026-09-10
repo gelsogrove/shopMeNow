@@ -62,12 +62,12 @@ export function OtherSection({
               id="customChatbotId"
               value={formData.customChatbotId}
               onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
-              placeholder="e.g. demowash"
+              placeholder="e.g. demorealestate"
               disabled={!canEdit}
             />
             <p className="text-xs text-gray-500">
               Name of the custom module that answers on this channel (e.g.{" "}
-              <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px]">demowash</code>).
+              <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px]">demorealestate</code>).
               Leave empty to use the standard AI agents.
             </p>
           </div>
