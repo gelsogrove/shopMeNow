@@ -21,9 +21,9 @@ describe("isPublicGuardExemptPath — TokenExpiryGuard exemptions", () => {
   })
 
   it("exempts every public standalone route family", () => {
-    // ecolaundry demo, operator dashboard and support chat are all public,
+    // demosappada demo, operator dashboard and support chat are all public,
     // token-less-from-the-main-app pages and must be skipped too.
-    expect(isPublicGuardExemptPath("/demo/ecolaundry")).toBe(true)
+    expect(isPublicGuardExemptPath("/demo/demosappada")).toBe(true)
     expect(isPublicGuardExemptPath("/support-chat")).toBe(true)
     expect(isPublicGuardExemptPath("/operator-dashboard")).toBe(true)
   })

@@ -71,7 +71,7 @@ export interface Workspace {
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
-  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces 
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   customChatbotModel?: string | null // LLM model override for the custom chatbot module
@@ -225,7 +225,7 @@ export interface UpdateWorkspaceData {
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
-  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   customChatbotModel?: string | null // LLM model override for the custom chatbot module

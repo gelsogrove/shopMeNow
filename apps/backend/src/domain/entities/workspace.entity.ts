@@ -85,7 +85,7 @@ export interface WorkspaceProps {
   // 🆕 Prompt Builder fields (Dynamic Prompt System)
   address?: string | null
   customAiRules?: string | null
-  customChatbotId?: string | null  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotId?: string | null  // Custom chatbot module for FLOW workspaces (e.g. "")
   customChatbotSystemPrompt?: string | null  // Editable main/system prompt for the custom chatbot module
   customChatbotModel?: string | null
   customChatbotTemperature?: number | null

@@ -772,7 +772,7 @@ export class WasenderWebhookController {
     }
 
     // 11. 🤖 Shared provider-agnostic pipeline — same result as Meta/UltraMsg
-    // (custom-ecolaundry → chatEngine, typing, media ingest, direct send).
+    // (custom chatbot module → chatEngine, typing, media ingest, direct send).
     // processReply reads the full workspace off customer.workspace; the workspace
     // loaded at step 1 has a limited select, so fetch the fields it needs.
     const pipelineWorkspace = await prisma.workspace.findUnique({

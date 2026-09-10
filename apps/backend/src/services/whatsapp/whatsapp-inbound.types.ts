@@ -6,7 +6,7 @@
  * provider-specific things — verify its signature and PARSE its raw payload into
  * a `NormalizedInboundMessage` — then hands that object to the single shared
  * `WhatsAppInboundPipeline.process()`. The pipeline runs all agnostic steps
- * (dedup, billing, security, rate limit, custom-ecolaundry / chatEngine, media,
+ * (dedup, billing, security, rate limit, custom chatbot / chatEngine, media,
  * typing, direct send) identically regardless of provider.
  *
  * This file is the seam. It defines the data crossing the parse → process

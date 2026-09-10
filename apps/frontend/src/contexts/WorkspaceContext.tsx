@@ -78,7 +78,7 @@ export interface Workspace {
   botIdentityResponse?: string
   address?: string // 🆕 Physical address for "where are you?" questions
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
-  customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   customChatbotModel?: string | null // LLM model override for the custom chatbot module

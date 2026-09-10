@@ -114,8 +114,8 @@ function createPrismaMock(overrides: Record<string, any> = {}) {
 function createFlowWorkspace(overrides: Record<string, any> = {}) {
   return {
     id: "ws-flow-1",
-    name: "Ecolaundry",
-    slug: "ecolaundry",
+    name: "Demowash",
+    slug: "demowash",
     channelMode: ChannelMode.FLOW,
     language: "ESP",
     sessionResetTimeout: 3600,
@@ -652,7 +652,7 @@ describe("FlowWorkspaceStrategy", () => {
         workspaceId: "ws-flow-1",
         flowKey: "router",
         flowLabel: "Router",
-        systemPrompt: "You are the Ecolaundry router assistant...",
+        systemPrompt: "You are the Demowash router assistant...",
         model: "openai/gpt-4o-mini",
         temperature: 0.3,
         maxTokens: 1024,
@@ -667,7 +667,7 @@ describe("FlowWorkspaceStrategy", () => {
       // Router LLM responds with a welcome + first question
       mockHandleQuery.mockResolvedValue({
         success: true,
-        output: "¡Hola! Soy el asistente de Ecolaundry, ¿cómo puedo ayudarte hoy?",
+        output: "¡Hola! Soy el asistente de Demowash, ¿cómo puedo ayudarte hoy?",
         chatContext: {}, // no flowKey yet (user just greeted)
         tokensUsed: 30,
         executionTimeMs: 200,

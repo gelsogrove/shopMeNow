@@ -118,7 +118,7 @@ const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
 const PlaygroundKanbanPage = lazy(() => import("./pages/PlaygroundKanbanPage"))
 const FeedbackBoardPage = lazy(() => import("./pages/FeedbackBoardPage"))
 // Not lazy: the gate must render immediately, before the demo page chunk loads.
-// In use on /demo/ecolaundry; /demo/demorobot stays open (wrapper commented there).
+// In use on /demo/demosappada; /demo/demorobot stays open (wrapper commented there).
 import { DemoPasswordGate } from "./components/DemoPasswordGate"
 
 function AuthLoginRedirect() {
@@ -160,7 +160,7 @@ function ProtectedAnalyticsRoute() {
  * F50 — CustomChatbotGuard
  *
  * Defensive route guard: when the active workspace runs a custom chatbot
- * module (`workspace.customChatbotId` is set, e.g. "ecolaundry"), the entire
+ * module (`workspace.customChatbotId` is set), the entire
  * standard-platform feature surface (catalog, FAQ, appointments, agent
  * configuration, sales, analytics, etc.) is not used. The sidebar already
  * hides those entries; this guard catches users who navigate directly via
@@ -290,26 +290,6 @@ export function App() {
           }
         />
 
-        {/* Demowash public demo — renders the real embeddable ChatWidget so a
-            visitor can try the live chatbot (name + language + first message),
-            exactly like the production widget. Resolves the workspaceId from the
-            slug via the ABSOLUTE API base (works in production, unlike the
-            relative-path Playground). */}
-        <Route
-          path="/demo/demowash/*"
-          element={
-            <Suspense
-              fallback={
-                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
-                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-                </div>
-              }
-            >
-              <DemoWidgetPage />
-            </Suspense>
-          }
-        />
-
         {/* DemoRealEstate — real-estate agency demo. Same DemoWidgetPage, branded by
             slug ("demorealestate"). Resolves the workspace via customChatbotId="demorealestate". */}
         <Route
@@ -369,33 +349,6 @@ export function App() {
             >
               <DemoWidgetPage />
             </Suspense>
-          }
-        />
-
-        {/* Ecolaundry — self-service laundromat demo. Same DemoWidgetPage, branded by
-            slug ("ecolaundry"). Resolves the workspace via customChatbotId="ecolaundry".
-            Behind a username+password gate (Andrea 2026-08-21): the prompts carry a
-            real customer's addresses and prices, so the page is not left wide open.
-            Light barrier only — the credentials ship in the bundle. */}
-        <Route
-          path="/demo/ecolaundry/*"
-          element={
-            <DemoPasswordGate
-              username="demo"
-              password="Admin1234"
-              unlockHours={24}
-              storageScope="ecolaundry"
-            >
-              <Suspense
-                fallback={
-                  <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
-                    <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-                  </div>
-                }
-              >
-                <DemoWidgetPage />
-              </Suspense>
-            </DemoPasswordGate>
           }
         />
 

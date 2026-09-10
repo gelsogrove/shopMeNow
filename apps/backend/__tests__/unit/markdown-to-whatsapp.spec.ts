@@ -5,7 +5,7 @@ import { mdToWhatsApp } from '../../src/utils/markdown-to-whatsapp'
  *
  * The converter is the single deterministic post-processor that bridges
  * the rich Markdown produced by custom chatbots (custom-demowash,
- * custom-ecolaundry, ...) to the very limited formatting that WhatsApp
+ * custom-demosappada, ...) to the very limited formatting that WhatsApp
  * actually renders. Every transformation here is covered by at least one
  * test, including the no-op cases (idempotent inputs) and the edge cases
  * that would otherwise leak raw Markdown syntax into the customer's chat.

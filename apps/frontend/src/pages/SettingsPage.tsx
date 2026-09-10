@@ -90,7 +90,7 @@ interface FormData {
   widgetAutoSuggestionsEnabled: boolean
   // AI Config
   customAiRules: string
-  customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotId: string  // Custom chatbot module for FLOW workspaces 
   customChatbotSystemPrompt: string  // Editable main/system prompt for the custom chatbot module
   enabledLanguages: string[]
   customChatbotModel: string

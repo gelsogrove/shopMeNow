@@ -1,14 +1,15 @@
 /**
  * DemoWidgetPage
  *
- * Public, standalone "try it" page served at /demo/<slug> (e.g. /demo/demowash,
+ * Public, standalone "try it" page served at /demo/<slug> (e.g.
  * /demo/demorealestate). It resolves the demo workspace from the chatbot slug and
  * renders the real embeddable ChatWidget pointed at that workspace, so a visitor
  * can talk to the live chatbot exactly as a customer would — including the
  * registration form that asks for name, phone and language before the first message.
  *
- * Branding is per-slug (see BRAND_THEMES below): demowash = laundry, demorealestate =
- * DemoRealEstate real-estate agency — both use the same WhatsApp-green styling. The
+ * Branding is per-slug (see BRAND_THEMES below): demorealestate =
+ * DemoRealEstate real-estate agency, demobeauty = beauty-center franchise, etc. —
+ * these use the same WhatsApp-green styling. The
  * slug also drives the resolve-demo lookup (workspace.customChatbotId === slug).
  *
  * Why this exists / production note:
@@ -54,8 +55,8 @@ interface ResolvedDemo {
 
 // ── Per-brand visual theme (keyed by slug) ───────────────────────────────────
 // Tailwind class strings are kept as full literals so the JIT compiler keeps
-// them. demowash reproduces the original green branding exactly; demorealestate shares
-// the same WhatsApp-green branding (only the wordmark + monogram differ).
+// them. Each brand shares the same WhatsApp-green branding (only the wordmark
+// + monogram differ).
 interface BrandTheme {
   titleA: string // first half of the H1 (kept white)
   titleB: string // second half of the H1 (accent color)
@@ -99,25 +100,7 @@ interface BrandTheme {
 }
 
 const BRAND_THEMES: Record<string, BrandTheme> = {
-  demowash: {
-    titleA: "Demo",
-    titleB: "Wash",
-    monogram: "DW",
-    primaryColor: "#25D366",
-    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
-    blob1: "bg-emerald-400/30",
-    blob2: "bg-teal-300/20",
-    accentText: "text-emerald-300",
-    badge: "bg-white/10 text-emerald-50",
-    dot: "bg-emerald-300",
-    introText: "text-emerald-50/90",
-    tryLabel: "text-emerald-200",
-    itemsText: "text-emerald-50/90",
-    spinner: "border-emerald-200 border-t-white",
-    loadingText: "text-emerald-50",
-    openHint: "text-emerald-100/80",
-  },
-  // DemoRealEstate shares the WhatsApp-green branding of demowash (Andrea's choice) —
+  // DemoRealEstate uses the WhatsApp-green branding (Andrea's choice) —
   // only the wordmark ("RealEstate") and monogram ("DR") differ.
   demorealestate: {
     titleA: "Demo",
@@ -181,26 +164,6 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
   },
-  // Ecolaundry — self-service laundromat support. Same WhatsApp-green branding;
-  // only the wordmark ("laundry") and monogram ("EL") differ.
-  ecolaundry: {
-    titleA: "Eco",
-    titleB: "laundry",
-    monogram: "EL",
-    primaryColor: "#25D366",
-    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
-    blob1: "bg-emerald-400/30",
-    blob2: "bg-teal-300/20",
-    accentText: "text-emerald-300",
-    badge: "bg-white/10 text-emerald-50",
-    dot: "bg-emerald-300",
-    introText: "text-emerald-50/90",
-    tryLabel: "text-emerald-200",
-    itemsText: "text-emerald-50/90",
-    spinner: "border-emerald-200 border-t-white",
-    loadingText: "text-emerald-50",
-    openHint: "text-emerald-100/80",
-  },
   // DemoRobot — STORM robotic-lawnmower support. Same emerald page styling; the
   // WIDGET however is loaded via the real embed snippet with the production
   // config for this workspace (sparkles icon + channel logo + #3aad38).
@@ -235,7 +198,7 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
 }
 
 function resolveBrand(slug: string): BrandTheme {
-  return BRAND_THEMES[slug] ?? BRAND_THEMES.demowash
+  return BRAND_THEMES[slug] ?? BRAND_THEMES.demorealestate
 }
 
 // ── Demo intro copy, localized to the visitor's browser language ─────────────
@@ -310,58 +273,8 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
 }
 
 // Per-brand suggestion chips ("Try, for example"). Each keeps its leading emoji.
-// Falls back to English, then to the demowash set for unknown brands.
+// Falls back to English, then to the demorealestate set for unknown brands.
 const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
-  demowash: {
-    en: [
-      "📅 Book an appointment",
-      "💶 Ask for prices and opening hours",
-      "🧺 Report that a washing machine isn't working",
-      "🧥 Ask the price to dry-clean a coat",
-      "👔 Ask when you can pick up your trousers (dry cleaning)",
-      "🙋 Ask to talk to a human operator",
-    ],
-    it: [
-      "📅 Prenota un appuntamento",
-      "💶 Chiedi prezzi e orari di apertura",
-      "🧺 Segnala che una lavatrice non funziona",
-      "🧥 Chiedi il prezzo per lavare un cappotto",
-      "👔 Chiedi quando puoi ritirare i pantaloni (tintoria)",
-      "🙋 Chiedi di parlare con un operatore",
-    ],
-    es: [
-      "📅 Reserva una cita",
-      "💶 Pregunta precios y horarios de apertura",
-      "🧺 Informa de que una lavadora no funciona",
-      "🧥 Pregunta el precio de limpiar un abrigo",
-      "👔 Pregunta cuándo recoger tus pantalones (tintorería)",
-      "🙋 Pide hablar con un operador",
-    ],
-    fr: [
-      "📅 Prendre un rendez-vous",
-      "💶 Demander les prix et les horaires d'ouverture",
-      "🧺 Signaler qu'un lave-linge ne fonctionne pas",
-      "🧥 Demander le prix pour nettoyer un manteau",
-      "👔 Demander quand récupérer votre pantalon (pressing)",
-      "🙋 Demander à parler à un opérateur",
-    ],
-    ca: [
-      "📅 Reserva una cita",
-      "💶 Pregunta preus i horaris d'obertura",
-      "🧺 Informa que una rentadora no funciona",
-      "🧥 Pregunta el preu per netejar un abric",
-      "👔 Pregunta quan pots recollir els pantalons (tintoreria)",
-      "🙋 Demana parlar amb un operador",
-    ],
-    de: [
-      "📅 Einen Termin buchen",
-      "💶 Nach Preisen und Öffnungszeiten fragen",
-      "🧺 Melden, dass eine Waschmaschine nicht funktioniert",
-      "🧥 Frag den Preis für die Reinigung eines Mantels",
-      "👔 Frag, wann du deine Hose abholen kannst (Reinigung)",
-      "🙋 Mit einem Mitarbeiter sprechen",
-    ],
-  },
   demorealestate: {
     en: [
       "🏠 Ask which homes are available",
@@ -503,12 +416,6 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🙋 Mit einem Mitarbeiter sprechen",
     ],
   },
-  // Ecolaundry shows no suggestion list (Andrea 2026-08-21): the empty array
-  // opts out, instead of inheriting demowash's dry-cleaning examples, which
-  // this self-service laundromat does not offer.
-  ecolaundry: {
-    en: [],
-  },
 }
 
 // Resolve the browser language (e.g. "it-IT" → "it"), English fallback.
@@ -524,8 +431,8 @@ function resolveDemoIntro(lang: string): DemoIntroCopy {
 
 function resolveDemoItems(slug: string, lang: string): string[] {
   // A brand declared with no items opts out of the suggestion list entirely
-  // (the block is not rendered) — unknown brands still fall back to demowash.
-  const brand = DEMO_ITEMS_I18N[slug] ?? DEMO_ITEMS_I18N.demowash
+  // (the block is not rendered) — unknown brands still fall back to demorealestate.
+  const brand = DEMO_ITEMS_I18N[slug] ?? DEMO_ITEMS_I18N.demorealestate
   return brand[lang] || brand.en || []
 }
 
@@ -535,8 +442,7 @@ function resolveDemoItems(slug: string, lang: string): string[] {
 // in the customer's own language. Each is a structured card (badge + body +
 // optional big image) rendered by ChatWidget's `renderContent` — NOT the generic
 // MessageRenderer (which caps images at 120px). Images are served from the
-// frontend origin (/public): /house-1.jpg, /house-2.jpg, /laundry.png.
-const WASH_BADGE = "📣 PROMO · DemoWash"
+// frontend origin (/public): /house-1.jpg, /house-2.jpg.
 const RE_BADGE = "📣 PROMO · DemoRealEstate"
 const BEAUTY_BADGE = "📣 PROMO · Demobeauty"
 
@@ -763,50 +669,6 @@ function sappadaPushCases(lang: "it" | "en" | "de"): PushDemoCase[] {
 }
 
 const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
-  demowash: {
-    en: [
-      { badge: WASH_BADGE, body: "🎫 Loyalty card: -20% on every wash. Activate it today at your store!", image: "/laundry.png" },
-      { badge: WASH_BADGE, body: "🧺 -30% on duvets this weekend at your store!" },
-      { badge: WASH_BADGE, body: "🎁 Bring a friend and you both get a free wash!" },
-      { badge: WASH_BADGE, body: "⭐ You have 50 points: a free wash is waiting for you!" },
-      { badge: WASH_BADGE, body: "📣 New store in Sants! Come try it with a free dry." },
-    ],
-    it: [
-      { badge: WASH_BADGE, body: "🎫 Tessera fedeltà: -20% su ogni lavaggio. Attivala oggi nella tua sede!", image: "/laundry.png" },
-      { badge: WASH_BADGE, body: "🧺 -30% sui piumoni questo weekend nella tua sede!" },
-      { badge: WASH_BADGE, body: "🎁 Porta un amico e avete entrambi un lavaggio gratis!" },
-      { badge: WASH_BADGE, body: "⭐ Hai 50 punti: ti aspetta un lavaggio gratis!" },
-      { badge: WASH_BADGE, body: "📣 Nuova sede a Sants! Vieni a provarla con un'asciugatura gratis." },
-    ],
-    es: [
-      { badge: WASH_BADGE, body: "🎫 Tarjeta de fidelización: -20% en cada lavado. ¡Actívala hoy en tu sede!", image: "/laundry.png" },
-      { badge: WASH_BADGE, body: "🧺 ¡-30% en edredones este fin de semana en tu sede!" },
-      { badge: WASH_BADGE, body: "🎁 ¡Trae a un amigo y los dos tenéis un lavado gratis!" },
-      { badge: WASH_BADGE, body: "⭐ Tienes 50 puntos: ¡te espera un lavado gratis!" },
-      { badge: WASH_BADGE, body: "📣 ¡Nueva sede en Sants! Ven a probarla con un secado gratis." },
-    ],
-    fr: [
-      { badge: WASH_BADGE, body: "🎫 Carte de fidélité : -20% sur chaque lavage. Activez-la aujourd'hui dans votre point !", image: "/laundry.png" },
-      { badge: WASH_BADGE, body: "🧺 -30% sur les couettes ce week-end dans votre point !" },
-      { badge: WASH_BADGE, body: "🎁 Amenez un ami et profitez chacun d'un lavage gratuit !" },
-      { badge: WASH_BADGE, body: "⭐ Vous avez 50 points : un lavage gratuit vous attend !" },
-      { badge: WASH_BADGE, body: "📣 Nouveau point à Sants ! Venez l'essayer avec un séchage gratuit." },
-    ],
-    ca: [
-      { badge: WASH_BADGE, body: "🎫 Targeta de fidelització: -20% en cada rentat. Activa-la avui a la teva seu!", image: "/laundry.png" },
-      { badge: WASH_BADGE, body: "🧺 -30% en edredons aquest cap de setmana a la teva seu!" },
-      { badge: WASH_BADGE, body: "🎁 Porta un amic i tots dos teniu un rentat gratis!" },
-      { badge: WASH_BADGE, body: "⭐ Tens 50 punts: t'espera un rentat gratis!" },
-      { badge: WASH_BADGE, body: "📣 Nova seu a Sants! Vine a provar-la amb un assecat gratis." },
-    ],
-    de: [
-      { badge: WASH_BADGE, body: "🎫 Treuekarte: -20% auf jede Wäsche. Aktiviere sie heute in deiner Filiale!", image: "/laundry.png" },
-      { badge: WASH_BADGE, body: "🧺 -30% auf Bettdecken dieses Wochenende in deiner Filiale!" },
-      { badge: WASH_BADGE, body: "🎁 Bring einen Freund mit und ihr bekommt beide eine Gratis-Wäsche!" },
-      { badge: WASH_BADGE, body: "⭐ Du hast 50 Punkte: eine Gratis-Wäsche wartet auf dich!" },
-      { badge: WASH_BADGE, body: "📣 Neue Filiale in Sants! Komm und teste sie mit einem Gratis-Trocknen." },
-    ],
-  },
   demorealestate: {
     en: [
       { badge: RE_BADGE, body: "🏡 New home in Gràcia\n3 rooms · 85 m² · bright · €320,000", image: "/house-1.jpg" },
@@ -1194,7 +1056,7 @@ const DEMO_PHASES: DemoPhase[] = [
 ]
 
 function resolveDemoPushCases(slug: string, lang: string): PushDemoCase[] {
-  const brand = PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demowash
+  const brand = PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demorealestate
   return brand[lang] || brand.en
 }
 
@@ -1202,7 +1064,7 @@ function resolveDemoPushCases(slug: string, lang: string): PushDemoCase[] {
 // shown in the language the BOT is replying in (the conversation language),
 // not the browser language.
 function resolveDemoPushCasesByLang(slug: string): Record<string, PushDemoCase[]> {
-  return PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demowash
+  return PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demorealestate
 }
 
 export function DemoWidgetPage() {
@@ -1343,7 +1205,7 @@ export function DemoWidgetPage() {
           </p>
 
           {/* Suggested things to try in the demo — guides the visitor. Brands
-              that declare no items (ecolaundry) skip the block altogether. */}
+              that declare no items  skip the block altogether. */}
           {items.length > 0 && (
             <div className="mt-6">
               <p className={`text-xs font-semibold uppercase tracking-wide ${brand.tryLabel} sm:text-sm`}>

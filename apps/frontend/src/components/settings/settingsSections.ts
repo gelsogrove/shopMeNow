@@ -23,7 +23,7 @@ export type SectionKey =
   | "other"
 
 // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
-// (`customChatbotId` set, e.g. "ecolaundry"), sections that are not used by
+// (`customChatbotId` set), sections that are not used by
 // the custom flow are filtered out at render time:
 //   - Appointments & Calendar (no booking)
 //   - Custom Tools (no external functions / sub-agents)

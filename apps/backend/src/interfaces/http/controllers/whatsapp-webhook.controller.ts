@@ -2295,7 +2295,7 @@ export class WhatsAppWebhookController {
       })
 
       // 🤖 Generate + send reply via the shared provider-agnostic pipeline.
-      // Same logic for Meta / UltraMsg / Wasender (custom-ecolaundry → chatEngine,
+      // Same logic for Meta / UltraMsg / Wasender (custom chatbot module → chatEngine,
       // typing, media ingest, direct send). The pipeline returns the HTTP result.
       const result = await whatsAppInboundPipeline.processReply({
         customer,

@@ -41,6 +41,7 @@ string literal in a module.** This includes the ones that feel too small to
 matter: hand-off notices, rate-limit warnings, intake questions, apologies.
 
 ❌ What went wrong in `custom-demorobot` (all removed):
+
 - `HANDOFF_MESSAGES` — one apology pre-translated into 8 languages. Adding a
   language meant a code change; the LLM already translates.
 - `"19 characters starting with HK"` — one tenant's serial format baked into a
@@ -49,6 +50,7 @@ matter: hand-off notices, rate-limit warnings, intake questions, apologies.
   who write in Italian.
 
 ✅ The resolution order, in this order:
+
 1. workspace column / DB (what the user edits in the app)
 2. `custom-<module>/settings.json` (the module's own default)
 3. **silence** — reply with nothing rather than untranslated English
@@ -101,15 +103,15 @@ Editing the JSON by hand is pointless: the next save overwrites it.
 
 ✅ The mapping for the values that come up most:
 
-| settings.json key | Workspace column |
-|---|---|
-| `model` | `customChatbotModel` |
-| `temperature` | `customChatbotTemperature` |
-| `maxTokens` | `customChatbotMaxTokens` |
-| `mainPrompt` | `customChatbotSystemPrompt` (variables pre-substituted) |
-| `audioOutput` | `audioOutput` (Voice Replies) |
-| `speechToTextEnabled` | `speechToTextEnabled` (Speech to Text) |
-| keys with no column | `customChatbotAdvancedSettings` (raw JSON) |
+| settings.json key     | Workspace column                                        |
+| --------------------- | ------------------------------------------------------- |
+| `model`               | `customChatbotModel`                                    |
+| `temperature`         | `customChatbotTemperature`                              |
+| `maxTokens`           | `customChatbotMaxTokens`                                |
+| `mainPrompt`          | `customChatbotSystemPrompt` (variables pre-substituted) |
+| `audioOutput`         | `audioOutput` (Voice Replies)                           |
+| `speechToTextEnabled` | `speechToTextEnabled` (Speech to Text)                  |
+| keys with no column   | `customChatbotAdvancedSettings` (raw JSON)              |
 
 Anything absent from both falls back to what is already on disk — the generator
 **merges onto** the current file, it never rewrites it from scratch.
@@ -243,8 +245,6 @@ column and ask before treating it as one.
 ### 16. NO Patches — Architecture Layers Are Sacred (🚨 IRON RULE)
 
 - When an LLM-driven feature behaves wrong, the fix is **deterministic code**, never a rule in the prompt
-- Applies to `apps/backend/custom-ecolaundry/` and any future custom chatbot
-- **THE 8 IRON RULES** (full text in `apps/backend/custom-ecolaundry/docs/architecture.md`):
   1. No patches in the prompt — fix in code (guard, tool validator, post-processor invariant)
   2. Tool refuses, LLM corrects — tools validate args + semantics
   3. One file = one responsibility — files >150 lines mixing concerns must be split
@@ -253,8 +253,7 @@ column and ask before treating it as one.
   6. No hardcoded phrase detection for INTENT — phrase routing belongs in the LLM
   7. Settings are law — `json/settings.json` is source of truth for tenant config
   8. Multi-language by design — every detector covers all 6 languages (es, it, en, ca, fr, de)
-- **BUG INTAKE PROTOCOL** (🚨 MANDATORY): see `apps/backend/custom-ecolaundry/CLAUDE.md → 🐛 Bug intake protocol` — 7-step checklist BEFORE writing any fix code
-- **FEATURE INTAKE PROTOCOL** (🚨 MANDATORY): see `apps/backend/custom-ecolaundry/CLAUDE.md → ✨ Feature intake protocol` — 8-step checklist BEFORE implementing
+
 - **`custom-demorobot` flow runtime**: same iron rule, different module. Full
   design + implementation order (0→9) + what's a code guarantee vs. what
   stays probabilistic: `apps/backend/custom-demorobot/docs/flow-runtime.md`
@@ -362,28 +361,30 @@ rtk prisma generate      # no ASCII art
 
 ### Discarded — do NOT install
 
-| Tool | Why rejected |
-|------|--------------|
-| **caveman** | Shortens the agent's *replies*. Adds ~1–1.5k input tokens/turn and conflicts with the rules requiring detailed test comments and full-stack reasoning. |
-| **headroom** | Local **proxy that rewrites API requests** — overlaps RTK's job with far more interception. Rejected for a client codebase. |
+| Tool         | Why rejected                                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **caveman**  | Shortens the agent's _replies_. Adds ~1–1.5k input tokens/turn and conflicts with the rules requiring detailed test comments and full-stack reasoning. |
+| **headroom** | Local **proxy that rewrites API requests** — overlaps RTK's job with far more interception. Rejected for a client codebase.                            |
 
 ---
 
 ## Security Pattern (3-Layer — ALL protected endpoints)
 
 ```typescript
-router.post('/workspaces/:workspaceId/resource',
-  authMiddleware,               // JWT token validation
-  sessionValidationMiddleware,  // x-session-id header check
-  validateWorkspaceOperation,   // x-workspace-id + param validation
-  controller.action
-)
+router.post(
+  "/workspaces/:workspaceId/resource",
+  authMiddleware, // JWT token validation
+  sessionValidationMiddleware, // x-session-id header check
+  validateWorkspaceOperation, // x-workspace-id + param validation
+  controller.action,
+);
 ```
 
 Controller access pattern:
+
 ```typescript
-const workspaceId = (req as any).workspaceId  // set by middleware
-const userId = (req as any).user.id            // set by authMiddleware
+const workspaceId = (req as any).workspaceId; // set by middleware
+const userId = (req as any).user.id; // set by authMiddleware
 ```
 
 ---
@@ -411,14 +412,14 @@ const userId = (req as any).user.id            // set by authMiddleware
 ❌ Hardcoded phrase/keyword detection (`includes`, regex on user text)  
 ❌ Using OpenAI directly (use OpenRouter)  
 ❌ Inventing features not in PRD  
-❌ Integration tests  
+❌ Integration tests
 
 ✅ Always pull from database  
 ✅ Always filter by workspace  
 ✅ Always log full error stack  
 ✅ Always update Swagger after API changes  
 ✅ Always run `npm run test:unit` before saying "done"  
-✅ Always ask Andrea before inventing new features  
+✅ Always ask Andrea before inventing new features
 
 ---
 

@@ -18,7 +18,7 @@
  * deploy step. Changing them now requires editing these lines and rebuilding.
  *
  * Per-demo credentials: pass `username` / `password` / `unlockHours` to give a
- * demo its own pair (Andrea 2026-08-21, ecolaundry). The defaults keep the
+ * demo its own pair (Andrea 2026-08-21). The defaults keep the
  * original demorobot behaviour untouched.
  */
 import { useCallback, useEffect, useState, type ReactNode } from "react"

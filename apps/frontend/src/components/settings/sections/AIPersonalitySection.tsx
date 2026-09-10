@@ -107,7 +107,7 @@ export function AIPersonalitySection({
   onFieldFocus,
 }: AIPersonalitySectionProps) {
   // F50 — Andrea 2026-05-13: when the workspace runs a JSON-config custom
-  // chatbot module (`customChatbotId` set, e.g. "ecolaundry"), Tone, Bot
+  // chatbot module (`customChatbotId` set), Tone, Bot
   // Identity and Override Rules are NOT used — those live in the module's
   // own JSON config (`apps/backend/custom-<name>/json/settings.json` +
   // `json/i18n/*.json`). We hide them to avoid confusion.

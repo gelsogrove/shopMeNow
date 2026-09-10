@@ -582,17 +582,7 @@ export class CustomClientChatbotService {
       // fire-and-forget) so a fast follow-up message cannot read stale state.
       await this.savePersistedState(params.sessionId, chatbotId, output.persistedState)
 
-      // NOTE: previously this service prepended `params.welcomeMessage`
-      // (taken from `workspace.welcomeMessage`, e.g. "Hi! 👋 I'm Ecolaundry,
-      // your Ecolaundry assistant.") to the chatbot reply on the first turn.
-      // That caused a DOUBLE welcome on ecolaundry, because ecolaundry already
-      // emits its own localized welcome from agent.ts via
-      // `settings.welcomeMessage` in custom-ecolaundry/json/settings.json.
-      // The custom chatbot module is the single source of truth for its own
-      // greeting; the host workspace.welcomeMessage stays unused for these
-      // chatbots. If a future chatbot module needs the host welcome, it can
-      // accept it via `config` and prepend it itself.
-
+      
       // Attach wipMessage from workspace settings (used by widget/WhatsApp to show debug banner)
       if (params.debugChannel && params.wipMessage) {
         output.wipMessage = params.wipMessage
@@ -2087,7 +2077,7 @@ export class CustomClientChatbotService {
     // Map chatbotId → folder name. Conventions:
     //   "cliente-N"        → "custom-client-N"   (legacy)
     //   "custom-<name>"    → "custom-<name>"     (already prefixed)
-    //   "<name>"           → "custom-<name>"     (e.g. "ecolaundry" → "custom-ecolaundry")
+    //   "<name>"           → "custom-<name>"     (e.g. "" → "custom-")
     const folderName = chatbotId.startsWith("cliente-")
       ? chatbotId.replace("cliente-", "custom-client-")
       : chatbotId.startsWith("custom-")

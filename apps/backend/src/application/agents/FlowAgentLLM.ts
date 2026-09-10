@@ -4,8 +4,7 @@
  * Visual Flow Builder deprecated. Caused unacceptable latency in production
  * (1 LLM call per node = compounding wait time for the customer). Replaced
  * by code-based custom chatbot modules at `apps/backend/custom-<name>/`
- * (e.g. custom-ecolaundry).
- *
+ 
  * This service is no longer wired into the active runtime routing for new
  * workspaces (customChatbotId is the new contract). Kept for compatibility
  * with any legacy workspace still on channelMode=FLOW without customChatbotId.
@@ -367,8 +366,7 @@ export class FlowAgentLLM {
       output = "I'm here to help. Please describe your issue."
     }
 
-    // Escalation policy (aligned with docs/ecolaundry/flows/flow1-router.md):
-    //   Escalation happens ONLY via:
+     //   Escalation happens ONLY via:
     //   (1) LLM calls `contactOperator` tool — user asks for human / is frustrated / ambiguous case
     //   (2) Flow sub-node with action: "escalate" (handled by FlowEngineService) — alarm in flow
     //   (3) Well-defined Playbook triggers (angry, contradictions, unknown error, manual activation,

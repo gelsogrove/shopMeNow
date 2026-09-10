@@ -449,7 +449,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/support-chat", // 🆘 PUBLIC operator handoff routes (token-authenticated)
   "/operator-dashboard", // 📊 PUBLIC operator dashboard routes (token-authenticated)
   "/questionnaire", // 📋 PUBLIC onboarding questionnaire (no auth)
-  "/playground", // 🎮 PUBLIC Ecolaundry demo playground (hardcoded FE auth)
+  "/playground", // 🎮 PUBLIC demo playground (hardcoded FE auth)
   "/legal-documents", // 📜 PUBLIC legal pages (terms, privacy, refund, GDPR)
   "/auth/google/calendar/callback", // 📅 PUBLIC Google Calendar OAuth callback (workspaceId in state param)
 ]
@@ -699,7 +699,7 @@ logger.info("✅ Registered public questionnaire route: POST /api/questionnaire"
 router.use("/admin", questionnaireAdminRouter)
 logger.info("✅ Registered admin questionnaire routes: /api/admin/questionnaire")
 
-// 🎮 PLAYGROUND ROUTES (Ecolaundry demo, no auth — hardcoded FE login)
+// 🎮 PLAYGROUND ROUTES (demo, no auth — hardcoded FE login)
 router.use(playgroundRouter)
 logger.info("✅ Registered playground routes: /api/playground/*")
 

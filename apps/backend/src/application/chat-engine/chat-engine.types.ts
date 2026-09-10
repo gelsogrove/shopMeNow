@@ -26,7 +26,7 @@ export interface WorkspaceConfig {
   chatbotName?: string | null      // Custom chatbot name
   businessType?: string | null     // Business sector
   catalogBaseLanguage?: string | null  // Base language of catalog content (default "it")
-  customChatbotId?: string | null  // Custom chatbot module id (e.g. "ecolaundry"). When set, the
+  customChatbotId?: string | null  // Custom chatbot module id (e.g. ""). When set, the
                                     // custom chatbot owns translation and the engine MUST skip
                                     // its own TranslationAgent layer to avoid double-translation.
   allowedExternalLinks: string[]   // Security: external domains allowed in OUTBOUND bot messages.

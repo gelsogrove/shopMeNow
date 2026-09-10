@@ -1154,7 +1154,7 @@ export class WidgetChatController {
       let llmTokensUsed = 0
       let suggestions: string[] = []
 
-      // 🎯 CUSTOM CLIENT: Try custom chatbot first (e.g. ecolaundry)
+      // 🎯 CUSTOM CLIENT: Try custom chatbot first
       // Pass history: [] because this is the first message of a new session.
       // chatbotFn will prepend welcomeMessage automatically when history is empty.
       let customClientRegHandled = false
@@ -2349,7 +2349,7 @@ export class WidgetChatController {
       const hb = startHeartbeat(res)
       heartbeat = hb
 
-      // 🎯 CUSTOM CLIENT: Check if this workspace uses a custom chatbot function (e.g. ecolaundry)
+      // 🎯 CUSTOM CLIENT: Check if this workspace uses a custom chatbot function
       // Wrapped in try-catch: any failure falls through gracefully to the normal LLM pipeline.
       try {
         const historyForCustomClient = await prisma.conversationMessage.findMany({
@@ -2410,7 +2410,7 @@ export class WidgetChatController {
           })
 
           if (customOutput.error) {
-            logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ custom-ecolaundry returned error", {
+            logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ custom chatbot returned error", {
               workspaceId: resolvedWorkspaceId,
               customerId: customer.id,
               error: customOutput.error,

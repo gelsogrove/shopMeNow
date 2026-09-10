@@ -14,7 +14,7 @@
 
 // ── Module mocks (before all imports) ────────────────────────────────────────
 
-// Mock the wrapper service — this keeps Jest away from the custom-ecolaundry
+// Mock the wrapper service — this keeps Jest away from the custom-demosappada
 // ESM internals (logger.js, models/index.js) which its CJS resolver can't follow.
 jest.mock('../../src/application/services/escalation-email.service', () => ({
   sendEscalationEmail: jest.fn().mockResolvedValue(undefined),
@@ -55,7 +55,7 @@ const workspaceRow = {
   operatorContactMethod: 'email',
   operatorEmail: 'fallback@example.com',
   operatorWhatsappNumber: '',
-  name: 'Ecolaundry Test',
+  name: 'Test Company',
 }
 
 function mockDb(overrides?: Partial<typeof workspaceRow> | null) {
@@ -84,7 +84,7 @@ describe('applyEscalationNotification()', () => {
     expect(data.summary).toContain('Andrea')
     expect(data.customerName).toBe('Andrea')
     expect(data.customerPhone).toBe('+34600000001')
-    expect(data.companyName).toBe('Ecolaundry Test')
+    expect(data.companyName).toBe('Test Company')
     expect(data.history).toHaveLength(2)
   })
 
@@ -113,7 +113,7 @@ describe('applyEscalationNotification()', () => {
   })
 
   it('proceeds when hasHumanSupport=false BUT notificationEmails IS set', async () => {
-    // WHY: ecolaundry configures emails in settings.json, not in DB hasHumanSupport
+    // WHY: custom chatbots configure emails in settings.json, not in DB hasHumanSupport
     const db = mockDb({ hasHumanSupport: false })
     await applyEscalationNotification(
       { ...baseParams, notificationEmails: 'gelsogrove@gmail.com' },

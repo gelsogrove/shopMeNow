@@ -70,24 +70,6 @@ async function getUsecasesMarkdownForLang(
 
 const customClientChatbotService = new CustomClientChatbotService()
 
-const ECOLAUNDRY_SLUG = "ecolaundry"
-let ecolaundryWorkspaceIdCache: string | null = null
-
-async function getEcolaundryWorkspaceId(): Promise<string> {
-  if (ecolaundryWorkspaceIdCache) return ecolaundryWorkspaceIdCache
-  const ws = await (prisma as any).workspace.findFirst({
-    where: { slug: ECOLAUNDRY_SLUG },
-    select: { id: true },
-  })
-  if (!ws) {
-    throw new Error(
-      `Ecolaundry workspace (slug=${ECOLAUNDRY_SLUG}) not found in database`
-    )
-  }
-  ecolaundryWorkspaceIdCache = ws.id
-  return ws.id
-}
-
 async function resolveWorkspaceId(req: Request): Promise<string> {
   // If set by middleware, use it (standard secure dashboard routing)
   if ((req as any).workspaceId) {
@@ -98,8 +80,9 @@ async function resolveWorkspaceId(req: Request): Promise<string> {
   if (wsId) {
     return wsId
   }
-  // Otherwise, fallback to the default Ecolaundry workspace
-  return await getEcolaundryWorkspaceId()
+  throw new Error(
+    "Unable to resolve workspaceId: no req.workspaceId, x-workspace-id header, or workspaceId query param provided"
+  )
 }
 
 const ALLOWED_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "NICE_TO_HAVE"]
@@ -195,7 +178,10 @@ export class PlaygroundController {
         where: { id: workspaceId },
         select: { slug: true, customChatbotId: true },
       })
-      const slug = workspace?.customChatbotId || workspace?.slug || ECOLAUNDRY_SLUG
+      const slug = workspace?.customChatbotId || workspace?.slug
+      if (!slug) {
+        return res.status(404).json({ error: "Workspace has no slug or customChatbotId" })
+      }
       const candidates = [
         // New layout (post-2026-05-27 cleanup): usecases.md in root of custom-<slug>/
         path.resolve(__dirname, `../../../../custom-${slug}/usecases.md`),
@@ -270,7 +256,7 @@ export class PlaygroundController {
   // GET /api/v1/playground/workspace-info
   // Returns minimal display info (name + chatbotId) about the current workspace.
   // Used by the playground top bar to render a dynamic title that matches the
-  // active workspace (e.g. "Demowash Playground" instead of always "Ecolaundry").
+  // active workspace, instead of a static title.
   async getWorkspaceInfo(req: Request, res: Response) {
     try {
       const workspaceId = await resolveWorkspaceId(req)
@@ -1138,10 +1124,10 @@ export class PlaygroundController {
         })
       }
 
-      // 2) If the workspace has a custom chatbot module (e.g. ecolaundry),
-      //    call it DIRECTLY here — bypassing chat-engine + FlowWorkspaceStrategy.
-      //    The default FlowWorkspaceStrategy ignores customChatbotId and falls
-      //    back to a generic Router LLM that does not know about ecolaundry
+      // 2) If the workspace has a custom chatbot module, call it DIRECTLY
+      //    here — bypassing chat-engine + FlowWorkspaceStrategy. The default
+      //    FlowWorkspaceStrategy ignores customChatbotId and falls back to a
+      //    generic Router LLM that does not know about the custom module
       //    (it ends up calling contactOperator() on the very first message).
       //    The widget controller already does this same direct invocation.
       let botResponse = ""

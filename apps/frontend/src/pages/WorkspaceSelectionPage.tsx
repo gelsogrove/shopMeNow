@@ -2521,7 +2521,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
         {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN)
             F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot
-            (`customChatbotId` set, e.g. "ecolaundry"), the platform "Enterprise
+            (`customChatbotId` set, e.g. ""), the platform "Enterprise
             Usage Limits" card is not applicable — the custom module governs
             its own delivery limits. Hide the card and collapse the grid to a
             single column so BillingSection uses the full width. */}

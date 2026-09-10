@@ -1515,7 +1515,7 @@ export class UltraMsgWebhookController {
               deliveryStatus: 'delivered',
               debugInfo: JSON.stringify({
                 source: 'ultramsg-webhook',
-                pipeline: 'custom-ecolaundry',
+                pipeline: 'custom-chatbot',
                 timestamp: new Date().toISOString(),
               }),
             },
@@ -1537,7 +1537,7 @@ export class UltraMsgWebhookController {
               deliveryStatus: 'pending',
               debugInfo: JSON.stringify({
                 source: 'ultramsg-webhook',
-                pipeline: 'custom-ecolaundry',
+                pipeline: 'custom-chatbot',
                 shouldEscalate: customOutput.shouldEscalate,
                 escalationSummary: customOutput.escalationSummary,
                 meta: customOutput.meta,
@@ -1642,7 +1642,7 @@ export class UltraMsgWebhookController {
           }
         }
 
-        logger.info('[ULTRAMSG] ✅ custom-ecolaundry processed message', {
+        logger.info('[ULTRAMSG] ✅ custom-chatbot processed message', {
           workspaceId,
           customerId: customer.id,
           hasReply: Boolean(customOutput.reply),
@@ -1657,7 +1657,7 @@ export class UltraMsgWebhookController {
             sessionId: chatSession.id,
             customerId: customer.id,
           },
-          agentUsed: 'custom-ecolaundry',
+          agentUsed: 'custom-chatbot',
           tokensUsed: customOutput.meta?.tokensUsed || 0,
           response: customOutput.reply,
           debugInfo: customOutput.meta?.debug,

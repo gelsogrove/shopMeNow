@@ -4,7 +4,7 @@
  * The SINGLE place where an inbound customer message becomes a reply, identical
  * for every provider (Meta / UltraMsg / Wasender). Each provider webhook
  * controller parses its own payload + runs its guards, then calls into this
- * pipeline so the LLM path (custom-ecolaundry vs chatEngine), typing indicator,
+ * pipeline so the LLM path (custom chatbot module vs chatEngine), typing indicator,
  * media ingest and outbound send behave the same regardless of provider.
  *
  * This is the goal: switch provider → same result.
@@ -44,7 +44,7 @@ import { PipelineResult } from "./whatsapp-inbound.types"
  * 🎤 Spoken-format instruction appended to the LLM input when the customer sent
  * a voice message. Forces a conversational, TTS-friendly reply: no markdown,
  * no lists, no parentheses, and a complete (not terse) spoken answer. Applied
- * identically on both the custom-ecolaundry and the standard chatEngine path so
+ * identically on both the custom chatbot module and the standard chatEngine path so
  * "voice in → voice out" sounds natural on every workspace.
  */
 const AUDIO_SPOKEN_INSTRUCTION =
@@ -528,7 +528,7 @@ export class WhatsAppInboundPipeline {
   }
 
   /**
-   * Run the reply stage: language → typing → custom-ecolaundry (if mapped) or
+   * Run the reply stage: language → typing → custom chatbot module (if mapped) or
    * chatEngine → media ingest → direct send. Returns the HTTP result for the
    * controller to emit. Never throws for normal control flow; unexpected errors
    * bubble to the controller's catch (same as before extraction).
@@ -643,7 +643,7 @@ export class WhatsAppInboundPipeline {
       }
 
       if (customOutput.error) {
-        logger.warn("[PIPELINE] ⚠️ custom-ecolaundry returned error", {
+        logger.warn("[PIPELINE] ⚠️ custom chatbot module returned error", {
           workspaceId: customer.workspaceId,
           customerId: customer.id,
           error: customOutput.error,
@@ -665,7 +665,7 @@ export class WhatsAppInboundPipeline {
           whatsappMessageId,
           debugInfo: JSON.stringify({
             source: "whatsapp-webhook",
-            pipeline: "custom-ecolaundry",
+            pipeline: "custom-chatbot",
             timestamp: new Date().toISOString(),
           }),
         },
@@ -674,7 +674,7 @@ export class WhatsAppInboundPipeline {
       // 📎 Inbound media (image/PDF/audio): download from provider + persist
       // linked to the inbound message we just saved. Fail-safe: never blocks or
       // breaks the reply. Mirrors the standard chatEngine path below — the
-      // custom-ecolaundry branch needs it too so voice notes show in /chat.
+      // custom chatbot module branch needs it too so voice notes show in /chat.
       if (inboundMedia) {
         await ingestInboundWebhookMedia({
           workspaceId: customer.workspaceId,
@@ -697,7 +697,7 @@ export class WhatsAppInboundPipeline {
             deliveryStatus: "pending",
             debugInfo: JSON.stringify({
               source: "whatsapp-webhook",
-              pipeline: "custom-ecolaundry",
+              pipeline: "custom-chatbot",
               shouldEscalate: customOutput.shouldEscalate,
               escalationSummary: customOutput.escalationSummary,
               meta: customOutput.meta,
@@ -840,7 +840,7 @@ export class WhatsAppInboundPipeline {
         }
       }
 
-      logger.info("[PIPELINE] ✅ custom-ecolaundry processed message", {
+      logger.info("[PIPELINE] ✅ custom chatbot module processed message", {
         workspaceId: customer.workspaceId,
         customerId: customer.id,
         hasReply: Boolean(customOutput.reply),
@@ -860,7 +860,7 @@ export class WhatsAppInboundPipeline {
             sessionId: chatSession.id,
             customerId: customer.id,
           },
-          agentUsed: "custom-ecolaundry",
+          agentUsed: "custom-chatbot",
           tokensUsed: customOutput.meta?.tokensUsed || 0,
           response: customOutput.reply,
           debugInfo: customOutput.meta?.debug,
