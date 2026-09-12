@@ -288,6 +288,28 @@ export interface CatalogueEntry {
 export type GetCatalogueHandler = (params: { workspaceId: string }) => Promise<CatalogueEntry[]>
 
 /**
+ * An event on file. `startDate`/`endDate` are ISO strings so the host can do
+ * the date-range filtering (deterministic, not left to the model) and the
+ * module only ever renders what it is given.
+ */
+export interface EventEntry {
+  title: string
+  description?: string
+  location?: string
+  startDate?: string
+  endDate?: string
+  price?: string
+  ticketInfo?: string
+  link?: string
+}
+
+export type GetEventsHandler = (params: {
+  workspaceId: string
+  from: string
+  to: string
+}) => Promise<EventEntry[]>
+
+/**
  * A tool the tenant defined in Settings → Custom Tools, dispatched as a
  * webhook by the host. The module never knows the URL or the credentials: it
  * receives a name, a schema and a description, offers them to the LLM, and
@@ -558,6 +580,7 @@ export interface ChatbotInput {
     handlers?: {
       getFaqs?: GetFaqsHandler
       getCatalogue?: GetCatalogueHandler
+      getEvents?: GetEventsHandler
       getCustomTools?: GetCustomToolsHandler
       executeCustomTool?: ExecuteCustomToolHandler
       getStayProfile?: GetStayProfileHandler
@@ -725,6 +748,53 @@ export function formatCatalogue(entries: CatalogueEntry[]): string {
     return `- ${bits.join(' ')} — ${detail.join(' · ')}`
   })
   return lines.join('\n')
+}
+
+/** Same rendering contract as {@link formatCatalogue}: one line per entry, only what was given. */
+export function formatEvents(entries: EventEntry[]): string {
+  const lines = entries.map((e) => {
+    const when = [e.startDate, e.endDate && e.endDate !== e.startDate ? e.endDate : null]
+      .filter(Boolean)
+      .join(' – ')
+    const detail: string[] = []
+    if (when) detail.push(when)
+    if (e.location) detail.push(e.location)
+    if (e.description) detail.push(e.description)
+    if (e.price) detail.push(`€ ${e.price}`)
+    if (e.link) detail.push(e.link)
+    return `- ${e.title} — ${detail.join(' · ')}`
+  })
+  return lines.join('\n')
+}
+
+/**
+ * `today`/`this_weekend`/`upcoming` resolved to a concrete ISO date range in
+ * Sappada's own timezone, computed here rather than left to the model —
+ * "questo weekend" is a deterministic calculation, not something worth a
+ * probabilistic guess (iron rule 16).
+ */
+export function eventDateRange(when: 'today' | 'this_weekend' | 'upcoming', now: Date): { from: string; to: string } {
+  const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(now) // YYYY-MM-DD
+  // Midnight UTC on that civil date, purely to walk whole days with
+  // setUTCDate — getUTCDay() on it is the correct weekday for Sappada's
+  // calendar date since todayKey was already resolved in that timezone.
+  const todayDate = new Date(`${todayKey}T00:00:00Z`)
+  const weekdayInSappada = todayDate.getUTCDay() === 0 ? 7 : todayDate.getUTCDay() // 1=Mon … 7=Sun
+  const addDays = (d: Date, days: number) => {
+    const copy = new Date(d)
+    copy.setUTCDate(copy.getUTCDate() + days)
+    return copy
+  }
+  const toKey = (d: Date) => d.toISOString().slice(0, 10)
+
+  if (when === 'today') return { from: todayKey, to: todayKey }
+  if (when === 'this_weekend') {
+    const daysToSaturday = (6 - weekdayInSappada + 7) % 7
+    const saturday = addDays(todayDate, daysToSaturday)
+    const sunday = addDays(saturday, 1)
+    return { from: toKey(saturday), to: toKey(sunday) }
+  }
+  return { from: todayKey, to: toKey(addDays(todayDate, 30)) }
 }
 
 // ── Operating rules ───────────────────────────────────────────────────────
@@ -1130,6 +1200,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
   const relevantFaqs = selectRelevantFaqs(faqs)
   const faqBlock = formatFaqBlock(relevantFaqs)
   const accommodationEnabled = !!input.config.handlers?.getCatalogue
+  const eventsEnabled = !!input.config.handlers?.getEvents
 
   // Every tool offered this turn: the module's own built-ins (seeded as rows
   // from tools.manifest.ts and switchable in Settings → Custom Tools) plus any
@@ -1616,6 +1687,7 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
       customTools,
       weatherEnabled,
       accommodationEnabled,
+      eventsEnabled,
       runtimeBlock,
       mainPromptRendered,
     })
@@ -2568,6 +2640,32 @@ async function runTurn(input: ChatbotInput, settings: Settings): Promise<TurnOut
               'is full, never say one has space, never say Sappada is booked out. Give the contact and ' +
               'let the customer call. You take no bookings. You have NO prices for any structure: never ' +
               'state, estimate or hint at a rate — the structure quotes its own when the guest calls.',
+          })
+        }
+      } else if (name === 'check_events') {
+        const args = safeParseArgs(call.function.arguments)
+        const when: 'today' | 'this_weekend' | 'upcoming' =
+          args.when === 'today' || args.when === 'this_weekend' ? args.when : 'upcoming'
+        const range = eventDateRange(when, now)
+        const entries = eventsEnabled
+          ? await input.config.handlers!.getEvents!({ workspaceId: input.config.workspaceId, ...range })
+          : []
+        if (entries.length === 0) {
+          toolOutput = JSON.stringify({
+            ok: false,
+            instruction:
+              'No event on file matches that date range. Do NOT invent one. Point the customer to the ' +
+              'official events page and the InfoPoint named in the FAQ block.',
+          })
+        } else {
+          const rendered = formatEvents(entries)
+          approvedContent += `\n${rendered}`
+          toolOutput = JSON.stringify({
+            ok: true,
+            events: rendered,
+            instruction:
+              'Written in Italian as the source language — translate it. Only mention events from this ' +
+              'list, for the date range asked. Never invent a date, a price or a location not given here.',
           })
         }
       } else if (name === 'save_preferences') {

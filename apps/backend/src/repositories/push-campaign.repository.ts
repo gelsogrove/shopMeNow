@@ -195,7 +195,29 @@ export class PushCampaignRepository {
     })
   }
 
+  /**
+   * Soft delete: the campaign stops appearing anywhere and the scheduler
+   * never picks it up again, but PushCampaignRecipient rows survive — they
+   * are the audit trail behind billing and the merchant's own quota ledger
+   * (Andrea, 2026-09-12: "se si cancella la campagna la storia non si
+   * cancella"). This is the only delete exposed on the normal campaign list.
+   */
   async deleteCampaign(id: string, workspaceId: string) {
+    return this.prisma.pushCampaign.update({
+      where: { id, workspaceId },
+      data: { deletedAt: new Date() },
+    })
+  }
+
+  /**
+   * Hard delete: a REAL row removal, cascading to every PushCampaignRecipient
+   * and WhatsAppQueue row. Reserved for backoffice cleanup of campaigns that
+   * never sent anything — a draft created by mistake, never scheduled. Guarded
+   * in the service layer (never here alone) so it can never touch a campaign
+   * with actualSent > 0: real sends move money (merchant quota, billing) and
+   * must never be erasable, soft-deleted or not (Andrea, 2026-09-12).
+   */
+  async hardDeleteCampaign(id: string, workspaceId: string) {
     return this.prisma.pushCampaign.delete({
       where: { id, workspaceId },
     })
@@ -203,7 +225,7 @@ export class PushCampaignRepository {
 
   async listByWorkspace(workspaceId: string) {
     return this.prisma.pushCampaign.findMany({
-      where: { workspaceId },
+      where: { workspaceId, deletedAt: null },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -236,6 +258,38 @@ export class PushCampaignRepository {
         merchant: { select: { name: true, quotaRemaining: true } },
         merchantPush: { select: { title: true } },
       },
+    })
+  }
+
+  /**
+   * The backoffice "trash": soft-deleted campaigns, so an admin can either
+   * restore one or hard-delete it (only when it never sent anything — see
+   * hardDeleteCampaign). Never merged into listByWorkspace, so a deleted
+   * campaign can't accidentally resurface where the scheduler or the normal
+   * list would treat it as live.
+   */
+  async listDeleted(workspaceId: string) {
+    return this.prisma.pushCampaign.findMany({
+      where: { workspaceId, deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        actualSent: true,
+        actualFailed: true,
+        actualSkipped: true,
+        deletedAt: true,
+        merchant: { select: { name: true } },
+      },
+    })
+  }
+
+  /** Undo a soft delete — the campaign is not gone, it was hidden. */
+  async restoreCampaign(id: string, workspaceId: string) {
+    return this.prisma.pushCampaign.update({
+      where: { id, workspaceId },
+      data: { deletedAt: null },
     })
   }
 

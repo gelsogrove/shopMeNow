@@ -2012,6 +2012,11 @@ model PushCampaign {
   metadata           Json?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
+  // Soft delete (Andrea, 2026-09-12): deleting a campaign must NEVER erase
+  // its send history — PushCampaignRecipient rows are the audit trail behind
+  // billing and the merchant's own quota ledger. A separate, explicit
+  // hard-delete exists for backoffice cleanup only (see repository).
+  deletedAt          DateTime?
 
   workspace  Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy  User?                   @relation(fields: [createdByUserId], references: [id])
@@ -2025,6 +2030,7 @@ model PushCampaign {
   @@index([sendAt])
   @@index([nextRunAt])
   @@index([workspaceId, merchantId])
+  @@index([workspaceId, deletedAt])
   @@map("push_campaigns")
 }
 
@@ -2151,6 +2157,11 @@ model PushCampaignRecipient {
   whatsappQueue WhatsAppQueue[]
   customer  Customers?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  // Andrea, 2026-09-12: a DB-level backstop against a double send — the
+  // scheduler already dedups in-transaction against existing rows, this
+  // makes a duplicate physically impossible even if that check is ever
+  // bypassed by a future bug.
+  @@unique([campaignId, customerId])
   @@index([campaignId])
   @@index([workspaceId])
   @@index([status])

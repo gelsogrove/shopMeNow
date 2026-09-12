@@ -265,6 +265,31 @@ export const ACCOMMODATION_TOOL = {
   },
 } as const
 
+export const EVENTS_TOOL = {
+  type: 'function',
+  function: {
+    name: 'check_events',
+    description:
+      'List the events the Pro Loco keeps on file — concerts, markets, festivals, sports — with dates ' +
+      'and location. Call it whenever the customer asks what is on, tonight, this weekend, or during ' +
+      'their stay. The date filtering is done for you: send only what the customer actually asked for.',
+    parameters: {
+      type: 'object',
+      properties: {
+        when: {
+          type: 'string',
+          enum: ['today', 'this_weekend', 'upcoming'],
+          description:
+            "'today' for tonight/oggi, 'this_weekend' for questo weekend/sabato e domenica, 'upcoming' " +
+            'for anything else (this week, during their stay, no date mentioned at all).',
+        },
+      },
+      required: ['when'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
 // ── The manifest ──────────────────────────────────────────────────────────
 
 /**
@@ -292,6 +317,11 @@ export const MODULE_TOOLS: ModuleToolManifestEntry[] = [
   entryOf(ACCOMMODATION_TOOL, {
     impact:
       'Guests asking where to sleep are pointed to the InfoPoint instead of the accommodation on file.',
+  }),
+  entryOf(EVENTS_TOOL, {
+    impact:
+      'The chatbot can no longer look up what is on, and will point guests to the InfoPoint or official ' +
+      'events page instead of naming a date-filtered list from what is on file.',
   }),
   entryOf(REMEMBER_TOOL, {
     impact: 'The chatbot stops learning guests\' names and cannot address them by name.',

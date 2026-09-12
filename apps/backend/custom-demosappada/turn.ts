@@ -14,8 +14,8 @@
 // a TurnContext. The old single-call loop stays in agent.ts until this one
 // has passed the acceptance scenarios; then it goes.
 
-import type { ChatbotInput, CustomToolDefinition, FaqEntry, Settings, StayProfile } from './agent.js'
-import { OPERATING_RULES, fetchWeather, formatCatalogue, weatherCheckedThisHour } from './agent.js'
+import type { ChatbotInput, CustomToolDefinition, EventEntry, FaqEntry, Settings, StayProfile } from './agent.js'
+import { OPERATING_RULES, eventDateRange, fetchWeather, formatCatalogue, formatEvents, weatherCheckedThisHour } from './agent.js'
 import { boldKnownVenues, knownVenueNames, phoneOnLastLine, stripUnknownVenues, stripUnverifiableContacts } from './content-guards.js'
 import { contentMediaAllowed, replyIsDetailAnswer, withFaqMedia } from './faq-media.js'
 import {
@@ -69,6 +69,7 @@ export interface TurnContext {
   customTools: CustomToolDefinition[]
   weatherEnabled: boolean
   accommodationEnabled: boolean
+  eventsEnabled: boolean
   runtimeBlock: string
   /** The tenant's main prompt, variables substituted — always from the DB. */
   mainPromptRendered: string
@@ -84,7 +85,7 @@ export interface TurnResult {
 
 // Tools the ANSWER call may use: content only. State is written by code
 // from the UNDERSTAND call; the model never saves anything itself.
-const CONTENT_TOOLS = new Set(['get_weather', 'check_accommodation', 'save_itinerary'])
+const CONTENT_TOOLS = new Set(['get_weather', 'check_accommodation', 'check_events', 'save_itinerary'])
 const STATE_TOOLS = new Set([
   'remember',
   'save_preferences',
@@ -416,6 +417,26 @@ export async function runTurnV2(ctx: TurnContext): Promise<TurnResult> {
               instruction:
                 'Pick the 2–3 that fit what they asked; name in bold, one line of description, the contact. ' +
                 'You have NO availability and NO prices: never state either — they call the structure.',
+            }
+          }
+        } else if (name === 'check_events') {
+          const when: 'today' | 'this_weekend' | 'upcoming' =
+            args.when === 'today' || args.when === 'this_weekend' ? args.when : 'upcoming'
+          const range = eventDateRange(when, now)
+          const entries: EventEntry[] = ctx.eventsEnabled && handlers?.getEvents
+            ? await handlers.getEvents({ workspaceId: input.config.workspaceId, ...range })
+            : []
+          if (entries.length === 0) {
+            output = { ok: false, instruction: 'No event on file matches that date range. Do NOT invent one: point to the official events page and the InfoPoint in the FAQ block.' }
+          } else {
+            const rendered = formatEvents(entries)
+            approvedContent += `\n${rendered}`
+            output = {
+              ok: true,
+              events: rendered,
+              instruction:
+                'Only mention events from this list, for the date range asked. Never invent a date, a ' +
+                'price or a location not given here.',
             }
           }
         } else if (name === 'save_itinerary') {

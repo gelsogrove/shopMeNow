@@ -640,6 +640,37 @@ export class PushCampaignService {
     return this.repo.deleteCampaign(id, workspaceId)
   }
 
+  async listTrash(workspaceId: string) {
+    return this.repo.listDeleted(workspaceId)
+  }
+
+  async restore(workspaceId: string, id: string) {
+    return this.repo.restoreCampaign(id, workspaceId)
+  }
+
+  /**
+   * Backoffice cleanup only. A hard delete is a real row removal that
+   * cascades to every PushCampaignRecipient — the record of every send this
+   * campaign ever made, which is what billing and the merchant's own quota
+   * history are built on. So this NEVER runs on a campaign that has sent
+   * anything: the guard is code, not a confirmation dialog an admin could
+   * click past (Andrea, 2026-09-12: "non mi puo' cancellare uno storico di
+   * invii che mi serve per fatturazione / statistiche").
+   */
+  async hardDelete(workspaceId: string, id: string) {
+    const campaign = await this.repo.findById(id, workspaceId)
+    if (!campaign) {
+      throw new AppError(404, "Campaign not found")
+    }
+    if (campaign.actualSent > 0) {
+      throw new AppError(
+        409,
+        "This campaign has sent messages and cannot be permanently deleted — its history is kept for billing and statistics."
+      )
+    }
+    return this.repo.hardDeleteCampaign(id, workspaceId)
+  }
+
   /**
    * The numbers the campaign form is built on (Andrea, 2026-09-01: "tag vuoti
    * non capisco"): how many customers a campaign can actually reach, total

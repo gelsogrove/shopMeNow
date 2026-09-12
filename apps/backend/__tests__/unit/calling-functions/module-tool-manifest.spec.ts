@@ -27,6 +27,7 @@ const MODULE_DIR = path.join(__dirname, "..", "..", "..", "custom-demosappada")
 const EXPECTED_TOOLS = [
   "get_weather",
   "check_accommodation",
+  "check_events",
   "remember",
   "save_preferences",
   "save_itinerary",

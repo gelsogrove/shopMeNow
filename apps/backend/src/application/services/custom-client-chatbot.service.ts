@@ -153,6 +153,19 @@ type CatalogueEntry = {
   type?: string
 }
 
+// Mirrors EventEntry in custom-demosappada/agent.ts — structural typing
+// across the dynamic import, same reasoning as CatalogueEntry above.
+type EventEntry = {
+  title: string
+  description?: string
+  location?: string
+  startDate?: string
+  endDate?: string
+  price?: string
+  ticketInfo?: string
+  link?: string
+}
+
 // A tenant-defined tool (WorkspaceCallingFunction, executionType WEBHOOK) as a
 // custom module sees it. Only WEBHOOK is exposed: INTERNAL and
 // DELEGATE_TO_AGENT are wired to the deprecated flow-builder pipeline
@@ -316,6 +329,10 @@ type ChatbotInput = {
       // accommodation the Pro Loco keeps up to date (stock = places declared
       // free); any module that does not ask for it is unaffected.
       getCatalogue?: (params: { workspaceId: string }) => Promise<CatalogueEntry[]>
+      // Events on file, filtered server-side by date range — same reasoning
+      // as getCatalogue: the module stays free of Prisma, the host resolves
+      // the query.
+      getEvents?: (params: { workspaceId: string; from: string; to: string }) => Promise<EventEntry[]>
       // Tenant-defined webhook tools, configured in Settings → Custom Tools.
       getCustomTools?: (params: { workspaceId: string }) => Promise<CustomToolDefinition[]>
       executeCustomTool?: (params: {
@@ -559,6 +576,7 @@ export class CustomClientChatbotService {
             listFlows: (p) => this.listFlows(p),
             loadFlow: (p) => this.loadFlow(p),
             getCatalogue: (p) => this.getCatalogue(p),
+            getEvents: (p) => this.getEvents(p),
             getCustomTools: (p) => this.getCustomTools(p),
             executeCustomTool: (p) => this.executeCustomTool(p),
             getStayProfile: (p) => this.getStayProfile(p),
@@ -1483,6 +1501,57 @@ export class CustomClientChatbotService {
       }))
     } catch (error) {
       logger.error("[CustomClientChatbotService] getCatalogue failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
+   * Events on file that overlap [from, to], workspace-scoped like every
+   * other read. The date filter is the whole point: "questo weekend" is
+   * resolved to a concrete range by the module before this is called, so an
+   * event overlapping the range is a plain date comparison here, not
+   * something the model has to reason about.
+   */
+  private async getEvents(p: { workspaceId: string; from: string; to: string }): Promise<EventEntry[]> {
+    try {
+      const from = new Date(`${p.from}T00:00:00Z`)
+      const to = new Date(`${p.to}T23:59:59Z`)
+      const rows = await defaultPrisma.touristEvent.findMany({
+        where: {
+          workspaceId: p.workspaceId,
+          isActive: true,
+          AND: [
+            { OR: [{ startDate: null }, { startDate: { lte: to } }] },
+            { OR: [{ endDate: null }, { endDate: { gte: from } }] },
+          ],
+        },
+        orderBy: { startDate: "asc" },
+        select: {
+          title: true,
+          description: true,
+          location: true,
+          startDate: true,
+          endDate: true,
+          price: true,
+          ticketInfo: true,
+          link: true,
+        },
+      })
+      return rows.map((r) => ({
+        title: r.title,
+        description: r.description ?? undefined,
+        location: r.location ?? undefined,
+        startDate: r.startDate ? r.startDate.toISOString().slice(0, 10) : undefined,
+        endDate: r.endDate ? r.endDate.toISOString().slice(0, 10) : undefined,
+        price: r.price ?? undefined,
+        ticketInfo: r.ticketInfo ?? undefined,
+        link: r.link ?? undefined,
+      }))
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] getEvents failed", {
         workspaceId: p.workspaceId,
         error: error instanceof Error ? error.message : String(error),
       })

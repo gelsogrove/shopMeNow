@@ -23,7 +23,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ChatbotInput, HistoryEntry } from './index.js'
-import type { FaqEntry, CatalogueEntry, StayProfile } from './agent.js'
+import type { EventEntry, FaqEntry, CatalogueEntry, StayProfile } from './agent.js'
 
 // Repo-root .env, loaded the way the backend loads it (values never printed).
 // The MODULE is imported dynamically below, AFTER this runs: llm.ts snapshots
@@ -102,6 +102,15 @@ const CATALOGUE: CatalogueEntry[] = [
   { name: 'Bach Boutique Hotel', description: 'Hotel in Borgata Bach 26, con ristorante.', link: 'https://www.visitsappada.it/dove-dormire.php', type: 'hotel' },
 ]
 
+// Dates relative to "today" so a today/this_weekend scenario stays valid no
+// matter which day sim.ts is actually run.
+const todayISO = new Date().toISOString().slice(0, 10)
+const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10)
+const EVENTS: EventEntry[] = [
+  { title: 'Mercatino artigianale', description: 'Bancarelle in Piazza Chiesa.', location: 'Piazza Chiesa, Sappada', startDate: todayISO, endDate: todayISO, price: 'Gratuito', link: 'https://www.visitsappada.it/eventi.php' },
+  { title: 'Concerto in baita', description: 'Musica dal vivo con la Pro Loco.', location: 'Baita Vecchia Sappada', startDate: inDays(2), endDate: inDays(2), price: '10€', ticketInfo: 'Biglietti in loco', link: 'https://www.visitsappada.it/eventi.php' },
+]
+
 // The host's merge, faithfully: empty values never overwrite, "RISOLTO"
 // deletes (custom-client-chatbot.service.ts saveStayProfile).
 let stayProfile: Record<string, unknown> | null = null
@@ -167,6 +176,7 @@ async function main(): Promise<void> {
         handlers: {
           getFaqs: async () => FAQ_OVERRIDE ?? FAQS,
           getCatalogue: async () => CATALOGUE,
+          getEvents: async ({ from, to }) => EVENTS.filter((e) => (e.endDate ?? e.startDate ?? '') >= from && (e.startDate ?? e.endDate ?? '') <= to),
           getCustomTools: async () => customTools,
           getStayProfile: async () => (stayProfile ? ({ ...stayProfile } as StayProfile) : null),
           saveStayProfile: async ({ profile }) => {

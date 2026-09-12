@@ -71,11 +71,12 @@ describe("syncModuleToolRows", () => {
     it("seeds one row per tool the module declares", async () => {
       await service.syncModuleToolRows(WORKSPACE_ID)
 
-      expect(mockUpsert).toHaveBeenCalledTimes(7)
+      expect(mockUpsert).toHaveBeenCalledTimes(8)
       const seeded = mockUpsert.mock.calls.map((c) => c[0].create.functionName)
       expect(seeded).toEqual([
         "get_weather",
         "check_accommodation",
+        "check_events",
         "remember",
         "save_preferences",
         "save_itinerary",

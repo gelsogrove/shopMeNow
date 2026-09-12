@@ -244,6 +244,44 @@ export class PushCampaignController {
     }
   }
 
+  /** The backoffice "trash": soft-deleted campaigns, restorable or hard-deletable. */
+  async listTrash(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId } = req.params
+      const campaigns = await service.listTrash(workspaceId)
+      res.json(campaigns)
+    } catch (error) {
+      logger.error("[PushCampaignController] listTrash error", error)
+      next(error)
+    }
+  }
+
+  async restore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, id } = req.params
+      const campaign = await service.restore(workspaceId, id)
+      res.json(campaign)
+    } catch (error) {
+      logger.error("[PushCampaignController] restore error", error)
+      next(error)
+    }
+  }
+
+  /**
+   * Permanent delete, backoffice cleanup only. Blocked by the service for any
+   * campaign that has actually sent something — see PushCampaignService.hardDelete.
+   */
+  async hardDelete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, id } = req.params
+      await service.hardDelete(workspaceId, id)
+      res.status(204).send()
+    } catch (error) {
+      logger.error("[PushCampaignController] hardDelete error", error)
+      next(error)
+    }
+  }
+
   async schedule(req: Request, res: Response, next: NextFunction) {
     try {
       const { workspaceId, id } = req.params
