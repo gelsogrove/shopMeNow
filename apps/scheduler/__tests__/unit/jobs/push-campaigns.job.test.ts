@@ -79,6 +79,8 @@ const mockPrisma = {
   },
   conversationMessage: {
     findFirst: jest.fn(),
+    // Backs the duplicate-content gate's pre-filter — default set in beforeEach.
+    findMany: jest.fn(),
     create: jest.fn(),
   },
   $transaction: jest.fn(),
@@ -156,6 +158,10 @@ describe('Push Campaigns Job', () => {
       conversationId: 'conv_customer1',
     })
     mockPrisma.conversationMessage.findFirst.mockResolvedValue(null)
+    // No recent push history by default: the duplicate-content gate's
+    // pre-filter finds nothing and never calls the LLM, so existing tests
+    // see the same behaviour as before that gate existed.
+    mockPrisma.conversationMessage.findMany.mockResolvedValue([])
     mockPrisma.whatsAppQueue.upsert.mockResolvedValue({ id: 'queue-1' })
     mockDeductOwnerPushCredit.mockResolvedValue({ success: true, newBalance: 99 })
   })
@@ -176,6 +182,7 @@ describe('Push Campaigns Job', () => {
         where: {
           status: 'SCHEDULED',
           isActive: true,
+          deletedAt: null,
           OR: [
             { sendAt: { lte: expect.any(Date) }, lastRunAt: null },
             { nextRunAt: { lte: expect.any(Date) } },

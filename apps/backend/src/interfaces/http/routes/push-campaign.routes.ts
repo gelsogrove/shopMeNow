@@ -15,15 +15,21 @@ export const pushCampaignRoutes = () => {
   router.use(workspaceValidationMiddleware)
 
   router.get("/", controller.list.bind(controller))
-  // Before /:id — "audience" must never be parsed as a campaign id.
+  // Before /:id — "audience"/"trash" must never be parsed as a campaign id.
   router.get("/audience", controller.audience.bind(controller))
+  router.get("/trash", controller.listTrash.bind(controller))
   router.get("/:id", controller.get.bind(controller))
   router.get("/:id/recipients", controller.recipients.bind(controller))
   router.get("/:id/sent-messages", controller.sentMessages.bind(controller))
 
   router.post("/", checkTrialValid, controller.create.bind(controller))
   router.put("/:id", controller.update.bind(controller))
+  // Soft delete — the default, keeps recipient/send history intact.
   router.delete("/:id", controller.delete.bind(controller))
+  // Restore from the trash (undo a soft delete).
+  router.post("/:id/restore", controller.restore.bind(controller))
+  // Permanent delete — backoffice cleanup only, blocked when actualSent > 0.
+  router.delete("/:id/permanent", controller.hardDelete.bind(controller))
   router.post("/:id/schedule", controller.schedule.bind(controller))
   router.post("/:id/run-now", controller.runNow.bind(controller))
   router.post("/:id/pause", controller.pause.bind(controller))

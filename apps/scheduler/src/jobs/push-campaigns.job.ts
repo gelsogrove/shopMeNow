@@ -9,6 +9,7 @@ import {
 import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
 import { BillingService } from '../services/billing.service'
+import { duplicateContentAgentService } from '../services/duplicate-content-agent.service'
 
 /**
  * Thrown inside the enqueue transaction when the merchant's push package hits
@@ -70,6 +71,7 @@ export async function pushCampaignsJob(): Promise<void> {
     where: {
       status: PushCampaignStatus.SCHEDULED,
       isActive: true,
+      deletedAt: null, // Soft-deleted campaigns must never be picked up (Andrea, 2026-09-12)
       OR: [
         { sendAt: { lte: now }, lastRunAt: null },
         { nextRunAt: { lte: now } },
@@ -378,6 +380,30 @@ export async function pushCampaignsJob(): Promise<void> {
             workspaceName: workspace.name || 'eChatbot',
             workspaceLanguage: workspace.defaultLanguage || 'en',
           })
+
+          // 🛡️ DUPLICATE CONTENT GATE (Andrea, 2026-09-12): a DB constraint
+          // already makes a second send from THIS campaign to this customer
+          // impossible — this catches the case it can't see, two DIFFERENT
+          // campaigns offering the same thing to the same person. The LLM is
+          // only called when there IS recent push history for this customer
+          // (see service), so a customer with none costs nothing here.
+          const duplicateCheck = await duplicateContentAgentService.checkRecentDuplicate({
+            workspaceId: campaign.workspaceId,
+            customerId: customer.id,
+            messageContent,
+            excludeCampaignId: campaign.id,
+          })
+          if (duplicateCheck.isDuplicate) {
+            await prisma.pushCampaignRecipient.update({
+              where: { id: recipient.id },
+              data: {
+                status: 'SKIPPED',
+                errorCode: 'DUPLICATE_CONTENT',
+                errorMessage: duplicateCheck.reason || 'Substantially the same offer was sent recently by another campaign',
+              },
+            })
+            continue
+          }
 
           await prisma.$transaction(async (tx) => {
             // 🏪 Debit the merchant's push package ATOMICALLY with the enqueue:
