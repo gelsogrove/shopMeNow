@@ -227,8 +227,8 @@ export default function ProLocoHomePage() {
                 robottino che avevamo prima verde"). Small and beside the
                 slogan, not above it: on this page the login form is the thing
                 that must stay above the fold. */}
-            <div className="mb-6 flex items-center gap-4">
-              <HeroRobot className="w-20 shrink-0 [&_img]:w-20 sm:[&_img]:w-24 [&_img]:h-auto" />
+            <div className="mb-6 flex items-center gap-5">
+              <HeroRobot className="w-32 shrink-0 [&_img]:w-32 sm:[&_img]:w-40 [&_img]:h-auto" />
               <p className="text-emerald-700 font-medium text-sm">
                 {t.eyebrow}
               </p>
