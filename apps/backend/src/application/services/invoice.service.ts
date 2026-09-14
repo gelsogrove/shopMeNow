@@ -140,6 +140,7 @@ export class InvoiceService {
 
   /**
    * Determine subscription fee for a billing period based on pause status.
+   * - If paused after the period ended: full monthly fee (pause is later news).
    * - If paused before the period starts: no monthly fee.
    * - If paused within the period: charge full monthly fee.
    */
@@ -147,6 +148,7 @@ export class InvoiceService {
     subscriptionStatus: SubscriptionStatus | string,
     pausedAt: Date | null,
     periodStart: Date,
+    periodEnd: Date,
     monthlyFee: number
   ): number {
     if (subscriptionStatus !== "PAUSED") {
@@ -155,6 +157,15 @@ export class InvoiceService {
 
     if (!pausedAt) {
       return 0
+    }
+
+    // A pause that started AFTER this period ended says nothing about it:
+    // the owner was active for the whole month and owes the full fee.
+    // Without this, pausing in March would retroactively zero January's fee
+    // on the next recalculation, because only TODAY's pause state is stored
+    // (Andrea, 2026-09-14). Closed invoices are additionally frozen once PAID.
+    if (pausedAt > periodEnd) {
+      return monthlyFee
     }
 
     return pausedAt <= periodStart ? 0 : monthlyFee
@@ -172,6 +183,12 @@ export class InvoiceService {
     periodEnd: Date
   ): Date | null {
     if (subscriptionStatus !== "PAUSED" || !pausedAt) {
+      return periodEnd
+    }
+
+    // Paused after the period closed → the owner consumed the whole period
+    // normally; the later pause must not retroactively erase it.
+    if (pausedAt > periodEnd) {
       return periodEnd
     }
 
@@ -237,17 +254,18 @@ export class InvoiceService {
       
       // Get plan monthly fee from database (NO HARDCODED VALUES)
       const monthlyFee = await this.getPlanMonthlyFee(user.planType)
+      // Calculate period dates (both needed to resolve the fee below)
       const periodStart = new Date(periodYear, periodMonth - 1, 1, 0, 0, 0)
+      const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59) // Last day of month
+
       const subscriptionAmount = this.resolveSubscriptionAmount(
         user.subscriptionStatus,
         user.pausedAt,
         periodStart,
+        periodEnd,
         monthlyFee
       )
-      
-      // Calculate period dates
-      const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59) // Last day of month
-      
+
       // Create draft invoice
       invoice = await prisma.monthlyInvoice.create({
         data: {
@@ -610,6 +628,7 @@ export class InvoiceService {
       user.subscriptionStatus,
       user.pausedAt,
       invoice.periodStart,
+      invoice.periodEnd,
       monthlyFee
     )
     const consumptionEnd = this.resolveConsumptionEnd(

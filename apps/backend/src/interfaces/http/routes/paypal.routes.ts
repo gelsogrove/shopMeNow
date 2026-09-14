@@ -304,6 +304,32 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
       subscriptionId,
     })
 
+    // 🔁 De-duplication: PayPal retries until it gets a 200, and a replayed
+    // delivery carries a still-valid signature — so verification alone does
+    // not make this handler idempotent. Without this, a redelivered
+    // PAYMENT.SUCCESS would increment paypalCyclesCompleted again and a
+    // redelivered PAYMENT.FAILED would inflate paypalFailedPaymentsCount.
+    // Same pattern as the WhatsApp inbound webhooks: insert on a UNIQUE
+    // column, treat P2002 as "already handled" and answer 200 so PayPal
+    // stops retrying (Andrea, 2026-09-14).
+    const paypalEventId = req.body?.id as string | undefined
+    if (paypalEventId) {
+      try {
+        await (prisma as any).payPalWebhookEvent.create({
+          data: { eventId: paypalEventId, eventType: eventType ?? null },
+        })
+      } catch (error: any) {
+        if (error?.code === "P2002") {
+          logger.info("[PAYPAL] 🔁 Duplicate webhook ignored", {
+            eventId: paypalEventId,
+            eventType,
+          })
+          return res.status(200).json({ success: true, status: "duplicate" })
+        }
+        throw error
+      }
+    }
+
     // Handle subscription events
     if (subscriptionId && eventType?.startsWith("BILLING.SUBSCRIPTION.")) {
       const user = await prisma.user.findFirst({

@@ -1874,6 +1874,23 @@ model PayPalTransaction {
   @@map("paypal_transactions")
 }
 
+// 🔐 PayPal webhook de-duplication (prevents PayPal retry double-processing).
+// PayPal retries a webhook until it gets a 200, and a valid signature stays
+// valid on a replay — so without this, one PAYMENT.SUCCESS could increment
+// paypalCyclesCompleted twice, and a replayed PAYMENT.FAILED could inflate
+// paypalFailedPaymentsCount. Keyed on PayPal's own event id (Andrea,
+// 2026-09-14). Owner-level, so no workspaceId: PayPal mandates belong to the
+// user, not to a workspace (Feature 198 owner-based billing).
+model PayPalWebhookEvent {
+  id         String   @id @default(cuid())
+  eventId    String   @unique // PayPal's event id (WH-XXXX) — the dedup key
+  eventType  String?
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
+  @@map("paypal_webhook_events")
+}
+
 // Feature 197: Monthly Invoice for billing tracking
 // Tracks subscription fees + credit usage per month per owner
 enum InvoiceStatus {

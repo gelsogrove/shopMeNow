@@ -543,6 +543,43 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
       expect(updateArgs.data.totalAmount).toBeGreaterThan(20)
     })
 
+    it('keeps the fee on a closed period when the pause came later', async () => {
+      // Only TODAY's pause state is stored (users.pausedAt), so a pause taken
+      // in March used to retroactively zero January's fee and wipe January's
+      // consumption on the next recalculation of that closed invoice. A pause
+      // that starts after the period ended is later news about a month the
+      // owner used in full (Andrea, 2026-09-14).
+      const closedInvoice = {
+        ...mockInvoice,
+        status: 'PENDING',
+        periodStart: new Date(2026, 0, 1, 0, 0, 0),
+        periodEnd: new Date(2026, 0, 31, 23, 59, 59),
+      }
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(closedInvoice)
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        subscriptionStatus: 'PAUSED',
+        pausedAt: new Date(2026, 2, 10), // March — two months after the period
+      })
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({ monthlyFee: 29 })
+      mockPrisma.billingTransaction.findMany.mockResolvedValue([])
+      mockPrisma.monthlyInvoice.update.mockResolvedValue(closedInvoice)
+
+      await service.recalculateInvoiceTotals('invoice-123')
+
+      const updateArgs = mockPrisma.monthlyInvoice.update.mock.calls[0][0]
+      // Full fee, not 0
+      expect(updateArgs.data.subscriptionAmount).toBe(29)
+      // And consumption is still read across the WHOLE period, not truncated
+      expect(mockPrisma.billingTransaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            createdAt: expect.objectContaining({ lte: closedInvoice.periodEnd }),
+          }),
+        })
+      )
+    })
+
     it('never rewrites a PAID invoice (issued document is immutable)', async () => {
       // A PAID invoice has been issued, numbered and collected. Recalculating
       // reads TODAY's user.taxRate, PlanConfiguration.monthlyFee and pause
