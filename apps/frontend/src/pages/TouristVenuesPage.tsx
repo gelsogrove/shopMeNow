@@ -1,7 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { FormDialog } from "@/components/shared/FormDialog"
+import { LargeFormDialog } from "@/components/shared/LargeFormDialog"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristVenueFormFields } from "@/components/tourist/TouristVenueFormFields"
@@ -234,7 +234,7 @@ export function TouristVenuesPage() {
         />
       </div>
 
-      <FormDialog
+      <LargeFormDialog
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
         title="Add Venue"
@@ -242,9 +242,9 @@ export function TouristVenuesPage() {
         onSubmit={handleAdd}
       >
         <TouristVenueFormFields item={null} workspaceId={workspace.id} />
-      </FormDialog>
+      </LargeFormDialog>
 
-      <FormDialog
+      <LargeFormDialog
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         title="Edit Venue"
@@ -254,7 +254,7 @@ export function TouristVenuesPage() {
         {selectedItem && (
           <TouristVenueFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
-      </FormDialog>
+      </LargeFormDialog>
 
       <ConfirmDialog
         open={showDeleteDialog}

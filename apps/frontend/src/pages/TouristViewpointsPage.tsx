@@ -1,7 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { FormDialog } from "@/components/shared/FormDialog"
+import { LargeFormDialog } from "@/components/shared/LargeFormDialog"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristViewpointFormFields } from "@/components/tourist/TouristViewpointFormFields"
@@ -235,7 +235,7 @@ export function TouristViewpointsPage() {
         />
       </div>
 
-      <FormDialog
+      <LargeFormDialog
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
         title="Add Viewpoint"
@@ -243,9 +243,9 @@ export function TouristViewpointsPage() {
         onSubmit={handleAdd}
       >
         <TouristViewpointFormFields item={null} workspaceId={workspace.id} />
-      </FormDialog>
+      </LargeFormDialog>
 
-      <FormDialog
+      <LargeFormDialog
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         title="Edit Viewpoint"
@@ -255,7 +255,7 @@ export function TouristViewpointsPage() {
         {selectedItem && (
           <TouristViewpointFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
-      </FormDialog>
+      </LargeFormDialog>
 
       <ConfirmDialog
         open={showDeleteDialog}

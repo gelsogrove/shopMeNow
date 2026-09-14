@@ -19,6 +19,7 @@ const translations = {
     solutions: "Soluzioni",
     realEstate: "Agenzie Immobiliari",
     beauty: "Centri Estetici",
+    tourism: "Turismo e Pro Loco",
     company: "Azienda",
     about: "Chi Siamo",
     contact: "Contatti",
@@ -45,6 +46,7 @@ const translations = {
     solutions: "Solutions",
     realEstate: "Real Estate Agencies",
     beauty: "Beauty Centers",
+    tourism: "Tourism & Visitor Offices",
     company: "Company",
     about: "About Us",
     contact: "Contact",
@@ -71,6 +73,7 @@ const translations = {
     solutions: "Soluciones",
     realEstate: "Agencias Inmobiliarias",
     beauty: "Centros de Estética",
+    tourism: "Turismo y Oficinas de Turismo",
     company: "Empresa",
     about: "Sobre Nosotros",
     contact: "Contacto",
@@ -97,6 +100,7 @@ const translations = {
     solutions: "Lösungen",
     realEstate: "Immobilienagenturen",
     beauty: "Kosmetikstudios",
+    tourism: "Tourismus & Tourismusbüros",
     company: "Unternehmen",
     about: "Über uns",
     contact: "Kontakt",
@@ -140,6 +144,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             <ul className="space-y-3">
               <li><Link to="/real-estate" className="text-sm hover:text-green-500 transition-colors">{t.realEstate}</Link></li>
               <li><Link to="/beauty" className="text-sm hover:text-green-500 transition-colors">{t.beauty}</Link></li>
+              <li><Link to="/tourism" className="text-sm hover:text-green-500 transition-colors">{t.tourism}</Link></li>
             </ul>
           </div>
 
