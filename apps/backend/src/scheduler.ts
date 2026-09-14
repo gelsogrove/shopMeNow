@@ -1,25 +1,22 @@
 /**
  * Scheduler for eChatbot Background Jobs
  *
- * Uses node-cron to run periodic maintenance tasks:
- * 1. Mark expired search conversations (every 5 minutes)
- * 2. Delete old search conversations >30 days (weekly)
- * 3. Month-end billing: invoice + PayPal charge for the PREVIOUS month
- *    (1st of each month, 23:30 Europe/Rome)
+ * Every job is declared ONCE, in the JOBS array below. start/stop/status all
+ * read that array, so adding a job means adding one entry — there is no second
+ * place to remember.
  *
- * Usage:
- * - Import and call startScheduler() in index.ts
- * - All tasks run in background, non-blocking
- * - Errors logged but don't crash the application
+ * WHY THE ARRAY (2026-09-14): each job used to be repeated in four places —
+ * its own `const`, startScheduler(), stopScheduler() and a hand-written type
+ * in getSchedulerStatus() — plus a summary comment up here. They had already
+ * drifted: this header listed 3 jobs while 5 were running. A job forgotten in
+ * startScheduler() throws no error, it simply never runs, and nobody notices
+ * until the thing it was supposed to do has not happened for a month.
  *
  * Cron syntax: [minute] [hour] [day] [month] [day-of-week]
- * Examples:
- * - Every 5 minutes: asterisk-slash-5 space asterisk space asterisk space asterisk space asterisk
- * - Every Sunday at 3:00 AM: 0 3 asterisk asterisk 0
  */
 
-import cron from "node-cron"
 import { prisma } from "@echatbot/database"
+import cron, { ScheduledTask } from "node-cron"
 import { SearchConversationRepository } from "./repositories/searchConversation.repository"
 import { WorkspaceRepository } from "./repositories/workspace.repository"
 import { runMonthEndBilling } from "./services/month-end-billing.service"
@@ -29,137 +26,152 @@ import logger from "./utils/logger"
 
 const searchConversationRepo = new SearchConversationRepository()
 const workspaceRepo = new WorkspaceRepository()
-
-/**
- * Job 1: Mark expired search conversations
- * Runs every 5 minutes
- * Changes ACTIVE conversations past expiresAt to EXPIRED
- * 🔒 SECURITY: Iterates over ALL workspaces to maintain isolation
- */
-const markExpiredConversationsJob = cron.schedule("*/5 * * * *", async () => {
-  try {
-    logger.info("⏰ Running job: Mark expired search conversations")
-    
-    // 🔒 Get all workspaces and process each one
-    const workspaces = await workspaceRepo.findAll()
-    let totalMarked = 0
-    
-    for (const workspace of workspaces) {
-      try {
-        const count = await searchConversationRepo.markExpired(workspace.id)
-        if (count > 0) {
-          logger.info(`✅ Marked ${count} conversations as expired in workspace ${workspace.id}`)
-          totalMarked += count
-        }
-      } catch (error) {
-        logger.error(`❌ Error marking expired conversations for workspace ${workspace.id}:`, error)
-      }
-    }
-    
-    if (totalMarked > 0) {
-      logger.info(`✅ Total: Marked ${totalMarked} search conversations as expired across all workspaces`)
-    }
-  } catch (error) {
-    logger.error("❌ Error in markExpiredConversationsJob:", error)
-  }
-})
-
-/**
- * Job 2: Delete old search conversations
- * Runs every Sunday at 3:00 AM
- * Deletes conversations older than 30 days
- * 🔒 SECURITY: Iterates over ALL workspaces to maintain isolation
- */
-const deleteOldConversationsJob = cron.schedule("0 3 * * 0", async () => {
-  try {
-    logger.info("⏰ Running job: Delete old search conversations")
-    
-    // 🔒 Get all workspaces and process each one
-    const workspaces = await workspaceRepo.findAll()
-    let totalDeleted = 0
-    
-    for (const workspace of workspaces) {
-      try {
-        const count = await searchConversationRepo.deleteOld(30, workspace.id)
-        if (count > 0) {
-          logger.info(`✅ Deleted ${count} conversations older than 30 days in workspace ${workspace.id}`)
-          totalDeleted += count
-        }
-      } catch (error) {
-        logger.error(`❌ Error deleting old conversations for workspace ${workspace.id}:`, error)
-      }
-    }
-    
-    if (totalDeleted > 0) {
-      logger.info(`✅ Total: Deleted ${totalDeleted} search conversations across all workspaces`)
-    }
-  } catch (error) {
-    logger.error("❌ Error in deleteOldConversationsJob:", error)
-  }
-})
-
-/**
- * Job 3: Month-end billing
- * Runs on the 1st of each month at 23:30 (Europe/Rome).
- * ALWAYS bills the PREVIOUS month: one invoice per owner
- * (subscription + recharges), then one automatic PayPal charge.
- * If the charge fails the invoice stays FAILED and surfaces in the
- * backoffice Collections page for manual operator retries (soft block).
- */
-const monthEndBillingJob = cron.schedule(
-  "30 23 1 * *",
-  async () => {
-    try {
-      logger.info("⏰ Running job: Month-end billing")
-      await runMonthEndBilling()
-    } catch (error) {
-      logger.error("❌ Error in monthEndBillingJob:", error)
-    }
-  },
-  { timezone: "Europe/Rome" }
-)
-
-/**
- * Job 4: WhatsApp retention cleanup
- * Runs daily at 4:00 AM.
- * Purges webhook dedup events >30 days and terminal-status queue rows
- * >30 days (plus expired anonymous widget sessions) — see
- * WhatsAppRetentionService for the exact rules.
- */
 const whatsappRetentionService = new WhatsAppRetentionService(prisma)
-const whatsappRetentionJob = cron.schedule("0 4 * * *", async () => {
-  try {
-    logger.info("⏰ Running job: WhatsApp retention cleanup")
-    await whatsappRetentionService.cleanup()
-  } catch (error) {
-    logger.error("❌ Error in whatsappRetentionJob:", error)
-  }
-})
+
+interface JobDefinition {
+  /** Stable key, used in the status payload. */
+  name: string
+  /** Cron expression. */
+  schedule: string
+  /** Shown in the startup log — plain words, for whoever reads the boot output. */
+  description: string
+  /** IANA timezone. Omit for jobs whose hour does not matter (cleanups). */
+  timezone?: string
+  /**
+   * `unknown` rather than `void`: several of these return a summary object
+   * (billing, retention, trial expiry) that the scheduler has never used and
+   * does not need. Typing it `void` would force a wrapper around each one for
+   * no gain.
+   */
+  run: () => Promise<unknown>
+}
 
 /**
- * Job 5: Trial expiry warnings
- * Runs daily at 9:00 (Europe/Rome) — a business-hours email, not a 4am one.
- * Warns FREE_TRIAL owners whose trial ends within the configured window
- * (PlatformConfig.TRIAL_WARNING_DAYS); one email per trial, throttled by
- * users.trialExpiringNotifiedAt. Before this, a trial lapsed with no notice
- * at all and the chatbot just went silent (Andrea, 2026-09-14).
+ * Mark ACTIVE search conversations past their expiresAt as EXPIRED.
+ *
+ * 🔒 Iterates over every workspace and calls the repository per workspace, so
+ * the workspaceId filter is never dropped (CLAUDE.md §2). One workspace
+ * failing must not stop the others, hence the inner try.
  */
-const trialExpiryJob = cron.schedule(
-  "0 9 * * *",
-  async () => {
+async function markExpiredConversations(): Promise<void> {
+  const workspaces = await workspaceRepo.findAll()
+  let totalMarked = 0
+
+  for (const workspace of workspaces) {
     try {
-      logger.info("⏰ Running job: Trial expiry notifications")
-      await runTrialExpiryNotifications()
+      const count = await searchConversationRepo.markExpired(workspace.id)
+      if (count > 0) {
+        logger.info(`✅ Marked ${count} conversations as expired in workspace ${workspace.id}`)
+        totalMarked += count
+      }
     } catch (error) {
-      logger.error("❌ Error in trialExpiryJob:", error)
+      logger.error(`❌ Error marking expired conversations for workspace ${workspace.id}:`, error)
     }
-  },
-  { timezone: "Europe/Rome" }
-)
+  }
+
+  if (totalMarked > 0) {
+    logger.info(`✅ Total: Marked ${totalMarked} search conversations as expired across all workspaces`)
+  }
+}
 
 /**
- * Start all scheduled jobs
- * Call this function in index.ts after server startup
+ * Delete search conversations older than 30 days.
+ *
+ * 🔒 Per workspace for the same reason as above.
+ */
+async function deleteOldConversations(): Promise<void> {
+  const workspaces = await workspaceRepo.findAll()
+  let totalDeleted = 0
+
+  for (const workspace of workspaces) {
+    try {
+      const count = await searchConversationRepo.deleteOld(30, workspace.id)
+      if (count > 0) {
+        logger.info(
+          `✅ Deleted ${count} conversations older than 30 days in workspace ${workspace.id}`
+        )
+        totalDeleted += count
+      }
+    } catch (error) {
+      logger.error(`❌ Error deleting old conversations for workspace ${workspace.id}:`, error)
+    }
+  }
+
+  if (totalDeleted > 0) {
+    logger.info(`✅ Total: Deleted ${totalDeleted} old search conversations across all workspaces`)
+  }
+}
+
+/**
+ * The jobs. One entry each — this array is the single source of truth.
+ */
+const JOBS: JobDefinition[] = [
+  {
+    name: "markExpiredConversations",
+    schedule: "*/5 * * * *",
+    description: "Mark expired conversations: every 5 minutes",
+    run: markExpiredConversations,
+  },
+  {
+    name: "deleteOldConversations",
+    schedule: "0 3 * * 0",
+    description: "Delete old conversations: Sundays at 3:00",
+    run: deleteOldConversations,
+  },
+  {
+    // Invoices the PREVIOUS month (subscription + recharges) and then charges
+    // it once via PayPal. A failed charge leaves the invoice FAILED and it
+    // surfaces in the backoffice Collections page for a manual retry.
+    name: "monthEndBilling",
+    schedule: "30 23 1 * *",
+    description: "Month-end billing: 1st of the month at 23:30 (Europe/Rome)",
+    timezone: "Europe/Rome",
+    run: runMonthEndBilling,
+  },
+  {
+    // Purges webhook dedup events and terminal queue rows older than 30 days,
+    // plus expired anonymous widget sessions. Exact rules live in the service.
+    name: "whatsappRetention",
+    schedule: "0 4 * * *",
+    description: "WhatsApp retention cleanup: every day at 4:00",
+    run: () => whatsappRetentionService.cleanup(),
+  },
+  {
+    // Warns FREE_TRIAL owners whose trial ends within TRIAL_WARNING_DAYS; one
+    // email per trial, throttled by users.trialExpiringNotifiedAt. Before this
+    // a trial lapsed with no notice and the chatbot just went silent (Andrea,
+    // 2026-09-14). Business hours on purpose — nobody reads a 4am email.
+    name: "trialExpiry",
+    schedule: "0 9 * * *",
+    description: "Trial expiry warnings: every day at 9:00 (Europe/Rome)",
+    timezone: "Europe/Rome",
+    run: runTrialExpiryNotifications,
+  },
+]
+
+/**
+ * Wrap a job so a failure is logged and contained: one job throwing must
+ * never take down the process or stop the others from running.
+ */
+function createTask(job: JobDefinition): ScheduledTask {
+  return cron.schedule(
+    job.schedule,
+    async () => {
+      try {
+        logger.info(`⏰ Running job: ${job.name}`)
+        await job.run()
+      } catch (error) {
+        logger.error(`❌ Error in job ${job.name}:`, error)
+      }
+    },
+    job.timezone ? { timezone: job.timezone } : undefined
+  )
+}
+
+const tasks = new Map<string, ScheduledTask>(JOBS.map((job) => [job.name, createTask(job)]))
+
+/**
+ * Start all scheduled jobs. Called from index.ts after server startup.
  */
 export function startScheduler(): void {
   // Heroku scale-out guard: cron jobs must run on exactly ONE process, or
@@ -174,69 +186,37 @@ export function startScheduler(): void {
   }
 
   logger.info("🚀 Starting background scheduler...")
-
-  // Start all jobs
-  markExpiredConversationsJob.start()
-  deleteOldConversationsJob.start()
-  monthEndBillingJob.start()
-  whatsappRetentionJob.start()
-  trialExpiryJob.start()
-
-  logger.info("✅ Scheduler started successfully")
-  logger.info("  - Mark expired conversations: Every 5 minutes")
-  logger.info("  - Delete old conversations: Every Sunday at 3:00 AM")
-  logger.info("  - Month-end billing: 1st of month at 23:30 (Europe/Rome)")
-  logger.info("  - WhatsApp retention cleanup: Every day at 4:00 AM")
-  logger.info("  - Trial expiry warnings: Every day at 9:00 (Europe/Rome)")
+  for (const job of JOBS) {
+    tasks.get(job.name)?.start()
+    logger.info(`  - ${job.description}`)
+  }
+  logger.info(`✅ Scheduler started successfully (${JOBS.length} jobs)`)
 }
 
 /**
- * Stop all scheduled jobs
- * Call this for graceful shutdown
+ * Stop all scheduled jobs, for a graceful shutdown.
  */
 export function stopScheduler(): void {
   logger.info("⏹️ Stopping background scheduler...")
-
-  markExpiredConversationsJob.stop()
-  deleteOldConversationsJob.stop()
-  monthEndBillingJob.stop()
-  whatsappRetentionJob.stop()
-  trialExpiryJob.stop()
-
+  for (const task of tasks.values()) task.stop()
   logger.info("✅ Scheduler stopped successfully")
 }
 
 /**
- * Get scheduler status
- * Useful for monitoring/health checks
+ * Per-job running state, for monitoring and health checks.
  */
-export function getSchedulerStatus(): {
-  markExpiredJob: { running: boolean; schedule: string }
-  deleteOldJob: { running: boolean; schedule: string }
-  monthEndBillingJob: { running: boolean; schedule: string }
-  whatsappRetentionJob: { running: boolean; schedule: string }
-  trialExpiryJob: { running: boolean; schedule: string }
-} {
-  return {
-    markExpiredJob: {
-      running: markExpiredConversationsJob.getStatus() === "scheduled",
-      schedule: "*/5 * * * *",
-    },
-    deleteOldJob: {
-      running: deleteOldConversationsJob.getStatus() === "scheduled",
-      schedule: "0 3 * * 0",
-    },
-    monthEndBillingJob: {
-      running: monthEndBillingJob.getStatus() === "scheduled",
-      schedule: "30 23 1 * * (Europe/Rome)",
-    },
-    whatsappRetentionJob: {
-      running: whatsappRetentionJob.getStatus() === "scheduled",
-      schedule: "0 4 * * *",
-    },
-    trialExpiryJob: {
-      running: trialExpiryJob.getStatus() === "scheduled",
-      schedule: "0 9 * * * (Europe/Rome)",
-    },
-  }
+export function getSchedulerStatus(): Record<
+  string,
+  { running: boolean; schedule: string; timezone?: string }
+> {
+  return Object.fromEntries(
+    JOBS.map((job) => [
+      job.name,
+      {
+        running: tasks.get(job.name)?.getStatus() === "scheduled",
+        schedule: job.schedule,
+        ...(job.timezone ? { timezone: job.timezone } : {}),
+      },
+    ])
+  )
 }
