@@ -178,6 +178,14 @@ export const platformConfigData: PlatformConfigData[] = [
   // ============================================================================
   {
     type: "LIMIT" as const,
+    key: "TRIAL_WARNING_DAYS",
+    value: "3",
+    description:
+      "Days before trialEndsAt when the owner is warned by email that the free trial is ending (daily trial-expiry job)",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
     key: "FREE_CLIENTS",
     value: "50",
     description: "Maximum clients for Free plan",
