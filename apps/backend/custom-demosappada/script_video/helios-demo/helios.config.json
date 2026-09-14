@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "directories": {
+    "components": "src/components/helios",
+    "lib": "src/lib"
+  },
+  "components": [],
+  "dependencies": {},
+  "framework": "vanilla"
+}
