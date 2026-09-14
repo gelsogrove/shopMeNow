@@ -30,6 +30,25 @@ export interface Scenario {
   script: ChatLine[]
 }
 
+/** Before/after row for the "what happens at the desk today" section. */
+export interface PainRow {
+  icon: string
+  pain: string
+  fix: string
+}
+
+/** Headline number with a caption, used by the results band. */
+export interface MetricItem {
+  value: string
+  label: string
+  desc: string
+}
+
+export interface FaqItem {
+  q: string
+  a: string
+}
+
 export interface TourismCopy {
   // SEO
   seoTitle: string
@@ -49,6 +68,18 @@ export interface TourismCopy {
   heroCardTitle: string
   heroCardStatus: string
   heroScript: ChatLine[]
+  // Hero phone chrome + the two-mode pills above it
+  heroPhoneTyping: string
+  heroPhoneInput: string
+  heroModeIn: string
+  heroModeOut: string
+  // Pain section (what the desk lives through today)
+  painTitle: string
+  painAccent: string
+  painSub: string
+  painColPain: string
+  painColFix: string
+  painRows: PainRow[]
   // How it works
   howTitle: string
   howAccent: string
@@ -70,11 +101,22 @@ export interface TourismCopy {
   pushFirstText: string
   pushGuardTag: string
   pushGuardText: string
+  pushLabelSent: string
+  pushLabelBlocked: string
+  // Results band
+  metricsTitle: string
+  metricsAccent: string
+  metrics: MetricItem[]
   // Try it (scenario demo)
   tryTitle: string
   tryAccent: string
   trySub: string
+  tryReplay: string
   scenarios: Scenario[]
+  // FAQ
+  faqTitle: string
+  faqAccent: string
+  faqItems: FaqItem[]
   // CTA
   ctaTitle: string
   ctaDesc: string
@@ -88,18 +130,22 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     seoKeys:
       "chatbot turismo, whatsapp pro loco, assistente turistico ia, chatbot destinazione turistica, whatsapp ufficio turismo, ia multilingua turismo",
     badge: "Per Pro Loco, APT e uffici del turismo",
-    heroTitleTop: "Il numero WhatsApp che",
-    heroTitleAccent: "conosce la tua destinazione.",
+    heroTitleTop: "Il vostro numero WhatsApp",
+    heroTitleAccent: "risponde anche di domenica.",
     heroSub:
-      "Eventi, alloggi, ristoranti, sentieri: i visitatori scrivono su WhatsApp e ricevono risposte prese dal tuo catalogo reale — non da un testo generico scritto una volta e mai aggiornato.",
+      "I visitatori scrivono al numero dell'ufficio come scriverebbero a un amico. Ricevono subito eventi, alloggi e ristoranti presi dal vostro catalogo — nella loro lingua, anche alle undici di sera, anche mentre l'ufficio è chiuso.",
     cta: "Richiedi una demo",
     ctaSub: "Demo su misura, nessun impegno",
-    tryDemo: "Prova la conversazione ↓",
-    heroProof1: "lingue gestite nella stessa chat",
-    heroProof2: "nessun orario d'ufficio",
-    heroProof3: "catalogo aggiornato, sempre coerente",
+    tryDemo: "Guarda le conversazioni ↓",
+    heroProof1: "lingue nella stessa chat",
+    heroProof2: "sempre attivo, anche a uffici chiusi",
+    heroProof3: "un solo catalogo da aggiornare",
     heroCardTitle: "Ufficio del Turismo",
-    heroCardStatus: "WhatsApp Business",
+    heroCardStatus: "online",
+    heroPhoneTyping: "sta scrivendo…",
+    heroPhoneInput: "Scrivi un messaggio",
+    heroModeIn: "Risponde a chi scrive",
+    heroModeOut: "E scrive per primo",
     heroScript: [
       { role: "guest", text: "Ciao! Siamo in famiglia, cosa fate di bello sabato?" },
       {
@@ -114,31 +160,69 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         text: "A due minuti a piedi c'è la Locanda del Bosco, aperta fino alle 22:30, nota per i piatti fatti in casa.",
       },
     ],
-    howTitle: "Tre tappe,",
-    howAccent: "non un progetto informatico.",
+    painTitle: "Le stesse dieci domande,",
+    painAccent: "tutti i giorni, a ogni stagione.",
+    painSub:
+      "Chi sta al banco lo sa: la maggior parte del lavoro non è informare, è ripetere. E le domande non arrivano negli orari d'ufficio — arrivano la sera, il weekend, in agosto.",
+    painColPain: "Oggi",
+    painColFix: "Con l'assistente su WhatsApp",
+    painRows: [
+      {
+        icon: "📞",
+        pain: "Il telefono squilla per la decima volta con la stessa domanda sugli orari della sagra.",
+        fix: "La risposta arriva in chat in due secondi, e il banco resta libero per chi ha bisogno davvero di una persona.",
+      },
+      {
+        icon: "🌙",
+        pain: "Chi arriva di sera o di domenica trova l'ufficio chiuso e cerca su Google, dove le informazioni sul paese sono vecchie o sbagliate.",
+        fix: "Scrive su WhatsApp e riceve la vostra informazione, quella giusta, a qualsiasi ora.",
+      },
+      {
+        icon: "🌍",
+        pain: "Arriva una famiglia tedesca e in ufficio, in quel momento, non c'è nessuno che parli tedesco.",
+        fix: "Scrivono in tedesco e ricevono risposta in tedesco, dallo stesso catalogo che leggete voi in italiano.",
+      },
+      {
+        icon: "📄",
+        pain: "Il volantino degli eventi è già vecchio il giorno dopo la stampa, e il PDF sul sito pure.",
+        fix: "Aggiornate una scheda nel pannello e la risposta cambia nello stesso istante, per tutti.",
+      },
+      {
+        icon: "🗂️",
+        pain: "Le stesse informazioni stanno sul sito, su Facebook, sul volantino e nella testa di chi lavora da vent'anni — e non coincidono.",
+        fix: "Un catalogo solo. Quello che c'è dentro è quello che il bot risponde; quello che non c'è, il bot dice che non lo sa.",
+      },
+      {
+        icon: "📣",
+        pain: "Un evento viene spostato per pioggia e non c'è modo di avvisare chi aveva chiesto informazioni.",
+        fix: "Il messaggio parte da solo a chi aveva chiesto di quell'evento, e a nessun altro.",
+      },
+    ],
+    howTitle: "Si parte dal vostro catalogo,",
+    howAccent: "non da un progetto da sei mesi.",
     howSub:
-      "Non è un chatbot da configurare a regole. Il catalogo della destinazione resta l'unica fonte: lo aggiorni tu, il resto lo fa il bot.",
+      "Non c'è niente da programmare e nessuna regola da scrivere. Quello che già raccogliete — eventi, strutture, ristoranti — diventa quello che il bot sa rispondere.",
     howSteps: [
       {
-        badge: "Tappa 1",
-        title: "Carichi il catalogo",
-        desc: "Eventi, alloggi, ristoranti, attività: ogni scheda che compili nel pannello diventa subito qualcosa che il bot sa rispondere.",
+        badge: "1",
+        title: "Caricate quello che avete già",
+        desc: "Eventi, alloggi, ristoranti, sentieri: ogni scheda che compilate nel pannello diventa subito qualcosa che il bot sa rispondere. Se avete già un elenco, si importa.",
       },
       {
-        badge: "Tappa 2",
-        title: "Colleghi il numero WhatsApp",
-        desc: "Il numero della Pro Loco o dell'ufficio IAT diventa il punto di contatto. Chi scrive riceve risposta subito, in qualunque lingua.",
+        badge: "2",
+        title: "Colleghiamo il vostro numero",
+        desc: "Il numero della Pro Loco o dell'ufficio IAT diventa il punto di contatto. Nessuna app da far scaricare ai turisti: usano il WhatsApp che hanno già.",
       },
       {
-        badge: "Tappa 3",
-        title: "Il bot risponde dal catalogo",
-        desc: "Ogni risposta è costruita sulle schede reali, non inventata. Se una cosa non è a catalogo, il bot lo dice — non improvvisa.",
+        badge: "3",
+        title: "Da lì in poi risponde da solo",
+        desc: "Ogni risposta è costruita sulle vostre schede, non inventata. Voi aggiornate il catalogo quando cambia qualcosa; il resto succede senza che nessuno debba farci niente.",
       },
     ],
     whatTitle: "Le domande che",
     whatAccent: "oggi arrivano allo sportello.",
     whatSub:
-      "Le stesse che il tuo ufficio riceve per telefono o al banco — solo che arrivano a qualsiasi ora, e in qualsiasi lingua.",
+      "Le stesse che il vostro ufficio riceve per telefono o al banco — solo che arrivano a qualsiasi ora, e in qualsiasi lingua.",
     capabilities: [
       {
         icon: "🎪",
@@ -171,38 +255,65 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Se una domanda esce dal catalogo, il bot lo dice chiaramente — meglio \"non lo so\" che un'informazione sbagliata data a un ospite.",
       },
     ],
-    pushTitle: "Non solo risponde.",
-    pushAccent: "Sa anche quando scrivere per primo.",
+    pushTitle: "E quando serve,",
+    pushAccent: "è lui a scrivere per primo.",
     pushSub:
-      "Oltre a rispondere a chi scrive, il sistema può avvisare i visitatori già in chat quando succede qualcosa che li riguarda — senza mai diventare la fonte di spam che fa disattivare le notifiche.",
+      "Un chatbot normale aspetta. Questo no: se succede qualcosa che riguarda chi vi ha già scritto — un evento nuovo, una data che si avvicina, una sagra spostata per pioggia — il messaggio parte da solo. E prima di partire controlla di non essere già stato detto.",
     pushSteps: [
       {
         badge: "Quando parte",
-        title: "Un evento nuovo, un posto che si libera",
-        desc: "Un nuovo evento viene pubblicato, una data si avvicina, un alloggio segnalato come \"ultimi posti\": il messaggio parte da solo verso chi ha già chattato con voi ed è in target.",
+        title: "Succede qualcosa che interessa a qualcuno",
+        desc: "Pubblicate un evento nuovo, una data si avvicina, un alloggio segna gli ultimi posti: il messaggio parte verso chi vi ha già scritto ed è in target. Nessuno in ufficio deve premere niente.",
       },
       {
         badge: "Cosa lo ferma",
-        title: "Un controllo prima dell'invio",
-        desc: "Prima di inviare, il sistema guarda cosa quel visitatore ha già ricevuto negli ultimi giorni. Se un'altra iniziativa gli ha già segnalato la stessa cosa, il secondo messaggio non parte.",
+        title: "Un controllo prima di ogni invio",
+        desc: "Prima di inviare, il sistema guarda cosa quella persona ha già ricevuto nei giorni scorsi. Se un'altra iniziativa gli ha già segnalato la stessa cosa, il secondo messaggio non parte.",
       },
       {
         badge: "Perché conta",
-        title: "Zero fatica, zero fastidio",
-        desc: "Nessuno in ufficio deve ricordarsi \"a questo l'abbiamo già scritto\": il controllo è automatico e chi riceve i messaggi non si sente mai inondato di doppioni.",
+        title: "Nessuno si sente inondato",
+        desc: "È la differenza tra un avviso utile e lo spam che fa silenziare la chat. Il controllo è automatico: nessuno deve ricordarsi \"a questo l'abbiamo già scritto\".",
       },
     ],
     pushBoardTitle: "Ufficio del Turismo",
-    pushBoardStatus: "Messaggio in uscita, non richiesto",
+    pushBoardStatus: "messaggio in uscita",
     pushFirstTag: "campagna: eventi del weekend",
     pushFirstText: "Ciao! Domenica c'è la Fiera d'Autunno in piazza, dalle 9:00 — pensavamo potesse interessarti.",
-    pushGuardTag: "campagna: newsletter mercatini — bloccata",
+    pushGuardTag: "campagna: newsletter mercatini",
     pushGuardText:
       "Stessa fiera già segnalata 3 giorni fa da un'altra iniziativa: invio annullato in automatico, il visitatore non riceve il doppione.",
+    pushLabelSent: "inviato",
+    pushLabelBlocked: "bloccato prima dell'invio",
+    metricsTitle: "Cosa cambia",
+    metricsAccent: "per chi sta al banco.",
+    metrics: [
+      {
+        value: "24/7",
+        label: "Sempre aperto",
+        desc: "Le domande arrivano la sera, il weekend e in alta stagione. La risposta arriva comunque.",
+      },
+      {
+        value: "4+",
+        label: "Lingue nella stessa chat",
+        desc: "Italiano, inglese, tedesco, spagnolo: ognuno scrive nella sua e riceve nella sua.",
+      },
+      {
+        value: "1",
+        label: "Catalogo da aggiornare",
+        desc: "Una scheda cambiata vale per tutte le lingue e per tutte le risposte, nello stesso momento.",
+      },
+      {
+        value: "0",
+        label: "App da far scaricare",
+        desc: "I turisti usano WhatsApp, che hanno già sul telefono. Nessuna registrazione, nessun download.",
+      },
+    ],
     tryTitle: "Tre conversazioni vere,",
     tryAccent: "non uno slogan.",
     trySub:
-      "Scegli una domanda tipo e guarda esattamente cosa risponderebbe il bot — lo stesso meccanismo che vedrebbero i tuoi visitatori.",
+      "Scegliete una domanda tipo e guardate esattamente cosa risponderebbe il bot — lo stesso meccanismo che vedrebbero i vostri visitatori.",
+    tryReplay: "Rivedi la conversazione",
     scenarios: [
       {
         title: "Cosa c'è questo weekend",
@@ -259,7 +370,35 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         ],
       },
     ],
-    ctaTitle: "Parliamo della tua destinazione",
+    faqTitle: "Le domande",
+    faqAccent: "che ci fanno sempre.",
+    faqItems: [
+      {
+        q: "Serve un numero WhatsApp nuovo?",
+        a: "No, si può usare il numero che avete già, purché non sia collegato all'app WhatsApp su un telefono. Se preferite tenere separato il numero dell'ufficio, ne attiviamo uno dedicato: decidete voi.",
+      },
+      {
+        q: "Chi aggiorna le informazioni?",
+        a: "Le aggiornate voi, da un pannello che si usa come un foglio di calcolo: si apre la scheda dell'evento, si cambia l'orario, si salva. Nessuno deve toccare codice e non serve chiamarci per una modifica.",
+      },
+      {
+        q: "E se il bot non sa rispondere?",
+        a: "Lo dice, invece di inventare. Se la domanda esce dal catalogo — o se la persona chiede espressamente di parlare con qualcuno — la conversazione passa a un operatore vero, che la vede e risponde dal pannello.",
+      },
+      {
+        q: "Quanto ci vuole per partire?",
+        a: "Dipende quasi solo da quanto materiale avete già pronto. Con un elenco di eventi e strutture da importare si parte in pochi giorni; se il catalogo va costruito da zero, serve qualche settimana di raccolta dati.",
+      },
+      {
+        q: "I dati dei turisti dove finiscono?",
+        a: "Restano vostri. I contatti e le conversazioni sono nel vostro spazio, separati da quelli di ogni altro ente, e la gestione è conforme al GDPR. Non vengono usati per addestrare modelli né ceduti a terzi.",
+      },
+      {
+        q: "Funziona anche se non siamo una destinazione di montagna?",
+        a: "Sì. Il bot non sa niente della montagna in particolare: sa quello che c'è nel vostro catalogo. Mare, città d'arte, lago o borgo cambiano le schede, non il funzionamento.",
+      },
+    ],
+    ctaTitle: "Parliamo della vostra destinazione",
     ctaDesc: "Una call di 20 minuti per capire cosa avete già e cosa serve per portarlo su WhatsApp.",
   },
 
@@ -270,18 +409,22 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     seoKeys:
       "tourism chatbot, whatsapp tourist board, ai tourism assistant, destination chatbot, whatsapp visitor office, multilingual tourism ai",
     badge: "For tourist boards, DMOs and visitor offices",
-    heroTitleTop: "The WhatsApp number that",
-    heroTitleAccent: "knows your destination.",
+    heroTitleTop: "Your WhatsApp number",
+    heroTitleAccent: "answers on Sundays too.",
     heroSub:
-      "Events, stays, restaurants, trails: visitors write on WhatsApp and get answers pulled from your real catalogue — not a generic script written once and never updated.",
+      "Visitors message the office number the way they'd message a friend. They get events, stays and restaurants straight from your catalogue — in their own language, at eleven at night, while the office is closed.",
     cta: "Request a demo",
     ctaSub: "Tailored demo, no commitment",
-    tryDemo: "Try the conversation ↓",
-    heroProof1: "languages handled in the same chat",
-    heroProof2: "no office hours",
-    heroProof3: "one catalogue, always consistent",
+    tryDemo: "See the conversations ↓",
+    heroProof1: "languages in the same chat",
+    heroProof2: "always on, even out of hours",
+    heroProof3: "one catalogue to keep updated",
     heroCardTitle: "Tourist Information",
-    heroCardStatus: "WhatsApp Business",
+    heroCardStatus: "online",
+    heroPhoneTyping: "typing…",
+    heroPhoneInput: "Type a message",
+    heroModeIn: "Answers whoever writes",
+    heroModeOut: "And writes first",
     heroScript: [
       { role: "guest", text: "Hi! We're a family, what's going on Saturday?" },
       {
@@ -296,46 +439,84 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         text: "Two minutes' walk away is Locanda del Bosco, open until 10:30pm, known for its homemade dishes.",
       },
     ],
-    howTitle: "Three stops,",
-    howAccent: "not an IT project.",
-    howSub:
-      "This isn't a chatbot you configure with rules. Your destination's catalogue stays the only source: you update it, the bot does the rest.",
-    howSteps: [
+    painTitle: "The same ten questions,",
+    painAccent: "every day, every season.",
+    painSub:
+      "Anyone who works the desk knows it: most of the job isn't informing, it's repeating. And the questions don't arrive during office hours — they arrive in the evening, at the weekend, in August.",
+    painColPain: "Today",
+    painColFix: "With the assistant on WhatsApp",
+    painRows: [
       {
-        badge: "Stop 1",
-        title: "You load the catalogue",
-        desc: "Events, stays, restaurants, activities: every entry you fill in the panel immediately becomes something the bot can answer with.",
+        icon: "📞",
+        pain: "The phone rings for the tenth time with the same question about the festival opening times.",
+        fix: "The answer lands in chat in two seconds, and the desk stays free for the people who actually need a human.",
       },
       {
-        badge: "Stop 2",
-        title: "You connect the WhatsApp number",
-        desc: "Your tourist board's or visitor office's number becomes the contact point. Whoever writes gets an answer right away, in any language.",
+        icon: "🌙",
+        pain: "Visitors arriving in the evening or on a Sunday find the office closed and turn to Google, where information about the area is old or wrong.",
+        fix: "They message WhatsApp and get your information, the correct one, at any hour.",
       },
       {
-        badge: "Stop 3",
-        title: "The bot answers from the catalogue",
-        desc: "Every answer is built from real entries, never invented. If something isn't in the catalogue, the bot says so — it doesn't improvise.",
+        icon: "🌍",
+        pain: "A German family walks in and, right then, nobody at the office speaks German.",
+        fix: "They write in German and get answers in German, from the same catalogue you read in your own language.",
+      },
+      {
+        icon: "📄",
+        pain: "The events leaflet is out of date the day after it's printed — and so is the PDF on the website.",
+        fix: "You update one entry in the panel and the answer changes that same instant, for everyone.",
+      },
+      {
+        icon: "🗂️",
+        pain: "The same details live on the website, on Facebook, on the leaflet and in the head of whoever's been here twenty years — and they don't match.",
+        fix: "One catalogue. What's in it is what the bot answers; what isn't, the bot says it doesn't know.",
+      },
+      {
+        icon: "📣",
+        pain: "An event is moved because of rain and there's no way to tell the people who'd asked about it.",
+        fix: "The message goes out on its own to the people who asked about that event, and to nobody else.",
       },
     ],
-    whatTitle: "The questions that",
-    whatAccent: "already reach your front desk.",
+    howTitle: "It starts from your catalogue,",
+    howAccent: "not from a six-month project.",
+    howSub:
+      "There's nothing to program and no rules to write. What you already collect — events, venues, restaurants — becomes what the bot knows how to answer.",
+    howSteps: [
+      {
+        badge: "1",
+        title: "Load what you already have",
+        desc: "Events, stays, restaurants, trails: every entry you fill in becomes something the bot can answer straight away. If you already keep a list, we import it.",
+      },
+      {
+        badge: "2",
+        title: "We connect your number",
+        desc: "The tourist board or visitor office number becomes the point of contact. No app for tourists to download: they use the WhatsApp they already have.",
+      },
+      {
+        badge: "3",
+        title: "From then on it answers by itself",
+        desc: "Every answer is built from your entries, never invented. You update the catalogue when something changes; the rest happens without anyone having to do a thing.",
+      },
+    ],
+    whatTitle: "The questions",
+    whatAccent: "that reach the desk today.",
     whatSub:
-      "The same ones your office gets by phone or at the counter — except they now arrive at any hour, in any language.",
+      "The same ones your office gets by phone or over the counter — except they arrive at any hour, in any language.",
     capabilities: [
       {
         icon: "🎪",
-        title: "Events and happenings",
-        desc: "Village fairs, patron saint festivals, local markets — with dates and times kept current, never a calendar two seasons old.",
+        title: "Events and festivals",
+        desc: "Village fairs, patron saint festivals, local markets — with up-to-date dates and times, never a calendar two seasons old.",
       },
       {
         icon: "🏡",
         title: "Stays and availability",
-        desc: "Apartments, B&Bs, mountain huts: features, capacity, contacts — whoever is looking for a place to sleep finds the right listing.",
+        desc: "Apartments, B&Bs, mountain huts: features, capacity, contacts — whoever's looking for a bed finds the right entry, not a list.",
       },
       {
         icon: "🍽️",
-        title: "Restaurants and local specialities",
-        desc: "Local dishes, allergens, who's open tonight — including specific questions, like \"is there a gluten-free option\".",
+        title: "Restaurants and local food",
+        desc: "Traditional dishes, allergens, who's open tonight — including the more specific questions, like \"is there anywhere gluten-free\".",
       },
       {
         icon: "🥾",
@@ -344,46 +525,74 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
       },
       {
         icon: "🌍",
-        title: "Multiple languages, no manual translation",
-        desc: "A German visitor and a Spanish one can write in the same chat: each gets an answer in their own language, from the same catalogue.",
+        title: "Several languages, no manual translation",
+        desc: "A German and a Spanish tourist can write in the same chat: each gets an answer in their own language, from the same catalogue.",
       },
       {
         icon: "✅",
-        title: "It never makes things up",
-        desc: "If a question falls outside the catalogue, the bot says so clearly — better \"I don't know\" than the wrong information given to a guest.",
+        title: "It doesn't invent what it doesn't know",
+        desc: "If a question falls outside the catalogue, the bot says so clearly — better \"I don't know\" than wrong information given to a guest.",
       },
     ],
-    pushTitle: "It doesn't just answer.",
-    pushAccent: "It also knows when to write first.",
+    pushTitle: "And when it matters,",
+    pushAccent: "it writes first.",
     pushSub:
-      "Beyond replying to whoever writes, the system can notify visitors already in chat when something relevant happens — without ever becoming the reason someone mutes your notifications.",
+      "A normal chatbot waits. This one doesn't: when something happens that concerns people who already wrote to you — a new event, a date coming up, a fair moved because of rain — the message goes out on its own. And before it goes, it checks it hasn't been said already.",
     pushSteps: [
       {
-        badge: "When it fires",
-        title: "A new event, a spot opening up",
-        desc: "A new event gets published, a date approaches, a stay is flagged \"last spots left\": the message goes out on its own to visitors who already chatted with you and match.",
+        badge: "What triggers it",
+        title: "Something happens that someone cares about",
+        desc: "You publish a new event, a date is approaching, a place flags its last rooms: the message goes to people who already wrote to you and match. Nobody at the office has to press anything.",
       },
       {
         badge: "What stops it",
-        title: "A check before it ever sends",
-        desc: "Before sending, the system looks at what that visitor already received in recent days. If another initiative already flagged the same thing, the second message never goes out.",
+        title: "A check before every send",
+        desc: "Before sending, the system looks at what that person has already received in recent days. If another campaign already flagged the same thing, the second message doesn't go out.",
       },
       {
         badge: "Why it matters",
-        title: "Zero effort, zero annoyance",
-        desc: "Nobody in the office has to remember \"we already told them this\": the check runs automatically and recipients never feel flooded with duplicates.",
+        title: "Nobody feels flooded",
+        desc: "It's the difference between a useful heads-up and the spam that gets a chat muted. The check is automatic: nobody has to remember \"we already told this one\".",
       },
     ],
     pushBoardTitle: "Tourist Information",
-    pushBoardStatus: "Outbound message, unprompted",
+    pushBoardStatus: "outbound message",
     pushFirstTag: "campaign: weekend events",
-    pushFirstText: "Hi! On Sunday there's the Autumn Fair in the square, from 9am — thought this might interest you.",
-    pushGuardTag: "campaign: markets newsletter — blocked",
+    pushFirstText: "Hi! On Sunday there's the Autumn Fair in the square, from 9am — we thought it might interest you.",
+    pushGuardTag: "campaign: markets newsletter",
     pushGuardText:
-      "The same fair was already flagged 3 days ago by another initiative: send cancelled automatically, the visitor never receives the duplicate.",
+      "Same fair already flagged 3 days ago by another campaign: send cancelled automatically, the visitor gets no duplicate.",
+    pushLabelSent: "sent",
+    pushLabelBlocked: "blocked before sending",
+    metricsTitle: "What changes",
+    metricsAccent: "for the people at the desk.",
+    metrics: [
+      {
+        value: "24/7",
+        label: "Always open",
+        desc: "Questions arrive in the evening, at weekends and in high season. The answer arrives anyway.",
+      },
+      {
+        value: "4+",
+        label: "Languages in the same chat",
+        desc: "Italian, English, German, Spanish: everyone writes in theirs and gets an answer in theirs.",
+      },
+      {
+        value: "1",
+        label: "Catalogue to update",
+        desc: "One changed entry applies to every language and every answer, at the same moment.",
+      },
+      {
+        value: "0",
+        label: "Apps to download",
+        desc: "Tourists use WhatsApp, already on their phone. No sign-up, no download.",
+      },
+    ],
     tryTitle: "Three real conversations,",
     tryAccent: "not a slogan.",
-    trySub: "Pick a typical question and see exactly what the bot would answer — the same mechanism your visitors would see.",
+    trySub:
+      "Pick a typical question and see exactly what the bot would answer — the same mechanism your visitors would see.",
+    tryReplay: "Replay the conversation",
     scenarios: [
       {
         title: "What's on this weekend",
@@ -393,31 +602,31 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
           {
             role: "bot",
             tag: "from events catalogue",
-            text: "This weekend: Saturday craft market (10am–7pm) and live music (8:30pm); Sunday guided walk to the mountain hut, meeting at 9am.",
+            text: "This weekend: Saturday, craft market in the square (10am–7pm) and live music night (8:30pm); Sunday, guided walk to the mountain hut, meeting at 9am.",
           },
-          { role: "guest", text: "Is the walk okay for kids?" },
+          { role: "guest", text: "Is the walk ok for children?" },
           {
             role: "bot",
             tag: "from events catalogue",
-            text: "Yes, it's an easy, family-friendly route: about 2 hours, gentle elevation gain, meeting at the hut car park.",
+            text: "Yes, it's an easy family-friendly route: around 2 hours, gentle elevation, meeting point at the hut car park.",
           },
         ],
       },
       {
-        title: "A stay for 4 people",
+        title: "Somewhere to sleep for 4",
         rule: "catalogue → stays",
         script: [
-          { role: "guest", text: "We're looking for a place to stay, 4 of us" },
+          { role: "guest", text: "We're looking for a place to stay, there are 4 of us" },
           {
             role: "bot",
             tag: "from stays catalogue",
-            text: "I have a couple of options for 4 people: a central apartment with kitchen and balcony, or a B&B 5 minutes from the village. Prefer central?",
+            text: "I have a couple of options for 4 people: an apartment in the centre with a kitchen and balcony, and a B&B 5 minutes from the village. Do you prefer the centre?",
           },
-          { role: "guest", text: "Central is better, and close to parking" },
+          { role: "guest", text: "Centre is better, and near a car park" },
           {
             role: "bot",
             tag: "from stays catalogue",
-            text: "The central apartment includes a parking spot. I'll pass along the owner's direct contact to check date availability.",
+            text: "The apartment in the centre includes a parking space. Here's the owner's direct contact to check the dates.",
           },
         ],
       },
@@ -428,7 +637,7 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
           { role: "guest", text: "Hallo, wir suchen einen leichten Wanderweg für morgen" },
           {
             role: "bot",
-            tag: "replies in German",
+            tag: "answers in German",
             text: "Guten Tag! Ich empfehle den Weg zum Waldsee: leicht, ca. 5 km, 1,5 Stunden, kaum Höhenunterschied.",
           },
           { role: "guest", text: "Gibt es dort auch eine Einkehrmöglichkeit?" },
@@ -440,6 +649,34 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         ],
       },
     ],
+    faqTitle: "The questions",
+    faqAccent: "we always get asked.",
+    faqItems: [
+      {
+        q: "Do we need a new WhatsApp number?",
+        a: "No, you can use the number you already have, as long as it isn't tied to the WhatsApp app on a phone. If you'd rather keep the office number separate, we set up a dedicated one: it's your call.",
+      },
+      {
+        q: "Who keeps the information up to date?",
+        a: "You do, from a panel that works like a spreadsheet: open the event, change the time, save. Nobody has to touch code and you don't have to call us for an edit.",
+      },
+      {
+        q: "What if the bot can't answer?",
+        a: "It says so instead of inventing. If the question falls outside the catalogue — or the person explicitly asks for a human — the conversation moves to a real operator, who sees it and replies from the panel.",
+      },
+      {
+        q: "How long does it take to go live?",
+        a: "Almost entirely down to how much material you already have ready. With a list of events and venues to import you're live in a few days; if the catalogue has to be built from scratch, allow a few weeks of gathering data.",
+      },
+      {
+        q: "Where does visitor data end up?",
+        a: "It stays yours. Contacts and conversations live in your own space, separate from every other organisation's, and handling is GDPR-compliant. It is never used to train models nor passed to third parties.",
+      },
+      {
+        q: "Does it work if we're not a mountain destination?",
+        a: "Yes. The bot knows nothing about mountains in particular: it knows what's in your catalogue. Seaside, art city, lake or village changes the entries, not how it works.",
+      },
+    ],
     ctaTitle: "Let's talk about your destination",
     ctaDesc: "A 20-minute call to understand what you already have and what it takes to bring it to WhatsApp.",
   },
@@ -447,139 +684,210 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
   es: {
     seoTitle: "Chatbot de WhatsApp para Turismo y Destinos - eChatbot",
     seoDesc:
-      "El asistente de WhatsApp para oficinas de turismo y destinos: responde sobre eventos, alojamientos y restaurantes desde tu catálogo real, en varios idiomas, 24/7. También sabe cuándo escribir primero, sin duplicar nunca los mensajes.",
+      "El asistente de WhatsApp para oficinas de turismo, patronatos y entes de destino: responde sobre eventos, alojamientos y restaurantes desde tu catálogo real, en varios idiomas, 24/7. También sabe cuándo escribir primero, sin duplicar nunca los mensajes.",
     seoKeys:
-      "chatbot turismo, whatsapp oficina de turismo, asistente turístico ia, chatbot destino turístico, ia multilingüe turismo",
-    badge: "Para oficinas de turismo y destinos",
-    heroTitleTop: "El número de WhatsApp que",
-    heroTitleAccent: "conoce tu destino.",
+      "chatbot turismo, whatsapp oficina de turismo, asistente turístico ia, chatbot destino turístico, whatsapp patronato turismo, ia multilingüe turismo",
+    badge: "Para oficinas de turismo, patronatos y entes de destino",
+    heroTitleTop: "Vuestro número de WhatsApp",
+    heroTitleAccent: "también responde en domingo.",
     heroSub:
-      "Eventos, alojamientos, restaurantes, senderos: los visitantes escriben por WhatsApp y reciben respuestas de tu catálogo real — no un texto genérico escrito una vez y nunca actualizado.",
+      "Los visitantes escriben al número de la oficina como le escribirían a un amigo. Reciben eventos, alojamientos y restaurantes sacados de vuestro catálogo — en su idioma, a las once de la noche, con la oficina cerrada.",
     cta: "Solicita una demo",
     ctaSub: "Demo a medida, sin compromiso",
-    tryDemo: "Prueba la conversación ↓",
-    heroProof1: "idiomas gestionados en el mismo chat",
-    heroProof2: "sin horario de oficina",
-    heroProof3: "un catálogo, siempre coherente",
+    tryDemo: "Mira las conversaciones ↓",
+    heroProof1: "idiomas en el mismo chat",
+    heroProof2: "siempre activo, también fuera de horario",
+    heroProof3: "un solo catálogo que actualizar",
     heroCardTitle: "Oficina de Turismo",
-    heroCardStatus: "WhatsApp Business",
+    heroCardStatus: "en línea",
+    heroPhoneTyping: "escribiendo…",
+    heroPhoneInput: "Escribe un mensaje",
+    heroModeIn: "Responde a quien escribe",
+    heroModeOut: "Y escribe primero",
     heroScript: [
-      { role: "guest", text: "¡Hola! Somos una familia, ¿qué se puede hacer el sábado?" },
+      { role: "guest", text: "¡Hola! Somos una familia, ¿qué hay el sábado?" },
       {
         role: "bot",
         tag: "del catálogo de eventos",
-        text: "El sábado a las 17:00 hay un mercadillo en la plaza, y a las 20:30 una noche de música — entrada libre en ambos.",
+        text: "El sábado a las 17:00 hay mercadillo en la plaza, y a las 20:30 noche de música en el centro cívico — ambos con entrada libre.",
       },
-      { role: "guest", text: "Perfecto, ¿dónde podemos comer algo típico después?" },
+      { role: "guest", text: "Perfecto, ¿dónde comemos algo típico después?" },
       {
         role: "bot",
         tag: "del catálogo de restaurantes",
         text: "A dos minutos a pie está la Locanda del Bosco, abierta hasta las 22:30, conocida por sus platos caseros.",
       },
     ],
-    howTitle: "Tres etapas,",
-    howAccent: "no un proyecto informático.",
+    painTitle: "Las mismas diez preguntas,",
+    painAccent: "todos los días, cada temporada.",
+    painSub:
+      "Quien está en el mostrador lo sabe: la mayor parte del trabajo no es informar, es repetir. Y las preguntas no llegan en horario de oficina — llegan por la tarde, el fin de semana, en agosto.",
+    painColPain: "Hoy",
+    painColFix: "Con el asistente en WhatsApp",
+    painRows: [
+      {
+        icon: "📞",
+        pain: "El teléfono suena por décima vez con la misma pregunta sobre los horarios de la fiesta.",
+        fix: "La respuesta llega al chat en dos segundos, y el mostrador queda libre para quien de verdad necesita a una persona.",
+      },
+      {
+        icon: "🌙",
+        pain: "Quien llega por la tarde o en domingo encuentra la oficina cerrada y busca en Google, donde la información del pueblo está vieja o es errónea.",
+        fix: "Escribe por WhatsApp y recibe vuestra información, la correcta, a cualquier hora.",
+      },
+      {
+        icon: "🌍",
+        pain: "Llega una familia alemana y en la oficina, en ese momento, no hay nadie que hable alemán.",
+        fix: "Escriben en alemán y reciben respuesta en alemán, del mismo catálogo que vosotros leéis en vuestro idioma.",
+      },
+      {
+        icon: "📄",
+        pain: "El folleto de eventos ya está viejo al día siguiente de imprimirlo, y el PDF de la web también.",
+        fix: "Actualizáis una ficha en el panel y la respuesta cambia en ese mismo instante, para todos.",
+      },
+      {
+        icon: "🗂️",
+        pain: "La misma información está en la web, en Facebook, en el folleto y en la cabeza de quien lleva veinte años aquí — y no coinciden.",
+        fix: "Un solo catálogo. Lo que hay dentro es lo que el bot responde; lo que no está, el bot dice que no lo sabe.",
+      },
+      {
+        icon: "📣",
+        pain: "Un evento se aplaza por lluvia y no hay forma de avisar a quien había preguntado por él.",
+        fix: "El mensaje sale solo hacia quien preguntó por ese evento, y hacia nadie más.",
+      },
+    ],
+    howTitle: "Se parte de vuestro catálogo,",
+    howAccent: "no de un proyecto de seis meses.",
     howSub:
-      "No es un chatbot que se configura con reglas. El catálogo del destino sigue siendo la única fuente: tú lo actualizas, el bot hace el resto.",
+      "No hay nada que programar ni reglas que escribir. Lo que ya recopiláis — eventos, establecimientos, restaurantes — se convierte en lo que el bot sabe responder.",
     howSteps: [
       {
-        badge: "Etapa 1",
-        title: "Cargas el catálogo",
-        desc: "Eventos, alojamientos, restaurantes, actividades: cada ficha que completas en el panel se convierte al instante en algo que el bot puede responder.",
+        badge: "1",
+        title: "Cargáis lo que ya tenéis",
+        desc: "Eventos, alojamientos, restaurantes, senderos: cada ficha que rellenáis en el panel se convierte enseguida en algo que el bot sabe responder. Si ya tenéis un listado, se importa.",
       },
       {
-        badge: "Etapa 2",
-        title: "Conectas el número de WhatsApp",
-        desc: "El número de tu oficina de turismo se convierte en el punto de contacto. Quien escribe recibe respuesta al momento, en cualquier idioma.",
+        badge: "2",
+        title: "Conectamos vuestro número",
+        desc: "El número de la oficina de turismo pasa a ser el punto de contacto. Ninguna app que los turistas tengan que descargar: usan el WhatsApp que ya tienen.",
       },
       {
-        badge: "Etapa 3",
-        title: "El bot responde desde el catálogo",
-        desc: "Cada respuesta se construye a partir de fichas reales, nunca inventada. Si algo no está en el catálogo, el bot lo dice — no improvisa.",
+        badge: "3",
+        title: "A partir de ahí responde solo",
+        desc: "Cada respuesta se construye con vuestras fichas, no se inventa. Vosotros actualizáis el catálogo cuando algo cambia; lo demás ocurre sin que nadie tenga que hacer nada.",
       },
     ],
     whatTitle: "Las preguntas que",
-    whatAccent: "hoy llegan a tu mostrador.",
-    whatSub: "Las mismas que recibe tu oficina por teléfono o en el mostrador — solo que ahora llegan a cualquier hora, en cualquier idioma.",
+    whatAccent: "hoy llegan al mostrador.",
+    whatSub:
+      "Las mismas que vuestra oficina recibe por teléfono o en el mostrador — solo que llegan a cualquier hora, y en cualquier idioma.",
     capabilities: [
       {
         icon: "🎪",
-        title: "Eventos y celebraciones",
-        desc: "Ferias del pueblo, fiestas patronales, mercadillos locales — con fechas y horarios actualizados, nunca un calendario de dos temporadas atrás.",
+        title: "Eventos y fiestas",
+        desc: "Fiestas del pueblo, fiestas patronales, mercadillos locales — con fechas y horarios actualizados, nunca un calendario de hace dos temporadas.",
       },
       {
         icon: "🏡",
         title: "Alojamientos y disponibilidad",
-        desc: "Apartamentos, B&B, refugios: características, capacidad, contactos — quien busca dónde dormir encuentra la ficha correcta, no un listado.",
+        desc: "Apartamentos, casas rurales, refugios: características, capacidad, contactos — quien busca dónde dormir encuentra la ficha correcta, no un listado.",
       },
       {
         icon: "🍽️",
-        title: "Restaurantes y especialidades locales",
-        desc: "Platos típicos, alérgenos, quién está abierto esta noche — incluidas preguntas específicas, como \"hay algún sitio sin gluten\".",
+        title: "Restaurantes y cocina local",
+        desc: "Platos típicos, alérgenos, quién abre esta noche — incluidas las preguntas más concretas, tipo \"¿hay algún sitio sin gluten?\".",
       },
       {
         icon: "🥾",
         title: "Senderos y actividades al aire libre",
-        desc: "Longitud, desnivel, dificultad: información que hoy termina impresa en un folleto se convierte en una respuesta inmediata.",
+        desc: "Longitud, desnivel, dificultad: información que hoy acaba en un folleto se convierte en una respuesta inmediata.",
       },
       {
         icon: "🌍",
-        title: "Varios idiomas, sin traducciones manuales",
-        desc: "Un visitante alemán y uno español pueden escribir en el mismo chat: cada uno recibe respuesta en su propio idioma, del mismo catálogo.",
+        title: "Varios idiomas, sin traducir a mano",
+        desc: "Un turista alemán y uno español pueden escribir en el mismo chat: cada uno recibe respuesta en su idioma, del mismo catálogo.",
       },
       {
         icon: "✅",
-        title: "Nunca inventa lo que no sabe",
-        desc: "Si una pregunta queda fuera del catálogo, el bot lo dice claramente — mejor \"no lo sé\" que dar información incorrecta a un huésped.",
+        title: "No inventa lo que no sabe",
+        desc: "Si una pregunta se sale del catálogo, el bot lo dice claramente — mejor un \"no lo sé\" que una información equivocada dada a un huésped.",
       },
     ],
-    pushTitle: "No solo responde.",
-    pushAccent: "También sabe cuándo escribir primero.",
+    pushTitle: "Y cuando hace falta,",
+    pushAccent: "escribe él primero.",
     pushSub:
-      "Además de responder a quien escribe, el sistema puede avisar a los visitantes ya en el chat cuando ocurre algo que les interesa — sin convertirse nunca en la razón por la que alguien silencia tus notificaciones.",
+      "Un chatbot normal espera. Este no: si pasa algo que afecta a quien ya os escribió — un evento nuevo, una fecha que se acerca, una fiesta aplazada por lluvia — el mensaje sale solo. Y antes de salir comprueba que no se haya dicho ya.",
     pushSteps: [
       {
-        badge: "Cuándo se activa",
-        title: "Un evento nuevo, una plaza que se libera",
-        desc: "Se publica un evento nuevo, se acerca una fecha, un alojamiento se marca como \"últimas plazas\": el mensaje sale solo hacia quienes ya han chateado contigo y encajan.",
+        badge: "Qué lo dispara",
+        title: "Pasa algo que le interesa a alguien",
+        desc: "Publicáis un evento nuevo, se acerca una fecha, un alojamiento marca sus últimas plazas: el mensaje sale hacia quien ya os escribió y encaja. Nadie en la oficina tiene que pulsar nada.",
       },
       {
-        badge: "Qué lo detiene",
-        title: "Una comprobación antes de enviar",
-        desc: "Antes de enviar, el sistema revisa qué ha recibido ya ese visitante en los últimos días. Si otra iniciativa ya señaló lo mismo, el segundo mensaje no se envía.",
+        badge: "Qué lo frena",
+        title: "Una comprobación antes de cada envío",
+        desc: "Antes de enviar, el sistema mira qué ha recibido esa persona en los últimos días. Si otra campaña ya le avisó de lo mismo, el segundo mensaje no sale.",
       },
       {
         badge: "Por qué importa",
-        title: "Cero esfuerzo, cero molestia",
-        desc: "Nadie en la oficina tiene que recordar \"esto ya se lo dijimos\": la comprobación es automática y quien recibe los mensajes nunca se siente inundado de duplicados.",
+        title: "Nadie se siente inundado",
+        desc: "Es la diferencia entre un aviso útil y el spam que hace silenciar el chat. La comprobación es automática: nadie tiene que acordarse de \"a este ya se lo dijimos\".",
       },
     ],
     pushBoardTitle: "Oficina de Turismo",
-    pushBoardStatus: "Mensaje saliente, no solicitado",
+    pushBoardStatus: "mensaje saliente",
     pushFirstTag: "campaña: eventos del fin de semana",
-    pushFirstText: "¡Hola! El domingo hay la Feria de Otoño en la plaza, desde las 9:00 — pensamos que te podría interesar.",
-    pushGuardTag: "campaña: newsletter de mercadillos — bloqueada",
+    pushFirstText: "¡Hola! El domingo está la Feria de Otoño en la plaza, desde las 9:00 — pensamos que podría interesarte.",
+    pushGuardTag: "campaña: newsletter de mercadillos",
     pushGuardText:
-      "La misma feria ya fue señalada hace 3 días por otra iniciativa: envío cancelado automáticamente, el visitante no recibe el duplicado.",
+      "La misma feria ya avisada hace 3 días por otra campaña: envío cancelado automáticamente, el visitante no recibe el duplicado.",
+    pushLabelSent: "enviado",
+    pushLabelBlocked: "bloqueado antes del envío",
+    metricsTitle: "Qué cambia",
+    metricsAccent: "para quien está en el mostrador.",
+    metrics: [
+      {
+        value: "24/7",
+        label: "Siempre abierto",
+        desc: "Las preguntas llegan por la tarde, el fin de semana y en temporada alta. La respuesta llega igualmente.",
+      },
+      {
+        value: "4+",
+        label: "Idiomas en el mismo chat",
+        desc: "Italiano, inglés, alemán, español: cada uno escribe en el suyo y recibe en el suyo.",
+      },
+      {
+        value: "1",
+        label: "Catálogo que actualizar",
+        desc: "Una ficha cambiada vale para todos los idiomas y para todas las respuestas, en el mismo momento.",
+      },
+      {
+        value: "0",
+        label: "Apps que descargar",
+        desc: "Los turistas usan WhatsApp, que ya tienen en el móvil. Sin registro, sin descargas.",
+      },
+    ],
     tryTitle: "Tres conversaciones reales,",
     tryAccent: "no un eslogan.",
-    trySub: "Elige una pregunta típica y mira exactamente qué respondería el bot — el mismo mecanismo que verían tus visitantes.",
+    trySub:
+      "Elegid una pregunta tipo y ved exactamente qué respondería el bot — el mismo mecanismo que verían vuestros visitantes.",
+    tryReplay: "Volver a ver la conversación",
     scenarios: [
       {
         title: "Qué hay este fin de semana",
         rule: "catálogo → eventos",
         script: [
-          { role: "guest", text: "¿Qué se puede hacer este fin de semana?" },
+          { role: "guest", text: "¿Qué hay para hacer este fin de semana?" },
           {
             role: "bot",
             tag: "del catálogo de eventos",
-            text: "Este fin de semana: sábado mercadillo artesanal (10:00–19:00) y noche de música (20:30); domingo caminata guiada al refugio, encuentro a las 9:00.",
+            text: "Este fin de semana: el sábado mercadillo artesanal en la plaza (10:00–19:00) y noche de música (20:30); el domingo caminata guiada al refugio, quedada a las 9:00.",
           },
-          { role: "guest", text: "¿La caminata es apta para niños?" },
+          { role: "guest", text: "¿La caminata va bien para niños?" },
           {
             role: "bot",
             tag: "del catálogo de eventos",
-            text: "Sí, es una ruta fácil y familiar: unas 2 horas, desnivel suave, encuentro en el aparcamiento del refugio.",
+            text: "Sí, es un recorrido fácil y apto para familias: unas 2 horas, desnivel suave, punto de encuentro en el aparcamiento del refugio.",
           },
         ],
       },
@@ -587,17 +895,17 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         title: "Dónde dormir 4 personas",
         rule: "catálogo → alojamientos",
         script: [
-          { role: "guest", text: "Buscamos un sitio para dormir, somos 4" },
+          { role: "guest", text: "Buscamos sitio para dormir, somos 4" },
           {
             role: "bot",
             tag: "del catálogo de alojamientos",
-            text: "Tengo un par de opciones para 4 personas: un apartamento céntrico con cocina y balcón, o un B&B a 5 minutos del pueblo. ¿Prefieres el centro?",
+            text: "Tengo un par de opciones para 4 personas: un apartamento en el centro con cocina y balcón, y una casa rural a 5 minutos del pueblo. ¿Preferís el centro?",
           },
-          { role: "guest", text: "Mejor en el centro, y cerca de aparcamiento" },
+          { role: "guest", text: "Mejor en el centro, y cerca de un aparcamiento" },
           {
             role: "bot",
             tag: "del catálogo de alojamientos",
-            text: "El apartamento céntrico incluye una plaza de aparcamiento. Te paso el contacto directo de la propietaria para confirmar fechas.",
+            text: "El apartamento del centro incluye una plaza de aparcamiento. Os dejo el contacto directo de la propietaria para comprobar las fechas.",
           },
         ],
       },
@@ -620,130 +928,229 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         ],
       },
     ],
-    ctaTitle: "Hablemos de tu destino",
+    faqTitle: "Las preguntas",
+    faqAccent: "que siempre nos hacen.",
+    faqItems: [
+      {
+        q: "¿Hace falta un número de WhatsApp nuevo?",
+        a: "No, se puede usar el número que ya tenéis, siempre que no esté vinculado a la app de WhatsApp en un móvil. Si preferís mantener separado el número de la oficina, activamos uno dedicado: lo decidís vosotros.",
+      },
+      {
+        q: "¿Quién actualiza la información?",
+        a: "La actualizáis vosotros, desde un panel que se usa como una hoja de cálculo: se abre la ficha del evento, se cambia el horario, se guarda. Nadie tiene que tocar código y no hace falta llamarnos por un cambio.",
+      },
+      {
+        q: "¿Y si el bot no sabe responder?",
+        a: "Lo dice, en vez de inventar. Si la pregunta se sale del catálogo — o si la persona pide expresamente hablar con alguien — la conversación pasa a un operador real, que la ve y responde desde el panel.",
+      },
+      {
+        q: "¿Cuánto se tarda en arrancar?",
+        a: "Depende casi solo de cuánto material tengáis ya listo. Con un listado de eventos y establecimientos para importar se arranca en pocos días; si el catálogo hay que construirlo desde cero, contad unas semanas de recogida de datos.",
+      },
+      {
+        q: "¿Dónde acaban los datos de los turistas?",
+        a: "Siguen siendo vuestros. Los contactos y las conversaciones están en vuestro espacio, separados de los de cualquier otro ente, y la gestión cumple el RGPD. No se usan para entrenar modelos ni se ceden a terceros.",
+      },
+      {
+        q: "¿Funciona aunque no seamos un destino de montaña?",
+        a: "Sí. El bot no sabe nada de montaña en particular: sabe lo que hay en vuestro catálogo. Costa, ciudad histórica, lago o pueblo cambian las fichas, no el funcionamiento.",
+      },
+    ],
+    ctaTitle: "Hablemos de vuestro destino",
     ctaDesc: "Una llamada de 20 minutos para entender qué tenéis ya y qué hace falta para llevarlo a WhatsApp.",
   },
 
   de: {
-    seoTitle: "WhatsApp-Chatbot für Tourismus & Destinationen - eChatbot",
+    seoTitle: "WhatsApp-Chatbot für Tourismus und Destinationen - eChatbot",
     seoDesc:
-      "Der WhatsApp-Assistent für Tourismusbüros und Destinationen: beantwortet Fragen zu Veranstaltungen, Unterkünften und Restaurants aus eurem echten Katalog, mehrsprachig, rund um die Uhr. Er weiß auch, wann er zuerst schreiben soll, ohne je doppelte Nachrichten zu senden.",
+      "Der WhatsApp-Assistent für Tourismusvereine, Tourismusverbände und Infobüros: beantwortet Fragen zu Veranstaltungen, Unterkünften und Restaurants aus Ihrem echten Katalog, mehrsprachig, rund um die Uhr. Er weiß auch, wann er von sich aus schreibt — ohne je Nachrichten zu doppeln.",
     seoKeys:
-      "tourismus chatbot, whatsapp tourismusbüro, ki tourismus assistent, destination chatbot, mehrsprachige tourismus ki",
-    badge: "Für Tourismusbüros und Destinationen",
-    heroTitleTop: "Die WhatsApp-Nummer, die",
-    heroTitleAccent: "eure Destination kennt.",
+      "chatbot tourismus, whatsapp tourismusverband, ki assistent tourismus, chatbot destination, whatsapp infobüro, mehrsprachige ki tourismus",
+    badge: "Für Tourismusvereine, Tourismusverbände und Infobüros",
+    heroTitleTop: "Ihre WhatsApp-Nummer",
+    heroTitleAccent: "antwortet auch sonntags.",
     heroSub:
-      "Veranstaltungen, Unterkünfte, Restaurants, Wanderwege: Gäste schreiben auf WhatsApp und erhalten Antworten aus eurem echten Katalog — nicht aus einem einmal geschriebenen und nie aktualisierten Standardtext.",
+      "Gäste schreiben der Nummer des Büros, wie sie einem Freund schreiben würden. Sie bekommen Veranstaltungen, Unterkünfte und Restaurants direkt aus Ihrem Katalog — in ihrer Sprache, um elf Uhr abends, auch wenn das Büro geschlossen ist.",
     cta: "Demo anfragen",
     ctaSub: "Maßgeschneiderte Demo, unverbindlich",
-    tryDemo: "Konversation testen ↓",
+    tryDemo: "Gespräche ansehen ↓",
     heroProof1: "Sprachen im selben Chat",
-    heroProof2: "keine Bürozeiten",
-    heroProof3: "ein Katalog, immer konsistent",
-    heroCardTitle: "Tourismusbüro",
-    heroCardStatus: "WhatsApp Business",
+    heroProof2: "immer erreichbar, auch außerhalb der Öffnungszeiten",
+    heroProof3: "nur ein Katalog zu pflegen",
+    heroCardTitle: "Tourist-Information",
+    heroCardStatus: "online",
+    heroPhoneTyping: "schreibt…",
+    heroPhoneInput: "Nachricht schreiben",
+    heroModeIn: "Antwortet allen, die schreiben",
+    heroModeOut: "Und schreibt von sich aus",
     heroScript: [
-      { role: "guest", text: "Hallo! Wir sind eine Familie, was gibt's am Samstag?" },
+      { role: "guest", text: "Hallo! Wir sind mit der Familie da, was ist am Samstag los?" },
       {
         role: "bot",
         tag: "aus dem Veranstaltungskatalog",
-        text: "Am Samstag um 17:00 Uhr ist ein Markt auf dem Platz, und um 20:30 Uhr ein Musikabend — beides mit freiem Eintritt.",
+        text: "Am Samstag um 17:00 Uhr ist Markt auf dem Platz, und um 20:30 Uhr Musikabend im Gemeindezentrum — beides bei freiem Eintritt.",
       },
       { role: "guest", text: "Super, wo können wir danach etwas Typisches essen?" },
       {
         role: "bot",
         tag: "aus dem Restaurantkatalog",
-        text: "Zwei Gehminuten entfernt liegt die Locanda del Bosco, bis 22:30 Uhr geöffnet, bekannt für hausgemachte Gerichte.",
+        text: "Zwei Gehminuten entfernt ist die Locanda del Bosco, geöffnet bis 22:30 Uhr, bekannt für hausgemachte Gerichte.",
       },
     ],
-    howTitle: "Drei Etappen,",
-    howAccent: "kein IT-Projekt.",
+    painTitle: "Dieselben zehn Fragen,",
+    painAccent: "jeden Tag, in jeder Saison.",
+    painSub:
+      "Wer am Schalter steht, kennt das: Der größte Teil der Arbeit ist nicht informieren, sondern wiederholen. Und die Fragen kommen nicht zu den Öffnungszeiten — sie kommen abends, am Wochenende, im August.",
+    painColPain: "Heute",
+    painColFix: "Mit dem Assistenten auf WhatsApp",
+    painRows: [
+      {
+        icon: "📞",
+        pain: "Das Telefon klingelt zum zehnten Mal mit derselben Frage nach den Öffnungszeiten des Festes.",
+        fix: "Die Antwort kommt in zwei Sekunden im Chat an, und der Schalter bleibt frei für alle, die wirklich einen Menschen brauchen.",
+      },
+      {
+        icon: "🌙",
+        pain: "Wer abends oder sonntags ankommt, findet das Büro geschlossen und sucht bei Google, wo die Infos zum Ort veraltet oder falsch sind.",
+        fix: "Er schreibt auf WhatsApp und bekommt Ihre Information, die richtige, zu jeder Uhrzeit.",
+      },
+      {
+        icon: "🌍",
+        pain: "Eine deutsche Familie kommt herein, und im Büro ist in diesem Moment niemand, der Deutsch spricht.",
+        fix: "Sie schreiben auf Deutsch und bekommen Antwort auf Deutsch — aus demselben Katalog, den Sie in Ihrer Sprache lesen.",
+      },
+      {
+        icon: "📄",
+        pain: "Der Veranstaltungsflyer ist am Tag nach dem Druck schon veraltet, das PDF auf der Website ebenso.",
+        fix: "Sie ändern einen Eintrag im Panel, und die Antwort ändert sich im selben Augenblick — für alle.",
+      },
+      {
+        icon: "🗂️",
+        pain: "Dieselben Informationen stehen auf der Website, auf Facebook, im Flyer und im Kopf derjenigen, die seit zwanzig Jahren dabei sind — und sie stimmen nicht überein.",
+        fix: "Nur ein Katalog. Was darin steht, antwortet der Bot; was nicht darin steht, sagt er ehrlich, dass er es nicht weiß.",
+      },
+      {
+        icon: "📣",
+        pain: "Eine Veranstaltung wird wegen Regen verschoben, und es gibt keine Möglichkeit, alle zu informieren, die danach gefragt hatten.",
+        fix: "Die Nachricht geht von selbst an genau die Leute, die nach dieser Veranstaltung gefragt hatten — und an sonst niemanden.",
+      },
+    ],
+    howTitle: "Es beginnt mit Ihrem Katalog,",
+    howAccent: "nicht mit einem Sechs-Monats-Projekt.",
     howSub:
-      "Das ist kein Chatbot, den man mit Regeln konfiguriert. Der Katalog der Destination bleibt die einzige Quelle: ihr aktualisiert ihn, der Bot erledigt den Rest.",
+      "Es gibt nichts zu programmieren und keine Regeln zu schreiben. Was Sie ohnehin schon sammeln — Veranstaltungen, Betriebe, Restaurants — wird zu dem, was der Bot beantworten kann.",
     howSteps: [
       {
-        badge: "Etappe 1",
-        title: "Ihr ladet den Katalog",
-        desc: "Veranstaltungen, Unterkünfte, Restaurants, Aktivitäten: jeder Eintrag im Panel wird sofort zu etwas, das der Bot beantworten kann.",
+        badge: "1",
+        title: "Sie laden hoch, was Sie schon haben",
+        desc: "Veranstaltungen, Unterkünfte, Restaurants, Wanderwege: Jeder Eintrag, den Sie im Panel ausfüllen, wird sofort zu etwas, das der Bot beantworten kann. Wenn Sie schon eine Liste führen, importieren wir sie.",
       },
       {
-        badge: "Etappe 2",
-        title: "Ihr verbindet die WhatsApp-Nummer",
-        desc: "Die Nummer eures Tourismusbüros wird zur Kontaktstelle. Wer schreibt, erhält sofort eine Antwort, in jeder Sprache.",
+        badge: "2",
+        title: "Wir binden Ihre Nummer an",
+        desc: "Die Nummer des Tourismusvereins oder des Infobüros wird zum Kontaktpunkt. Keine App, die Gäste herunterladen müssen: Sie nutzen das WhatsApp, das sie ohnehin haben.",
       },
       {
-        badge: "Etappe 3",
-        title: "Der Bot antwortet aus dem Katalog",
-        desc: "Jede Antwort basiert auf echten Einträgen, nie erfunden. Fehlt etwas im Katalog, sagt der Bot das klar — er improvisiert nicht.",
+        badge: "3",
+        title: "Ab da antwortet er von allein",
+        desc: "Jede Antwort entsteht aus Ihren Einträgen, nichts wird erfunden. Sie pflegen den Katalog, wenn sich etwas ändert; der Rest passiert, ohne dass jemand etwas tun muss.",
       },
     ],
-    whatTitle: "Die Fragen, die",
-    whatAccent: "heute am Schalter ankommen.",
-    whatSub: "Dieselben, die euer Büro per Telefon oder am Schalter erhält — nur dass sie jetzt zu jeder Zeit, in jeder Sprache ankommen.",
+    whatTitle: "Die Fragen,",
+    whatAccent: "die heute am Schalter ankommen.",
+    whatSub:
+      "Genau dieselben, die Ihr Büro am Telefon oder am Schalter bekommt — nur dass sie zu jeder Uhrzeit und in jeder Sprache eintreffen.",
     capabilities: [
       {
         icon: "🎪",
         title: "Veranstaltungen und Feste",
-        desc: "Dorffeste, Kirchweihfeste, lokale Märkte — mit aktuellen Daten und Zeiten, nie ein zwei Saisons alter Kalender.",
+        desc: "Dorffeste, Patronatsfeste, lokale Märkte — mit aktuellen Daten und Uhrzeiten, nie ein Kalender von vor zwei Saisonen.",
       },
       {
         icon: "🏡",
         title: "Unterkünfte und Verfügbarkeit",
-        desc: "Wohnungen, B&Bs, Hütten: Merkmale, Kapazität, Kontakte — wer eine Unterkunft sucht, findet den richtigen Eintrag, keine bloße Liste.",
+        desc: "Ferienwohnungen, Pensionen, Hütten: Ausstattung, Kapazität, Kontakte — wer eine Unterkunft sucht, findet den passenden Eintrag, keine Liste.",
       },
       {
         icon: "🍽️",
-        title: "Restaurants und lokale Spezialitäten",
-        desc: "Typische Gerichte, Allergene, wer heute Abend offen hat — auch spezifischere Fragen wie \"gibt es glutenfreie Optionen\".",
+        title: "Restaurants und regionale Küche",
+        desc: "Typische Gerichte, Allergene, wer heute Abend geöffnet hat — auch die konkreteren Fragen, etwa \"gibt es etwas Glutenfreies\".",
       },
       {
         icon: "🥾",
         title: "Wanderwege und Outdoor-Aktivitäten",
-        desc: "Länge, Höhenunterschied, Schwierigkeit: Informationen, die heute auf einem Flyer landen, werden zu einer sofortigen Antwort.",
+        desc: "Länge, Höhenmeter, Schwierigkeit: Informationen, die heute auf einem Flyer landen, werden zur sofortigen Antwort.",
       },
       {
         icon: "🌍",
-        title: "Mehrere Sprachen, keine manuelle Übersetzung",
-        desc: "Ein deutscher und ein spanischer Gast können im selben Chat schreiben: jeder erhält eine Antwort in seiner Sprache, aus demselben Katalog.",
+        title: "Mehrere Sprachen, ohne Handübersetzung",
+        desc: "Ein deutscher und ein spanischer Gast können im selben Chat schreiben: Jeder bekommt die Antwort in seiner Sprache, aus demselben Katalog.",
       },
       {
         icon: "✅",
-        title: "Erfindet nichts, was er nicht weiß",
-        desc: "Fällt eine Frage außerhalb des Katalogs, sagt der Bot das klar — besser \"weiß ich nicht\" als eine falsche Information an einen Gast.",
+        title: "Er erfindet nichts, was er nicht weiß",
+        desc: "Fällt eine Frage aus dem Katalog heraus, sagt der Bot das klar — lieber ein \"weiß ich nicht\" als eine falsche Auskunft an einen Gast.",
       },
     ],
-    pushTitle: "Er antwortet nicht nur.",
-    pushAccent: "Er weiß auch, wann er zuerst schreiben soll.",
+    pushTitle: "Und wenn es darauf ankommt,",
+    pushAccent: "schreibt er von sich aus.",
     pushSub:
-      "Neben dem Antworten kann das System Gäste, die bereits im Chat sind, informieren, wenn etwas Relevantes passiert — ohne je der Grund zu sein, warum jemand eure Benachrichtigungen stummschaltet.",
+      "Ein normaler Chatbot wartet. Dieser nicht: Wenn etwas passiert, das Leute betrifft, die Ihnen schon geschrieben haben — eine neue Veranstaltung, ein näher rückendes Datum, ein wegen Regen verschobenes Fest — geht die Nachricht von selbst raus. Und bevor sie rausgeht, prüft sie, ob es nicht schon gesagt wurde.",
     pushSteps: [
       {
-        badge: "Wann es auslöst",
-        title: "Eine neue Veranstaltung, ein frei werdender Platz",
-        desc: "Eine neue Veranstaltung wird veröffentlicht, ein Termin rückt näher, eine Unterkunft wird als \"letzte Plätze\" markiert: die Nachricht geht automatisch an passende Gäste, die bereits mit euch gechattet haben.",
+        badge: "Was ihn auslöst",
+        title: "Es passiert etwas, das jemanden betrifft",
+        desc: "Sie veröffentlichen eine neue Veranstaltung, ein Datum rückt näher, eine Unterkunft meldet letzte Plätze: Die Nachricht geht an alle, die Ihnen schon geschrieben haben und infrage kommen. Niemand im Büro muss etwas anklicken.",
       },
       {
-        badge: "Was es stoppt",
-        title: "Eine Prüfung vor dem Versand",
-        desc: "Vor dem Versand prüft das System, was dieser Gast in den letzten Tagen bereits erhalten hat. Hat eine andere Initiative dasselbe schon gemeldet, wird die zweite Nachricht nie verschickt.",
+        badge: "Was ihn stoppt",
+        title: "Eine Prüfung vor jedem Versand",
+        desc: "Vor dem Senden schaut das System nach, was diese Person in den letzten Tagen schon bekommen hat. Hat eine andere Kampagne dasselbe bereits gemeldet, geht die zweite Nachricht nicht raus.",
       },
       {
         badge: "Warum das zählt",
-        title: "Null Aufwand, null Ärger",
-        desc: "Niemand im Büro muss sich merken \"das haben wir schon geschrieben\": die Prüfung läuft automatisch, und niemand fühlt sich je mit Duplikaten überflutet.",
+        title: "Niemand fühlt sich überflutet",
+        desc: "Das ist der Unterschied zwischen einem nützlichen Hinweis und dem Spam, der dazu führt, dass der Chat stummgeschaltet wird. Die Prüfung läuft automatisch: Niemand muss sich merken, \"dem haben wir es schon geschrieben\".",
       },
     ],
-    pushBoardTitle: "Tourismusbüro",
-    pushBoardStatus: "Ausgehende Nachricht, unaufgefordert",
-    pushFirstTag: "Kampagne: Wochenendveranstaltungen",
-    pushFirstText: "Hallo! Am Sonntag ist das Herbstfest auf dem Platz, ab 9:00 Uhr — das könnte euch interessieren.",
-    pushGuardTag: "Kampagne: Marktnewsletter — blockiert",
+    pushBoardTitle: "Tourist-Information",
+    pushBoardStatus: "ausgehende Nachricht",
+    pushFirstTag: "Kampagne: Veranstaltungen am Wochenende",
+    pushFirstText: "Hallo! Am Sonntag ist ab 9:00 Uhr der Herbstmarkt auf dem Platz — wir dachten, das könnte Sie interessieren.",
+    pushGuardTag: "Kampagne: Markt-Newsletter",
     pushGuardText:
-      "Dasselbe Fest wurde bereits vor 3 Tagen von einer anderen Initiative gemeldet: Versand automatisch abgebrochen, der Gast erhält kein Duplikat.",
+      "Derselbe Markt wurde vor 3 Tagen bereits von einer anderen Kampagne gemeldet: Versand automatisch abgebrochen, der Gast bekommt keine Dopplung.",
+    pushLabelSent: "gesendet",
+    pushLabelBlocked: "vor dem Versand gestoppt",
+    metricsTitle: "Was sich ändert",
+    metricsAccent: "für alle am Schalter.",
+    metrics: [
+      {
+        value: "24/7",
+        label: "Immer geöffnet",
+        desc: "Fragen kommen abends, am Wochenende und in der Hochsaison. Die Antwort kommt trotzdem.",
+      },
+      {
+        value: "4+",
+        label: "Sprachen im selben Chat",
+        desc: "Italienisch, Englisch, Deutsch, Spanisch: Jeder schreibt in seiner Sprache und bekommt Antwort in seiner Sprache.",
+      },
+      {
+        value: "1",
+        label: "Katalog zu pflegen",
+        desc: "Ein geänderter Eintrag gilt für alle Sprachen und alle Antworten, im selben Moment.",
+      },
+      {
+        value: "0",
+        label: "Apps zum Herunterladen",
+        desc: "Gäste nutzen WhatsApp, das sie schon auf dem Handy haben. Keine Registrierung, kein Download.",
+      },
+    ],
     tryTitle: "Drei echte Gespräche,",
-    tryAccent: "kein Slogan.",
-    trySub: "Wählt eine typische Frage und seht genau, was der Bot antworten würde — derselbe Mechanismus, den eure Gäste sehen würden.",
+    tryAccent: "kein Werbespruch.",
+    trySub:
+      "Wählen Sie eine typische Frage und sehen Sie genau, was der Bot antworten würde — derselbe Ablauf, den Ihre Gäste sehen würden.",
+    tryReplay: "Gespräch erneut ansehen",
     scenarios: [
       {
         title: "Was ist dieses Wochenende los",
@@ -753,13 +1160,13 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
           {
             role: "bot",
             tag: "aus dem Veranstaltungskatalog",
-            text: "Dieses Wochenende: Samstag Handwerksmarkt (10–19 Uhr) und Musikabend (20:30 Uhr); Sonntag geführte Wanderung zur Hütte, Treffpunkt 9 Uhr.",
+            text: "Dieses Wochenende: Samstag Handwerkermarkt auf dem Platz (10:00–19:00 Uhr) und Musikabend (20:30 Uhr); Sonntag geführte Wanderung zur Hütte, Treffpunkt um 9:00 Uhr.",
           },
           { role: "guest", text: "Ist die Wanderung für Kinder geeignet?" },
           {
             role: "bot",
             tag: "aus dem Veranstaltungskatalog",
-            text: "Ja, sie ist als leichte, familienfreundliche Route markiert: ca. 2 Stunden, geringer Höhenunterschied, Treffpunkt am Hüttenparkplatz.",
+            text: "Ja, es ist ein leichter, familienfreundlicher Weg: etwa 2 Stunden, wenig Höhenunterschied, Treffpunkt am Parkplatz der Hütte.",
           },
         ],
       },
@@ -771,18 +1178,18 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
           {
             role: "bot",
             tag: "aus dem Unterkunftskatalog",
-            text: "Ich habe zwei Optionen für 4 Personen: eine zentrale Wohnung mit Küche und Balkon, oder ein B&B 5 Minuten vom Dorf entfernt. Lieber zentral?",
+            text: "Ich habe zwei Möglichkeiten für 4 Personen: eine Ferienwohnung im Zentrum mit Küche und Balkon, und eine Pension 5 Minuten außerhalb des Ortes. Lieber im Zentrum?",
           },
-          { role: "guest", text: "Lieber zentral, und in der Nähe eines Parkplatzes" },
+          { role: "guest", text: "Lieber im Zentrum, und in der Nähe eines Parkplatzes" },
           {
             role: "bot",
             tag: "aus dem Unterkunftskatalog",
-            text: "Die zentrale Wohnung hat einen Parkplatz inklusive. Ich gebe euch den direkten Kontakt der Vermieterin für die Terminprüfung.",
+            text: "Die Wohnung im Zentrum hat einen Stellplatz inklusive. Ich gebe Ihnen den direkten Kontakt der Eigentümerin, um die Termine zu prüfen.",
           },
         ],
       },
       {
-        title: "Ausländischer Gast, leichter Wanderweg",
+        title: "Gast aus dem Ausland, leichter Weg",
         rule: "Katalog → Outdoor · Spracherkennung",
         script: [
           { role: "guest", text: "Hallo, wir suchen einen leichten Wanderweg für morgen" },
@@ -800,7 +1207,35 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         ],
       },
     ],
-    ctaTitle: "Lasst uns über eure Destination sprechen",
-    ctaDesc: "Ein 20-minütiges Gespräch, um zu verstehen, was ihr schon habt und was es braucht, um es auf WhatsApp zu bringen.",
+    faqTitle: "Die Fragen,",
+    faqAccent: "die uns immer gestellt werden.",
+    faqItems: [
+      {
+        q: "Brauchen wir eine neue WhatsApp-Nummer?",
+        a: "Nein, Sie können die Nummer nutzen, die Sie schon haben — solange sie nicht mit der WhatsApp-App auf einem Handy verknüpft ist. Wenn Sie die Büronummer lieber getrennt halten, richten wir eine eigene ein: Sie entscheiden.",
+      },
+      {
+        q: "Wer pflegt die Informationen?",
+        a: "Sie selbst, über ein Panel, das sich wie eine Tabelle bedienen lässt: Eintrag öffnen, Uhrzeit ändern, speichern. Niemand muss Code anfassen, und für eine Änderung müssen Sie uns nicht anrufen.",
+      },
+      {
+        q: "Und wenn der Bot nicht antworten kann?",
+        a: "Dann sagt er es, statt etwas zu erfinden. Fällt die Frage aus dem Katalog heraus — oder bittet die Person ausdrücklich um einen Menschen — geht das Gespräch an eine echte Mitarbeiterin, die es sieht und aus dem Panel antwortet.",
+      },
+      {
+        q: "Wie lange dauert es bis zum Start?",
+        a: "Das hängt fast nur davon ab, wie viel Material Sie schon fertig haben. Mit einer Liste von Veranstaltungen und Betrieben zum Importieren starten Sie in wenigen Tagen; muss der Katalog von Grund auf entstehen, rechnen Sie mit einigen Wochen Datenerfassung.",
+      },
+      {
+        q: "Wo landen die Daten der Gäste?",
+        a: "Sie bleiben Ihre. Kontakte und Gespräche liegen in Ihrem eigenen Bereich, getrennt von denen jeder anderen Organisation, und die Verarbeitung ist DSGVO-konform. Sie werden weder zum Training von Modellen genutzt noch an Dritte weitergegeben.",
+      },
+      {
+        q: "Funktioniert das auch, wenn wir keine Bergdestination sind?",
+        a: "Ja. Der Bot weiß nichts über Berge im Besonderen: Er weiß, was in Ihrem Katalog steht. Meer, Kunststadt, See oder Dorf ändern die Einträge, nicht die Funktionsweise.",
+      },
+    ],
+    ctaTitle: "Sprechen wir über Ihre Destination",
+    ctaDesc: "Ein 20-minütiges Gespräch, um zu verstehen, was Sie schon haben und was es braucht, um es auf WhatsApp zu bringen.",
   },
 }

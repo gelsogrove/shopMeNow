@@ -2,7 +2,8 @@
  * Tourist INDEX cards — one synthetic FAQ entry per catalogue category.
  *
  * WHAT: for each non-empty tourist table (events, restaurants, hotels,
- * excursions, refuges, sports facilities, ski facilities) this builds ONE
+ * excursions, refuges, sports facilities, ski facilities, churches, castles,
+ * viewpoints, venues) this builds ONE
  * entry whose question is the bare category label and whose answer lists
  * every row with all of its short fields — every DB field except the long
  * `description` prose, which stays in the per-row detail card.
@@ -182,6 +183,38 @@ export interface TouristIndexInput {
     location?: string | null
     link?: string | null
   }>
+  churches: Array<{
+    name: string
+    century?: string | null
+    style?: string | null
+    location?: string | null
+    phone?: string | null
+    link?: string | null
+  }>
+  castles: Array<{
+    name: string
+    century?: string | null
+    visitInfo?: string | null
+    location?: string | null
+    phone?: string | null
+    link?: string | null
+  }>
+  viewpoints: Array<{
+    name: string
+    altitude?: number | null
+    access?: string | null
+    difficulty?: string | null
+    location?: string | null
+    link?: string | null
+  }>
+  venues: Array<{
+    name: string
+    venueType?: string | null
+    openingHours?: string | null
+    location?: string | null
+    phone?: string | null
+    link?: string | null
+  }>
 }
 
 export function buildTouristIndexCards(
@@ -292,6 +325,66 @@ export function buildTouristIndexCards(
           fact("Tipo di pista", s.slopeType),
           fact("Località", s.location),
           s.link ?? null,
+        ])
+      ),
+      i18n
+    ),
+    ...indexCards(
+      "churches",
+      "Chiese",
+      content.churches.map((c) =>
+        joinFacts([
+          c.name,
+          fact("Epoca", c.century),
+          fact("Stile", c.style),
+          fact("Località", c.location),
+          fact("Tel", c.phone),
+          c.link ?? null,
+        ])
+      ),
+      i18n
+    ),
+    ...indexCards(
+      "castles",
+      "Castelli",
+      content.castles.map((c) =>
+        joinFacts([
+          c.name,
+          fact("Epoca", c.century),
+          fact("Visite", c.visitInfo),
+          fact("Località", c.location),
+          fact("Tel", c.phone),
+          c.link ?? null,
+        ])
+      ),
+      i18n
+    ),
+    ...indexCards(
+      "viewpoints",
+      "Punti panoramici",
+      content.viewpoints.map((v) =>
+        joinFacts([
+          v.name,
+          fact("Quota", v.altitude ? `${v.altitude} m` : null),
+          fact("Accesso", v.access),
+          fact("Difficoltà", v.difficulty),
+          fact("Località", v.location),
+          v.link ?? null,
+        ])
+      ),
+      i18n
+    ),
+    ...indexCards(
+      "venues",
+      "Locali",
+      content.venues.map((v) =>
+        joinFacts([
+          v.name,
+          fact("Tipo", v.venueType),
+          fact("Orari", v.openingHours),
+          fact("Località", v.location),
+          fact("Tel", v.phone),
+          v.link ?? null,
         ])
       ),
       i18n

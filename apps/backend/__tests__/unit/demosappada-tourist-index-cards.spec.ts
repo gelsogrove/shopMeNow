@@ -33,6 +33,10 @@ const emptyContent = () => ({
   events: [],
   sportsFacilities: [],
   skiFacilities: [],
+  churches: [],
+  castles: [],
+  viewpoints: [],
+  venues: [],
 })
 
 describe("buildTouristIndexCards — card content", () => {
@@ -116,6 +120,112 @@ describe("buildTouristIndexCards — card content", () => {
     // The false flag must NOT mark Ai Larici as celiac-friendly.
     const lariciLine = answer.split("\n").find((l) => l.includes("Ai Larici"))!
     expect(lariciLine).not.toContain("celiaci")
+  })
+})
+
+describe("buildTouristIndexCards — churches, castles, viewpoints, venues", () => {
+  // WHAT: the four categories Andrea added on 2026-09-14 ("per la proloco
+  // dobbiamo aggiungere delle categorie: chiese, castelli, punti panoramici,
+  // locali"). They go through exactly the same index-card mechanism as the
+  // original seven, so these specs lock the two things that are specific to
+  // them: the Italian category label used as the bare question, and that
+  // every short field of a row reaches the answer.
+  //
+  // WHY it matters: without an index card, "che chiese posso visitare?"
+  // cannot be answered — the word "chiese" is in EVERY church detail card, so
+  // its IDF weight tends to zero and no detail card wins on a generic
+  // question. This is the same failure that hid the whole events calendar
+  // from the bot on 2026-09-01.
+
+  it("uses the Italian category labels as the bare questions", () => {
+    const cards = buildTouristIndexCards({
+      ...emptyContent(),
+      churches: [{ name: "Chiesa di Santa Margherita" }],
+      castles: [{ name: "Forte di Monte Ricco" }],
+      viewpoints: [{ name: "Sorgenti del Piave" }],
+      venues: [{ name: "Bar Nardi" }],
+    })
+    // Order follows buildTouristIndexCards' own category order.
+    expect(cards.map((c) => c.question)).toEqual([
+      "Chiese",
+      "Castelli",
+      "Punti panoramici",
+      "Locali",
+    ])
+  })
+
+  it("a church line carries all its short fields", () => {
+    const [card] = buildTouristIndexCards({
+      ...emptyContent(),
+      churches: [
+        {
+          name: "Chiesa di Santa Margherita",
+          century: "1777-1779",
+          style: "barocco",
+          location: "Borgata Granvilla",
+          phone: "0435 469131",
+          link: "https://example.com/margherita",
+        },
+      ],
+    })
+    expect(card.question).toBe("Chiese")
+    expect(card.answer).toContain("Chiesa di Santa Margherita")
+    expect(card.answer).toContain("Epoca: 1777-1779")
+    expect(card.answer).toContain("Stile: barocco")
+    expect(card.answer).toContain("Località: Borgata Granvilla")
+    expect(card.answer).toContain("Tel: 0435 469131")
+    expect(card.answer).toContain("https://example.com/margherita")
+  })
+
+  it("a viewpoint line renders altitude with its unit", () => {
+    // altitude is the one numeric field among the four new categories: it is
+    // stored as Int so the LLM can compare heights, but must reach the card
+    // as prose with the unit attached.
+    const [card] = buildTouristIndexCards({
+      ...emptyContent(),
+      viewpoints: [
+        {
+          name: "Sorgenti del Piave",
+          altitude: 1830,
+          access: "in auto",
+          difficulty: "facile",
+          location: "Val Sesis",
+        },
+      ],
+    })
+    expect(card.answer).toContain("Quota: 1830 m")
+    expect(card.answer).toContain("Accesso: in auto")
+    expect(card.answer).toContain("Difficoltà: facile")
+  })
+
+  it("a venue line carries the venue type, which is what wins retrieval", () => {
+    const [card] = buildTouristIndexCards({
+      ...emptyContent(),
+      venues: [
+        {
+          name: "Enoteca da Franz",
+          venueType: "enoteca",
+          openingHours: "17:00-24:00",
+          location: "Borgata Cottern",
+          phone: "0435 469379",
+        },
+      ],
+    })
+    expect(card.question).toBe("Locali")
+    expect(card.answer).toContain("Enoteca da Franz")
+    expect(card.answer).toContain("Tipo: enoteca")
+    expect(card.answer).toContain("Orari: 17:00-24:00")
+    expect(card.answer).toContain("Tel: 0435 469379")
+  })
+
+  it("builds no card for a category with no rows", () => {
+    // An empty category must stay silent rather than produce an empty list —
+    // same rule as every other category (an empty list is not a fact).
+    const cards = buildTouristIndexCards({
+      ...emptyContent(),
+      churches: [{ name: "Chiesa di Sant'Osvaldo" }],
+    })
+    expect(cards.map((c) => c.question)).toEqual(["Chiese"])
   })
 })
 

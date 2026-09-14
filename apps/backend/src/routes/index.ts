@@ -116,6 +116,10 @@ import { touristApartmentsRouter } from "../interfaces/http/routes/tourist-apart
 import { touristEventsRouter } from "../interfaces/http/routes/tourist-events.routes"
 import { touristSportsFacilitiesRouter } from "../interfaces/http/routes/tourist-sports-facilities.routes"
 import { touristSkiFacilitiesRouter } from "../interfaces/http/routes/tourist-ski-facilities.routes"
+import { touristChurchesRouter } from "../interfaces/http/routes/tourist-churches.routes"
+import { touristCastlesRouter } from "../interfaces/http/routes/tourist-castles.routes"
+import { touristViewpointsRouter } from "../interfaces/http/routes/tourist-viewpoints.routes"
+import { touristVenuesRouter } from "../interfaces/http/routes/tourist-venues.routes"
 import { merchantsRouter } from "../interfaces/http/routes/merchants.routes"
 import { publicMerchantPushPhotosRouter } from "../interfaces/http/routes/public-merchant-push-photos.routes"
 import { publicCampaignMediaRouter } from "../interfaces/http/routes/public-campaign-media.routes"
@@ -864,6 +868,16 @@ router.use(
   "/workspaces/:workspaceId/tourist-ski-facilities",
   touristSkiFacilitiesRouter()
 )
+// Andrea, 2026-09-14: "per la proloco dobbiamo aggiungere delle categorie:
+// chiese, castelli, punti panoramici, locali" — four more tourist content
+// categories, same router shape as the ones above.
+router.use("/workspaces/:workspaceId/tourist-churches", touristChurchesRouter())
+router.use("/workspaces/:workspaceId/tourist-castles", touristCastlesRouter())
+router.use(
+  "/workspaces/:workspaceId/tourist-viewpoints",
+  touristViewpointsRouter()
+)
+router.use("/workspaces/:workspaceId/tourist-venues", touristVenuesRouter())
 router.use("/workspaces/:workspaceId/tourist-photos", touristPhotosRouter())
 logger.info("Registered PRO_LOCO tourist content routers with workspace routes")
 router.use("/geocoding", geocodingRouter())

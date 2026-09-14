@@ -162,6 +162,10 @@ export type {
   TouristEvent,
   TouristSportsFacility,
   TouristSkiFacility,
+  TouristChurch,
+  TouristCastle,
+  TouristViewpoint,
+  TouristVenue,
   TouristPhoto,
   // Merchant advertising (esercenti) types
   Merchant,

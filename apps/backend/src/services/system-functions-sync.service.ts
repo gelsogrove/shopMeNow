@@ -13,9 +13,7 @@
 import { PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 import {
-  ALWAYS_AVAILABLE_FUNCTIONS,
-  APPOINTMENT_FUNCTIONS,
-  ECOMMERCE_FUNCTIONS,
+  systemFunctionsFor,
   SystemFunctionDef,
 } from "../constants/system-functions"
 
@@ -37,18 +35,13 @@ export async function syncSystemFunctionsOnStartup(prisma: PrismaClient): Promis
     let totalCreated = 0
 
     for (const workspace of workspaces) {
-      // Always-available functions (changeLanguage, customerSupportAgent, etc.)
-      const functionsToSync: SystemFunctionDef[] = [...ALWAYS_AVAILABLE_FUNCTIONS]
-
-      // E-commerce functions if workspace is in ecommerce mode
-      if (workspace.channelMode === "ECOMMERCE") {
-        functionsToSync.push(...ECOMMERCE_FUNCTIONS)
-      }
-
-      // Appointment functions if calendar is enabled
-      if (workspace.enableCalendarBooking) {
-        functionsToSync.push(...APPOINTMENT_FUNCTIONS)
-      }
+      // Which defaults this workspace should have, decided in ONE place so
+      // that startup and creation cannot disagree (they used to: creation
+      // seeded the appointment tools unconditionally, this sync did not).
+      const functionsToSync: SystemFunctionDef[] = systemFunctionsFor(
+        workspace.channelMode,
+        workspace.enableCalendarBooking ?? false
+      )
 
       for (const fnDef of functionsToSync) {
         try {

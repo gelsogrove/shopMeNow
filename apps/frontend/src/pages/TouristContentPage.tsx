@@ -11,17 +11,25 @@ import { touristRefugeApi } from "@/services/touristRefugeApi"
 import { touristEventApi } from "@/services/touristEventApi"
 import { touristSportsFacilityApi } from "@/services/touristSportsFacilityApi"
 import { touristSkiFacilityApi } from "@/services/touristSkiFacilityApi"
+import { touristChurchApi } from "@/services/touristChurchApi"
+import { touristCastleApi } from "@/services/touristCastleApi"
+import { touristViewpointApi } from "@/services/touristViewpointApi"
+import { touristVenueApi } from "@/services/touristVenueApi"
 import { faqApi } from "@/services/faqApi"
 import { flowApi } from "@/services/flowBuilderApi"
 import {
+  Beer,
   Building2,
   CableCar,
   CalendarDays,
+  Castle,
+  Church,
   ChevronRight,
   Dumbbell,
   HelpCircle,
   Home,
   Mountain,
+  MountainSnow,
   Search,
   Utensils,
   Workflow,
@@ -120,6 +128,46 @@ const CATEGORIES: CategoryCard[] = [
     iconBg: "bg-sky-100",
     iconColor: "text-sky-600",
   },
+  // Andrea 2026-09-14 ("per la proloco dobbiamo aggiungere delle categorie:
+  // chiese, castelli, punti panoramici, locali"): four more categories, same
+  // shape as the ones above. "Locali" is bars/pubs/cafés — full restaurants
+  // stay in Ristoranti.
+  {
+    key: "churches",
+    title: "Chiese",
+    description: "Churches, chapels and religious buildings",
+    route: "/tourist-churches",
+    icon: Church,
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+  },
+  {
+    key: "castles",
+    title: "Castelli",
+    description: "Castles and fortresses, including nearby day trips",
+    route: "/tourist-castles",
+    icon: Castle,
+    iconBg: "bg-stone-100",
+    iconColor: "text-stone-600",
+  },
+  {
+    key: "viewpoints",
+    title: "Punti panoramici",
+    description: "Scenic viewpoints, belvederes and natural landmarks",
+    route: "/tourist-viewpoints",
+    icon: MountainSnow,
+    iconBg: "bg-cyan-100",
+    iconColor: "text-cyan-600",
+  },
+  {
+    key: "venues",
+    title: "Locali",
+    description: "Bars, pubs, cafes and nightlife",
+    route: "/tourist-venues",
+    icon: Beer,
+    iconBg: "bg-orange-100",
+    iconColor: "text-orange-500",
+  },
   // Andrea 2026-08-31 ("FAQ METTILO DENTRO CONTENT"): for PRO_LOCO the FAQs
   // entry moved from the Settings dropdown into this hub as one more card.
   {
@@ -168,7 +216,7 @@ export function TouristContentPage() {
     const loadContent = async () => {
       if (!workspace?.id) return
       try {
-        const [restaurants, hotels, excursions, refuges, events, sportsFacilities, skiFacilities, faqs, flows] = await Promise.all([
+        const [restaurants, hotels, excursions, refuges, events, sportsFacilities, skiFacilities, churches, castles, viewpoints, venues, faqs, flows] = await Promise.all([
           touristRestaurantApi.getTouristRestaurants(workspace.id),
           touristHotelApi.getTouristHotels(workspace.id),
           touristExcursionApi.getTouristExcursions(workspace.id),
@@ -176,6 +224,10 @@ export function TouristContentPage() {
           touristEventApi.getTouristEvents(workspace.id),
           touristSportsFacilityApi.getTouristSportsFacilities(workspace.id),
           touristSkiFacilityApi.getTouristSkiFacilities(workspace.id),
+          touristChurchApi.getTouristChurches(workspace.id),
+          touristCastleApi.getTouristCastles(workspace.id),
+          touristViewpointApi.getTouristViewpoints(workspace.id),
+          touristVenueApi.getTouristVenues(workspace.id),
           faqApi.getFAQs(workspace.id),
           flowApi.listAll(workspace.id),
         ])
@@ -187,6 +239,10 @@ export function TouristContentPage() {
           events: events.length,
           sportsFacilities: sportsFacilities.length,
           skiFacilities: skiFacilities.length,
+          churches: churches.length,
+          castles: castles.length,
+          viewpoints: viewpoints.length,
+          venues: venues.length,
           faqs: faqs.length,
           flows: flows.length,
         })
@@ -239,6 +295,34 @@ export function TouristContentPage() {
             snippet: sk.description ?? sk.slopeType ?? undefined,
             categoryKey: "skiFacilities",
             editPath: `/tourist-ski-facilities?edit=${sk.id}`,
+          })),
+          ...churches.map((c) => ({
+            id: c.id,
+            label: c.name,
+            snippet: c.description ?? c.century ?? undefined,
+            categoryKey: "churches",
+            editPath: `/tourist-churches?edit=${c.id}`,
+          })),
+          ...castles.map((c) => ({
+            id: c.id,
+            label: c.name,
+            snippet: c.description ?? c.century ?? undefined,
+            categoryKey: "castles",
+            editPath: `/tourist-castles?edit=${c.id}`,
+          })),
+          ...viewpoints.map((v) => ({
+            id: v.id,
+            label: v.name,
+            snippet: v.description ?? v.access ?? undefined,
+            categoryKey: "viewpoints",
+            editPath: `/tourist-viewpoints?edit=${v.id}`,
+          })),
+          ...venues.map((v) => ({
+            id: v.id,
+            label: v.name,
+            snippet: v.description ?? v.venueType ?? undefined,
+            categoryKey: "venues",
+            editPath: `/tourist-venues?edit=${v.id}`,
           })),
           ...faqs.map((f) => ({
             id: f.id,

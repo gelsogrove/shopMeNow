@@ -56,11 +56,27 @@ export const publicTouristPhotosRouter = (): Router => {
       // Stored as either a full data URI (data:image/png;base64,...) or raw
       // base64. The data URI carries its own mime type; raw defaults to jpeg.
       const dataUriMatch = photo.imageBase64.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i)
-      const mimeType = dataUriMatch ? dataUriMatch[1] : "image/jpeg"
+      const declaredMime = dataUriMatch ? dataUriMatch[1].toLowerCase() : "image/jpeg"
       const base64 = dataUriMatch ? dataUriMatch[2] : photo.imageBase64
 
+      // Serve only mime types this endpoint is willing to vouch for, even
+      // though tourist-photo.service.ts now allow-lists them on the way in:
+      // rows written before that validation existed are still in the DB, and
+      // this response is unauthenticated and same-origin. Anything else
+      // (notably image/svg+xml, which can carry <script>) is downgraded to an
+      // opaque download rather than rendered by the browser.
+      const RENDERABLE = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]
+      const isRenderable = RENDERABLE.includes(declaredMime)
+
       const bytes = Buffer.from(base64, "base64")
-      res.setHeader("Content-Type", mimeType)
+      res.setHeader("Content-Type", isRenderable ? declaredMime : "application/octet-stream")
+      if (!isRenderable) {
+        res.setHeader("Content-Disposition", "attachment")
+      }
+      // Defence in depth: this origin also serves the API, so make sure a
+      // stored payload can never be sniffed into an executable type.
+      res.setHeader("X-Content-Type-Options", "nosniff")
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox")
       res.setHeader("Cache-Control", "public, max-age=86400")
       return res.send(bytes)
     } catch (error) {

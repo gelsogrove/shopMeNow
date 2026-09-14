@@ -98,6 +98,10 @@ export function CallingFunctionsSection({
     const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
     const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
     const [loading, setLoading] = useState(true)
+    // Filters for the unified tool list: which origin, and whether to hide the
+    // ones that are switched off.
+    const [originFilter, setOriginFilter] = useState<"all" | "builtin" | "default" | "custom">("all")
+    const [showActiveOnly, setShowActiveOnly] = useState(false)
     const [testingToolWebhook, setTestingToolWebhook] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -330,10 +334,48 @@ export function CallingFunctionsSection({
         toggleFunctionStatus(fn)
     }
 
-    // The module's own tools and the tenant's are the same kind of row and are
-    // edited the same way; they are split here only so each lands in its own card.
-    const builtInFunctions = functions.filter(f => f.moduleBuiltIn)
-    const customFunctions = functions.filter(f => !f.moduleBuiltIn)
+    /**
+     * Where a tool came from. Three origins existed all along but the UI only
+     * showed one of them, so an admin could not tell a tool shipped by the
+     * chatbot module from a platform default from something they added
+     * themselves (Andrea, 2026-09-14: "non so se sono tutte attive ... con
+     * questa UI non capisco nulla").
+     */
+    const originOf = (fn: CallingFunction): "builtin" | "default" | "custom" =>
+        fn.moduleBuiltIn ? "builtin" : fn.isSystemFunction ? "default" : "custom"
+
+    const ORIGIN_CONFIG = {
+        builtin: {
+            label: "Built-in",
+            className: "bg-violet-50 text-violet-700 border border-violet-200",
+            help: "Shipped with this chatbot module. Name and parameters are fixed by its code.",
+        },
+        default: {
+            label: "Default",
+            className: "bg-slate-100 text-slate-600 border border-slate-200",
+            help: "Included with every workspace of this type.",
+        },
+        custom: {
+            label: "Custom",
+            className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+            help: "Added by you for this workspace.",
+        },
+    } as const
+
+    // One list, filtered — instead of three cards that hid which tools were on.
+    const visibleFunctions = functions
+        .filter(f => originFilter === "all" || originOf(f) === originFilter)
+        .filter(f => !showActiveOnly || f.isActive)
+        .sort((a, b) => {
+            // Off first: the whole point of the page is spotting what is off.
+            if (a.isActive !== b.isActive) return a.isActive ? 1 : -1
+            const rank = { builtin: 0, default: 1, custom: 2 } as const
+            const byOrigin = rank[originOf(a)] - rank[originOf(b)]
+            return byOrigin !== 0 ? byOrigin : a.functionName.localeCompare(b.functionName)
+        })
+
+    const activeCount = functions.filter(f => f.isActive).length
+    const offCount = functions.length - activeCount
 
     return (
         <div className="space-y-6">
@@ -351,148 +393,159 @@ export function CallingFunctionsSection({
                 {/* F50: Agent Configuration CTA permanently hidden (Visual Flow Builder deprecated). */}
             </div>
 
-            {/* Built-in tools — the chatbot module's own, seeded as editable rows
-                from its tools.manifest.ts. Switchable and re-describable here;
-                their name and parameters belong to the module's code. */}
-            {builtInFunctions.length > 0 && (
-                <Card>
-                    <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
-                        <CardTitle className="text-base font-semibold flex items-center gap-2">
-                            <Wrench className="h-5 w-5 text-slate-500" />
-                            Built-in Tools
-                        </CardTitle>
-                        <p className="text-sm text-gray-500">
-                            Shipped with this chatbot module. Switch them on or off and edit what they tell
-                            the AI — their name and parameters are fixed by the module's code.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="p-0 divide-y">
-                        {builtInFunctions.map((fn) => (
-                            <div key={fn.id} className="p-4 flex items-start justify-between gap-3 group hover:bg-slate-50 transition-colors">
-                                <div className="flex items-start gap-3 min-w-0">
-                                    <div className={cn(
-                                        "mt-1 p-2 rounded-lg",
-                                        fn.isActive ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"
-                                    )}>
-                                        <Wrench className="h-4 w-4" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <code className="text-sm font-semibold text-gray-900">{fn.functionName}</code>
-                                            <Badge variant="outline" className="text-xs">Built-in</Badge>
-                                            {!fn.isActive && (
-                                                <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Off</span>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-gray-500 mt-1">{fn.description}</p>
-                                    </div>
-                                </div>
-                                {canEdit && (
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <Switch
-                                            checked={fn.isActive}
-                                            onCheckedChange={() => requestBuiltInToggle(fn)}
-                                            className="scale-75"
-                                        />
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
-                                            <Edit2 className="h-4 w-4" />
-                                        </Button>
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleReinstall(fn.functionName)} className="text-teal-500 hover:text-teal-700 hover:bg-teal-50">
-                                                        <RefreshCw className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="left">
-                                                    <p>Restore the module's original description</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Functions List Card */}
+            {/* ── Tools: ONE list ──────────────────────────────────────────
+                Previously three cards (built-in / "Available" / missing) split
+                the same entity by origin, so the question an admin actually
+                asks — "what is switched on right now?" — could not be answered
+                without reading all three. Now: one list, origin as a badge,
+                the off ones first, filters on top. */}
             <Card>
-                <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-white flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="text-base font-semibold flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-amber-500" />
-                            Available Tools
-                        </CardTitle>
-                        <p className="text-sm text-gray-500">
-                            Actions the chatbot can perform on your systems during a chat
-                        </p>
+                <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                <Zap className="h-5 w-5 text-amber-500" />
+                                Tools
+                                <span className="text-sm font-normal text-gray-500">
+                                    ({activeCount} on{offCount > 0 ? `, ${offCount} off` : ""})
+                                </span>
+                            </CardTitle>
+                            <p className="text-sm text-gray-500">
+                                Everything the chatbot can do during a chat. Switch a tool off and the
+                                AI stops being offered it.
+                            </p>
+                        </div>
+                        {canEdit && (
+                            <Button size="sm" onClick={() => handleOpenModal()} className="gap-2">
+                                <Plus className="h-4 w-4" />
+                                Add Tool
+                            </Button>
+                        )}
                     </div>
-                    {canEdit && (
-                        <Button size="sm" onClick={() => handleOpenModal()} className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            Add Tool
-                        </Button>
-                    )}
+
+                    {/* Filters */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {([
+                            ["all", `All (${functions.length})`],
+                            ["builtin", `Built-in (${functions.filter(f => originOf(f) === "builtin").length})`],
+                            ["default", `Default (${functions.filter(f => originOf(f) === "default").length})`],
+                            ["custom", `Custom (${functions.filter(f => originOf(f) === "custom").length})`],
+                        ] as const).map(([value, label]) => (
+                            <button
+                                key={value}
+                                onClick={() => setOriginFilter(value)}
+                                className={cn(
+                                    "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                                    originFilter === value
+                                        ? "bg-slate-800 text-white border-slate-800"
+                                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                        <label className="flex items-center gap-2 ml-auto text-xs text-slate-600 cursor-pointer">
+                            <Switch
+                                checked={showActiveOnly}
+                                onCheckedChange={setShowActiveOnly}
+                                className="scale-75"
+                            />
+                            Active only
+                        </label>
+                    </div>
                 </CardHeader>
+
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-8 text-center text-slate-500">
                             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                             Loading tools...
                         </div>
-                    ) : customFunctions.length === 0 ? (
-                        <div className="p-12 text-center text-slate-400">
-                            <Code className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                            <p>No custom tools defined yet.</p>
-                            <p className="text-sm mt-1">Add your first tool to expand your AI's capabilities.</p>
+                    ) : visibleFunctions.length === 0 ? (
+                        <div className="p-10 text-center text-slate-400">
+                            <Code className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                            <p>{functions.length === 0 ? "No tools yet." : "No tools match these filters."}</p>
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {[...customFunctions]
-                                .sort((a, b) => {
-                                    const order: Record<string, number> = { DELEGATE_TO_AGENT: 0, INTERNAL: 1, WEBHOOK: 2 }
-                                    return (order[a.executionType] ?? 2) - (order[b.executionType] ?? 2)
-                                })
-                                .map((fn) => {
+                            {visibleFunctions.map((fn) => {
+                                const origin = originOf(fn)
+                                const originConfig = ORIGIN_CONFIG[origin]
                                 const typeConfig = EXECUTION_TYPE_CONFIG[fn.executionType] || EXECUTION_TYPE_CONFIG.WEBHOOK
                                 return (
-                                    <div key={fn.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
-                                        <div className="flex items-start gap-3">
+                                    <div
+                                        key={fn.id}
+                                        className={cn(
+                                            "p-4 flex items-start justify-between gap-3 hover:bg-slate-50 transition-colors",
+                                            !fn.isActive && "bg-slate-50/60"
+                                        )}
+                                    >
+                                        <div className="flex items-start gap-3 min-w-0">
                                             <div className={cn(
-                                                "mt-1 p-2 rounded-lg",
-                                                fn.isActive ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"
+                                                "mt-0.5 p-2 rounded-lg shrink-0",
+                                                fn.isActive ? "bg-green-100 text-green-600" : "bg-slate-200 text-slate-400"
                                             )}>
                                                 <Code className="h-4 w-4" />
                                             </div>
-                                            <div>
+                                            <div className="min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-mono font-bold text-slate-800">{fn.functionName}</span>
-                                                    {/* Execution type badge */}
+                                                    <span className={cn(
+                                                        "font-mono font-bold text-sm",
+                                                        fn.isActive ? "text-slate-800" : "text-slate-400"
+                                                    )}>
+                                                        {fn.functionName}
+                                                    </span>
+
+                                                    {/* Origin — the distinction the old UI never showed */}
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span className={cn(
+                                                                    "px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-help",
+                                                                    originConfig.className
+                                                                )}>
+                                                                    {originConfig.label}
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">
+                                                                <p className="max-w-[240px]">{originConfig.help}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+
                                                     <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold", typeConfig.className)}>
                                                         {typeConfig.icon}
                                                         {typeConfig.label}
                                                     </span>
+
                                                     {!fn.isActive && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inactive</span>
+                                                        <span className="px-1.5 py-0.5 rounded bg-slate-300 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                                                            Off
+                                                        </span>
                                                     )}
                                                 </div>
-                                                <p className="text-sm text-slate-500 line-clamp-1 mt-0.5">{fn.description}</p>
+                                                <p className={cn(
+                                                    "text-sm mt-1 line-clamp-2",
+                                                    fn.isActive ? "text-slate-500" : "text-slate-400"
+                                                )}>
+                                                    {fn.description}
+                                                </p>
                                             </div>
                                         </div>
 
+                                        {/* Always visible: hiding these behind hover made the page
+                                            unusable on touch and undiscoverable with a mouse. */}
                                         {canEdit && (
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center gap-1 shrink-0">
                                                 <Switch
                                                     checked={fn.isActive}
-                                                    onCheckedChange={() => toggleFunctionStatus(fn)}
+                                                    onCheckedChange={() => origin === "builtin" ? requestBuiltInToggle(fn) : toggleFunctionStatus(fn)}
                                                     className="scale-75"
                                                 />
                                                 <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
                                                     <Edit2 className="h-4 w-4" />
                                                 </Button>
-                                                {fn.isSystemFunction ? (
+                                                {(origin === "builtin" || fn.isSystemFunction) && (
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -501,14 +554,18 @@ export function CallingFunctionsSection({
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent side="left">
-                                                                <p>Reinstall to factory defaults</p>
+                                                                <p>Restore the original description</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
-                                                ) : null}
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                )}
+                                                {/* A module built-in has no life outside its module's
+                                                    code, so it can be switched off but not deleted. */}
+                                                {origin !== "builtin" && (
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -518,6 +575,7 @@ export function CallingFunctionsSection({
                     )}
                 </CardContent>
             </Card>
+
 
             {/* Missing System Functions — available for this workspace but not installed */}
             {canEdit && missingSystemFunctions.length > 0 && (

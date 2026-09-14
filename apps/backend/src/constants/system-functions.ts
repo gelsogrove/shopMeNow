@@ -263,3 +263,48 @@ export const ALL_INFO_FUNCTIONS: SystemFunctionDef[] = [
 export const SYSTEM_FUNCTIONS_BY_NAME: ReadonlyMap<string, SystemFunctionDef> = new Map(
   [...ALL_ECOMMERCE_FUNCTIONS, ...ALL_INFO_FUNCTIONS].map(fn => [fn.functionName, fn])
 )
+
+/**
+ * The system functions a workspace should have, decided by its TYPE.
+ *
+ * 🚨 SINGLE SOURCE OF TRUTH for "which default tools does this workspace get".
+ * Both the creation seed (workspace.service.ts → seedSystemFunctions) and the
+ * startup sync (system-functions-sync.service.ts) call this, so they can no
+ * longer disagree — they did before, and the disagreement was invisible:
+ *
+ *   - the seed gave APPOINTMENT_FUNCTIONS to EVERY workspace, ignoring
+ *     enableCalendarBooking entirely
+ *   - the startup sync gave them only when enableCalendarBooking was true
+ *
+ * So a workspace created with the calendar off got the 5 appointment tools
+ * anyway, and nothing ever removed them. That is why a Pro Loco chatbot ends
+ * up offering bookAppointment (Andrea, 2026-09-14: "i punti di ecommerce non
+ * li voglio ... dipende dal tipo").
+ *
+ * The rules, by channelMode:
+ *   ECOMMERCE     → always-available + e-commerce (catalogue, cart, orders)
+ *   INFORMATIONAL → always-available only
+ *   FLOW          → always-available only
+ *   PRO_LOCO      → always-available only — a tourist office sells nothing
+ *
+ * Appointment tools are orthogonal to the mode: they are added to ANY mode
+ * when the workspace has calendar booking switched on, and to none otherwise.
+ */
+export function systemFunctionsFor(
+  channelMode: string,
+  enableCalendarBooking: boolean
+): SystemFunctionDef[] {
+  const functions: SystemFunctionDef[] = [...ALWAYS_AVAILABLE_FUNCTIONS]
+
+  // Only a workspace that actually sells gets catalogue/cart/order tools.
+  if (channelMode === "ECOMMERCE") {
+    functions.push(...ECOMMERCE_FUNCTIONS)
+  }
+
+  // Booking tools follow the calendar switch, in every mode.
+  if (enableCalendarBooking) {
+    functions.push(...APPOINTMENT_FUNCTIONS)
+  }
+
+  return functions
+}

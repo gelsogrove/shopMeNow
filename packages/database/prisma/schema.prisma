@@ -17,7 +17,7 @@ model Workspace {
   whatsappVerifyToken       String?
   notificationEmail         String?
   webhookUrl                String?
-  webhookSecret             String?   // 🆕 HMAC secret for signing custom function payloads
+  webhookSecret             String? // 🆕 HMAC secret for signing custom function payloads
   webhookTimeout            Int?      @default(10000) // 🆕 Timeout in ms (default 10s)
   language                  String    @default("ENG")
   createdAt                 DateTime  @default(now())
@@ -51,95 +51,95 @@ model Workspace {
   websiteUrl                String?   @db.Text // Custom domain/base URL for this workspace (e.g., "https://shop.acme.com")
 
   // 🆕 Web Widget Configuration
-  widgetLogoUrl      String? // Widget logo URL (for customer-facing chat widget)
-  widgetLogoKey      String? // 💾 Storage key for cleanup
-  widgetTitle        String? // Custom title for chat widget (default: workspace name)
-  widgetLanguage     String? @default("en") // Default language: en, it, es, pt
-  widgetPrimaryColor String? @default("#22c55e") // Primary color in hex format
-  widgetTextColor    String? @default("#0f172a") // Text color for widget accents (links, labels)
-  widgetIcon         String? @default("chat") // Icon for widget trigger button
-  widgetUseChannelLogo Boolean @default(false) // Use channel logo instead of icon in widget trigger
-  widgetAutoSuggestionsEnabled Boolean   @default(false) // Show quick reply suggestions in widget
-  widgetQuickReplies           String[]  @default([])    // Up to 4 quick replies shown in widget
-  widgetSuggestionsModel       String?               // Optional custom model for widget suggestions
-  widgetErrorMessage           String?   @db.Text    // Shown by the widget when a turn fails client-side (network/transport error). Tenant-authored, one language (rule 1A); null = the widget shows nothing
+  widgetLogoUrl                String? // Widget logo URL (for customer-facing chat widget)
+  widgetLogoKey                String? // 💾 Storage key for cleanup
+  widgetTitle                  String? // Custom title for chat widget (default: workspace name)
+  widgetLanguage               String?  @default("en") // Default language: en, it, es, pt
+  widgetPrimaryColor           String?  @default("#22c55e") // Primary color in hex format
+  widgetTextColor              String?  @default("#0f172a") // Text color for widget accents (links, labels)
+  widgetIcon                   String?  @default("chat") // Icon for widget trigger button
+  widgetUseChannelLogo         Boolean  @default(false) // Use channel logo instead of icon in widget trigger
+  widgetAutoSuggestionsEnabled Boolean  @default(false) // Show quick reply suggestions in widget
+  widgetQuickReplies           String[] @default([]) // Up to 4 quick replies shown in widget
+  widgetSuggestionsModel       String? // Optional custom model for widget suggestions
+  widgetErrorMessage           String?  @db.Text // Shown by the widget when a turn fails client-side (network/transport error). Tenant-authored, one language (rule 1A); null = the widget shows nothing
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
-  channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
-  enableWhatsapp                    Boolean     @default(true)
-  enableWidget                      Boolean     @default(false)
-  channelMode                       ChannelMode @default(INFORMATIONAL) // Workspace mode: ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps), PRO_LOCO (flow + tourism-office-only features, e.g. Sappada)
-  enableCalendarBooking             Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
-  hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
-  hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
-  speechToTextEnabled               Boolean     @default(false) // Widget shows a microphone; voice notes are transcribed (Whisper) in the customer's detected language
-  hasProductCatalog                 Boolean     @default(true) // Enable product search agent in pipeline
-  hasCart                           Boolean     @default(true) // Enable cart management agent in pipeline
-  hasOrderTracking                  Boolean     @default(true) // Enable order tracking agent in pipeline
-  needRegistration                  Boolean     @default(true) // Enable profile management agent in pipeline
-  humanSupportInstructions          String?     @db.Text // Instructions for human support requests
+  channelType               ChannelType @default(WHATSAPP) // WhatsApp or Widget
+  enableWhatsapp            Boolean     @default(true)
+  enableWidget              Boolean     @default(false)
+  channelMode               ChannelMode @default(INFORMATIONAL) // Workspace mode: ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps), PRO_LOCO (flow + tourism-office-only features, e.g. Sappada)
+  enableCalendarBooking     Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
+  hasSalesAgents            Boolean     @default(false) // Has sales team for customer assignment?
+  hasHumanSupport           Boolean     @default(true) // Can customers request human support?
+  speechToTextEnabled       Boolean     @default(false) // Widget shows a microphone; voice notes are transcribed (Whisper) in the customer's detected language
+  hasProductCatalog         Boolean     @default(true) // Enable product search agent in pipeline
+  hasCart                   Boolean     @default(true) // Enable cart management agent in pipeline
+  hasOrderTracking          Boolean     @default(true) // Enable order tracking agent in pipeline
+  needRegistration          Boolean     @default(true) // Enable profile management agent in pipeline
+  humanSupportInstructions  String?     @db.Text // Instructions for human support requests
   // 🆕 Customer-facing sentence sent when the conversation is handed to a human.
   // Editable in the Human Support card. {{customerName}} is substituted at
   // runtime — the bot asks for the name before escalating when it does not
   // have one, so the hand-off is never addressed to an anonymous customer.
-  humanSupportMessage               String?     @default("Hi {{customerName}}, I'm putting you in touch with our operator as soon as possible.") @db.Text
-  frustrationTriggers               String?     @db.Text // Signals of customer frustration/panic that should trigger immediate escalation
-  escalationTrigger                 String?     @db.Text // 🆕 Customer-facing sentence explaining how to reach a human. Injectable into any prompt/message via {{escalationTrigger}}.
-  operatorContactMethod             String?     @default("email") // 'email' | 'whatsapp'
-  operatorEmail                     String? // Email for human support notifications
-  operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')
+  humanSupportMessage       String?     @default("Hi {{customerName}}, I'm putting you in touch with our operator as soon as possible.") @db.Text
+  frustrationTriggers       String?     @db.Text // Signals of customer frustration/panic that should trigger immediate escalation
+  escalationTrigger         String?     @db.Text // 🆕 Customer-facing sentence explaining how to reach a human. Injectable into any prompt/message via {{escalationTrigger}}.
+  operatorContactMethod     String?     @default("email") // 'email' | 'whatsapp'
+  operatorEmail             String? // Email for human support notifications
+  operatorWhatsappNumber    String? // WhatsApp number for human support (if method='whatsapp')
   // 🆕 Multi-operator routing. The singular fields above stay as the fallback for
   // workspaces that never configured a list, so existing setups keep working.
-  operatorEmails                    String[]  @default([]) // Escalation recipients (email)
-  operatorWhatsappNumbers           String[]  @default([]) // Escalation recipients (WhatsApp)
-  operatorDeliveryMode              String?   @default("all") // 'all' = notify everyone | 'random' = one at random (load sharing) | 'custom' = the custom chatbot module decides
-  toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
-  translateCustomerMessages         Boolean     @default(true) // 🆕 Auto-translate customer messages to operator's language (reverse direction)
-  
+  operatorEmails            String[]    @default([]) // Escalation recipients (email)
+  operatorWhatsappNumbers   String[]    @default([]) // Escalation recipients (WhatsApp)
+  operatorDeliveryMode      String?     @default("all") // 'all' = notify everyone | 'random' = one at random (load sharing) | 'custom' = the custom chatbot module decides
+  toneOfVoice               String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
+  translateCustomerMessages Boolean     @default(true) // 🆕 Auto-translate customer messages to operator's language (reverse direction)
+
   // 🆕 WhatsApp Provider Configuration (Multi-provider support)
-  whatsappProvider      String  @default("wasender") // "meta" | "ultramsg" | "wasender" - selects which WhatsApp provider to use
+  whatsappProvider                      String    @default("wasender") // "meta" | "ultramsg" | "wasender" - selects which WhatsApp provider to use
   // Meta Business API fields (existing fields kept for compatibility)
-  metaPhoneNumberId     String? // Meta Phone Number ID
-  metaAccessToken       String? // Meta Access Token
-  webhookVerifyToken    String? // Meta Webhook Verification Token
+  metaPhoneNumberId                     String? // Meta Phone Number ID
+  metaAccessToken                       String? // Meta Access Token
+  webhookVerifyToken                    String? // Meta Webhook Verification Token
   // UltraMsg fields
-  ultraMsgInstanceId    String? // UltraMsg Instance ID
-  ultraMsgToken         String? // UltraMsg API Token
-  ultraMsgApiUrl        String? // UltraMsg API Base URL (from UltraMsg dashboard)
+  ultraMsgInstanceId                    String? // UltraMsg Instance ID
+  ultraMsgToken                         String? // UltraMsg API Token
+  ultraMsgApiUrl                        String? // UltraMsg API Base URL (from UltraMsg dashboard)
   // WasenderAPI fields
-  wasenderSessionId       String?   // WasenderAPI numeric session ID (stored as string)
-  wasenderApiKey          String?   // Per-session API key used for messaging (Bearer auth)
-  wasenderSessionStatus   String?   // 'pending' | 'need_scan' | 'connected' | 'disconnected' | 'failed'
-  wasenderPhoneNumber     String?   // WhatsApp phone number used in session
-  wasenderWebhookSecret   String?   // Secret WasenderAPI echoes in X-Webhook-Signature — verified on every webhook
-  wasenderQrString        String?   @db.Text // Raw QR string returned by WasenderAPI (use qrcode lib to render)
-  wasenderQrGeneratedAt   DateTime? // When QR string was last received
-  wasenderIsActive        Boolean   @default(false) // Whether Wasender session is active
-  botIdentityResponse               String?     @db.Text // Response when customer asks "Who are you?"
-  customAiRules                     String?     @db.Text // Custom AI rules/instructions that override default behavior
-  address                           String?     @db.Text // Physical address/location for "where are you?" questions
-  chatbotName                       String?     @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
-  businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
-  customChatbotId                   String?     @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "demowash")
-  customChatbotSystemPrompt         String?     @db.Text // 🆕 Editable main/system prompt for custom chatbot modules (e.g. demorobot), with {{variables}} processed by PromptProcessorService. Falls back to the module's own static prompt file (e.g. common.md) when empty.
-  customChatbotModel                String?     @db.Text // 🆕 LLM model override for custom chatbot modules (e.g. "anthropic/claude-haiku-4.5"). Falls back to the module's settings.json when empty.
-  customChatbotTemperature          Float?      // 🆕 LLM temperature override for custom chatbot modules. Falls back to the module's settings.json when empty.
-  customChatbotMaxTokens            Int?        // 🆕 Max tokens per LLM reply for custom chatbot modules. Falls back to the module's settings.json when empty.
-  faqsEnabled                       Boolean     @default(true) // 🆕 Master switch for the FAQ block injected into the chatbot prompt. Individual FAQ.isActive still applies.
-  flowsEnabled                      Boolean     @default(true) // 🆕 Master switch for flow retrieval. When off the chatbot answers without consulting any flow; the flows themselves are untouched.
-  videoUrl                          String?     @db.Text // 🆕 Presentation video, referenced from customer copy as {{videoUrl}} (e.g. in welcomeMessage). One place to edit the link instead of pasting it into the text.
-  audioOutput                       Boolean     @default(false) // 🆕 Whether the chatbot replies with synthesized audio (ElevenLabs)
-  audioVoices                       Json?       // 🆕 ElevenLabs voice id per language, e.g. { "default": "EXAV...", "it": "EXAV...", "es": "FGY2..." }
-  customChatbotOperatorBriefingLanguage String? @db.Text // 🆕 Language the operator escalation briefing email is written in (e.g. "es"). Falls back to the module's settings.json when empty.
-  customChatbotOperatorEmail        String?     @db.Text // 🆕 Operator email override for custom chatbot escalations. Falls back to the module's settings.json when empty.
-  customChatbotEmailFrom            String?     @db.Text // 🆕 "From" header override for custom chatbot escalation emails (e.g. "Demowash Bot <noreply@demowash.demo>"). Falls back to the module's settings.json when empty.
-  customChatbotEmailSubjectPrefix   String?     @db.Text // 🆕 Subject-line prefix override for custom chatbot escalation emails (e.g. "[Demowash] Incidencia"). Falls back to the module's settings.json when empty.
-  customChatbotAudioOutput          Boolean?    // 🆕 When true, the custom chatbot module may reply with audio (TTS) if the customer sent audio. Falls back to the module's settings.json when null.
-  customChatbotAudioVoices          Json?       // 🆕 Per-language ElevenLabs voice IDs for custom chatbot TTS (key = ISO language code, plus "default"). Falls back to the module's settings.json when empty.
-  customChatbotAdvancedSettings     Json?       // 🆕 Free-form JSON merged onto custom-<module>/settings.json on every save (e.g. maxToolHops, rateLimitedMessage, intakeQuestions). Unknown keys pass through unvalidated; widget look & feel keys are never written here.
-  registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
-  requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
-  approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")
+  wasenderSessionId                     String? // WasenderAPI numeric session ID (stored as string)
+  wasenderApiKey                        String? // Per-session API key used for messaging (Bearer auth)
+  wasenderSessionStatus                 String? // 'pending' | 'need_scan' | 'connected' | 'disconnected' | 'failed'
+  wasenderPhoneNumber                   String? // WhatsApp phone number used in session
+  wasenderWebhookSecret                 String? // Secret WasenderAPI echoes in X-Webhook-Signature — verified on every webhook
+  wasenderQrString                      String?   @db.Text // Raw QR string returned by WasenderAPI (use qrcode lib to render)
+  wasenderQrGeneratedAt                 DateTime? // When QR string was last received
+  wasenderIsActive                      Boolean   @default(false) // Whether Wasender session is active
+  botIdentityResponse                   String?   @db.Text // Response when customer asks "Who are you?"
+  customAiRules                         String?   @db.Text // Custom AI rules/instructions that override default behavior
+  address                               String?   @db.Text // Physical address/location for "where are you?" questions
+  chatbotName                           String?   @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
+  businessType                          String?   @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
+  customChatbotId                       String?   @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "demowash")
+  customChatbotSystemPrompt             String?   @db.Text // 🆕 Editable main/system prompt for custom chatbot modules (e.g. demorobot), with {{variables}} processed by PromptProcessorService. Falls back to the module's own static prompt file (e.g. common.md) when empty.
+  customChatbotModel                    String?   @db.Text // 🆕 LLM model override for custom chatbot modules (e.g. "anthropic/claude-haiku-4.5"). Falls back to the module's settings.json when empty.
+  customChatbotTemperature              Float? // 🆕 LLM temperature override for custom chatbot modules. Falls back to the module's settings.json when empty.
+  customChatbotMaxTokens                Int? // 🆕 Max tokens per LLM reply for custom chatbot modules. Falls back to the module's settings.json when empty.
+  faqsEnabled                           Boolean   @default(true) // 🆕 Master switch for the FAQ block injected into the chatbot prompt. Individual FAQ.isActive still applies.
+  flowsEnabled                          Boolean   @default(true) // 🆕 Master switch for flow retrieval. When off the chatbot answers without consulting any flow; the flows themselves are untouched.
+  videoUrl                              String?   @db.Text // 🆕 Presentation video, referenced from customer copy as {{videoUrl}} (e.g. in welcomeMessage). One place to edit the link instead of pasting it into the text.
+  audioOutput                           Boolean   @default(false) // 🆕 Whether the chatbot replies with synthesized audio (ElevenLabs)
+  audioVoices                           Json? // 🆕 ElevenLabs voice id per language, e.g. { "default": "EXAV...", "it": "EXAV...", "es": "FGY2..." }
+  customChatbotOperatorBriefingLanguage String?   @db.Text // 🆕 Language the operator escalation briefing email is written in (e.g. "es"). Falls back to the module's settings.json when empty.
+  customChatbotOperatorEmail            String?   @db.Text // 🆕 Operator email override for custom chatbot escalations. Falls back to the module's settings.json when empty.
+  customChatbotEmailFrom                String?   @db.Text // 🆕 "From" header override for custom chatbot escalation emails (e.g. "Demowash Bot <noreply@demowash.demo>"). Falls back to the module's settings.json when empty.
+  customChatbotEmailSubjectPrefix       String?   @db.Text // 🆕 Subject-line prefix override for custom chatbot escalation emails (e.g. "[Demowash] Incidencia"). Falls back to the module's settings.json when empty.
+  customChatbotAudioOutput              Boolean? // 🆕 When true, the custom chatbot module may reply with audio (TTS) if the customer sent audio. Falls back to the module's settings.json when null.
+  customChatbotAudioVoices              Json? // 🆕 Per-language ElevenLabs voice IDs for custom chatbot TTS (key = ISO language code, plus "default"). Falls back to the module's settings.json when empty.
+  customChatbotAdvancedSettings         Json? // 🆕 Free-form JSON merged onto custom-<module>/settings.json on every save (e.g. maxToolHops, rateLimitedMessage, intakeQuestions). Unknown keys pass through unvalidated; widget look & feel keys are never written here.
+  registrationPage                      String?   @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
+  requireManualApproval                 Boolean   @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
+  approvalMessage                       String?   @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")
 
   // �🆕 Translation Settings (Feature: Configurable Translation Layer)
   translateProductNames  Boolean @default(false) // Translate product names to customer language (false = preserve original, e.g., "Pecorino Romano")
@@ -151,53 +151,57 @@ model Workspace {
   ownerId String?
   owner   User?   @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
 
-  users                  UserWorkspace[]
-  invitations            WorkspaceInvitation[]
-  agentConfigs           AgentConfig[]
-  agentConversationLogs  AgentConversationLog[]
-  conversationMessages   ConversationMessage[]
-  whatsappWebhookEvents  WhatsappWebhookEvent[]
-  carts                  Carts[]
-  categories             Categories[]
-  chatSessions           ChatSession[]
-  customers              Customers[]
-  faqs                   FAQ[]
-  touristRestaurants     TouristRestaurant[]
-  touristHotels          TouristHotel[]
-  touristExcursions      TouristExcursion[]
-  touristRefuges         TouristRefuge[]
-  touristApartments      TouristApartment[]
-  touristEvents          TouristEvent[]
+  users                   UserWorkspace[]
+  invitations             WorkspaceInvitation[]
+  agentConfigs            AgentConfig[]
+  agentConversationLogs   AgentConversationLog[]
+  conversationMessages    ConversationMessage[]
+  whatsappWebhookEvents   WhatsappWebhookEvent[]
+  carts                   Carts[]
+  categories              Categories[]
+  chatSessions            ChatSession[]
+  customers               Customers[]
+  faqs                    FAQ[]
+  touristRestaurants      TouristRestaurant[]
+  touristHotels           TouristHotel[]
+  touristExcursions       TouristExcursion[]
+  touristRefuges          TouristRefuge[]
+  touristApartments       TouristApartment[]
+  touristEvents           TouristEvent[]
   touristSportsFacilities TouristSportsFacility[]
-  touristSkiFacilities   TouristSkiFacility[]
-  touristPhotos          TouristPhoto[]
-  gdprContent            GdprContent[]
-  languages              Languages[]
-  offers                 Offers[]
-  orders                 Orders[]
-  products               Products[]
-  sales                  Sales[]
-  secureTokens           SecureToken[]
-  services               Services[]
-  billings               Billing[]
-  shortUrls              ShortUrls[]
-  usage                  Usage[]
-  whatsappSettings       WhatsappSettings?
-  adminSessions          AdminSession[]
-  searchConversations    SearchConversations[]
-  certifications         Certification[]
-  types                  Type[]
-  whatsappQueue          WhatsAppQueue[]
-  billingTransactions    BillingTransaction[]
-  softDeleteAuditLogs    SoftDeleteAuditLog[]
-  callingFunctions       WorkspaceCallingFunction[] // ✅ Inverse relation
-  environmentVariables   WorkspaceEnvironmentVariable[] // 🔐 Secure credentials storage
-  supportTickets         SupportTicket[] // 🎫 Support tickets for this workspace
-  pushCampaigns          PushCampaign[]
-  merchants              Merchant[]
-  merchantPushes         MerchantPush[]
-  merchantQuotaTopups    MerchantQuotaTopup[]
-  pushCampaignRecipients PushCampaignRecipient[]
+  touristSkiFacilities    TouristSkiFacility[]
+  touristChurches         TouristChurch[]
+  touristCastles          TouristCastle[]
+  touristViewpoints       TouristViewpoint[]
+  touristVenues           TouristVenue[]
+  touristPhotos           TouristPhoto[]
+  gdprContent             GdprContent[]
+  languages               Languages[]
+  offers                  Offers[]
+  orders                  Orders[]
+  products                Products[]
+  sales                   Sales[]
+  secureTokens            SecureToken[]
+  services                Services[]
+  billings                Billing[]
+  shortUrls               ShortUrls[]
+  usage                   Usage[]
+  whatsappSettings        WhatsappSettings?
+  adminSessions           AdminSession[]
+  searchConversations     SearchConversations[]
+  certifications          Certification[]
+  types                   Type[]
+  whatsappQueue           WhatsAppQueue[]
+  billingTransactions     BillingTransaction[]
+  softDeleteAuditLogs     SoftDeleteAuditLog[]
+  callingFunctions        WorkspaceCallingFunction[] // ✅ Inverse relation
+  environmentVariables    WorkspaceEnvironmentVariable[] // 🔐 Secure credentials storage
+  supportTickets          SupportTicket[] // 🎫 Support tickets for this workspace
+  pushCampaigns           PushCampaign[]
+  merchants               Merchant[]
+  merchantPushes          MerchantPush[]
+  merchantQuotaTopups     MerchantQuotaTopup[]
+  pushCampaignRecipients  PushCampaignRecipient[]
 
   // 📅 Calendar & Appointment Booking (Feature: Calendar Integration)
   appointments             Appointment[]
@@ -206,28 +210,28 @@ model Workspace {
   blackoutPeriods          BlackoutPeriod[]
   reminderLocks            ReminderLock[]
   lateCancellationAttempts LateCancellationAttempt[]
-  timezone                 String?  @default("Europe/Rome") // IANA timezone (e.g., "Europe/Rome", "America/New_York")
-  
+  timezone                 String?                   @default("Europe/Rome") // IANA timezone (e.g., "Europe/Rome", "America/New_York")
+
   // 🔔 Appointment Reminder Settings (Global template for all appointment types)
   // Three separate templates for different timing intervals
-  appointmentReminder24hEnabled Boolean  @default(true) // Enable 24h reminder
-  appointmentReminder24hMessage String?  @db.Text @default("Hi {{customerName}}, reminder: your {{appointmentType}} appointment is tomorrow {{appointmentDate}} at {{appointmentTime}}. Confirm your presence?")
-  
-  appointmentReminder1hEnabled  Boolean  @default(true) // Enable 1h reminder
-  appointmentReminder1hMessage  String?  @db.Text @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 1 hour at {{appointmentTime}}. See you soon!")
-  
-  appointmentReminder30mEnabled Boolean  @default(false) // Enable 30min reminder
-  appointmentReminder30mMessage String?  @db.Text @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}. We're waiting for you!")
-  
-  appointmentReminderChannel    String   @default("whatsapp") // "whatsapp" | "email" | "both"
-  appointmentReminderHours      Int[]    @default([24, 1]) // Hours when reminders are sent (e.g., [24, 1, 0.5] for 24h, 1h, and 30min before)
-  minBookingBufferHours         Int      @default(12) // Minimum hours in advance a slot can be booked (e.g., 12 = slots must be at least 12h from now)
+  appointmentReminder24hEnabled Boolean @default(true) // Enable 24h reminder
+  appointmentReminder24hMessage String? @default("Hi {{customerName}}, reminder: your {{appointmentType}} appointment is tomorrow {{appointmentDate}} at {{appointmentTime}}. Confirm your presence?") @db.Text
+
+  appointmentReminder1hEnabled Boolean @default(true) // Enable 1h reminder
+  appointmentReminder1hMessage String? @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 1 hour at {{appointmentTime}}. See you soon!") @db.Text
+
+  appointmentReminder30mEnabled Boolean @default(false) // Enable 30min reminder
+  appointmentReminder30mMessage String? @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}. We're waiting for you!") @db.Text
+
+  appointmentReminderChannel String @default("whatsapp") // "whatsapp" | "email" | "both"
+  appointmentReminderHours   Int[]  @default([24, 1]) // Hours when reminders are sent (e.g., [24, 1, 0.5] for 24h, 1h, and 30min before)
+  minBookingBufferHours      Int    @default(12) // Minimum hours in advance a slot can be booked (e.g., 12 = slots must be at least 12h from now)
 
   // 🎥 Zoom Meeting Integration
-  zoomAccessToken              String?   @db.Text // Encrypted Zoom OAuth access token
-  zoomRefreshToken             String?   @db.Text // Encrypted Zoom OAuth refresh token
-  zoomConnected                Boolean   @default(false) // Whether Zoom is successfully connected
-  zoomUserId                   String?   // Zoom user ID
+  zoomAccessToken  String? @db.Text // Encrypted Zoom OAuth access token
+  zoomRefreshToken String? @db.Text // Encrypted Zoom OAuth refresh token
+  zoomConnected    Boolean @default(false) // Whether Zoom is successfully connected
+  zoomUserId       String? // Zoom user ID
 
   // 🔄 FLOW workspace configs (E1) — deprecated, see CLAUDE.md §17
   flowNodeConfigs FlowNodeConfig[] // FLOW chatbot configurations (machine-specific flows)
@@ -243,20 +247,20 @@ model Workspace {
 
 // 🔄 FLOW Node Configuration (Epic E1)
 model FlowNodeConfig {
-  id                  String    @id @default(cuid())
-  workspaceId         String
-  flowKey             String    // Machine identifier (e.g., "hs60xx", "ed340") - maps to QR code
-  flowLabel           String    // Human-readable label (e.g., "Lavadora HS-60XX")
-  systemPrompt        String    @default("") @db.Text // Machine-specific context for FlowAgentLLM
-  model               String    @default("openai/gpt-4o-mini") // LLM model for this flow
-  temperature         Float     @default(0.3)
-  maxTokens           Int       @default(2048)
-  availableFunctions  Json      @default("[]") // Array of calling function names FlowAgentLLM can use
-  flows               Json      @default("{}") // Complete flow definitions: { flowId: { nodes: {...}, startNode: "..." } }
-  isActive            Boolean   @default(true)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id                 String    @id @default(cuid())
+  workspaceId        String
+  flowKey            String // Machine identifier (e.g., "hs60xx", "ed340") - maps to QR code
+  flowLabel          String // Human-readable label (e.g., "Lavadora HS-60XX")
+  systemPrompt       String    @default("") @db.Text // Machine-specific context for FlowAgentLLM
+  model              String    @default("openai/gpt-4o-mini") // LLM model for this flow
+  temperature        Float     @default(0.3)
+  maxTokens          Int       @default(2048)
+  availableFunctions Json      @default("[]") // Array of calling function names FlowAgentLLM can use
+  flows              Json      @default("{}") // Complete flow definitions: { flowId: { nodes: {...}, startNode: "..." } }
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, flowKey]) // Each machine is unique per workspace
   @@index([workspaceId])
@@ -312,32 +316,32 @@ model Languages {
 }
 
 model Products {
-  id                    String                 @id @default(uuid())
+  id                    String                  @id @default(uuid())
   name                  String
   sku                   String?
   description           String?
   formato               String?
-  price                 Decimal                @db.Decimal(10, 2)
-  stock                 Int                    @default(0)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  isActive              Boolean                @default(true)
+  price                 Decimal                 @db.Decimal(10, 2)
+  stock                 Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  isActive              Boolean                 @default(true)
   workspaceId           String
   slug                  String
-  link                  String?                @db.VarChar(120) // Optional product external link (max 120 chars)
-  status                ProductStatus          @default(ACTIVE)
-  imageUrl              String[]               @default([])
+  link                  String?                 @db.VarChar(120) // Optional product external link (max 120 chars)
+  status                ProductStatus           @default(ACTIVE)
+  imageUrl              String[]                @default([])
   imageKey              String? // 💾 Storage key for cleanup (e.g., "products/workspace-id/product-id.jpg")
-  type                  String                 @default("Temperatura ambiente")
+  type                  String                  @default("Temperatura ambiente")
   region                String?
-  allergens             String[]               @default([])
+  allergens             String[]                @default([])
   cartItems             CartItems[]
   orderItems            OrderItems[]
   productCertifications ProductCertification[]
   productTypes          ProductType[]
   productCategories     ProductCategory[]
   characteristics       ProductCharacteristic[]
-  workspace             Workspace              @relation(fields: [workspaceId], references: [id])
+  workspace             Workspace               @relation(fields: [workspaceId], references: [id])
 
   @@unique([slug, workspaceId])
   @@index([workspaceId])
@@ -418,8 +422,8 @@ model ProductCategory {
 model ProductCharacteristic {
   id        String   @id @default(uuid())
   productId String
-  name      String   // Characteristic name (e.g., "superficie", "colore", "taglia")
-  value     String   // Characteristic value (e.g., "42mq", "rosso", "L")
+  name      String // Characteristic name (e.g., "superficie", "colore", "taglia")
+  value     String // Characteristic value (e.g., "42mq", "rosso", "L")
   createdAt DateTime @default(now())
   product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -429,25 +433,25 @@ model ProductCharacteristic {
 }
 
 model WhatsAppQueue {
-  id                    String    @id @default(uuid())
-  workspaceId           String
-  customerId            String
-  phoneNumber           String
-  messageContent        String    @db.Text
+  id                      String    @id @default(uuid())
+  workspaceId             String
+  customerId              String
+  phoneNumber             String
+  messageContent          String    @db.Text
   // Optional image to attach (push-campaign creatives): the queue processor
   // sends media+caption via provider.sendMediaMessage when set.
-  mediaUrl              String?
-  status                String    @default("pending") // pending, sent, error, delivered, failed
-  errorMessage          String?   @db.Text
-  retryCount            Int       @default(0) // Number of failed send attempts so far
-  maxRetries            Int       @default(3) // Retries before status is permanently "failed" (dead-letter)
-  nextRetryAt           DateTime? // Exponential backoff gate — findPending skips rows until this time
-  createdAt             DateTime  @default(now())
-  deliveredAt           DateTime?
-  conversationMessageId String? // FK to ConversationMessage for timeline tracking
+  mediaUrl                String?
+  status                  String    @default("pending") // pending, sent, error, delivered, failed
+  errorMessage            String?   @db.Text
+  retryCount              Int       @default(0) // Number of failed send attempts so far
+  maxRetries              Int       @default(3) // Retries before status is permanently "failed" (dead-letter)
+  nextRetryAt             DateTime? // Exponential backoff gate — findPending skips rows until this time
+  createdAt               DateTime  @default(now())
+  deliveredAt             DateTime?
+  conversationMessageId   String? // FK to ConversationMessage for timeline tracking
   // Push Campaign linkage for idempotency
-  pushCampaignId           String?
-  pushCampaignRecipientId  String?   @unique
+  pushCampaignId          String?
+  pushCampaignRecipientId String?   @unique
 
   // 🆕 Widget Support
   channel         String    @default("whatsapp") // "whatsapp" | "widget"
@@ -463,11 +467,11 @@ model WhatsAppQueue {
 
   skipSecurityCheck Boolean @default(false) // 🔐 Skip security validation for trusted messages (e.g., operator notification)
 
-  workspace               Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customer                Customers               @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  conversationMessage     ConversationMessage?    @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
-  pushCampaign            PushCampaign?           @relation(fields: [pushCampaignId], references: [id], onDelete: SetNull)
-  pushCampaignRecipient   PushCampaignRecipient?  @relation(fields: [pushCampaignRecipientId], references: [id], onDelete: SetNull)
+  workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer              Customers              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  conversationMessage   ConversationMessage?   @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
+  pushCampaign          PushCampaign?          @relation(fields: [pushCampaignId], references: [id], onDelete: SetNull)
+  pushCampaignRecipient PushCampaignRecipient? @relation(fields: [pushCampaignRecipientId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status])
   @@index([workspaceId, channel])
@@ -496,35 +500,35 @@ model WhatsappWebhookEvent {
 }
 
 model Customers {
-  id                            String                  @id @default(uuid())
+  id                            String             @id @default(uuid())
   name                          String
-  email                         String?                 // Nullable: WhatsApp customers have no email until they provide one (no more temp_…@pending.com placeholders)
+  email                         String? // Nullable: WhatsApp customers have no email until they provide one (no more temp_…@pending.com placeholders)
   phone                         String?
-  customId                      String?                 @unique // 🆕 Widget: visitor tracking ID (e.g., "webvisitor-abc123")
+  customId                      String?            @unique // 🆕 Widget: visitor tracking ID (e.g., "webvisitor-abc123")
   address                       String?
   company                       String?
-  discount                      Float?                  @default(0)
-  language                      String?                 @default("en") // 🌍 Default to English (base language) - detects from phone prefix
-  currency                      String?                 @default("EUR")
+  discount                      Float?             @default(0)
+  language                      String?            @default("en") // 🌍 Default to English (base language) - detects from phone prefix
+  currency                      String?            @default("EUR")
   notes                         String?
-  tags                          String[]                @default([])
-  serviceIds                    String[]                @default([])
-  isBlacklisted                 Boolean                 @default(false)
-  createdAt                     DateTime                @default(now())
-  updatedAt                     DateTime                @updatedAt
+  tags                          String[]           @default([])
+  serviceIds                    String[]           @default([])
+  isBlacklisted                 Boolean            @default(false)
+  createdAt                     DateTime           @default(now())
+  updatedAt                     DateTime           @updatedAt
   deletedAt                     DateTime?
-  isActive                      Boolean                 @default(false) // 🔒 Feature 174: Rule #4 - New customers are NOT registered by default
-  registrationStatus            RegistrationStatus      @default(NEW) // 🆕 Customer registration state: NEW (never registered), PENDING_APPROVAL (registered, awaiting admin), ACTIVE (approved)
+  isActive                      Boolean            @default(false) // 🔒 Feature 174: Rule #4 - New customers are NOT registered by default
+  registrationStatus            RegistrationStatus @default(NEW) // 🆕 Customer registration state: NEW (never registered), PENDING_APPROVAL (registered, awaiting admin), ACTIVE (approved)
   workspaceId                   String
   last_privacy_version_accepted String?
   privacy_accepted_at           DateTime?
-  push_notifications_consent    Boolean                 @default(false)
+  push_notifications_consent    Boolean            @default(false)
   push_notifications_consent_at DateTime?
-  activeChatbot                 Boolean                 @default(true)
-  operatorRequestedAt           DateTime?               // 🧑‍💼 When customer requested human operator (null = not pending)
-  originChannel                 String?                 // 🔀 Channel: "widget" | "whatsapp" — used to route operator replies
-  operatorQueuePosition         Int?                    // 📋 Position in operator queue (null = not queued; 1 = currently being served)
-  operatorQueueEnteredAt        DateTime?               // 🕐 When customer entered the operator queue (used to order by FIFO when positions tie)
+  activeChatbot                 Boolean            @default(true)
+  operatorRequestedAt           DateTime? // 🧑‍💼 When customer requested human operator (null = not pending)
+  originChannel                 String? // 🔀 Channel: "widget" | "whatsapp" — used to route operator replies
+  operatorQueuePosition         Int? // 📋 Position in operator queue (null = not queued; 1 = currently being served)
+  operatorQueueEnteredAt        DateTime? // 🕐 When customer entered the operator queue (used to order by FIFO when positions tie)
   invoiceAddress                Json?
 
   // 🏔️ Tourism (custom-demosappada): what the assistant learned about this
@@ -534,29 +538,29 @@ model Customers {
   // sentence would break the moment the wording changed.
   // Shape: { adults, children, seniors, arrivalDate, departureDate, origin,
   //           doneAlready, notes }
-  stayProfile                   Json?
+  stayProfile     Json?
   // End-of-stay feedback collected in conversation, shown on the customer card.
-  feedbackRating                Int?      // 1-5
-  feedbackComment               String?   @db.Text
-  feedbackAt                    DateTime?
+  feedbackRating  Int? // 1-5
+  feedbackComment String?   @db.Text
+  feedbackAt      DateTime?
 
-  salesId                       String?
-  cart                          Carts?
-  chatSessions                  ChatSession[]
-  sales                         Sales?                  @relation(fields: [salesId], references: [id])
-  workspace                     Workspace               @relation(fields: [workspaceId], references: [id])
-  orders                        Orders[]
-  usage                         Usage[]
-  billings                      Billing[]
-  agentConversationLogs         AgentConversationLog[]
-  conversationMessages          ConversationMessage[]
-  whatsappQueue                 WhatsAppQueue[]
-  pushCampaignRecipients        PushCampaignRecipient[] // Campaign recipients for this customer
+  salesId                String?
+  cart                   Carts?
+  chatSessions           ChatSession[]
+  sales                  Sales?                  @relation(fields: [salesId], references: [id])
+  workspace              Workspace               @relation(fields: [workspaceId], references: [id])
+  orders                 Orders[]
+  usage                  Usage[]
+  billings               Billing[]
+  agentConversationLogs  AgentConversationLog[]
+  conversationMessages   ConversationMessage[]
+  whatsappQueue          WhatsAppQueue[]
+  pushCampaignRecipients PushCampaignRecipient[] // Campaign recipients for this customer
 
   // 📅 Calendar & Appointment Booking (Anti-spam)
-  maxActiveAppointments         Int?     @default(5)  // Max concurrent future appointments (prevents spam)
-  lastAppointmentDate           DateTime? // Last appointment booked (for analytics/spam)
-  appointments                  Appointment[] // Customer's confirmed appointments
+  maxActiveAppointments Int?          @default(5) // Max concurrent future appointments (prevents spam)
+  lastAppointmentDate   DateTime? // Last appointment booked (for analytics/spam)
+  appointments          Appointment[] // Customer's confirmed appointments
 
   @@unique([workspaceId, phone])
   @@index([workspaceId])
@@ -636,7 +640,7 @@ model CreditNote {
   creditNoteCode String   @unique // Format: NC-{orderCode} e.g., NC-ORD-2025-001
   orderId        String
   order          Orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount         Decimal @db.Decimal(10, 2) // Importo della nota di credito (positivo)
+  amount         Decimal  @db.Decimal(10, 2) // Importo della nota di credito (positivo)
   reason         String   @db.Text // Motivo della nota di credito
   createdAt      DateTime @default(now())
   createdById    String? // User ID who created the credit note
@@ -859,28 +863,28 @@ model UserWorkspace {
 }
 
 model WhatsappSettings {
-  id           String    @id @default(uuid())
-  phoneNumber  String    @unique
-  apiKey       String
-  appName      String?
-  appSecret    String?   @db.Text
-  webhookUrl   String?
-  webhookId    String    @unique
-  webhookToken String
+  id                String    @id @default(uuid())
+  phoneNumber       String    @unique
+  apiKey            String
+  appName           String?
+  appSecret         String?   @db.Text
+  webhookUrl        String?
+  webhookId         String    @unique
+  webhookToken      String
   businessAccountId String?
-  settings     Json?     @default("{}")
-  adminEmail   String?
-  smtpHost     String?   @default("smtp.ethereal.email")
-  smtpPort     Int?      @default(587)
-  smtpSecure   Boolean?  @default(false)
-  smtpUser     String?
-  smtpPass     String?
-  smtpFrom     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  workspaceId  String    @unique
-  gdpr         String?
-  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+  settings          Json?     @default("{}")
+  adminEmail        String?
+  smtpHost          String?   @default("smtp.ethereal.email")
+  smtpPort          Int?      @default(587)
+  smtpSecure        Boolean?  @default(false)
+  smtpUser          String?
+  smtpPass          String?
+  smtpFrom          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  workspaceId       String    @unique
+  gdpr              String?
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
 
   @@map("whatsapp_settings")
 }
@@ -1116,27 +1120,27 @@ model SecureToken {
 }
 
 model Services {
-  id              String       @id @default(cuid())
-  code            String
-  name            String
-  description     String
-  price           Decimal  @db.Decimal(10, 2)
-  currency        String       @default("EUR")
-  isActive        Boolean      @default(true)
-  workspaceId     String
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  duration        Int          @default(60)
-  imageUrl        String[]     @default([])
-  imageKey        String? // 💾 Storage key for cleanup
-  enableForBooking Boolean     @default(false) // When true, this service is available as appointment type
-  bufferTime      Int          @default(0)     // Minutes before next slot (cleanup time)
-  color           String       @default("#3b82f6") // Calendar color (hex)
-  cartItems       CartItems[]
-  orderItems      OrderItems[]
-  appointments    Appointment[]
+  id                       String                    @id @default(cuid())
+  code                     String
+  name                     String
+  description              String
+  price                    Decimal                   @db.Decimal(10, 2)
+  currency                 String                    @default("EUR")
+  isActive                 Boolean                   @default(true)
+  workspaceId              String
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  duration                 Int                       @default(60)
+  imageUrl                 String[]                  @default([])
+  imageKey                 String? // 💾 Storage key for cleanup
+  enableForBooking         Boolean                   @default(false) // When true, this service is available as appointment type
+  bufferTime               Int                       @default(0) // Minutes before next slot (cleanup time)
+  color                    String                    @default("#3b82f6") // Calendar color (hex)
+  cartItems                CartItems[]
+  orderItems               OrderItems[]
+  appointments             Appointment[]
   lateCancellationAttempts LateCancellationAttempt[]
-  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
+  workspace                Workspace                 @relation(fields: [workspaceId], references: [id])
 
   @@unique([code, workspaceId])
   @@index([workspaceId])
@@ -1357,6 +1361,105 @@ model TouristSkiFacility {
   @@map("tourist_ski_facilities")
 }
 
+// Churches and religious buildings (Andrea, 2026-09-14: "per la proloco
+// dobbiamo aggiungere delle categorie: chiese, castelli, punti panoramici,
+// locali") — same shape as the other tourist content types, photos in
+// TouristPhoto. `century` and `style` are free text like every other
+// descriptive field: the LLM reads them as prose.
+model TouristChurch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  century     String? // free text, e.g. "XV secolo", "1740"
+  style       String? // free text, e.g. "gotico", "barocco", "alpino"
+  location    String? // borgata / frazione
+  phone       String?
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_churches")
+}
+
+// Castles and fortifications (Andrea, 2026-09-14). Sappada itself has none,
+// so rows are typically in the surrounding Cadore/Carnia area: `location`
+// carries the comune, and `visitInfo` the free-text opening/visit terms.
+model TouristCastle {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  century     String? // free text, e.g. "XII secolo"
+  visitInfo   String? // free text: opening times / how to visit
+  location    String? // comune / frazione
+  phone       String?
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_castles")
+}
+
+// Scenic viewpoints / belvederi (Andrea, 2026-09-14). `altitude` is Int so
+// the LLM can reason about height; `access` and `difficulty` stay free text
+// like the excursion fields they mirror.
+model TouristViewpoint {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?   @db.Text
+  altitude    Int? // metres above sea level
+  access      String? // free text, e.g. "a piedi", "in auto", "seggiovia"
+  difficulty  String? // free text, e.g. "facile", "media"
+  location    String? // borgata / frazione
+  link        String?
+  videoUrl    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_viewpoints")
+}
+
+// Bars, pubs, cafés and nightlife (Andrea, 2026-09-14: "Locali"). Distinct
+// from TouristRestaurant on purpose — a full restaurant belongs there, this
+// is where you go for a drink. `venueType` carries the distinction as free
+// text and is the term that wins retrieval ("c'è una birreria?").
+model TouristVenue {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  name         String
+  description  String?   @db.Text
+  venueType    String? // free text, e.g. "bar", "pub", "birreria", "caffè"
+  openingHours String? // free text
+  location     String? // borgata / frazione
+  phone        String?
+  link         String?
+  videoUrl     String?
+  order        Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+  @@map("tourist_venues")
+}
+
 enum TouristContentType {
   RESTAURANT
   HOTEL
@@ -1366,6 +1469,10 @@ enum TouristContentType {
   APARTMENT
   SPORTS_FACILITY
   SKI_FACILITY
+  CHURCH
+  CASTLE
+  VIEWPOINT
+  VENUE
 }
 
 /// Photo gallery for PRO_LOCO tourist content. Polymorphic on purpose — one
@@ -1374,15 +1481,15 @@ enum TouristContentType {
 /// (Prisma has no native polymorphic relation): consistency + cascade
 /// delete-on-parent-delete are enforced in the service layer instead.
 model TouristPhoto {
-  id          String              @id @default(cuid())
+  id          String             @id @default(cuid())
   workspaceId String
   contentType TouristContentType
   contentId   String
-  imageBase64 String              @db.Text
+  imageBase64 String             @db.Text
   caption     String?
-  order       Int                 @default(0)
-  createdAt   DateTime            @default(now())
-  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  order       Int                @default(0)
+  createdAt   DateTime           @default(now())
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, contentType, contentId])
   @@map("tourist_photos")
@@ -1530,9 +1637,9 @@ enum MessageType {
 // - PENDING_APPROVAL: Completed registration, waiting for admin approval
 // - ACTIVE: Approved by admin, full access to features
 enum RegistrationStatus {
-  NEW              // Default: customer has never registered
+  NEW // Default: customer has never registered
   PENDING_APPROVAL // Customer completed registration form, awaiting admin approval
-  ACTIVE           // Admin approved, customer has full access
+  ACTIVE // Admin approved, customer has full access
 }
 
 enum ChannelType {
@@ -1658,24 +1765,24 @@ model AgentConversationLog {
 
 // Conversation Messages - Complete history for LLM Router context
 model ConversationMessage {
-  id                String          @id @default(cuid())
+  id                String              @id @default(cuid())
   workspaceId       String
   customerId        String
   conversationId    String
   role              String // "user", "assistant", "function", "system"
-  content           String          @db.Text
+  content           String              @db.Text
   agentType         String? // "ROUTER", "PRODUCT_SEARCH", etc.
   functionName      String? // If role="function", name of function called
   functionArguments Json? // If role="function", arguments passed
   tokensUsed        Int?
   debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
   deliveredAt       DateTime? // ✅ WhatsApp delivery timestamp (when message sent via queue)
-  deliveryStatus    String          @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
+  deliveryStatus    String              @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
   reaction          String? // 😀 WhatsApp-style reaction emoji on this message (single, server-synced between operator + demo). Null = no reaction.
   whatsappMessageId String? // 📲 Provider message ID (wamid) — stored for operator-sent messages so reactions can be forwarded to WhatsApp.
-  createdAt         DateTime        @default(now())
-  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customer          Customers       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt         DateTime            @default(now())
+  workspace         Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer          Customers           @relation(fields: [customerId], references: [id], onDelete: Cascade)
   whatsAppQueue     WhatsAppQueue[] // Inverse relation for queue tracking
   attachments       MessageAttachment[] // 📎 image/PDF attachments
 
@@ -2018,11 +2125,11 @@ model PushCampaign {
   // hard-delete exists for backoffice cleanup only (see repository).
   deletedAt          DateTime?
 
-  workspace  Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy  User?                   @relation(fields: [createdByUserId], references: [id])
-  merchant     Merchant?     @relation(fields: [merchantId], references: [id])
-  merchantPush MerchantPush? @relation(fields: [merchantPushId], references: [id])
-  recipients PushCampaignRecipient[]
+  workspace     Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy     User?                   @relation(fields: [createdByUserId], references: [id])
+  merchant      Merchant?               @relation(fields: [merchantId], references: [id])
+  merchantPush  MerchantPush?           @relation(fields: [merchantPushId], references: [id])
+  recipients    PushCampaignRecipient[]
   whatsappQueue WhatsAppQueue[]
 
   @@index([workspaceId])
@@ -2062,12 +2169,12 @@ model Merchant {
   billingProvince String?
   billingCountry  String? @default("IT")
 
-  isActive Boolean @default(true)
+  isActive       Boolean @default(true)
   // Push-package balance: sum of topups minus debited sends. Never expires
   // (Andrea, 2026-08-31). Decremented atomically by the push-campaigns job at
   // enqueue time — the same point where platform credits are debited, so the
   // two ledgers can never diverge.
-  quotaRemaining Int @default(0)
+  quotaRemaining Int     @default(0)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -2152,10 +2259,10 @@ model PushCampaignRecipient {
   createdAt     DateTime                    @default(now())
   updatedAt     DateTime                    @updatedAt
 
-  campaign  PushCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign      PushCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   whatsappQueue WhatsAppQueue[]
-  customer  Customers?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer      Customers?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   // Andrea, 2026-09-12: a DB-level backstop against a double send — the
   // scheduler already dedups in-transaction against existing rows, this
@@ -2213,7 +2320,6 @@ enum ConfigType {
   LIMIT // Numeric limits (maxProducts, maxMessages)
   TEXT // Free-text settings (company name, address, etc.)
 }
-
 
 enum AgentType {
   ROUTER // order: 0 - Intent classification + FAQ
@@ -2278,27 +2384,27 @@ model SoftDeleteAuditLog {
 
 // ⚡ WORKSPACE CALLING FUNCTIONS - Controls which CFs are active per workspace
 model WorkspaceCallingFunction {
-  id           String    @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  functionName          String    // camelCase: "productSearchAgent", "cercaPrecedentiLegali"
-  description           String?   @db.Text // QUANDO chiamarla (per LLM)
-  responseInstructions  String?   @db.Text // COME presentare il risultato (per LLM)
-  parameters            Json?     // Schema parametri (formato OpenAI function calling)
-  
-  isSystemFunction      Boolean   @default(false)  // true = core, non cancellabile
-  executionType         String    @default("WEBHOOK")  // "DELEGATE_TO_AGENT" | "WEBHOOK" | "INTERNAL"
-  attachedLlm           String?   // For DELEGATE_TO_AGENT (AgentConfig): agent type (e.g. "PRODUCT_SEARCH", "CART_MANAGEMENT")
-  attachedFlowKey       String?   // For DELEGATE_TO_AGENT (FlowNodeConfig): flowKey of the sub-LLM to delegate to
-  webhookUrl            String?   // 🆕 Per-function webhook URL (overrides workspace default if set)
-  
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  functionName         String // camelCase: "productSearchAgent", "cercaPrecedentiLegali"
+  description          String?   @db.Text // QUANDO chiamarla (per LLM)
+  responseInstructions String?   @db.Text // COME presentare il risultato (per LLM)
+  parameters           Json? // Schema parametri (formato OpenAI function calling)
+
+  isSystemFunction Boolean @default(false) // true = core, non cancellabile
+  executionType    String  @default("WEBHOOK") // "DELEGATE_TO_AGENT" | "WEBHOOK" | "INTERNAL"
+  attachedLlm      String? // For DELEGATE_TO_AGENT (AgentConfig): agent type (e.g. "PRODUCT_SEARCH", "CART_MANAGEMENT")
+  attachedFlowKey  String? // For DELEGATE_TO_AGENT (FlowNodeConfig): flowKey of the sub-LLM to delegate to
+  webhookUrl       String? // 🆕 Per-function webhook URL (overrides workspace default if set)
+
   // 🔐 Credentials mapping - specifica dove e come injettare le credenziali
   // Esempio: { "api_key": { "location": "querystring", "paramName": "apikey", "variableName": "MAILCHIMP_KEY" } }
-  credentialsMapping    Json?     // Maps env vars to header/querystring/body locations
-  
-  isActive              Boolean   @default(true)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  credentialsMapping Json? // Maps env vars to header/querystring/body locations
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, functionName]) // One record per function per workspace
   @@index([workspaceId, isActive])
@@ -2308,18 +2414,18 @@ model WorkspaceCallingFunction {
 // 🔐 ENVIRONMENT VARIABLES - Secure storage for API keys and credentials per workspace
 // Encrypted at rest, decrypted only when needed for webhook dispatch
 model WorkspaceEnvironmentVariable {
-  id              String    @id @default(cuid())
-  workspaceId     String
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  variableName    String    // e.g., "STRIPE_API_KEY", "MAILCHIMP_TOKEN", "TWILIO_AUTH"
-  encryptedValue  String    @db.Text  // 🔒 Encrypted with workspace secret + AES-256-GCM
-  nonce           String    @db.Text  // 🔒 Random nonce for encryption (prevents pattern matching)
-  description     String?   @db.Text  // What this variable is for
-  createdBy       String?   // User ID who created it (for audit)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  variableName   String // e.g., "STRIPE_API_KEY", "MAILCHIMP_TOKEN", "TWILIO_AUTH"
+  encryptedValue String    @db.Text // 🔒 Encrypted with workspace secret + AES-256-GCM
+  nonce          String    @db.Text // 🔒 Random nonce for encryption (prevents pattern matching)
+  description    String?   @db.Text // What this variable is for
+  createdBy      String? // User ID who created it (for audit)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  @@unique([workspaceId, variableName])  // One credential name per workspace
+  @@unique([workspaceId, variableName]) // One credential name per workspace
   @@index([workspaceId])
   @@index([createdAt])
   @@map("workspace_environment_variables")
@@ -2411,57 +2517,57 @@ enum SupportSenderType {
 // Confirmed Appointment: appuntamento confermato (fonte di verità per reminder/billing)
 // Google Calendar è fonte esterna, questo è la copia locale per scheduler/billing/history
 model Appointment {
-  id                   String    @id @default(uuid())
-  workspaceId          String
-  customerId           String    // Customers.id
-  serviceId            String    // Services.id (booking service type)
+  id          String @id @default(uuid())
+  workspaceId String
+  customerId  String // Customers.id
+  serviceId   String // Services.id (booking service type)
 
   // Timing (UTC)
-  startTime            DateTime  // Inizio appuntamento (UTC)
-  endTime              DateTime  // Fine appuntamento (UTC) = startTime + duration + bufferTime
-  timezone             String    @default("Europe/Rome") // IANA timezone per display cliente
+  startTime DateTime // Inizio appuntamento (UTC)
+  endTime   DateTime // Fine appuntamento (UTC) = startTime + duration + bufferTime
+  timezone  String   @default("Europe/Rome") // IANA timezone per display cliente
 
   // Google Calendar sync
-  googleEventId        String?   // Google Calendar Event ID (null se non sincronizzato)
-  googleEventLink      String?   // Link diretto al Google Calendar event
-  googleCalendarId     String?   // Calendar ID usato (default "primary")
+  googleEventId    String? // Google Calendar Event ID (null se non sincronizzato)
+  googleEventLink  String? // Link diretto al Google Calendar event
+  googleCalendarId String? // Calendar ID usato (default "primary")
 
   // Zoom meeting
-  zoomLink             String?   // Zoom meeting link (e.g., https://zoom.us/j/123456789)
-  zoomMeetingId        String?   // Zoom meeting ID
+  zoomLink      String? // Zoom meeting link (e.g., https://zoom.us/j/123456789)
+  zoomMeetingId String? // Zoom meeting ID
 
   // Status
-  status               String    @default("confirmed") // "confirmed" | "cancelled" | "completed" | "no_show"
-  cancelledAt          DateTime? // When cancelled
-  cancellationReason   String?   @db.Text
-  cancelledBy          String?   // "customer" | "admin" | "system"
+  status             String    @default("confirmed") // "confirmed" | "cancelled" | "completed" | "no_show"
+  cancelledAt        DateTime? // When cancelled
+  cancellationReason String?   @db.Text
+  cancelledBy        String? // "customer" | "admin" | "system"
 
   // Customer details (snapshot al momento prenotazione, non dipende da Customers record)
-  customerName         String?
-  customerPhone        String?
-  customerEmail        String?
-  customerNotes        String?   @db.Text
-  adminNotes           String?   @db.Text
+  customerName  String?
+  customerPhone String?
+  customerEmail String?
+  customerNotes String? @db.Text
+  adminNotes    String? @db.Text
 
   // Channel that booked (determines reminder channel)
-  bookedVia            String    @default("whatsapp") // "whatsapp" | "widget" | "admin"
+  bookedVia String @default("whatsapp") // "whatsapp" | "widget" | "admin"
 
   // Reminder tracking
-  reminder24hSentAt    DateTime? // When 24h reminder was sent (null = not sent yet)
-  reminder1hSentAt     DateTime? // When 1h reminder was sent (null = not sent yet)
-  reminder30mSentAt    DateTime? // When 30min reminder was sent (null = not sent yet)
-  reminderChannel      String?   // "whatsapp" | "email" — actual channel used for this appointment
+  reminder24hSentAt DateTime? // When 24h reminder was sent (null = not sent yet)
+  reminder1hSentAt  DateTime? // When 1h reminder was sent (null = not sent yet)
+  reminder30mSentAt DateTime? // When 30min reminder was sent (null = not sent yet)
+  reminderChannel   String? // "whatsapp" | "email" — actual channel used for this appointment
 
   // Billing
   reminderBilledAt     DateTime? // When billing record was created for reminders
   reminderBillingTotal Decimal?  @default(0) @db.Decimal(10, 2) // Total charged for reminders
 
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  workspace            Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  service              Services        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  customer             Customers       @relation(fields: [customerId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  service   Services  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  customer  Customers @relation(fields: [customerId], references: [id])
 
   @@index([workspaceId, status])
   @@index([workspaceId, startTime]) // Scheduler: finds upcoming appointments
@@ -2474,19 +2580,19 @@ model Appointment {
 
 // Google Calendar OAuth Connection (1 per workspace)
 model GoogleCalendarConnection {
-  id                   String    @id @default(uuid())
-  workspaceId          String    @unique // 1:1 relation
-  calendarId           String    @default("primary") // Google Calendar ID (default "primary")
-  accessToken          String    @db.Text // Encrypted OAuth access token
-  refreshToken         String    @db.Text // Encrypted OAuth refresh token
-  tokenExpiry          DateTime  // When access token expires
-  scope                String[]  @default(["https://www.googleapis.com/auth/calendar"]) // OAuth scopes granted
-  connectedAt          DateTime  @default(now())
-  lastSyncAt           DateTime? // Last successful cache sync
-  isActive             Boolean   @default(true)
-  errorMessage         String?   @db.Text // Last error (token revoked, quota exceeded)
+  id           String    @id @default(uuid())
+  workspaceId  String    @unique // 1:1 relation
+  calendarId   String    @default("primary") // Google Calendar ID (default "primary")
+  accessToken  String    @db.Text // Encrypted OAuth access token
+  refreshToken String    @db.Text // Encrypted OAuth refresh token
+  tokenExpiry  DateTime // When access token expires
+  scope        String[]  @default(["https://www.googleapis.com/auth/calendar"]) // OAuth scopes granted
+  connectedAt  DateTime  @default(now())
+  lastSyncAt   DateTime? // Last successful cache sync
+  isActive     Boolean   @default(true)
+  errorMessage String?   @db.Text // Last error (token revoked, quota exceeded)
 
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@map("google_calendar_connections")
@@ -2494,14 +2600,14 @@ model GoogleCalendarConnection {
 
 // Business Hours: orari di lavoro settimanali
 model WorkspaceBusinessHours {
-  id                   String    @id @default(uuid())
-  workspaceId          String
-  dayOfWeek            Int       // 0=Sunday, 1=Monday, ..., 6=Saturday
-  startTime            String    // "09:00" (HH:mm format)
-  endTime              String    // "17:00" (HH:mm format)
-  isActive             Boolean   @default(true)
+  id          String  @id @default(uuid())
+  workspaceId String
+  dayOfWeek   Int // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime   String // "09:00" (HH:mm format)
+  endTime     String // "17:00" (HH:mm format)
+  isActive    Boolean @default(true)
 
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, dayOfWeek]) // 1 orario per giorno (espandibile con multi-shift in futuro)
   @@index([workspaceId, isActive])
@@ -2510,14 +2616,14 @@ model WorkspaceBusinessHours {
 
 // Blackout Periods: chiusure straordinarie (vacanze, manutenzione)
 model BlackoutPeriod {
-  id                   String    @id @default(uuid())
-  workspaceId          String
-  startDate            DateTime  // Inizio chiusura (UTC)
-  endDate              DateTime  // Fine chiusura (UTC)
-  reason               String?   @db.Text // "Vacanze estive 2024", "Manutenzione sistema"
-  createdAt            DateTime  @default(now())
+  id          String   @id @default(uuid())
+  workspaceId String
+  startDate   DateTime // Inizio chiusura (UTC)
+  endDate     DateTime // Fine chiusura (UTC)
+  reason      String?  @db.Text // "Vacanze estive 2024", "Manutenzione sistema"
+  createdAt   DateTime @default(now())
 
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, startDate, endDate])
   @@map("blackout_periods")
@@ -2525,16 +2631,16 @@ model BlackoutPeriod {
 
 // Reminder Lock: atomicità per evitare duplicati reminder
 model ReminderLock {
-  id                   String    @id @default(uuid())
-  workspaceId          String
-  appointmentId        String    // Appointment ID
-  googleEventId        String?   // Google Calendar Event ID (optional if not synced)
-  reminderType         String    // "1h" | "24h"
-  lockKey              String    @unique // "reminder-{type}-{appointmentId}" — dedup key
-  sentAt               DateTime  @default(now())
-  expiresAt            DateTime  // Cleanup automatico
+  id            String   @id @default(uuid())
+  workspaceId   String
+  appointmentId String // Appointment ID
+  googleEventId String? // Google Calendar Event ID (optional if not synced)
+  reminderType  String // "1h" | "24h"
+  lockKey       String   @unique // "reminder-{type}-{appointmentId}" — dedup key
+  sentAt        DateTime @default(now())
+  expiresAt     DateTime // Cleanup automatico
 
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([appointmentId, reminderType]) // Previene duplicati
   @@index([expiresAt]) // Cleanup job
@@ -2543,17 +2649,17 @@ model ReminderLock {
 
 // Late Cancellation Attempts: analytics tentativi cancellazione tardiva
 model LateCancellationAttempt {
-  id                   String             @id @default(uuid())
-  workspaceId          String
-  customerId           String             // Chi ha tentato cancellazione
-  serviceId            String             // Services.id (booking service type)
-  googleEventId        String?            // Google Calendar Event ID (optional until GCal integration)
-  scheduledStartTime   DateTime           // Quando era l'appuntamento (UTC)
-  attemptedAt          DateTime           @default(now())
-  tooLateThreshold     Int                // Ore di preavviso richiesto (24, 48, etc.)
+  id                 String   @id @default(uuid())
+  workspaceId        String
+  customerId         String // Chi ha tentato cancellazione
+  serviceId          String // Services.id (booking service type)
+  googleEventId      String? // Google Calendar Event ID (optional until GCal integration)
+  scheduledStartTime DateTime // Quando era l'appuntamento (UTC)
+  attemptedAt        DateTime @default(now())
+  tooLateThreshold   Int // Ore di preavviso richiesto (24, 48, etc.)
 
-  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  service              Services           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  service   Services  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId, customerId])
   @@index([attemptedAt])
@@ -2564,46 +2670,46 @@ model LateCancellationAttempt {
 // ONBOARDING QUESTIONNAIRE
 // ============================================================
 model OnboardingQuestionnaire {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
 
   // Contact info (optional — only if user consents to be contacted)
-  fullName    String?
-  email       String?
-  phone       String?
-  company     String?
+  fullName String?
+  email    String?
+  phone    String?
+  company  String?
 
   // v2 Step answers (new questionnaire)
-  stepIndustry          String?  // "real_estate" | "retail" | "food_hospitality" | "professions" | "b2b" | "education" | "other"
-  stepGoal              String?  // "support" | "leads" | "sales" | "bookings" | "communications"
-  stepHumanSupport      String?  // "yes_handoff" | "partial" | "full_auto"
-  stepPushMarketing     String?  // "yes" | "no"
-  stepReminders         String?  // "yes" | "no"
-  stepWidget            String?  // "yes_widget" | "whatsapp_only" | "both"
-  stepSalesAgents       String?  // "yes" | "general" | "no"
-  stepEcommerce         String?  // "yes" | "no" | "planning"
-  stepEcommercePlatform String?  // "wordpress" | "prestashop" | "magento" | "other"
-  stepIntegrations      String?  // "yes" | "no" | "learn_more"
-  stepPrivacy           String?  // "ok" | "concerns" | "need_info"
-  stepOnPremise         String?  // "yes" | "interested" | "cloud"
-  stepHelpful           String?  // "yes" | "maybe" | "exploring"
-  stepInterest          String?  // "0" | "1" | "2" | "3" | "4" | "5" (stars rating)
-  stepOther             String?  // free text
-  stepDemo              String?  // "yes" | "no" — lead wants demo credentials emailed
-  lang                  String?  // "it" | "en" | "es" | "pt"
-  wantsContact          Boolean  @default(false)
+  stepIndustry          String? // "real_estate" | "retail" | "food_hospitality" | "professions" | "b2b" | "education" | "other"
+  stepGoal              String? // "support" | "leads" | "sales" | "bookings" | "communications"
+  stepHumanSupport      String? // "yes_handoff" | "partial" | "full_auto"
+  stepPushMarketing     String? // "yes" | "no"
+  stepReminders         String? // "yes" | "no"
+  stepWidget            String? // "yes_widget" | "whatsapp_only" | "both"
+  stepSalesAgents       String? // "yes" | "general" | "no"
+  stepEcommerce         String? // "yes" | "no" | "planning"
+  stepEcommercePlatform String? // "wordpress" | "prestashop" | "magento" | "other"
+  stepIntegrations      String? // "yes" | "no" | "learn_more"
+  stepPrivacy           String? // "ok" | "concerns" | "need_info"
+  stepOnPremise         String? // "yes" | "interested" | "cloud"
+  stepHelpful           String? // "yes" | "maybe" | "exploring"
+  stepInterest          String? // "0" | "1" | "2" | "3" | "4" | "5" (stars rating)
+  stepOther             String? // free text
+  stepDemo              String? // "yes" | "no" — lead wants demo credentials emailed
+  lang                  String? // "it" | "en" | "es" | "pt"
+  wantsContact          Boolean @default(false)
 
   // v1 legacy fields (kept nullable for backward compat)
-  stepChannel      String?
-  stepTimeSaving   String?
-  stepDocuments    String?
-  stepIntegration  String?
-  stepHandoff      String?
-  stepMarketing    String?
+  stepChannel     String?
+  stepTimeSaving  String?
+  stepDocuments   String?
+  stepIntegration String?
+  stepHandoff     String?
+  stepMarketing   String?
 
   // Admin management
-  status      String   @default("NEW")  // "NEW" | "VIEWED"
-  adminNotes  String?
+  status     String  @default("NEW") // "NEW" | "VIEWED"
+  adminNotes String?
 
   @@map("onboarding_questionnaires")
 }
@@ -2615,19 +2721,19 @@ model OnboardingQuestionnaire {
 // so the report stays readable even if the session moves on.
 model PlaygroundTodo {
   id              String   @id @default(uuid())
-  workspaceId     String   // Board owner — boards are never shared across workspaces
+  workspaceId     String // Board owner — boards are never shared across workspaces
   // Evidence — present when the card was reported from a chat message, null on
   // a card created straight on the board.
-  dialogId        String?  // Reference to Message.id (no FK - cross-workspace safety)
-  messageType     String?  // "chatbot" | "human"
+  dialogId        String? // Reference to Message.id (no FK - cross-workspace safety)
+  messageType     String? // "chatbot" | "human"
   messageContent  String?
   chatbotResponse String?
   commentTitle    String
   priority        String   @default("MEDIUM") // "HIGH" | "MEDIUM" | "LOW"
-  status          String   @default("TODO")  // "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
-  position        Int      @default(0)       // Order within column
-  createdBy       String   // Author display name (staff user, or demo session customer)
-  authorKind      String   @default("STAFF")  // "STAFF" (in-app JWT) | "CUSTOMER" (public demo session)
+  status          String   @default("TODO") // "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
+  position        Int      @default(0) // Order within column
+  createdBy       String // Author display name (staff user, or demo session customer)
+  authorKind      String   @default("STAFF") // "STAFF" (in-app JWT) | "CUSTOMER" (public demo session)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -2639,14 +2745,14 @@ model PlaygroundTodo {
 }
 
 model PlaygroundComment {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   todoId      String
   todo        PlaygroundTodo @relation(fields: [todoId], references: [id], onDelete: Cascade)
   commentText String
   createdBy   String
-  authorKind  String   @default("STAFF") // "STAFF" (in-app JWT) | "CUSTOMER" (public demo session)
-  color       String?  // Hex color or username-derived
-  createdAt   DateTime @default(now())
+  authorKind  String         @default("STAFF") // "STAFF" (in-app JWT) | "CUSTOMER" (public demo session)
+  color       String? // Hex color or username-derived
+  createdAt   DateTime       @default(now())
 
   @@index([todoId, createdAt])
   @@map("playground_comments")
@@ -2659,15 +2765,15 @@ model PlaygroundComment {
 // ============================================================
 
 model FlowCategory {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String // e.g. "RoboCut X200", "Front-load washer"
   slug        String
-  description String?  @db.Text
-  lookupRules Json     @default("{}") // pluggable serialNumber -> FlowCategory matching config (TBD, see analisi.md §13)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  description String?   @db.Text
+  lookupRules Json      @default("{}") // pluggable serialNumber -> FlowCategory matching config (TBD, see analisi.md §13)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   flows  Flow[]
   assets Asset[]
@@ -2678,7 +2784,7 @@ model FlowCategory {
 }
 
 model Flow {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -2686,7 +2792,7 @@ model Flow {
   flowCategory   FlowCategory? @relation(fields: [flowCategoryId], references: [id], onDelete: Cascade)
 
   title       String
-  description String? @db.Text
+  description String?  @db.Text
   keywords    String[] @default([]) // optional synonyms not necessarily present in the graph text
 
   // Editable (nodes/edges/questions can change), but the row itself cannot be
@@ -2698,15 +2804,15 @@ model Flow {
   // Editing this never deletes the flow: an inactive flow stays in the builder.
   isActive Boolean @default(true)
 
-  retrievalDocument String    @db.Text // dense text used only to compute the embedding
-  embedding         Float[]   @default([]) // cosine similarity computed in Node, not in Postgres (see design.md)
-  compiledPrompt    String    @db.Text // verbose markdown injected into the LLM prompt at runtime
+  retrievalDocument String  @db.Text // dense text used only to compute the embedding
+  embedding         Float[] @default([]) // cosine similarity computed in Node, not in Postgres (see design.md)
+  compiledPrompt    String  @db.Text // verbose markdown injected into the LLM prompt at runtime
   hash              String // sha256(compiledPrompt), for determinism/versioning checks
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  nodes FlowNode[]
+  nodes             FlowNode[]
   incomingFlowEdges FlowEdge[] @relation("EdgeTargetFlow")
 
   @@index([workspaceId])
@@ -2731,7 +2837,7 @@ model FlowNode {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  outgoingEdges FlowEdge[]        @relation("EdgeSource")
+  outgoingEdges FlowEdge[]           @relation("EdgeSource")
   attachments   FlowNodeAttachment[]
 
   @@index([flowId])
@@ -2739,10 +2845,10 @@ model FlowNode {
 }
 
 model FlowEdge {
-  id             String   @id @default(cuid())
-  sourceNodeId   String
-  sourceNode     FlowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
-  targetNodeId   String? // null = dead end (should not survive compiler validation)
+  id           String   @id @default(cuid())
+  sourceNodeId String
+  sourceNode   FlowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNodeId String? // null = dead end (should not survive compiler validation)
 
   // This answer hands the conversation over to a DIFFERENT flow instead of a
   // node in this one. Mutually exclusive with targetNodeId. The runtime
@@ -2762,7 +2868,7 @@ model FlowEdge {
 }
 
 model Asset {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   flowCategoryId String // lives at category level, not node level — deduplicated across nodes
   flowCategory   FlowCategory @relation(fields: [flowCategoryId], references: [id], onDelete: Cascade)
 

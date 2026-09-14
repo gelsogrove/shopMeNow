@@ -1159,7 +1159,7 @@ export class CustomClientChatbotService {
    */
   private async getTouristContentAsFaqs(workspaceId: string): Promise<FaqEntry[]> {
     try {
-      const [restaurants, hotels, excursions, refuges, apartments, events, sportsFacilities, skiFacilities, photos] = await Promise.all([
+      const [restaurants, hotels, excursions, refuges, apartments, events, sportsFacilities, skiFacilities, churches, castles, viewpoints, venues, photos] = await Promise.all([
         defaultPrisma.touristRestaurant.findMany({
           where: { workspaceId, isActive: true },
           orderBy: { order: "asc" },
@@ -1192,6 +1192,22 @@ export class CustomClientChatbotService {
           where: { workspaceId, isActive: true },
           orderBy: { order: "asc" },
         }),
+        defaultPrisma.touristChurch.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristCastle.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristViewpoint.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        defaultPrisma.touristVenue.findMany({
+          where: { workspaceId, isActive: true },
+          orderBy: { order: "asc" },
+        }),
         defaultPrisma.touristPhoto.findMany({
           where: { workspaceId },
           orderBy: { order: "asc" },
@@ -1208,7 +1224,8 @@ export class CustomClientChatbotService {
       // getFaqs) pay no extra query and see no behavior change.
       const hasTouristContent =
         restaurants.length + hotels.length + excursions.length + refuges.length +
-        apartments.length + events.length + sportsFacilities.length + skiFacilities.length > 0
+        apartments.length + events.length + sportsFacilities.length + skiFacilities.length +
+        churches.length + castles.length + viewpoints.length + venues.length > 0
       const workspaceLang = hasTouristContent
         ? await defaultPrisma.workspace.findUnique({
             where: { id: workspaceId },
@@ -1431,6 +1448,77 @@ export class CustomClientChatbotService {
         ]),
       }))
 
+      // Churches, castles, viewpoints and venues (Andrea, 2026-09-14).
+      // Question stays category + name + the one discriminating term that
+      // carries IDF weight for that category (see the dilution note above):
+      // the saint's name is already in `name`, so churches add nothing;
+      // viewpoints add nothing either (proper names like "Sorgenti del
+      // Piave" are what guests type); venues add venueType, which is what
+      // wins "c'è una birreria?".
+      const churchEntries: FaqEntry[] = churches.map((c) => ({
+        question: searchableQuestion([`Chiese: ${c.name}`]),
+        answer: joinBlock([
+          c.description,
+          joinFacts([
+            fact("Epoca", c.century),
+            fact("Stile", c.style),
+            fact("Località", c.location),
+            fact("Tel", c.phone),
+          ]),
+          c.link,
+          c.videoUrl,
+          photoOf("CHURCH", c.id),
+        ]),
+      }))
+
+      const castleEntries: FaqEntry[] = castles.map((c) => ({
+        question: searchableQuestion([`Castelli: ${c.name}`]),
+        answer: joinBlock([
+          c.description,
+          joinFacts([
+            fact("Epoca", c.century),
+            fact("Visite", c.visitInfo),
+            fact("Località", c.location),
+            fact("Tel", c.phone),
+          ]),
+          c.link,
+          c.videoUrl,
+          photoOf("CASTLE", c.id),
+        ]),
+      }))
+
+      const viewpointEntries: FaqEntry[] = viewpoints.map((v) => ({
+        question: searchableQuestion([`Punti panoramici: ${v.name}`]),
+        answer: joinBlock([
+          v.description,
+          joinFacts([
+            fact("Quota", v.altitude ? `${v.altitude} m` : null),
+            fact("Accesso", v.access),
+            fact("Difficoltà", v.difficulty),
+            fact("Località", v.location),
+          ]),
+          v.link,
+          v.videoUrl,
+          photoOf("VIEWPOINT", v.id),
+        ]),
+      }))
+
+      const venueEntries: FaqEntry[] = venues.map((v) => ({
+        question: searchableQuestion([`Locali: ${v.name}`, v.venueType]),
+        answer: joinBlock([
+          v.description,
+          joinFacts([
+            fact("Tipo", v.venueType),
+            fact("Orari", v.openingHours),
+            fact("Località", v.location),
+            fact("Tel", v.phone),
+          ]),
+          v.link,
+          v.videoUrl,
+          photoOf("VENUE", v.id),
+        ]),
+      }))
+
       // INDEX cards close the retrieval gap the detail cards cannot cover:
       // on a generic question ("che eventi ci sono?") the category word is in
       // EVERY detail question so its IDF weight tends to zero, and no detail
@@ -1448,6 +1536,10 @@ export class CustomClientChatbotService {
           events,
           sportsFacilities,
           skiFacilities,
+          churches,
+          castles,
+          viewpoints,
+          venues,
         },
         {
           enabledLanguages: workspaceLang?.enabledLanguages,
@@ -1466,6 +1558,10 @@ export class CustomClientChatbotService {
         ...eventEntries,
         ...sportsFacilityEntries,
         ...skiFacilityEntries,
+        ...churchEntries,
+        ...castleEntries,
+        ...viewpointEntries,
+        ...venueEntries,
       ]
     } catch (error) {
       logger.error("[CustomClientChatbotService] getTouristContentAsFaqs failed", {

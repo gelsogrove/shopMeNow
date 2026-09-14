@@ -490,13 +490,17 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
 
   describe('recalculateInvoiceTotals', () => {
     it('should keep credit notes separate from totals', async () => {
+      // PENDING, not PAID: a paid invoice is frozen (see the immutability
+      // test below), so recalculation is only ever exercised before payment.
+      // What this test pins is unchanged — credit notes are recorded on the
+      // invoice but stay OUT of subtotal/tax/total.
       const invoice = {
         ...mockInvoice,
         subscriptionAmount: 0,
         creditUsage: 0,
         creditDebt: 0,
         totalAmount: 0,
-        status: 'PAID',
+        status: 'PENDING',
       }
 
       mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(invoice)

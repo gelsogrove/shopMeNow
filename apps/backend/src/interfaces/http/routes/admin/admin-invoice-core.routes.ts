@@ -246,6 +246,30 @@ router.patch(
         return
       }
 
+      // A PAID invoice has been issued, numbered and collected: it cannot be
+      // walked back to DRAFT/PENDING/FAILED, which would let it be renumbered
+      // or recalculated and break the numbering sequence. The accounting
+      // remedy for a wrongly collected invoice is a credit note, not a status
+      // rollback (Andrea, 2026-09-14). Editing adminNotes on it stays allowed.
+      const current = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { status: true },
+      })
+
+      if (!current) {
+        res.status(404).json({ success: false, error: "Invoice not found" })
+        return
+      }
+
+      if (current.status === "PAID" && status !== "PAID") {
+        res.status(400).json({
+          success: false,
+          error:
+            "A paid invoice cannot change status. Issue a credit note instead.",
+        })
+        return
+      }
+
       const adminUser = (req as any).user
 
       const updateData: any = {

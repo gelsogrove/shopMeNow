@@ -168,7 +168,7 @@ export class WelcomeMessageHandler {
       if (input.conversationId && !input.conversationId.startsWith("temp-")) {
         try {
           const rowsUpdated = (await this.prisma.$executeRaw`
-            UPDATE "ChatSession"
+            UPDATE "chat_sessions"
             SET context = jsonb_set(COALESCE(context, '{}'), '{welcomeSent}', 'true')
             WHERE id = ${input.conversationId}
               AND COALESCE(context->>'welcomeSent', 'false') != 'true'

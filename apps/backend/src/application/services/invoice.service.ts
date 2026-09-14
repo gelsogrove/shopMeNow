@@ -578,6 +578,18 @@ export class InvoiceService {
       throw new Error('Invoice not found')
     }
 
+    // IMMUTABILITY (Andrea, 2026-09-14): a PAID invoice is an issued fiscal
+    // document — the amounts on it are the amounts actually collected, and
+    // they must never move again. Recalculating reads TODAY's user.taxRate,
+    // PlanConfiguration.monthlyFee and pause state, so any later change to
+    // those would silently rewrite a document the customer already paid.
+    // This guard is central on purpose: every caller (PDF download, admin
+    // detail GET, analytics bulk recalculation, adjustments, credit notes)
+    // is protected by it, instead of each remembering to check.
+    if (invoice.status === 'PAID') {
+      return invoice
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: invoice.userId },
       select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true, taxRate: true },
@@ -648,8 +660,16 @@ export class InvoiceService {
         : Promise.resolve({ _sum: { amount: 0 } }),
       this.getRechargeTotal(invoice.userId, invoice.periodStart, invoice.periodEnd),
     ])
-    const creditNotesAmount =
-      invoice.status === "PAID" ? Number(creditNotesTotal._sum.amount || 0) : 0
+    // Recorded on the invoice for reporting, but NOT part of the totals:
+    // computeInvoiceTotals() below is fed subscription + adjustments +
+    // recharges only (locked by invoice.service.spec.ts, which expects
+    // creditNotesTotal 5 alongside subtotal 20 = the fee alone).
+    // A refund is issued as its own credit-note document; to net it off the
+    // invoice an admin books a negative InvoiceAdjustment instead.
+    // Previously read `status === "PAID" ? ... : 0`, which is unreachable
+    // now that PAID invoices return before this point (see the immutability
+    // guard above) — it would have pinned the column to 0 forever.
+    const creditNotesAmount = Number(creditNotesTotal._sum.amount || 0)
     const adjustmentsAmount = Number(adjustmentsTotal._sum.amount || 0)
     const rechargesAmount = Number(rechargeTotal || 0)
 

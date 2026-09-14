@@ -10,6 +10,10 @@ export type TouristContentType =
   | "APARTMENT"
   | "SPORTS_FACILITY"
   | "SKI_FACILITY"
+  | "CHURCH"
+  | "CASTLE"
+  | "VIEWPOINT"
+  | "VENUE"
 
 export interface TouristPhoto {
   id: string

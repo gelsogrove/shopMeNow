@@ -16,10 +16,8 @@ import { WhatsAppQueueService } from "../../services/whatsapp-queue.service"
 import { writeChatbotSettingsJson } from "./chatbot-settings-json.service"
 import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
 import {
-  ALWAYS_AVAILABLE_FUNCTIONS,
-  ECOMMERCE_FUNCTIONS,
-  APPOINTMENT_FUNCTIONS,
   SystemFunctionDef,
+  systemFunctionsFor,
 } from "../../constants/system-functions"
 import { loadModuleToolManifest } from "./module-tool-manifest.service"
 
@@ -125,19 +123,24 @@ For privacy inquiries, please contact our support team.`
    * Populate system functions based on workspace type
    * @private
    */
+  /**
+   * Seed the default system functions for a brand-new workspace.
+   *
+   * Delegates the WHICH to systemFunctionsFor() so that creation and the
+   * startup sync cannot drift apart. Previously this method took a boolean
+   * and appended APPOINTMENT_FUNCTIONS unconditionally, which handed the 5
+   * booking tools to workspaces whose calendar was off.
+   */
   private async seedSystemFunctions(
     tx: any, // Using any for transaction client
     workspaceId: string,
-    isEcommerce: boolean
+    channelMode: string,
+    enableCalendarBooking: boolean
   ) {
-    const functions: SystemFunctionDef[] = [
-      ...ALWAYS_AVAILABLE_FUNCTIONS,
-      ...APPOINTMENT_FUNCTIONS,
-    ]
-
-    if (isEcommerce) {
-      functions.push(...ECOMMERCE_FUNCTIONS)
-    }
+    const functions: SystemFunctionDef[] = systemFunctionsFor(
+      channelMode,
+      enableCalendarBooking
+    )
 
     await tx.workspaceCallingFunction.createMany({
       data: functions.map(fn => ({ ...fn, workspaceId }))
@@ -497,8 +500,16 @@ For privacy inquiries, please contact our support team.`
           `✅ Imported ${agents.length} agents for workspace ${createdWorkspace.id}`
         )
 
-        // 3b. 🆕 Seed system functions based on workspace type
-        await this.seedSystemFunctions(tx, createdWorkspace.id, wsChannelMode === "ECOMMERCE");
+        // 3b. 🆕 Seed system functions based on workspace type AND whether
+        // the workspace actually books appointments. Passing the mode through
+        // (instead of a lone isEcommerce boolean) is what stops a PRO_LOCO or
+        // INFORMATIONAL workspace being born with booking tools it never uses.
+        await this.seedSystemFunctions(
+          tx,
+          createdWorkspace.id,
+          wsChannelMode,
+          createdWorkspace.enableCalendarBooking ?? false
+        );
 
         // 3c. 🆕 Auto-create router FlowNodeConfig for FLOW workspaces
         if (wsChannelMode === "FLOW" || wsChannelMode === "PRO_LOCO") {

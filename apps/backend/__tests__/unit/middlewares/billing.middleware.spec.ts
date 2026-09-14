@@ -104,7 +104,7 @@ describe("Billing Middleware", () => {
 
       const payload = (mockRes.json as jest.Mock).mock.calls[0][0]
       expect(payload.code).toBe("PLAN_LIMIT_REACHED")
-      expect(payload.message).toContain("clienti")
+      expect(payload.message).toContain("customers")
     })
 
     it("should include channel limit message when at channel limit", async () => {
@@ -120,7 +120,7 @@ describe("Billing Middleware", () => {
 
       const payload = (mockRes.json as jest.Mock).mock.calls[0][0]
       expect(payload.code).toBe("PLAN_LIMIT_REACHED")
-      expect(payload.message).toContain("canali")
+      expect(payload.message).toContain("channels")
     })
 
     it("should include limit details when limit is reached", async () => {

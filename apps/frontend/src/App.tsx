@@ -61,6 +61,10 @@ import { TouristRefugesPage } from "./pages/TouristRefugesPage"
 import { TouristEventsPage } from "./pages/TouristEventsPage"
 import { TouristSportsFacilitiesPage } from "./pages/TouristSportsFacilitiesPage"
 import { TouristSkiFacilitiesPage } from "./pages/TouristSkiFacilitiesPage"
+import { TouristChurchesPage } from "./pages/TouristChurchesPage"
+import { TouristCastlesPage } from "./pages/TouristCastlesPage"
+import { TouristViewpointsPage } from "./pages/TouristViewpointsPage"
+import { TouristVenuesPage } from "./pages/TouristVenuesPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
 import NotFoundPage from "./pages/not-found"
@@ -598,6 +602,18 @@ function AppWithProviders() {
 
                   <Route path="/profile" element={<MinimalLayout />}>
                     <Route index element={<ProfilePage />} />
+                  </Route>
+                  <Route path="/tourist-churches" element={<MinimalLayout />}>
+                    <Route index element={<TouristChurchesPage />} />
+                  </Route>
+                  <Route path="/tourist-castles" element={<MinimalLayout />}>
+                    <Route index element={<TouristCastlesPage />} />
+                  </Route>
+                  <Route path="/tourist-viewpoints" element={<MinimalLayout />}>
+                    <Route index element={<TouristViewpointsPage />} />
+                  </Route>
+                  <Route path="/tourist-venues" element={<MinimalLayout />}>
+                    <Route index element={<TouristVenuesPage />} />
                   </Route>
 
                   <Route path="/billing" element={<MinimalLayout />}>

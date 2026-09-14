@@ -51,7 +51,7 @@ export const checkCredit = (operation: "message" | "order" | "push") => {
         )
 
         res.status(402).json({
-          error: "Credito insufficiente",
+          error: "Insufficient credit",
           code: "INSUFFICIENT_CREDIT",
           details: {
             currentBalance: creditCheck.currentBalance,
@@ -59,7 +59,7 @@ export const checkCredit = (operation: "message" | "order" | "push") => {
             deficit: creditCheck.deficit,
             operation,
           },
-          message: `Credito insufficiente. Saldo attuale: $${creditCheck.currentBalance.toFixed(2)}, Richiesto: $${cost.toFixed(2)}. Ricarica il tuo credito per continuare.`,
+          message: `Insufficient credit. Current balance: $${creditCheck.currentBalance.toFixed(2)}, required: $${cost.toFixed(2)}. Top up your credit to continue.`,
         })
         return
       }
@@ -72,7 +72,7 @@ export const checkCredit = (operation: "message" | "order" | "push") => {
     } catch (error) {
       logger.error("[BILLING] Error in checkCredit middleware:", error)
       res.status(500).json({
-        error: "Errore verifica credito",
+        error: "Credit check failed",
         code: "CREDIT_CHECK_ERROR",
       })
     }
@@ -109,10 +109,10 @@ export const checkPlanLimits = (
 
       if (!limitCheck.withinLimits) {
         const limitMessages: Record<string, string> = {
-          customers: "clienti",
-          channels: "canali",
-          teamMembers: "membri del team",
-          products: "prodotti",
+          customers: "customers",
+          channels: "channels",
+          teamMembers: "team members",
+          products: "products",
         }
 
         logger.warn(
@@ -120,14 +120,14 @@ export const checkPlanLimits = (
         )
 
         res.status(403).json({
-          error: "Limite piano raggiunto",
+          error: "Plan limit reached",
           code: "PLAN_LIMIT_REACHED",
           details: {
             limitType,
             current: limitCheck.current,
             max: limitCheck.max,
           },
-          message: `Hai raggiunto il limite massimo di ${limitMessages[limitType]} per il tuo piano (${limitCheck.current}/${limitCheck.max}). Aggiorna a un piano superiore per aumentare i limiti.`,
+          message: `You have reached the maximum number of ${limitMessages[limitType]} for your plan (${limitCheck.current}/${limitCheck.max}). Upgrade your plan to raise the limit.`,
         })
         return
       }
@@ -136,7 +136,7 @@ export const checkPlanLimits = (
     } catch (error) {
       logger.error("[BILLING] Error in checkPlanLimits middleware:", error)
       res.status(500).json({
-        error: "Errore verifica limiti piano",
+        error: "Plan limits check failed",
         code: "PLAN_LIMITS_CHECK_ERROR",
       })
     }
@@ -171,13 +171,13 @@ export const checkTrialValid = async (
       )
 
       res.status(403).json({
-        error: "Trial scaduto",
+        error: "Trial expired",
         code: "TRIAL_EXPIRED",
         details: {
           expiredAt: trialStatus.expiredAt,
         },
         message:
-          "Il tuo periodo di prova è scaduto. Scegli un piano per continuare ad usare eChatbot.",
+          "Your trial period has expired. Choose a plan to keep using eChatbot.",
       })
       return
     }
@@ -189,7 +189,7 @@ export const checkTrialValid = async (
   } catch (error) {
     logger.error("[BILLING] Error in checkTrialValid middleware:", error)
     res.status(500).json({
-      error: "Errore verifica trial",
+      error: "Trial check failed",
       code: "TRIAL_CHECK_ERROR",
     })
   }
@@ -223,10 +223,10 @@ export const checkBillingRequirements = (
 
       if (trialStatus.isTrialPlan && !trialStatus.isValid) {
         res.status(403).json({
-          error: "Trial scaduto",
+          error: "Trial expired",
           code: "TRIAL_EXPIRED",
           message:
-            "Il tuo periodo di prova è scaduto. Scegli un piano per continuare.",
+            "Your trial period has expired. Choose a plan to continue.",
         })
         return
       }
@@ -237,14 +237,14 @@ export const checkBillingRequirements = (
 
       if (!creditCheck.hasSufficientCredit) {
         res.status(402).json({
-          error: "Credito insufficiente",
+          error: "Insufficient credit",
           code: "INSUFFICIENT_CREDIT",
           details: {
             currentBalance: creditCheck.currentBalance,
             requiredAmount: creditCheck.requiredAmount,
             deficit: creditCheck.deficit,
           },
-          message: `Credito insufficiente. Ricarica per continuare.`,
+          message: `Insufficient credit. Top up to continue.`,
         })
         return
       }
@@ -261,7 +261,7 @@ export const checkBillingRequirements = (
         error
       )
       res.status(500).json({
-        error: "Errore verifica billing",
+        error: "Billing check failed",
         code: "BILLING_CHECK_ERROR",
       })
     }
@@ -302,7 +302,7 @@ export const requireOwnerForBilling = async (
 
     if (!userWorkspace) {
       res.status(403).json({
-        error: "Non hai accesso a questo workspace",
+        error: "You do not have access to this workspace",
         code: "NO_WORKSPACE_ACCESS",
       })
       return
@@ -315,10 +315,10 @@ export const requireOwnerForBilling = async (
       )
 
       res.status(403).json({
-        error: "Solo il proprietario può modificare le impostazioni di billing",
+        error: "Only the owner can change billing settings",
         code: "OWNER_REQUIRED",
         message:
-          "Questa operazione richiede i permessi di proprietario del canale.",
+          "This operation requires channel owner permissions.",
       })
       return
     }
@@ -327,7 +327,7 @@ export const requireOwnerForBilling = async (
   } catch (error) {
     logger.error("[BILLING] Error in requireOwnerForBilling middleware:", error)
     res.status(500).json({
-      error: "Errore verifica permessi",
+      error: "Permission check failed",
       code: "PERMISSION_CHECK_ERROR",
     })
   }
