@@ -394,9 +394,13 @@ function PhoneMock({ t }: { t: TourismCopy }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.7, delay: 0.1 }}
+      /* No scale on the way in: the phone is a fixed object, and growing it
+         from 96% read as the handset "narrowing then opening" before the chat
+         appeared (Andrea, 2026-09-14). A plain fade + rise keeps the chrome
+         still while the conversation types itself in. */
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
       className="relative mx-auto w-full max-w-[340px]"
     >
       <div className="absolute -inset-6 rounded-[3rem] bg-gradient-to-tr from-green-500/25 via-emerald-400/10 to-transparent blur-2xl" />
