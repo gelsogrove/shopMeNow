@@ -1,0 +1,164 @@
+import { api } from "@/services/api"
+import { Check, Loader2, Server, Sparkles, Star } from "lucide-react"
+import { useEffect, useState } from "react"
+
+interface Plan {
+  planType: string
+  displayName: string
+  monthlyFee: number
+  features: string[]
+  messageCost: number
+  pushCost: number
+}
+
+/** Copy that frames each plan for a tourist office, not for a shop. */
+const PITCH: Record<string, { tagline: string; icon: typeof Star }> = {
+  BASIC: {
+    tagline: "Per iniziare: il territorio risponde da solo",
+    icon: Sparkles,
+  },
+  PREMIUM: {
+    tagline: "Il più scelto: si ripaga vendendo i push agli esercenti",
+    icon: Star,
+  },
+  ENTERPRISE: {
+    tagline: "Server dedicato, solo per il vostro ente",
+    icon: Server,
+  },
+}
+
+/** The plan highlighted as recommended. */
+const FEATURED = "PREMIUM"
+
+const euro = (n: number) =>
+  n % 1 === 0 ? `€${n}` : `€${n.toFixed(2).replace(".", ",")}`
+
+/**
+ * The three plans, read from the DATABASE — never hardcoded (CLAUDE.md §1).
+ *
+ * The same `/api/subscription/plans` the billing pages use, so a price shown
+ * here can never drift from the price actually charged. FREE_TRIAL is filtered
+ * out: it is a state an account passes through, not something to choose.
+ */
+export function ProLocoPricing() {
+  const [plans, setPlans] = useState<Plan[] | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get("/subscription/plans")
+      .then((res) => {
+        if (cancelled) return
+        const all: Plan[] = res.data?.data ?? []
+        setPlans(
+          all
+            .filter((p) => p.planType !== "FREE_TRIAL")
+            .sort((a, b) => a.monthlyFee - b.monthlyFee)
+        )
+      })
+      .catch(() => !cancelled && setError(true))
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (error) return null // A pricing table that failed to load is worse than none.
+
+  if (!plans) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
+  const perMessage = plans[0]?.messageCost
+  const perPush = plans[0]?.pushCost
+
+  return (
+    <div>
+      <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
+        {plans.map((plan) => {
+          const featured = plan.planType === FEATURED
+          const pitch = PITCH[plan.planType]
+          const Icon = pitch?.icon ?? Sparkles
+
+          return (
+            <div
+              key={plan.planType}
+              className={[
+                "group relative flex flex-col rounded-2xl border p-7 transition-all duration-300",
+                // Lift on hover — the whole card is the affordance.
+                "hover:-translate-y-1 hover:shadow-xl",
+                featured
+                  ? "border-emerald-500 bg-white shadow-lg md:-mt-4 md:mb-4"
+                  : "border-slate-200 bg-white hover:border-emerald-300",
+              ].join(" ")}
+            >
+              {featured && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                  Il più scelto
+                </span>
+              )}
+
+              <div
+                className={[
+                  "mb-4 flex h-11 w-11 items-center justify-center rounded-xl transition-colors",
+                  featured
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100",
+                ].join(" ")}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                {plan.displayName}
+              </h3>
+              <p className="mt-1 min-h-[2.5rem] text-sm text-slate-500">
+                {pitch?.tagline}
+              </p>
+
+              <div className="mt-5 flex items-baseline gap-1">
+                <span className="text-4xl font-semibold tracking-tight text-slate-900">
+                  {euro(plan.monthlyFee)}
+                </span>
+                <span className="text-sm text-slate-500">/ mese</span>
+              </div>
+
+              <ul className="mt-6 flex-1 space-y-2.5">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex gap-2.5 text-sm text-slate-600">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <a
+                href="#contatti"
+                className={[
+                  "mt-7 block rounded-lg px-4 py-2.5 text-center text-sm font-medium transition-colors",
+                  featured
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "border border-slate-200 text-slate-700 hover:border-emerald-600 hover:text-emerald-700",
+                ].join(" ")}
+              >
+                Richiedi informazioni
+              </a>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Usage costs, from the same rows — the numbers the system really bills. */}
+      {perMessage !== undefined && (
+        <p className="mt-8 text-center text-sm text-slate-500">
+          Consumi a parte: {euro(perMessage)} a messaggio ·{" "}
+          {euro(perPush!)} a notifica push. Si paga solo quello che si usa.
+        </p>
+      )}
+    </div>
+  )
+}

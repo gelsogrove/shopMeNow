@@ -67,6 +67,7 @@ import { TouristViewpointsPage } from "./pages/TouristViewpointsPage"
 import { TouristVenuesPage } from "./pages/TouristVenuesPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
+import ProLocoHomePage from "./pages/ProLocoHomePage"
 import NotFoundPage from "./pages/not-found"
 import { OffersPage } from "./pages/OffersPage"
 import OrdersPage from "./pages/OrdersPage"
@@ -394,8 +395,12 @@ function AppWithProviders() {
           <ChatProvider>
             <ChatListProvider>
               <Routes>
-                {/* ROOT: Login is the homepage */}
-                <Route path="/" element={<LoginPage />} />
+                {/* ROOT: the Pro Loco landing, which carries its own login
+                    form. The previous homepage (LoginPage) stays reachable at
+                    /login — it holds Google sign-in, registration and the
+                    contact form, which this landing deliberately does not
+                    duplicate. The /login route already exists further down. */}
+                <Route path="/" element={<ProLocoHomePage />} />
 
                 {/* Auth Routes - accessibili senza autenticazione */}
                 <Route path="/auth">

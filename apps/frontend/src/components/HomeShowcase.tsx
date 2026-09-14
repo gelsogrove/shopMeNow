@@ -19,7 +19,7 @@ import { Loader2, MapPin, Mic, Play } from "lucide-react"
 // Translated to it / en / es / de; fr / ca fall back to English.
 // ---------------------------------------------------------------------------
 
-type Lang = "it" | "en" | "es" | "de" | "fr" | "ca"
+export type Lang = "it" | "en" | "es" | "de" | "fr" | "ca"
 
 const WA_GREEN = "#25D366"
 
@@ -37,7 +37,7 @@ function pick(lang: Lang, it: string, en: string, es: string, de: string): strin
 }
 
 type Role = "in" | "out" | "op"
-interface Msg {
+export interface Msg {
   role: Role
   text?: string
   sub?: string
@@ -52,12 +52,12 @@ interface Msg {
   imgBig?: string // promo banner: big value (e.g. -20%)
   imgSmall?: string // promo banner: subtitle line
 }
-interface Feature {
+export interface Feature {
   icon: string
   title: string
   desc: string
 }
-interface Step {
+export interface Step {
   feature: number // index into features[] to highlight
   msgs: Msg[]
   reset?: boolean // clears the chat (start of a fresh conversation)
@@ -309,8 +309,32 @@ function buildContent(lang: Lang) {
   return { title, subtitle, everyLang, online, opLabel, voiceLabel, features, script }
 }
 
-export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
-  const c = buildContent(lang)
+/** What the showcase plays: the copy, the capability cards and the script. */
+export interface ShowcaseContent {
+  title: string
+  subtitle: string
+  everyLang: string
+  online: string
+  opLabel: string
+  voiceLabel: string
+  features: Feature[]
+  script: Step[]
+}
+
+/**
+ * `content` lets a page play a DIFFERENT story on the same stage — the Pro
+ * Loco landing tells a guest's holiday instead of a laundry franchise
+ * (Andrea, 2026-09-14). Omitted, it behaves exactly as before: the existing
+ * LoginPage passes only `lang` and is untouched.
+ */
+export function HomeShowcase({
+  lang = "en",
+  content,
+}: {
+  lang?: Lang
+  content?: ShowcaseContent
+}) {
+  const c = content ?? buildContent(lang)
   const chatRef = useRef<HTMLDivElement>(null)
   const iRef = useRef(0) // driver's current flat message index (mutable, clickable)
   const [visible, setVisible] = useState(0) // number of revealed messages (flat)
