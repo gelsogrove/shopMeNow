@@ -1,4 +1,6 @@
 import { HomeShowcase } from "@/components/HomeShowcase"
+import HeroRobot from "@/components/landing/HeroRobot"
+import { ProLocoGallery } from "@/components/ProLocoGallery"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
 import { proLocoShowcaseContent } from "@/components/ProLocoShowcaseContent"
 import { Button } from "@/components/ui/button"
@@ -7,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { SUPPORTED_LANGUAGES, useLanguage } from "@/contexts/LanguageContext"
-import { auth } from "@/services/api"
+import { api, auth } from "@/services/api"
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"
 import { homeCopy } from "./proLocoHomeTranslations"
 import {
   Bell,
@@ -50,6 +53,11 @@ const CONTENT_ICONS = [
   Building2, UtensilsCrossed, Mountain, CalendarDays, Sparkles,
   MapPin, Castle, ScrollText, Phone,
 ]
+
+// Same client id the main LoginPage uses — one Google app, one consent screen.
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com"
 
 export default function ProLocoHomePage() {
   const navigate = useNavigate()
@@ -95,6 +103,49 @@ export default function ProLocoHomePage() {
           ? t.errBadCredentials
           : t.errGeneric
       )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Google sign-in, mirroring LoginPage's flow exactly: storage cleared first,
+   * then the same three outcomes the backend can return — straight in, 2FA
+   * setup, or 2FA verification. Diverging here would mean a user who signs in
+   * from the landing page skips a step the other page enforces.
+   */
+  const handleGoogle = async (credential: string | undefined) => {
+    if (!credential) return
+    setError("")
+    setLoading(true)
+    storage.clearAppState()
+
+    try {
+      const response = await api.post("/auth/oauth/google", { credential })
+      const { user, requiresSetup, requires2FA, qrCode, token, sessionId } =
+        response.data
+
+      // Admin/developer accounts come back already authenticated.
+      if (sessionId && token && !requiresSetup && !requires2FA) {
+        navigate("/workspace-selection")
+        return
+      }
+
+      // Kept only for the 2FA screens to read — no session yet.
+      storage.setUser(user)
+
+      navigate(requiresSetup ? "/auth/setup-2fa" : "/auth/verify-2fa", {
+        state: {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          ...(requiresSetup ? { qrCode } : {}),
+          provider: "google",
+        },
+      })
+    } catch (err) {
+      logger.error("[ProLocoHome] google sign-in failed", err)
+      setError(t.errGeneric)
     } finally {
       setLoading(false)
     }
@@ -151,9 +202,17 @@ export default function ProLocoHomePage() {
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <div>
-            <p className="text-emerald-700 font-medium text-sm mb-4">
-              {t.eyebrow}
-            </p>
+            {/* The brand mascot, reusing the animated HeroRobot already built
+                for the other landing pages (Andrea, 2026-09-14: "usa il
+                robottino che avevamo prima verde"). Small and beside the
+                slogan, not above it: on this page the login form is the thing
+                that must stay above the fold. */}
+            <div className="mb-6 flex items-center gap-4">
+              <HeroRobot className="w-20 shrink-0 [&_img]:w-20 sm:[&_img]:w-24 [&_img]:h-auto" />
+              <p className="text-emerald-700 font-medium text-sm">
+                {t.eyebrow}
+              </p>
+            </div>
             <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] text-slate-900">
               {t.slogan1}
               <br />
@@ -243,6 +302,24 @@ export default function ProLocoHomePage() {
                 >
                   {t.forgot}
                 </button>
+
+                {/* Google sign-in, same as the main LoginPage: many tourist
+                    offices run on a Gmail account and never set a password. */}
+                <div className="flex items-center gap-3 pt-2">
+                  <span className="h-px flex-1 bg-slate-200" />
+                  <span className="text-xs text-slate-400">{t.orDivider}</span>
+                  <span className="h-px flex-1 bg-slate-200" />
+                </div>
+
+                <div className="flex justify-center">
+                  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                    <GoogleLogin
+                      onSuccess={(res) => handleGoogle(res.credential)}
+                      onError={() => setError(t.errGeneric)}
+                      width="320"
+                    />
+                  </GoogleOAuthProvider>
+                </div>
               </form>
             </div>
           </div>
@@ -314,6 +391,13 @@ export default function ProLocoHomePage() {
               )
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ── Real places from the workspace, not stock photos ─────── */}
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <ProLocoGallery title={t.galleryTitle} subtitle={t.gallerySubtitle} />
         </div>
       </section>
 

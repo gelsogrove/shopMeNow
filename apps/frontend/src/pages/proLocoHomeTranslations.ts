@@ -33,6 +33,7 @@ export interface HomeCopy {
   loginCta: string
   loginLoading: string
   forgot: string
+  orDivider: string
   errBadCredentials: string
   errGeneric: string
   benefitsTitle: string
@@ -49,6 +50,8 @@ export interface HomeCopy {
   revenueBody1: string
   revenueBody2: string
   revenueSteps: Array<{ t: string; d: string }>
+  galleryTitle: string
+  gallerySubtitle: string
   closingTitle: string
   closingBody: string
   closingCta: string
@@ -56,6 +59,8 @@ export interface HomeCopy {
 }
 
 const it: HomeCopy = {
+  galleryTitle: "Il vostro territorio, com'è davvero",
+  gallerySubtitle: "Ogni scheda può portarsi dietro le sue foto: l'ospite vede il posto prima di arrivarci.",
   audience: "per Pro Loco e Consorzi",
   eyebrow: "Per gli uffici turistici",
   slogan1: "Il vostro territorio risponde",
@@ -71,6 +76,7 @@ const it: HomeCopy = {
   loginCta: "Accedi",
   loginLoading: "Accesso in corso...",
   forgot: "Password dimenticata?",
+  orDivider: "oppure",
   errBadCredentials: "Email o password non corretti.",
   errGeneric: "Accesso non riuscito. Riprova fra poco.",
   benefitsTitle: "Cosa cambia per i vostri ospiti",
@@ -105,6 +111,8 @@ const it: HomeCopy = {
 }
 
 const en: HomeCopy = {
+  galleryTitle: "Your region, as it really is",
+  gallerySubtitle: "Every entry can carry its own photos: the visitor sees the place before they get there.",
   audience: "for Tourist Offices",
   eyebrow: "For tourist information offices",
   slogan1: "Your region answers",
@@ -120,6 +128,7 @@ const en: HomeCopy = {
   loginCta: "Sign in",
   loginLoading: "Signing in...",
   forgot: "Forgot your password?",
+  orDivider: "or",
   errBadCredentials: "Incorrect email or password.",
   errGeneric: "Sign-in failed. Please try again shortly.",
   benefitsTitle: "What changes for your visitors",
@@ -154,6 +163,8 @@ const en: HomeCopy = {
 }
 
 const es: HomeCopy = {
+  galleryTitle: "Vuestro territorio, tal y como es",
+  gallerySubtitle: "Cada ficha puede llevar sus fotos: el visitante ve el sitio antes de llegar.",
   audience: "para Oficinas de Turismo",
   eyebrow: "Para oficinas de turismo",
   slogan1: "Vuestro territorio responde",
@@ -169,6 +180,7 @@ const es: HomeCopy = {
   loginCta: "Acceder",
   loginLoading: "Accediendo...",
   forgot: "¿Has olvidado la contraseña?",
+  orDivider: "o",
   errBadCredentials: "Email o contraseña incorrectos.",
   errGeneric: "No se ha podido acceder. Inténtalo de nuevo en un momento.",
   benefitsTitle: "Qué cambia para vuestros visitantes",
@@ -204,6 +216,8 @@ const es: HomeCopy = {
 
 const ca: HomeCopy = {
   ...es,
+  galleryTitle: "El vostre territori, tal com és",
+  gallerySubtitle: "Cada fitxa pot portar les seves fotos: el visitant veu el lloc abans d'arribar-hi.",
   audience: "per a Oficines de Turisme",
   eyebrow: "Per a oficines de turisme",
   slogan1: "El vostre territori respon",
@@ -219,6 +233,7 @@ const ca: HomeCopy = {
   loginCta: "Accedeix",
   loginLoading: "Accedint...",
   forgot: "Has oblidat la contrasenya?",
+  orDivider: "o",
   errBadCredentials: "Correu o contrasenya incorrectes.",
   errGeneric: "No s'ha pogut accedir. Torna-ho a provar d'aquí a una estona.",
   benefitsTitle: "Què canvia per als vostres visitants",
@@ -253,6 +268,8 @@ const ca: HomeCopy = {
 }
 
 const fr: HomeCopy = {
+  galleryTitle: "Votre territoire, tel qu'il est",
+  gallerySubtitle: "Chaque fiche peut porter ses photos : le visiteur voit le lieu avant d'y arriver.",
   audience: "pour Offices de Tourisme",
   eyebrow: "Pour les offices de tourisme",
   slogan1: "Votre territoire répond",
@@ -268,6 +285,7 @@ const fr: HomeCopy = {
   loginCta: "Se connecter",
   loginLoading: "Connexion...",
   forgot: "Mot de passe oublié ?",
+  orDivider: "ou",
   errBadCredentials: "Email ou mot de passe incorrects.",
   errGeneric: "Connexion impossible. Réessayez dans un instant.",
   benefitsTitle: "Ce qui change pour vos visiteurs",
@@ -302,6 +320,8 @@ const fr: HomeCopy = {
 }
 
 const de: HomeCopy = {
+  galleryTitle: "Ihre Region, wie sie wirklich ist",
+  gallerySubtitle: "Jeder Eintrag kann eigene Fotos mitbringen: Der Gast sieht den Ort, bevor er ankommt.",
   audience: "für Tourismusverbände",
   eyebrow: "Für Tourismusbüros",
   slogan1: "Ihre Region antwortet",
@@ -317,6 +337,7 @@ const de: HomeCopy = {
   loginCta: "Anmelden",
   loginLoading: "Anmeldung läuft...",
   forgot: "Passwort vergessen?",
+  orDivider: "oder",
   errBadCredentials: "E-Mail oder Passwort sind falsch.",
   errGeneric: "Anmeldung fehlgeschlagen. Bitte gleich noch einmal versuchen.",
   benefitsTitle: "Was sich für Ihre Gäste ändert",
