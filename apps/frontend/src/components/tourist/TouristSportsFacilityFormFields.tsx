@@ -1,8 +1,8 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import { TouristSportsFacility } from "@/services/touristSportsFacilityApi"
+import { DescriptionField } from "./DescriptionField"
 import { LocationField } from "./LocationField"
 import { PhotoGallery } from "./PhotoGallery"
 
@@ -29,15 +29,7 @@ export function TouristSportsFacilityFormFields({
         <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" defaultValue={item?.name} required />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          name="description"
-          className="min-h-[260px]"
-          defaultValue={item?.description ?? ""}
-        />
-      </div>
+      <DescriptionField defaultValue={item?.description} />
       <div className="space-y-2">
         <Label htmlFor="sport">Sport</Label>
         <Input

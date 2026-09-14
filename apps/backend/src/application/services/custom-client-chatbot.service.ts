@@ -1272,6 +1272,38 @@ export class CustomClientChatbotService {
       const joinBlock = (parts: Array<string | null | undefined>): string =>
         parts.filter((p): p is string => !!p).join("\n")
 
+      /**
+       * Tourist descriptions as plain text.
+       *
+       * The backoffice edits them in a WYSIWYG (Andrea, 2026-09-14: "magari
+       * metti un lettore di bold corsivo colori un WYSIWYG"), so what is
+       * stored is HTML — `<strong>`, `<em>`, `<span style="color:…">`. None of
+       * it means anything here: this text goes into the model's prompt and is
+       * relayed over WhatsApp, where tags are neither rendered nor wanted, and
+       * every tag is an input token paid on each turn.
+       *
+       * Block ends become newlines so the paragraphing survives the strip;
+       * the entities are the ones Quill actually emits.
+       */
+      const plainText = (html: string | null | undefined): string | null => {
+        if (!html) return null
+        const text = html
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+          .replace(/<[^>]+>/g, "")
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim()
+        // An empty editor stores "<p><br></p>": after stripping it is blank,
+        // and a blank line in the prompt is worse than no line at all.
+        return text === "" ? null : text
+      }
+
       // The module's retrieval (selectRelevantFaqs → subjectScore) matches the
       // guest's words against the entry's QUESTION only, never the answer —
       // and the score is matched/total over the question's OWN terms, so every
@@ -1292,7 +1324,7 @@ export class CustomClientChatbotService {
           r.celiacFriendly ? "adatto a celiaci, senza glutine" : null,
         ]),
         answer: joinBlock([
-          r.description,
+          plainText(r.description),
           joinFacts([
             fact("Cucina", r.cuisineType),
             fact("Adatto a celiaci", r.celiacFriendly),
@@ -1309,7 +1341,7 @@ export class CustomClientChatbotService {
       const hotelEntries: FaqEntry[] = hotels.map((h) => ({
         question: searchableQuestion([`Alberghi: ${h.name}`]),
         answer: joinBlock([
-          h.description,
+          plainText(h.description),
           joinFacts([
             fact("Categoria", h.stars ? `${h.stars} stelle` : null),
             fact("Località", h.location),
@@ -1328,7 +1360,7 @@ export class CustomClientChatbotService {
       const excursionEntries: FaqEntry[] = excursions.map((e) => ({
         question: searchableQuestion([`Escursioni: ${e.name}`]),
         answer: joinBlock([
-          e.description,
+          plainText(e.description),
           joinFacts([
             fact("Difficoltà", e.difficulty),
             fact("Durata", e.duration),
@@ -1344,7 +1376,7 @@ export class CustomClientChatbotService {
       const refugeEntries: FaqEntry[] = refuges.map((r) => ({
         question: searchableQuestion([`Rifugi: ${r.name}`]),
         answer: joinBlock([
-          r.description,
+          plainText(r.description),
           joinFacts([
             fact("Tempo di salita", r.climbTime),
             fact("Difficoltà", r.difficulty),
@@ -1370,7 +1402,7 @@ export class CustomClientChatbotService {
           `${a.category || "Case e appartamenti"}: ${a.name}`,
         ]),
         answer: joinBlock([
-          a.description,
+          plainText(a.description),
           joinFacts([
             fact("Borgata", a.location),
             fact("Civico", a.streetNumber),
@@ -1393,7 +1425,7 @@ export class CustomClientChatbotService {
       const eventEntries: FaqEntry[] = events.map((e) => ({
         question: searchableQuestion([`Eventi: ${e.title}`]),
         answer: joinBlock([
-          e.description,
+          plainText(e.description),
           joinFacts([
             fact("Località", e.location),
             fact("Dal", formatEventDate(e.startDate)),
@@ -1417,7 +1449,7 @@ export class CustomClientChatbotService {
           s.sport,
         ]),
         answer: joinBlock([
-          s.description,
+          plainText(s.description),
           joinFacts([
             fact("Sport", s.sport),
             fact("Stagione", s.season),
@@ -1437,7 +1469,7 @@ export class CustomClientChatbotService {
           s.slopeType ? `pista ${s.slopeType}` : null,
         ]),
         answer: joinBlock([
-          s.description,
+          plainText(s.description),
           joinFacts([
             fact("Tipo di pista", s.slopeType),
             fact("Località", s.location),
@@ -1458,7 +1490,7 @@ export class CustomClientChatbotService {
       const churchEntries: FaqEntry[] = churches.map((c) => ({
         question: searchableQuestion([`Chiese: ${c.name}`]),
         answer: joinBlock([
-          c.description,
+          plainText(c.description),
           joinFacts([
             fact("Epoca", c.century),
             fact("Stile", c.style),
@@ -1474,7 +1506,7 @@ export class CustomClientChatbotService {
       const castleEntries: FaqEntry[] = castles.map((c) => ({
         question: searchableQuestion([`Castelli: ${c.name}`]),
         answer: joinBlock([
-          c.description,
+          plainText(c.description),
           joinFacts([
             fact("Epoca", c.century),
             fact("Visite", c.visitInfo),
@@ -1490,7 +1522,7 @@ export class CustomClientChatbotService {
       const viewpointEntries: FaqEntry[] = viewpoints.map((v) => ({
         question: searchableQuestion([`Punti panoramici: ${v.name}`]),
         answer: joinBlock([
-          v.description,
+          plainText(v.description),
           joinFacts([
             fact("Quota", v.altitude ? `${v.altitude} m` : null),
             fact("Accesso", v.access),
@@ -1506,7 +1538,7 @@ export class CustomClientChatbotService {
       const venueEntries: FaqEntry[] = venues.map((v) => ({
         question: searchableQuestion([`Locali: ${v.name}`, v.venueType]),
         answer: joinBlock([
-          v.description,
+          plainText(v.description),
           joinFacts([
             fact("Tipo", v.venueType),
             fact("Orari", v.openingHours),

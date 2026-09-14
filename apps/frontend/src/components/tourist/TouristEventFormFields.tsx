@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { TouristEvent } from "@/services/touristEventApi"
+import { DescriptionField } from "./DescriptionField"
 import { LocationField } from "./LocationField"
 import { PhotoGallery } from "./PhotoGallery"
 
@@ -27,15 +28,7 @@ export function TouristEventFormFields({ item, workspaceId }: TouristEventFormFi
         <Label htmlFor="title">Title</Label>
         <Input id="title" name="title" defaultValue={item?.title} required />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          name="description"
-          className="min-h-[260px]"
-          defaultValue={item?.description ?? ""}
-        />
-      </div>
+      <DescriptionField defaultValue={item?.description} />
       <LocationField defaultValue={item?.location} />
       <div className="space-y-2">
         <Label htmlFor="startDate">Start date</Label>
