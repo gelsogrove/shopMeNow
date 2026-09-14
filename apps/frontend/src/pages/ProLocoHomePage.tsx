@@ -93,6 +93,21 @@ export default function ProLocoHomePage() {
         return
       }
 
+      // 🚨 The session has to be STORED before navigating, exactly as
+      // LoginPage does. Without this the redirect fired with no token and no
+      // sessionId, the guarded route found nothing and bounced the user
+      // straight back to the landing page — a login that looked like it did
+      // nothing at all (found 2026-09-14).
+      if (response.data?.token) {
+        storage.setToken(response.data.token)
+      }
+      if (response.data?.sessionId) {
+        storage.setSessionId(response.data.sessionId)
+      }
+      if (response.data?.user) {
+        storage.setUser(response.data.user)
+      }
+
       navigate("/workspace-selection")
     } catch (err: any) {
       logger.error("[ProLocoHome] login failed", err)
@@ -127,6 +142,11 @@ export default function ProLocoHomePage() {
 
       // Admin/developer accounts come back already authenticated.
       if (sessionId && token && !requiresSetup && !requires2FA) {
+        // Same as the password path: store the session BEFORE navigating, or
+        // the guarded route finds nothing and bounces straight back.
+        storage.setToken(token)
+        storage.setSessionId(sessionId)
+        storage.setUser(user)
         navigate("/workspace-selection")
         return
       }
