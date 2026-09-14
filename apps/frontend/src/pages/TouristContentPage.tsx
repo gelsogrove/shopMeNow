@@ -71,6 +71,18 @@ const CATEGORIES: CategoryCard[] = [
     iconBg: "bg-orange-100",
     iconColor: "text-orange-600",
   },
+  // Andrea 2026-09-14 ("locali vicino a ristoranti"): Locali sits next to
+  // Ristoranti — both are "where to eat and drink" — rather than with the
+  // other categories added the same day.
+  {
+    key: "venues",
+    title: "Locali",
+    description: "Bars, pubs, cafes and nightlife",
+    route: "/tourist-venues",
+    icon: Beer,
+    iconBg: "bg-orange-100",
+    iconColor: "text-orange-500",
+  },
   {
     key: "hotels",
     title: "Alberghi",
@@ -130,8 +142,9 @@ const CATEGORIES: CategoryCard[] = [
   },
   // Andrea 2026-09-14 ("per la proloco dobbiamo aggiungere delle categorie:
   // chiese, castelli, punti panoramici, locali"): four more categories, same
-  // shape as the ones above. "Locali" is bars/pubs/cafés — full restaurants
-  // stay in Ristoranti.
+  // shape as the ones above. Three of them are here; the fourth, "Locali"
+  // (bars/pubs/cafés — full restaurants stay in Ristoranti), sits next to
+  // Ristoranti above.
   {
     key: "churches",
     title: "Chiese",
@@ -158,15 +171,6 @@ const CATEGORIES: CategoryCard[] = [
     icon: MountainSnow,
     iconBg: "bg-cyan-100",
     iconColor: "text-cyan-600",
-  },
-  {
-    key: "venues",
-    title: "Locali",
-    description: "Bars, pubs, cafes and nightlife",
-    route: "/tourist-venues",
-    icon: Beer,
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-500",
   },
   // Andrea 2026-08-31 ("FAQ METTILO DENTRO CONTENT"): for PRO_LOCO the FAQs
   // entry moved from the Settings dropdown into this hub as one more card.

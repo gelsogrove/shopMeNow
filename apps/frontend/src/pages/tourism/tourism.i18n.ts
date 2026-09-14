@@ -323,7 +323,7 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "I turisti usano WhatsApp, che hanno già sul telefono. Nessuna registrazione, nessun download.",
       },
     ],
-    tryTitle: "Tre conversazioni vere,",
+    tryTitle: "Sei conversazioni vere,",
     tryAccent: "non uno slogan.",
     trySub:
       "Scegliete una domanda tipo e guardate esattamente cosa risponderebbe il bot — lo stesso meccanismo che vedrebbero i vostri visitatori.",
@@ -655,7 +655,7 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Tourists use WhatsApp, already on their phone. No sign-up, no download.",
       },
     ],
-    tryTitle: "Three real conversations,",
+    tryTitle: "Six real conversations,",
     tryAccent: "not a slogan.",
     trySub:
       "Pick a typical question and see exactly what the bot would answer — the same mechanism your visitors would see.",
@@ -987,7 +987,7 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Los turistas usan WhatsApp, que ya tienen en el móvil. Sin registro, sin descargas.",
       },
     ],
-    tryTitle: "Tres conversaciones reales,",
+    tryTitle: "Seis conversaciones reales,",
     tryAccent: "no un eslogan.",
     trySub:
       "Elegid una pregunta tipo y ved exactamente qué respondería el bot — el mismo mecanismo que verían vuestros visitantes.",
@@ -1319,7 +1319,7 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Gäste nutzen WhatsApp, das sie schon auf dem Handy haben. Keine Registrierung, kein Download.",
       },
     ],
-    tryTitle: "Drei echte Gespräche,",
+    tryTitle: "Sechs echte Gespräche,",
     tryAccent: "kein Werbespruch.",
     trySub:
       "Wählen Sie eine typische Frage und sehen Sie genau, was der Bot antworten würde — derselbe Ablauf, den Ihre Gäste sehen würden.",

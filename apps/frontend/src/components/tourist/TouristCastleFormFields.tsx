@@ -30,7 +30,7 @@ export function TouristCastleFormFields({
         <Textarea
           id="description"
           name="description"
-          className="min-h-[120px]"
+          className="min-h-[260px]"
           defaultValue={item?.description ?? ""}
         />
       </div>

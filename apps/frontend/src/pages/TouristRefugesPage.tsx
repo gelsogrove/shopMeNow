@@ -1,7 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { FormSheet } from "@/components/shared/FormSheet"
+import { FormDialog } from "@/components/shared/FormDialog"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristRefugeFormFields } from "@/components/tourist/TouristRefugeFormFields"
@@ -237,7 +237,7 @@ export function TouristRefugesPage() {
         />
       </div>
 
-      <FormSheet
+      <FormDialog
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
         title="Add Refuge"
@@ -245,9 +245,9 @@ export function TouristRefugesPage() {
         onSubmit={handleAdd}
       >
         <TouristRefugeFormFields item={null} workspaceId={workspace.id} />
-      </FormSheet>
+      </FormDialog>
 
-      <FormSheet
+      <FormDialog
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         title="Edit Refuge"
@@ -257,7 +257,7 @@ export function TouristRefugesPage() {
         {selectedItem && (
           <TouristRefugeFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
-      </FormSheet>
+      </FormDialog>
 
       <ConfirmDialog
         open={showDeleteDialog}

@@ -1,7 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { FormSheet } from "@/components/shared/FormSheet"
+import { FormDialog } from "@/components/shared/FormDialog"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristHotelFormFields } from "@/components/tourist/TouristHotelFormFields"
@@ -233,7 +233,7 @@ export function TouristHotelsPage() {
         />
       </div>
 
-      <FormSheet
+      <FormDialog
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
         title="Add Hotel"
@@ -241,9 +241,9 @@ export function TouristHotelsPage() {
         onSubmit={handleAdd}
       >
         <TouristHotelFormFields item={null} workspaceId={workspace.id} />
-      </FormSheet>
+      </FormDialog>
 
-      <FormSheet
+      <FormDialog
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         title="Edit Hotel"
@@ -253,7 +253,7 @@ export function TouristHotelsPage() {
         {selectedItem && (
           <TouristHotelFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
-      </FormSheet>
+      </FormDialog>
 
       <ConfirmDialog
         open={showDeleteDialog}

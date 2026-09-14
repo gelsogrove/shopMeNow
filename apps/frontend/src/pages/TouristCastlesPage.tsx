@@ -1,7 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { FormSheet } from "@/components/shared/FormSheet"
+import { FormDialog } from "@/components/shared/FormDialog"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristCastleFormFields } from "@/components/tourist/TouristCastleFormFields"
@@ -234,7 +234,7 @@ export function TouristCastlesPage() {
         />
       </div>
 
-      <FormSheet
+      <FormDialog
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
         title="Add Castle"
@@ -242,9 +242,9 @@ export function TouristCastlesPage() {
         onSubmit={handleAdd}
       >
         <TouristCastleFormFields item={null} workspaceId={workspace.id} />
-      </FormSheet>
+      </FormDialog>
 
-      <FormSheet
+      <FormDialog
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         title="Edit Castle"
@@ -254,7 +254,7 @@ export function TouristCastlesPage() {
         {selectedItem && (
           <TouristCastleFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
-      </FormSheet>
+      </FormDialog>
 
       <ConfirmDialog
         open={showDeleteDialog}

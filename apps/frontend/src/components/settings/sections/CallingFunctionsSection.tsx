@@ -444,14 +444,25 @@ export function CallingFunctionsSection({
                                 {label}
                             </button>
                         ))}
-                        <label className="flex items-center gap-2 ml-auto text-xs text-slate-600 cursor-pointer">
+                        {/* NOT a <label>: Radix Switch renders a button plus a hidden
+                            checkbox, so a wrapping label forwards its own click to that
+                            checkbox and the toggle fires twice — once from the button,
+                            once from the label — landing back on its original value.
+                            The text gets its own onClick instead. */}
+                        <div className="flex items-center gap-2 ml-auto text-xs text-slate-600">
                             <Switch
+                                id="tools-active-only"
                                 checked={showActiveOnly}
                                 onCheckedChange={setShowActiveOnly}
                                 className="scale-75"
                             />
-                            Active only
-                        </label>
+                            <span
+                                className="cursor-pointer select-none"
+                                onClick={() => setShowActiveOnly(v => !v)}
+                            >
+                                Active only
+                            </span>
+                        </div>
                     </div>
                 </CardHeader>
 

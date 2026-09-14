@@ -1,7 +1,7 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { FormSheet } from "@/components/shared/FormSheet"
+import { FormDialog } from "@/components/shared/FormDialog"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 import { TouristCardList } from "@/components/tourist/TouristCardList"
 import { TouristSportsFacilityFormFields } from "@/components/tourist/TouristSportsFacilityFormFields"
@@ -244,7 +244,7 @@ export function TouristSportsFacilitiesPage() {
         />
       </div>
 
-      <FormSheet
+      <FormDialog
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
         title="Add Sports Facility"
@@ -252,9 +252,9 @@ export function TouristSportsFacilitiesPage() {
         onSubmit={handleAdd}
       >
         <TouristSportsFacilityFormFields item={null} workspaceId={workspace.id} />
-      </FormSheet>
+      </FormDialog>
 
-      <FormSheet
+      <FormDialog
         open={showEditSheet}
         onOpenChange={setShowEditSheet}
         title="Edit Sports Facility"
@@ -264,7 +264,7 @@ export function TouristSportsFacilitiesPage() {
         {selectedItem && (
           <TouristSportsFacilityFormFields item={selectedItem} workspaceId={workspace.id} />
         )}
-      </FormSheet>
+      </FormDialog>
 
       <ConfirmDialog
         open={showDeleteDialog}
