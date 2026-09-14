@@ -214,6 +214,7 @@ const ca: HomeCopy = {
   chipNoApp: "Sense cap app per instal·lar",
   loginTitle: "Accedeix al teu canal",
   loginSub: "Gestiona continguts, notificacions i converses.",
+  email: "Correu electrònic",
   password: "Contrasenya",
   loginCta: "Accedeix",
   loginLoading: "Accedint...",
