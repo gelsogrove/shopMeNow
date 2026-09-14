@@ -790,4 +790,60 @@ export class CustomersController {
       next(error)
     }
   }
+
+  /**
+   * GET /workspaces/:workspaceId/customers/:id/feedback
+   *
+   * Every feedback this guest ever gave, newest stay first — one row per
+   * holiday, with the dates it refers to (Andrea, 2026-09-14: "a livello di
+   * UI/UX devi gestire bene i feedback, con le date delle vacanze e il
+   * riscontro").
+   *
+   * 🔒 The workspaceId comes from the validated route param and is part of
+   * BOTH queries: without it, a customer id guessed from another workspace
+   * would return that tenant's guest feedback (CLAUDE.md §2).
+   */
+  async getCustomerFeedback(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, workspaceId } = req.params
+
+      // 404 before reading feedback: a customer who is not in THIS workspace
+      // must be indistinguishable from one who does not exist.
+      const customer = await prisma.customers.findFirst({
+        where: { id, workspaceId, deletedAt: null },
+        select: { id: true },
+      })
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" })
+      }
+
+      const feedbacks = await prisma.customerFeedback.findMany({
+        where: { customerId: id, workspaceId },
+        orderBy: [{ departureDate: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+          arrivalDate: true,
+          departureDate: true,
+          createdAt: true,
+        },
+      })
+
+      const rated = feedbacks.filter((f) => typeof f.rating === "number")
+      return res.status(200).json({
+        feedbacks,
+        total: feedbacks.length,
+        // Computed here rather than in the browser so every consumer agrees
+        // on what "average" means: rated stays only, never counting a
+        // comment-without-a-score as a zero.
+        averageRating: rated.length
+          ? Number((rated.reduce((n, f) => n + (f.rating ?? 0), 0) / rated.length).toFixed(1))
+          : null,
+      })
+    } catch (error) {
+      logger.error("Error fetching customer feedback:", error)
+      next(error)
+    }
+  }
 }

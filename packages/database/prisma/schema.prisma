@@ -166,6 +166,7 @@ model Workspace {
   touristHotels           TouristHotel[]
   touristExcursions       TouristExcursion[]
   touristRefuges          TouristRefuge[]
+  customerFeedbacks       CustomerFeedback[]
   touristApartments       TouristApartment[]
   touristEvents           TouristEvent[]
   touristSportsFacilities TouristSportsFacility[]
@@ -541,8 +542,10 @@ model Customers {
   stayProfile     Json?
   // End-of-stay feedback collected in conversation, shown on the customer card.
   feedbackRating  Int? // 1-5
-  feedbackComment String?   @db.Text
+  feedbackComment String?            @db.Text
   feedbackAt      DateTime?
+  /// Every feedback this customer ever gave, one per stay.
+  feedbacks       CustomerFeedback[]
 
   salesId                String?
   cart                   Carts?
@@ -739,14 +742,14 @@ model User {
 
   // 💳 SUBSCRIPTION & BILLING (Feature 198 - Owner-based billing)
   // Credit is SHARED across ALL owned workspaces
-  planType             PlanType  @default(FREE_TRIAL)
-  creditBalance        Decimal   @default(19.00) @db.Decimal(10, 2)
-  trialEndsAt          DateTime?
-  planStartedAt        DateTime  @default(now())
-  nextBillingDate      DateTime?
-  lowBalanceNotifiedAt DateTime? // Last time low balance notification was sent
+  planType                PlanType  @default(FREE_TRIAL)
+  creditBalance           Decimal   @default(19.00) @db.Decimal(10, 2)
+  trialEndsAt             DateTime?
+  planStartedAt           DateTime  @default(now())
+  nextBillingDate         DateTime?
+  lowBalanceNotifiedAt    DateTime? // Last time low balance notification was sent
   trialExpiringNotifiedAt DateTime? // Last time the "trial is ending" warning was sent (throttles the daily job to one email per threshold)
-  taxRate              Decimal   @default(0.22) @db.Decimal(5, 4) // VAT rate applied to this owner's invoices (0.22 = 22%)
+  taxRate                 Decimal   @default(0.22) @db.Decimal(5, 4) // VAT rate applied to this owner's invoices (0.22 = 22%)
 
   // Subscription Status
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
@@ -2040,6 +2043,11 @@ enum BillingType {
 
 enum CampaignFrequency {
   ONCE
+  // Not a calendar cadence like the others: the date is the GUEST's, not the
+  // campaign's — one send per guest, the day after THEIR departure. Handled by
+  // its own procedure, never by the generic "is this campaign due?" runner
+  // (Andrea, 2026-09-14: "ON_STAY_END andrebbe tolta dallo schedule").
+  ON_STAY_END
   WEEKLY
   BIWEEKLY
   MONTHLY
@@ -2085,6 +2093,35 @@ enum PushCampaignRecipientStatus {
 }
 
 // 🚀 Push Campaigns v2 (promotional/scheduled sends)
+/// One feedback per STAY, not per customer (Andrea, 2026-09-14: "i feedback
+/// possiamo salvarli con relazioni 1 a molti nel DB per ogni cliente").
+///
+/// The three `customers.feedback*` columns hold only the LATEST answer: a
+/// second holiday's feedback overwrote the first one, losing the history that
+/// `rolloverStay` itself calls "the most valuable thing the stay produced".
+/// Those columns stay where they are — the customer card reads them and works
+/// (CLAUDE.md §13) — and this table is the full book behind that cover.
+model CustomerFeedback {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  customerId    String
+  rating        Int? // 1-5, validated before it is written
+  comment       String?  @db.Text
+  /// The stay this belongs to: the departure date (YYYY-MM-DD), the same key
+  /// PushCampaignRecipient.stayKey uses. One stay, one feedback.
+  stayKey       String?
+  arrivalDate   String?
+  departureDate String?
+  createdAt     DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer  Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, stayKey])
+  @@index([workspaceId, createdAt])
+  @@map("customer_feedback")
+}
+
 model PushCampaign {
   id                 String                    @id @default(cuid())
   workspaceId        String
@@ -2137,6 +2174,18 @@ model PushCampaign {
   metadata           Json?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
+  // A campaign the platform creates and owns, not the user (Andrea,
+  // 2026-09-14: "una campagna di default che non si puo' cancellare").
+  // Seeded per PRO_LOCO workspace, ALWAYS created switched off: it writes to
+  // real guests, so switching it on is the tenant's deliberate act.
+  // Delete and hard-delete both refuse it; name, message and hours stay editable.
+  isSystem           Boolean                   @default(false)
+  // Hour of day (0-23, workspace timezone) an ON_STAY_END campaign sends at.
+  // Andrea asked for 10:00. Still bounded by sendWindowStart/End like every
+  // other campaign — a guest must never be messaged at 3am.
+  stayEndSendHour    Int                       @default(10)
+  // Days to wait after departure before asking. 1 = the morning after.
+  stayEndDelayDays   Int                       @default(1)
   // Soft delete (Andrea, 2026-09-12): deleting a campaign must NEVER erase
   // its send history — PushCampaignRecipient rows are the audit trail behind
   // billing and the merchant's own quota ledger. A separate, explicit
@@ -2274,6 +2323,17 @@ model PushCampaignRecipient {
   isBlocked     Boolean                     @default(false)
   isFake        Boolean                     @default(false)
   optOutAt      DateTime?
+  // WHICH STAY this send belongs to — the guest's departure date (YYYY-MM-DD).
+  //
+  // 🚨 This is what makes "never send the same message twice" and "DO send it
+  // again for a second holiday" the same rule (Andrea, 2026-09-14: "non
+  // possiamo permetterci di mandare messaggi a chi li ha già ricevuti, ma
+  // attenzione perché se fa una seconda vacanza il feedback lo dobbiamo
+  // inviare"). Keying dedup on the CUSTOMER would silence every later
+  // holiday for ever; keying it on the STAY does not.
+  //
+  // Null for ordinary campaigns, which have one date of their own.
+  stayKey       String?
   createdAt     DateTime                    @default(now())
   updatedAt     DateTime                    @updatedAt
 
@@ -2282,6 +2342,11 @@ model PushCampaignRecipient {
   whatsappQueue WhatsAppQueue[]
   customer      Customers?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  // Dedup enforced by POSTGRES, not by an `if` in the service: two processes,
+  // a retried job or a manual re-run all lose the race here instead of
+  // double-messaging a guest. Ordinary campaigns keep stayKey null and are
+  // unaffected (NULLs do not collide in a unique index).
+  @@unique([campaignId, customerId, stayKey])
   // Andrea, 2026-09-12: a DB-level backstop against a double send — the
   // scheduler already dedups in-transaction against existing rows, this
   // makes a duplicate physically impossible even if that check is ever

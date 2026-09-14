@@ -1956,7 +1956,62 @@ export class CustomClientChatbotService {
         where: { id: p.customerId, workspaceId: p.workspaceId },
         data: data as never,
       })
-      return updated.count > 0
+      if (updated.count === 0) return false
+
+      // ALSO recorded as its own row, one per stay (Andrea, 2026-09-14: "i
+      // feedback possiamo salvarli con relazioni 1 a molti nel DB per ogni
+      // cliente"). The three columns above only ever hold the LATEST answer —
+      // a second holiday overwrote the first — so the history that makes a
+      // returning guest's card worth reading lived nowhere.
+      //
+      // Keyed on departureDate, the same stayKey the campaign dedups on: one
+      // feedback per holiday, and a new holiday is a new row.
+      //
+      // Failing here must NOT lose the answer the guest just gave: the
+      // columns are already written, so this is logged and swallowed.
+      try {
+        const customer = await defaultPrisma.customers.findFirst({
+          where: { id: p.customerId, workspaceId: p.workspaceId },
+          select: { stayProfile: true },
+        })
+        const stay = (customer?.stayProfile ?? null) as {
+          arrivalDate?: string
+          departureDate?: string
+        } | null
+
+        await defaultPrisma.customerFeedback.upsert({
+          // A guest who adds to their feedback in a later message updates the
+          // same stay's row rather than creating a second one.
+          where: {
+            customerId_stayKey: {
+              customerId: p.customerId,
+              stayKey: stay?.departureDate ?? null,
+            },
+          },
+          update: {
+            ...(typeof data.feedbackRating === "number"
+              ? { rating: data.feedbackRating as number }
+              : {}),
+            ...(data.feedbackComment ? { comment: data.feedbackComment as string } : {}),
+          },
+          create: {
+            workspaceId: p.workspaceId,
+            customerId: p.customerId,
+            rating: (data.feedbackRating as number) ?? null,
+            comment: (data.feedbackComment as string) ?? null,
+            stayKey: stay?.departureDate ?? null,
+            arrivalDate: stay?.arrivalDate ?? null,
+            departureDate: stay?.departureDate ?? null,
+          },
+        })
+      } catch (historyError) {
+        logger.warn("[CustomClientChatbotService] feedback history row skipped", {
+          workspaceId: p.workspaceId,
+          error: historyError instanceof Error ? historyError.message : String(historyError),
+        })
+      }
+
+      return true
     } catch (error) {
       logger.error("[CustomClientChatbotService] saveFeedback failed", {
         workspaceId: p.workspaceId,

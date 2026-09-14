@@ -24,6 +24,7 @@
  *   appointment-reminder      - Send 24h and 1h appointment reminder notifications
  *   wasender-qr-cleanup       - Clear expired Wasender QR codes
  *   stale-inloco-cleanup      - Remove INLOCO tag from customers whose stay is over
+ *   stay-end-feedback         - Ask departed guests how the holiday went (ON_STAY_END campaigns)
  */
 
 import { connectDatabase, disconnectDatabase } from '../config/database'
@@ -33,6 +34,10 @@ const JOB_MAP: Record<string, () => Promise<void>> = {
   'push-campaigns': async () => {
     const { pushCampaignsJob } = await import('../jobs/push-campaigns.job')
     await pushCampaignsJob()
+  },
+  'stay-end-feedback': async () => {
+    const { stayEndFeedbackJob } = await import('../jobs/stay-end-feedback.job')
+    await stayEndFeedbackJob()
   },
   'whatsapp-queue-cleanup': async () => {
     const { whatsappQueueCleanupJob } = await import('../jobs/whatsapp-queue-cleanup.job')

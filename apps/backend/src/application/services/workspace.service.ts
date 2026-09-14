@@ -896,6 +896,7 @@ For privacy inquiries, please contact our support team.`
           invalidateWorkspaceConfig(id)
           await this.syncModuleToolRows(id)
           await this.syncChatbotSettingsJson(id)
+          await this.syncSystemCampaigns(id)
           return updated
         }
 
@@ -937,6 +938,7 @@ For privacy inquiries, please contact our support team.`
     invalidateWorkspaceConfig(id)
     await this.syncModuleToolRows(id)
     await this.syncChatbotSettingsJson(id)
+    await this.syncSystemCampaigns(id)
     return updated
   }
 
@@ -1009,6 +1011,60 @@ For privacy inquiries, please contact our support team.`
    * Never throws: like the settings.json sync above, a failure here must not
    * fail the user's save.
    */
+  /**
+   * Ensure a PRO_LOCO workspace has its end-of-stay feedback campaign.
+   *
+   * Runs on every save, like syncModuleToolRows above, so it covers all three
+   * cases with one hook: a workspace created as PRO_LOCO, one that BECOMES
+   * PRO_LOCO later, and every PRO_LOCO workspace that already existed before
+   * this feature (Sappada included) — backfilled the first time anyone saves.
+   * Seeding only in create() would have left Sappada without it for ever.
+   *
+   * 🚨 ALWAYS CREATED SWITCHED OFF. This campaign writes to real guests on a
+   * real WhatsApp number; switching it on is the tenant's deliberate act, not
+   * a side effect of saving Settings.
+   *
+   * The row is created ONCE and never updated afterwards: name, message and
+   * hours are the tenant's to edit, exactly like module tool descriptions.
+   * Never throws — a failure here must not fail the user's save.
+   */
+  private async syncSystemCampaigns(id: string): Promise<void> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id },
+        select: { channelMode: true },
+      })
+      // Only a tourist office has stays that end. A laundry has no departure
+      // date, and its guests must never be swept into this (Andrea,
+      // 2026-09-14: "magari uno è di vacanze e l'altro è di lavanderia").
+      if (workspace?.channelMode !== "PRO_LOCO") return
+
+      const existing = await this.prisma.pushCampaign.findFirst({
+        where: { workspaceId: id, frequency: "ON_STAY_END", isSystem: true },
+        select: { id: true },
+      })
+      if (existing) return
+
+      await this.prisma.pushCampaign.create({
+        data: {
+          workspaceId: id,
+          name: "Feedback fine vacanza",
+          frequency: "ON_STAY_END",
+          isSystem: true,
+          isActive: false,
+          status: "DRAFT",
+          // No message text here: what the guest reads is the tenant's to
+          // write and to translate (CLAUDE.md §1A — no customer-facing copy
+          // in code). The job sends nothing while this is empty.
+          message: null,
+        },
+      })
+      logger.info(`[Workspace] Seeded end-of-stay feedback campaign for ${id} (off by default)`)
+    } catch (err) {
+      logger.warn("[Workspace] system campaign sync skipped:", err)
+    }
+  }
+
   private async syncModuleToolRows(id: string): Promise<void> {
     try {
       const workspace = await this.prisma.workspace.findUnique({

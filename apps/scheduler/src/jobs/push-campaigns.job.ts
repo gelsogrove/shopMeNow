@@ -193,7 +193,16 @@ export async function pushCampaignsJob(): Promise<void> {
           where: { campaignId: campaign.id, status: 'PENDING' },
         })
 
-        if (pendingCount === 0) {
+        // ON_STAY_END owns its own recipients: stay-end-feedback.job.ts adds
+        // exactly the guests who left on the target date, one row per stay.
+        // Letting the generic audience logic run here would message the WHOLE
+        // audience — everyone who ever visited — instead of yesterday's
+        // departures (Andrea, 2026-09-14: "non possiamo permetterci di
+        // mandare messaggi a chi non dobbiamo"). Sending below is shared:
+        // only the SELECTION differs.
+        const ownsItsRecipients = campaign.frequency === CampaignFrequency.ON_STAY_END
+
+        if (pendingCount === 0 && !ownsItsRecipients) {
           // If no pending, it means either we just started a run or we finished.
           // For dynamic targeting, we always repopulate.
           // For manual, we repopulate if this is a new run (lastRunAt updated recently).

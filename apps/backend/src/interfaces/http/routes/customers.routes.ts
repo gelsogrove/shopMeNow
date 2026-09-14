@@ -130,6 +130,14 @@ export const workspaceCustomersRouter = (
     "/:workspaceId/customers/:id",
     controller.deleteCustomer.bind(controller)
   )
+  // Every stay's feedback for one guest, newest first. The workspace guard
+  // runs before the controller reads any row: this returns what a guest wrote
+  // about their holiday and must never cross a tenant boundary.
+  router.get(
+    "/:workspaceId/customers/:id/feedback",
+    workspaceValidationMiddleware,
+    controller.getCustomerFeedback.bind(controller)
+  )
   router.post(
     "/:workspaceId/customers/:id/block",
     controller.blockCustomer.bind(controller)

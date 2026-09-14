@@ -18,6 +18,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
+import { FeedbackHistory } from "@/components/shared/FeedbackHistory"
 import { api } from "@/services/api"
 import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
@@ -835,7 +836,13 @@ export default function ClientsPage(): JSX.Element {
                           what they have already done, and how it went. Built
                           by the assistant during the conversation — this is
                           what the Consorzio keeps once the tourist has left. */}
-                      {(client.stayProfile || client.feedback?.comment) && (
+                      {/* Also opens for a guest with feedback but no stay
+                          profile — someone who answered without ever stating
+                          their dates would otherwise have their feedback
+                          hidden by a condition about something else. */}
+                      {(client.stayProfile ||
+                        client.feedback?.comment ||
+                        client.feedback?.rating) && (
                         <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-600">
                           {client.stayProfile && (
                             <>
@@ -873,9 +880,17 @@ export default function ClientsPage(): JSX.Element {
                               )}
                             </>
                           )}
-                          {client.feedback?.comment && (
-                            <div className="italic text-gray-500">
-                              “{client.feedback.comment}”
+                          {/* Every stay's feedback, not just the latest: the
+                              three customers.feedback* columns keep only the
+                              most recent answer, so a returning guest's
+                              earlier holidays were invisible here. Loaded per
+                              card, on demand. */}
+                          {workspace?.id && (
+                            <div className="pt-2 border-t border-gray-100">
+                              <FeedbackHistory
+                                workspaceId={workspace.id}
+                                customerId={client.id}
+                              />
                             </div>
                           )}
                         </div>
