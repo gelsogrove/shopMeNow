@@ -202,12 +202,17 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
         setCreatingPhase(1)
 
+        // Tracked locally because setQrString() does not update `qrString`
+        // before this same tick decides which step to show.
+        let freshQr = ''
+
         if (needsWhatsApp) {
           const wasResp = await initializeWasenderSession(workspace.id, {
             phoneNumber: whatsappPhoneNumber.trim(),
           })
           setCreatedWorkspaceId(workspace.id)
           if (wasResp.wasenderQrString) {
+            freshQr = wasResp.wasenderQrString
             setQrString(wasResp.wasenderQrString)
             setWasenderStatus('need_scan')
           } else {
@@ -220,12 +225,17 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         setCreatingPhase(2)
         await new Promise(r => setTimeout(r, 700))
 
-        // Sales-led pivot: the qr-scan step has been removed from the
-        // public wizard. WhatsApp setup (QR / provider config) is now
-        // done from Settings → WhatsApp Channel after the workspace is
-        // created, under direct guidance from the sales team. We jump
-        // straight to 'done' regardless of needsWhatsApp.
-        goTo('done')
+        // Show the QR right here when the user asked for WhatsApp (Andrea,
+        // 2026-09-14). It had been skipped for a sales-led onboarding, which
+        // left a self-service signup finishing with NO channel connected and
+        // no sign that one was missing — the QR screen exists and works, it
+        // was simply never reached. Settings → WhatsApp Channel remains the
+        // way back for anyone who closes the wizard here.
+        //
+        // Only when there is something to scan: no QR string means the
+        // session came back already connected or still pending, and an empty
+        // QR screen would be a dead end.
+        goTo(needsWhatsApp && freshQr ? 'qr-scan' : 'done')
       } catch (err: any) {
         const msg = err.response?.data?.error || err.message || 'Failed to create workspace'
         logger.error('[OnboardingWizard] workspace creation failed:', err)
@@ -849,6 +859,21 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                     <RefreshCw className="h-3 w-3 mr-1" />{t.qr.newQr}
                   </Button>
                 )}
+
+                {/* A way out that does not require the phone to be in hand
+                    right now. Until this existed the only exit from a VALID
+                    QR was to scan it or close the window: the "Go to
+                    Dashboard anyway" button above only renders on failure, so
+                    a user without their phone was stuck on a working screen.
+                    The workspace is already created at this point — WhatsApp
+                    can be connected later from Settings. */}
+                <button
+                  type="button"
+                  onClick={handleDone}
+                  className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+                >
+                  {t.qr.later}
+                </button>
               </>
             )}
           </div>

@@ -110,7 +110,7 @@ export const OWT = {
     qr: {
       title: 'Collega WhatsApp',
       subtitle: 'WhatsApp → Dispositivi collegati → Collega dispositivo → Scansiona',
-      expired: 'QR scaduto', newQr: 'Nuovo QR', wait: 's',
+      expired: 'QR scaduto', newQr: 'Nuovo QR', wait: 's', later: 'Lo collego dopo, dalle impostazioni',
     },
     done: {
       title: 'Tutto pronto!',
@@ -213,7 +213,7 @@ export const OWT = {
     qr: {
       title: 'Connect WhatsApp',
       subtitle: 'WhatsApp → Linked Devices → Link a Device → Scan',
-      expired: 'QR expired', newQr: 'New QR', wait: 's',
+      expired: 'QR expired', newQr: 'New QR', wait: 's', later: "I'll connect it later, from Settings",
     },
     done: {
       title: 'All set!',
@@ -316,7 +316,7 @@ export const OWT = {
     qr: {
       title: 'Conectar WhatsApp',
       subtitle: 'WhatsApp → Dispositivos vinculados → Vincular dispositivo → Escanear',
-      expired: 'QR expirado', newQr: 'Nuevo QR', wait: 's',
+      expired: 'QR expirado', newQr: 'Nuevo QR', wait: 's', later: 'Lo conecto después, desde Ajustes',
     },
     done: {
       title: '¡Todo listo!',
@@ -419,7 +419,7 @@ export const OWT = {
     qr: {
       title: 'WhatsApp verbinden',
       subtitle: 'WhatsApp → Verknüpfte Geräte → Gerät verknüpfen → Scannen',
-      expired: 'QR abgelaufen', newQr: 'Neuer QR', wait: 's',
+      expired: 'QR abgelaufen', newQr: 'Neuer QR', wait: 's', later: 'Ich verbinde es später, in den Einstellungen',
     },
     done: {
       title: 'Alles bereit!',
@@ -522,7 +522,7 @@ export const OWT = {
     qr: {
       title: 'Connecter WhatsApp',
       subtitle: 'WhatsApp → Appareils liés → Lier un appareil → Scanner',
-      expired: 'QR expiré', newQr: 'Nouveau QR', wait: 's',
+      expired: 'QR expiré', newQr: 'Nouveau QR', wait: 's', later: 'Je le connecterai plus tard, depuis les Réglages',
     },
     done: {
       title: 'Tout est prêt !',
@@ -625,7 +625,7 @@ export const OWT = {
     qr: {
       title: 'Connectar WhatsApp',
       subtitle: 'WhatsApp → Dispositius vinculats → Vincular dispositiu → Escanejar',
-      expired: 'QR caducat', newQr: 'Nou QR', wait: 's',
+      expired: 'QR caducat', newQr: 'Nou QR', wait: 's', later: 'El connectaré més tard, des de Configuració',
     },
     done: {
       title: 'Tot llest!',
