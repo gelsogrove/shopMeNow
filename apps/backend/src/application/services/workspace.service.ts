@@ -907,6 +907,7 @@ For privacy inquiries, please contact our support team.`
           await this.syncModuleToolRows(id)
           await this.syncChatbotSettingsJson(id)
           await this.syncSystemCampaigns(id)
+          await this.syncSystemFunctions(id)
           return updated
         }
 
@@ -949,6 +950,7 @@ For privacy inquiries, please contact our support team.`
     await this.syncModuleToolRows(id)
     await this.syncChatbotSettingsJson(id)
     await this.syncSystemCampaigns(id)
+    await this.syncSystemFunctions(id)
     return updated
   }
 
@@ -1021,6 +1023,98 @@ For privacy inquiries, please contact our support team.`
    * Never throws: like the settings.json sync above, a failure here must not
    * fail the user's save.
    */
+  /**
+   * Keep the appointment tools in step with the calendar switch.
+   *
+   * 🚨 WHY (2026-09-14). `seedSystemFunctions` runs ONCE, at creation. Nothing
+   * ran when the switch was flipped afterwards, so the two drifted in both
+   * directions — and both are wrong in front of a customer:
+   *
+   *   switch ON later  → the 5 booking tools were never created, so the model
+   *                      has no way to book: the feature looks enabled in
+   *                      Settings and silently does nothing.
+   *   switch OFF later → the tools stayed, so the model kept offering to book
+   *                      appointments the tenant no longer takes. Found live:
+   *                      two workspaces with enableCalendarBooking = false and
+   *                      all 5 booking tools still active.
+   *
+   * DEACTIVATED, never deleted, on the way out: an admin who switched one back
+   * on by hand must not have it removed under them, and a later re-enable then
+   * restores exactly what they had (same reasoning as `syncModuleToolRows`).
+   *
+   * Never throws — a failure here must not fail the user's save.
+   */
+  private async syncSystemFunctions(id: string): Promise<void> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id },
+        select: { channelMode: true, enableCalendarBooking: true },
+      })
+      if (!workspace) return
+
+      const wanted = systemFunctionsFor(
+        workspace.channelMode,
+        workspace.enableCalendarBooking ?? false
+      )
+      const wantedNames = new Set(wanted.map((fn) => fn.functionName))
+
+      const existing = await this.prisma.workspaceCallingFunction.findMany({
+        where: { workspaceId: id, isSystemFunction: true },
+        select: { functionName: true },
+      })
+      const existingNames = new Set(existing.map((f) => f.functionName))
+
+      // Create what is missing. `description` and the rest come from the
+      // definition only on CREATE: text an admin edited in the UI must survive.
+      const toCreate = wanted.filter((fn) => !existingNames.has(fn.functionName))
+      if (toCreate.length > 0) {
+        await this.prisma.workspaceCallingFunction.createMany({
+          data: toCreate.map((fn) => ({ ...fn, workspaceId: id })),
+          skipDuplicates: true,
+        })
+      }
+
+      // Deactivate what is no longer wanted — module built-ins are NOT system
+      // functions, so they are untouched by the isSystemFunction filter above.
+      const toDeactivate = [...existingNames].filter((n) => !wantedNames.has(n))
+      if (toDeactivate.length > 0) {
+        await this.prisma.workspaceCallingFunction.updateMany({
+          where: {
+            workspaceId: id,
+            functionName: { in: toDeactivate },
+            isSystemFunction: true,
+          },
+          data: { isActive: false },
+        })
+      }
+
+      // And re-activate anything that is wanted again after being switched off
+      // by a previous pass — flipping the calendar back on must restore booking.
+      const toReactivate = wanted
+        .map((fn) => fn.functionName)
+        .filter((n) => existingNames.has(n))
+      if (toReactivate.length > 0) {
+        await this.prisma.workspaceCallingFunction.updateMany({
+          where: {
+            workspaceId: id,
+            functionName: { in: toReactivate },
+            isSystemFunction: true,
+            isActive: false,
+          },
+          data: { isActive: true },
+        })
+      }
+
+      if (toCreate.length || toDeactivate.length) {
+        logger.info(
+          `[Workspace] Synced system functions for ${id}: +${toCreate.length} / -${toDeactivate.length}`
+        )
+      }
+    } catch (err) {
+      logger.warn("[Workspace] system function sync skipped:", err)
+    }
+  }
+
   /**
    * Ensure a PRO_LOCO workspace has its end-of-stay feedback campaign.
    *
