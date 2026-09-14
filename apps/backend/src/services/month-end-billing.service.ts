@@ -25,6 +25,9 @@ import {
   paypalInvoiceChargeService,
   MAX_PAYMENT_ATTEMPTS,
 } from "./paypal-invoice-charge.service"
+import { EmailService } from "../application/services/email.service"
+
+const emailService = new EmailService()
 
 export interface MonthEndBillingSummary {
   periodYear: number
@@ -96,6 +99,70 @@ async function applyPendingPlansAndExpireTrials(reference: Date): Promise<void> 
 
   if (expiredTrials.count > 0) {
     logger.info(`[MONTH-END] ⏸️ Paused ${expiredTrials.count} owners with expired free trials`)
+  }
+}
+
+/**
+ * Email the owner the outcome of their monthly invoice: the issued invoice
+ * with its PDF when collected, a payment-failed notice when not.
+ *
+ * Entirely best-effort — every failure is caught and logged here, so a
+ * broken SMTP or a PDF that will not render can never abort the billing run
+ * or leave later owners unbilled (Andrea, 2026-09-14).
+ */
+async function notifyOwnerOfInvoiceOutcome(
+  invoiceId: string,
+  userId: string,
+  periodYear: number,
+  periodMonth: number,
+  paid: boolean
+): Promise<void> {
+  try {
+    const [owner, invoice] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true },
+      }),
+      prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { invoiceNumber: true, totalAmount: true },
+      }),
+    ])
+
+    if (!owner?.email || !invoice) return
+
+    const periodLabel = `${String(periodMonth).padStart(2, "0")}/${periodYear}`
+    const firstName = owner.firstName || "there"
+    const totalAmount = Number(invoice.totalAmount)
+
+    if (!paid) {
+      await emailService.sendPaymentFailedAlert({
+        to: owner.email,
+        firstName,
+        periodLabel,
+        totalAmount,
+      })
+      return
+    }
+
+    // PDF generation is the part most likely to throw; keep it inside the try
+    // so a rendering problem downgrades to "no email", never to a failed run.
+    const invoicePdf = await invoiceService.generateInvoicePdf(invoiceId)
+
+    await emailService.sendMonthlyInvoiceEmail({
+      to: owner.email,
+      firstName,
+      invoiceNumber: invoice.invoiceNumber ?? periodLabel,
+      periodLabel,
+      totalAmount,
+      invoicePdf,
+      paid,
+    })
+  } catch (error) {
+    logger.error(
+      `[MONTH-END] Failed to notify owner ${userId} about invoice ${invoiceId}:`,
+      error
+    )
   }
 }
 
@@ -171,6 +238,19 @@ export async function runMonthEndBilling(
         )
       } else {
         summary.invoicesSkipped++
+      }
+
+      // Notify the owner of the outcome. Never blocks the run: a broken SMTP
+      // must not stop the remaining owners from being billed, so failures are
+      // logged inside notifyOwner and swallowed here (Andrea, 2026-09-14).
+      if (result.status === "PAID" || result.status === "FAILED") {
+        await notifyOwnerOfInvoiceOutcome(
+          invoiceData.id,
+          userId,
+          periodYear,
+          periodMonth,
+          result.status === "PAID"
+        )
       }
     } catch (error) {
       summary.errors++

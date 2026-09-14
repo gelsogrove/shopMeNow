@@ -745,6 +745,7 @@ model User {
   planStartedAt        DateTime  @default(now())
   nextBillingDate      DateTime?
   lowBalanceNotifiedAt DateTime? // Last time low balance notification was sent
+  trialExpiringNotifiedAt DateTime? // Last time the "trial is ending" warning was sent (throttles the daily job to one email per threshold)
   taxRate              Decimal   @default(0.22) @db.Decimal(5, 4) // VAT rate applied to this owner's invoices (0.22 = 22%)
 
   // Subscription Status

@@ -23,6 +23,7 @@ import { prisma } from "@echatbot/database"
 import { SearchConversationRepository } from "./repositories/searchConversation.repository"
 import { WorkspaceRepository } from "./repositories/workspace.repository"
 import { runMonthEndBilling } from "./services/month-end-billing.service"
+import { runTrialExpiryNotifications } from "./services/trial-expiry-notification.service"
 import { WhatsAppRetentionService } from "./services/whatsapp-retention.service"
 import logger from "./utils/logger"
 
@@ -136,6 +137,27 @@ const whatsappRetentionJob = cron.schedule("0 4 * * *", async () => {
 })
 
 /**
+ * Job 5: Trial expiry warnings
+ * Runs daily at 9:00 (Europe/Rome) — a business-hours email, not a 4am one.
+ * Warns FREE_TRIAL owners whose trial ends within the configured window
+ * (PlatformConfig.TRIAL_WARNING_DAYS); one email per trial, throttled by
+ * users.trialExpiringNotifiedAt. Before this, a trial lapsed with no notice
+ * at all and the chatbot just went silent (Andrea, 2026-09-14).
+ */
+const trialExpiryJob = cron.schedule(
+  "0 9 * * *",
+  async () => {
+    try {
+      logger.info("⏰ Running job: Trial expiry notifications")
+      await runTrialExpiryNotifications()
+    } catch (error) {
+      logger.error("❌ Error in trialExpiryJob:", error)
+    }
+  },
+  { timezone: "Europe/Rome" }
+)
+
+/**
  * Start all scheduled jobs
  * Call this function in index.ts after server startup
  */
@@ -158,12 +180,14 @@ export function startScheduler(): void {
   deleteOldConversationsJob.start()
   monthEndBillingJob.start()
   whatsappRetentionJob.start()
+  trialExpiryJob.start()
 
   logger.info("✅ Scheduler started successfully")
   logger.info("  - Mark expired conversations: Every 5 minutes")
   logger.info("  - Delete old conversations: Every Sunday at 3:00 AM")
   logger.info("  - Month-end billing: 1st of month at 23:30 (Europe/Rome)")
   logger.info("  - WhatsApp retention cleanup: Every day at 4:00 AM")
+  logger.info("  - Trial expiry warnings: Every day at 9:00 (Europe/Rome)")
 }
 
 /**
@@ -177,6 +201,7 @@ export function stopScheduler(): void {
   deleteOldConversationsJob.stop()
   monthEndBillingJob.stop()
   whatsappRetentionJob.stop()
+  trialExpiryJob.stop()
 
   logger.info("✅ Scheduler stopped successfully")
 }
@@ -190,6 +215,7 @@ export function getSchedulerStatus(): {
   deleteOldJob: { running: boolean; schedule: string }
   monthEndBillingJob: { running: boolean; schedule: string }
   whatsappRetentionJob: { running: boolean; schedule: string }
+  trialExpiryJob: { running: boolean; schedule: string }
 } {
   return {
     markExpiredJob: {
@@ -207,6 +233,10 @@ export function getSchedulerStatus(): {
     whatsappRetentionJob: {
       running: whatsappRetentionJob.getStatus() === "scheduled",
       schedule: "0 4 * * *",
+    },
+    trialExpiryJob: {
+      running: trialExpiryJob.getStatus() === "scheduled",
+      schedule: "0 9 * * * (Europe/Rome)",
     },
   }
 }

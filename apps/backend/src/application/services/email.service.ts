@@ -1338,4 +1338,235 @@ startxref
       return false
     }
   }
+
+  /**
+   * Shared shell for the billing notification emails below, so the three of
+   * them cannot drift apart in markup. Content stays in the callers.
+   */
+  private billingEmailHtml(opts: {
+    icon: string
+    title: string
+    headerFrom: string
+    headerTo: string
+    firstName: string
+    bodyHtml: string
+    ctaLabel: string
+    ctaHref: string
+    ctaColor: string
+  }): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:40px 0;">
+        <table role="presentation" style="width:600px;max-width:95%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:36px 32px 24px;background:linear-gradient(135deg,${opts.headerFrom} 0%,${opts.headerTo} 100%);border-radius:12px 12px 0 0;text-align:center;">
+              <p style="margin:0 0 8px;font-size:32px;">${opts.icon}</p>
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">${opts.title}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">Hi <strong>${opts.firstName}</strong>,</p>
+              ${opts.bodyHtml}
+              <div style="text-align:center;margin-top:28px;">
+                <a href="${opts.ctaHref}" style="display:inline-block;padding:14px 36px;background:${opts.ctaColor};color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;">
+                  ${opts.ctaLabel}
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;text-align:center;color:#9ca3af;font-size:12px;border-top:1px solid #f3f4f6;">
+              © eChatbot — All rights reserved
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+  }
+
+  /**
+   * Warn an owner that the free trial is about to end.
+   * Sent by the trial-expiry scheduler job; until it existed, the trial
+   * simply stopped and the chatbot went silent with no warning at all
+   * (Andrea, 2026-09-14).
+   */
+  async sendTrialExpiringAlert(data: {
+    to: string
+    firstName: string
+    daysRemaining: number
+    trialEndsAt: Date
+  }): Promise<boolean> {
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+      const endsOn = data.trialEndsAt.toISOString().slice(0, 10)
+      const dayWord = data.daysRemaining === 1 ? 'day' : 'days'
+
+      const htmlContent = this.billingEmailHtml({
+        icon: '⏳',
+        title: `Your trial ends in ${data.daysRemaining} ${dayWord}`,
+        headerFrom: '#6366f1',
+        headerTo: '#4338ca',
+        firstName: data.firstName,
+        ctaLabel: 'Choose a plan',
+        ctaHref: `${frontendUrl}/billing`,
+        ctaColor: '#4f46e5',
+        bodyHtml: `
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">
+                Your eChatbot free trial ends on <strong>${endsOn}</strong>.
+              </p>
+              <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:16px;margin:20px 0;">
+                <p style="margin:0;font-size:14px;color:#3730a3;">
+                  When the trial expires your chatbot stops replying to customers.
+                  Connect PayPal and choose a plan to keep it running.
+                </p>
+              </div>`,
+      })
+
+      await this.getTransporter().sendMail({
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
+        to: data.to,
+        subject: `⏳ Your eChatbot trial ends in ${data.daysRemaining} ${dayWord}`,
+        html: htmlContent,
+      })
+
+      logger.info(
+        `Trial expiring alert sent to ${data.to} (${data.daysRemaining} ${dayWord} left)`
+      )
+      return true
+    } catch (error) {
+      logger.error('Failed to send trial expiring alert:', error)
+      return false
+    }
+  }
+
+  /**
+   * Deliver a freshly issued monthly platform invoice, PDF attached.
+   * Distinct from sendInvoiceEmail(), which is the END CUSTOMER's order
+   * invoice for a workspace — this one is eChatbot billing its own owner.
+   */
+  async sendMonthlyInvoiceEmail(data: {
+    to: string
+    firstName: string
+    invoiceNumber: string
+    periodLabel: string
+    totalAmount: number
+    invoicePdf: Buffer
+    paid: boolean
+  }): Promise<boolean> {
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+      const total = data.totalAmount.toFixed(2)
+
+      const htmlContent = this.billingEmailHtml({
+        icon: '🧾',
+        title: `Invoice ${data.invoiceNumber}`,
+        headerFrom: '#10b981',
+        headerTo: '#059669',
+        firstName: data.firstName,
+        ctaLabel: 'View billing',
+        ctaHref: `${frontendUrl}/billing`,
+        ctaColor: '#059669',
+        bodyHtml: `
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">
+                Your eChatbot invoice for <strong>${data.periodLabel}</strong> is attached
+                (total <strong>€${total}</strong>).
+              </p>
+              <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin:20px 0;">
+                <p style="margin:0;font-size:14px;color:#065f46;">
+                  ${
+                    data.paid
+                      ? 'It has already been charged to your connected PayPal account — nothing further is needed.'
+                      : 'We could not collect it automatically. We will retry; you can also settle it from the billing page.'
+                  }
+                </p>
+              </div>`,
+      })
+
+      await this.getTransporter().sendMail({
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
+        to: data.to,
+        subject: `🧾 eChatbot invoice ${data.invoiceNumber} — €${total}`,
+        html: htmlContent,
+        attachments: [
+          {
+            filename: `invoice-${data.invoiceNumber}.pdf`,
+            content: data.invoicePdf,
+          },
+        ],
+      })
+
+      logger.info(
+        `Monthly invoice email sent to ${data.to} (invoice ${data.invoiceNumber}, €${total})`
+      )
+      return true
+    } catch (error) {
+      logger.error('Failed to send monthly invoice email:', error)
+      return false
+    }
+  }
+
+  /**
+   * Tell an owner that the monthly collection failed, so they can fix the
+   * payment method before the operator's retries run out.
+   */
+  async sendPaymentFailedAlert(data: {
+    to: string
+    firstName: string
+    periodLabel: string
+    totalAmount: number
+  }): Promise<boolean> {
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+      const total = data.totalAmount.toFixed(2)
+
+      const htmlContent = this.billingEmailHtml({
+        icon: '❌',
+        title: 'Payment failed',
+        headerFrom: '#ef4444',
+        headerTo: '#b91c1c',
+        firstName: data.firstName,
+        ctaLabel: 'Check payment method',
+        ctaHref: `${frontendUrl}/billing`,
+        ctaColor: '#dc2626',
+        bodyHtml: `
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">
+                We could not collect <strong>€${total}</strong> for
+                <strong>${data.periodLabel}</strong> through your PayPal account.
+              </p>
+              <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:20px 0;">
+                <p style="margin:0;font-size:14px;color:#991b1b;">
+                  Please check that your PayPal mandate is still active and has
+                  funds available. We will retry the charge shortly.
+                </p>
+              </div>`,
+      })
+
+      await this.getTransporter().sendMail({
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
+        to: data.to,
+        subject: `❌ Payment failed for ${data.periodLabel} — €${total}`,
+        html: htmlContent,
+      })
+
+      logger.info(
+        `Payment failed alert sent to ${data.to} (${data.periodLabel}, €${total})`
+      )
+      return true
+    } catch (error) {
+      logger.error('Failed to send payment failed alert:', error)
+      return false
+    }
+  }
 }
