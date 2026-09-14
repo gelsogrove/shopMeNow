@@ -542,6 +542,27 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
       expect(updateArgs.data.taxAmount).toBeGreaterThan(0)
       expect(updateArgs.data.totalAmount).toBeGreaterThan(20)
     })
+
+    it('never rewrites a PAID invoice (issued document is immutable)', async () => {
+      // A PAID invoice has been issued, numbered and collected. Recalculating
+      // reads TODAY's user.taxRate, PlanConfiguration.monthlyFee and pause
+      // state — so without this guard, changing a VAT rate or a plan price
+      // would silently restate amounts the customer already paid, and the PDF
+      // would no longer match the money taken (Andrea, 2026-09-14).
+      const paidInvoice = { ...mockInvoice, status: 'PAID', totalAmount: 61 }
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(paidInvoice)
+
+      // A tax rate that differs from the one on the invoice: if the guard were
+      // removed, the recalculation would pick THIS up and rewrite the totals.
+      mockPrisma.user.findUnique.mockResolvedValue({ ...mockUser, taxRate: 0.05 })
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({ monthlyFee: 999 })
+
+      const result = await service.recalculateInvoiceTotals('invoice-123')
+
+      // No write at all, and the caller gets the stored invoice back unchanged.
+      expect(mockPrisma.monthlyInvoice.update).not.toHaveBeenCalled()
+      expect(result).toEqual(paidInvoice)
+    })
   })
 
   describe('markInvoicePaid', () => {
