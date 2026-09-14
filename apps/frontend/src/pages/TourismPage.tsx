@@ -9,6 +9,7 @@ import {
   ChevronDown,
   MessageCircle,
   Phone,
+  Play,
   Send,
   ShieldOff,
   Video,
@@ -446,7 +447,31 @@ function PhoneMock({ t }: { t: TourismCopy }) {
                         {line.tag}
                       </p>
                     )}
-                    {line.text}
+                    {/* Media preview above the text, the way WhatsApp shows a
+                        photo or video with its caption underneath. */}
+                    {line.media && (
+                      <div className="mb-1.5 overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                        <div className="relative flex h-24 items-center justify-center bg-gradient-to-br from-slate-700/60 to-slate-800/60 text-3xl">
+                          {line.media.emoji}
+                          {line.media.kind === "video" && (
+                            <>
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/25">
+                                  <Play className="ml-0.5 h-4 w-4 fill-white text-white" />
+                                </span>
+                              </span>
+                              {line.media.duration && (
+                                <span className="absolute bottom-1 right-1 rounded bg-black/65 px-1.5 py-0.5 font-mono text-[9px] text-white">
+                                  {line.media.duration}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <p className="px-2 py-1 text-[11px] text-slate-300">{line.media.caption}</p>
+                      </div>
+                    )}
+                    <span className="whitespace-pre-line">{line.text}</span>
                   </div>
                 </motion.div>
               ))}

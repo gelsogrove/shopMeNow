@@ -22,6 +22,23 @@ export interface ChatLine {
   role: "guest" | "bot"
   tag?: string
   text: string
+  /**
+   * Optional media attachment rendered above the bubble text, the way
+   * WhatsApp shows a photo or a video with its caption underneath (Andrea,
+   * 2026-09-14: "esempi con video e foto di passeggiate rifugi o altro").
+   *
+   * `emoji` + `caption` draw a lightweight illustrative preview rather than a
+   * real image: the landing page must stay fast and must not ship a photo of
+   * a real business it has no licence for. `kind` only changes the chrome —
+   * a video gets a play button and a duration pill.
+   */
+  media?: {
+    kind: "photo" | "video"
+    emoji: string
+    caption: string
+    /** Shown on video previews only, e.g. "0:45". */
+    duration?: string
+  }
 }
 
 export interface Scenario {
@@ -113,6 +130,10 @@ export interface TourismCopy {
   trySub: string
   tryReplay: string
   scenarios: Scenario[]
+  /** Caption under the scenario phone, next to the language flags. */
+  scenarioLangs: string
+  /** Contact name shown in the scenario phone's WhatsApp header. */
+  scenarioBoardTitle: string
   // FAQ
   faqTitle: string
   faqAccent: string
@@ -147,17 +168,10 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     heroModeIn: "Risponde a chi scrive",
     heroModeOut: "E scrive per primo",
     heroScript: [
-      { role: "guest", text: "Ciao! Siamo in famiglia, cosa fate di bello sabato?" },
       {
         role: "bot",
-        tag: "dal catalogo eventi",
-        text: "Sabato alle 17:00 c'è il mercatino in piazza, e alle 20:30 la serata musicale al centro civico — entrambi a ingresso libero.",
-      },
-      { role: "guest", text: "Perfetto, dove mangiamo qualcosa di tipico dopo?" },
-      {
-        role: "bot",
-        tag: "dal catalogo ristoranti",
-        text: "A due minuti a piedi c'è la Locanda del Bosco, aperta fino alle 22:30, nota per i piatti fatti in casa.",
+        tag: "messaggio di benvenuto",
+        text: "Benvenuti! 👋 Siamo l'ufficio del turismo: da qui vi diamo una mano per tutta la vacanza.\n\nChiedeteci cosa fare oggi, dove mangiare, che sentieri fare, come muovervi o un numero utile — rispondiamo con foto e video quando servono.",
       },
     ],
     painTitle: "Le stesse dieci domande,",
@@ -255,34 +269,34 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Se una domanda esce dal catalogo, il bot lo dice chiaramente — meglio \"non lo so\" che un'informazione sbagliata data a un ospite.",
       },
     ],
-    pushTitle: "E quando serve,",
-    pushAccent: "è lui a scrivere per primo.",
+    pushTitle: "E quando la vacanza finisce,",
+    pushAccent: "è lui a farli tornare.",
     pushSub:
-      "Un chatbot normale aspetta. Questo no: se succede qualcosa che riguarda chi vi ha già scritto — un evento nuovo, una data che si avvicina, una sagra spostata per pioggia — il messaggio parte da solo. E prima di partire controlla di non essere già stato detto.",
+      "Il visitatore che ha già scritto una volta è il contatto più prezioso che avete: sa dov'è, si è trovato bene, e vi ha lasciato il numero. Prima di Natale, di Pasqua o dell'estate riceve le vostre offerte per la prossima vacanza — ma solo se ha detto di sì, e con un NO che basta scrivere per non riceverne più.",
     pushSteps: [
       {
-        badge: "Quando parte",
-        title: "Succede qualcosa che interessa a qualcuno",
-        desc: "Pubblicate un evento nuovo, una data si avvicina, un alloggio segna gli ultimi posti: il messaggio parte verso chi vi ha già scritto ed è in target. Nessuno in ufficio deve premere niente.",
+        badge: "Durante il soggiorno",
+        title: "Solo quello che serve, mentre sono qui",
+        desc: "Meteo che cambia, un evento di stasera, una sagra spostata per pioggia: arriva l'avviso a chi è in paese in quel momento. Nessuno in ufficio deve premere niente.",
       },
       {
-        badge: "Cosa lo ferma",
-        title: "Un controllo prima di ogni invio",
-        desc: "Prima di inviare, il sistema guarda cosa quella persona ha già ricevuto nei giorni scorsi. Se un'altra iniziativa gli ha già segnalato la stessa cosa, il secondo messaggio non parte.",
+        badge: "Prima delle feste",
+        title: "Natale, Pasqua, estate: il messaggio che li riporta",
+        desc: "Finita la vacanza, il contatto resta. Qualche settimana prima delle festività riceve offerte ed eventi della prossima stagione — il periodo in cui si decide davvero dove andare.",
       },
       {
-        badge: "Perché conta",
-        title: "Nessuno si sente inondato",
-        desc: "È la differenza tra un avviso utile e lo spam che fa silenziare la chat. Il controllo è automatico: nessuno deve ricordarsi \"a questo l'abbiamo già scritto\".",
+        badge: "Sempre con il consenso",
+        title: "Ricevono solo se hanno detto di sì",
+        desc: "Il consenso viene chiesto in chat, e basta scrivere NO per smettere di ricevere. Prima di ogni invio il sistema controlla anche di non ripetere una cosa già detta da un'altra iniziativa.",
       },
     ],
     pushBoardTitle: "Ufficio del Turismo",
     pushBoardStatus: "messaggio in uscita",
-    pushFirstTag: "campagna: eventi del weekend",
-    pushFirstText: "Ciao! Domenica c'è la Fiera d'Autunno in piazza, dalle 9:00 — pensavamo potesse interessarti.",
-    pushGuardTag: "campagna: newsletter mercatini",
+    pushFirstTag: "campagna: offerte di Natale",
+    pushFirstText: "Ciao! Le settimane di Natale in paese sono aperte: mercatini, pista di pattinaggio e alloggi convenzionati. Se volete tornare, vi mandiamo le offerte?",
+    pushGuardTag: "campagna: newsletter inverno",
     pushGuardText:
-      "Stessa fiera già segnalata 3 giorni fa da un'altra iniziativa: invio annullato in automatico, il visitatore non riceve il doppione.",
+      "Stessa offerta già inviata 3 giorni fa da un'altra iniziativa: invio annullato in automatico, il visitatore non riceve il doppione.",
     pushLabelSent: "inviato",
     pushLabelBlocked: "bloccato prima dell'invio",
     metricsTitle: "Cosa cambia",
@@ -316,44 +330,102 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     tryReplay: "Rivedi la conversazione",
     scenarios: [
       {
-        title: "Cosa c'è questo weekend",
-        rule: "catalogo → eventi",
+        title: "Bambini e una celiaca",
+        rule: "catalogo → ristoranti · filtro senza glutine",
         script: [
-          { role: "guest", text: "Cosa c'è da fare questo weekend?" },
+          { role: "guest", text: "Siamo con due bambini e mia figlia è celiaca, dove possiamo mangiare?" },
           {
             role: "bot",
-            tag: "dal catalogo eventi",
-            text: "Questo weekend: sabato mercatino artigianale in piazza (10:00–19:00) e serata musicale (20:30); domenica camminata guidata al rifugio, ritrovo alle 9:00.",
+            tag: "dal catalogo ristoranti",
+            text: "Due locali con cucina senza glutine certificata e menù per bambini: uno in centro, l'altro a cinque minuti con giardino e area giochi. Vi passo i contatti?",
           },
-          { role: "guest", text: "La camminata va bene per bambini?" },
+          { role: "guest", text: "Sì, quello con il giardino" },
           {
             role: "bot",
-            tag: "dal catalogo eventi",
-            text: "Sì, è un percorso facile e adatto alle famiglie: circa 2 ore, dislivello contenuto, ritrovo al parcheggio del rifugio.",
+            tag: "dal catalogo ristoranti",
+            media: { kind: "photo", emoji: "🍽️", caption: "La sala e il giardino" },
+            text: "Eccolo. Cucina separata per il senza glutine, aperto fino alle 22:30. Conviene prenotare nel weekend — vi lascio il numero diretto.",
           },
         ],
       },
       {
-        title: "Dove dormire in 4 persone",
-        rule: "catalogo → alloggi",
+        title: "Senza macchina",
+        rule: "catalogo → trasporti · raggiungibile a piedi",
         script: [
-          { role: "guest", text: "Cerchiamo un posto per dormire, siamo in 4" },
+          { role: "guest", text: "Siamo senza macchina, cosa riusciamo a fare in giornata?" },
           {
             role: "bot",
-            tag: "dal catalogo alloggi",
-            text: "Ho un paio di soluzioni per 4 persone: un appartamento in centro con cucina e balcone, e un B&B a 5 minuti dal paese. Preferite il centro?",
+            tag: "dal catalogo trasporti",
+            text: "Con la navetta arrivate agli impianti in 10 minuti, ferma a 200 metri da voi. A piedi invece raggiungete il sentiero delle cascate direttamente dal paese.",
           },
-          { role: "guest", text: "Meglio in centro, e vicino a un parcheggio" },
+          { role: "guest", text: "Meglio la passeggiata, è fattibile?" },
           {
             role: "bot",
-            tag: "dal catalogo alloggi",
-            text: "L'appartamento in centro ha un posto auto incluso. Vi lascio il contatto diretto della proprietaria per verificare le date.",
+            tag: "dal catalogo escursioni",
+            media: { kind: "photo", emoji: "🏞️", caption: "Il sentiero delle cascate" },
+            text: "Sì: un'ora e mezza, nessun tratto esposto, si parte dalla piazza. A metà percorso c'è l'area picnic.",
           },
         ],
       },
       {
-        title: "Turista straniero, sentiero facile",
-        rule: "catalogo → outdoor · rilevamento lingua",
+        title: "Numeri utili",
+        rule: "catalogo → contatti · sempre attivo",
+        script: [
+          { role: "guest", text: "Mia figlia ha la febbre, a chi possiamo rivolgerci? È domenica" },
+          {
+            role: "bot",
+            tag: "dal catalogo numeri utili",
+            text: "La guardia medica risponde allo 0435 000000, attiva nei festivi. La farmacia di turno questa settimana è quella in piazza, aperta fino alle 19:00.\n\nPer un'emergenza il numero è 112.",
+          },
+          { role: "guest", text: "Grazie, e se servisse una farmacia di notte?" },
+          {
+            role: "bot",
+            tag: "dal catalogo numeri utili",
+            text: "Di notte il servizio è a chiamata: si telefona allo stesso numero della guardia medica e vi indirizzano alla farmacia reperibile più vicina.",
+          },
+        ],
+      },
+      {
+        title: "Prudenza e meteo",
+        rule: "meteo → catalogo · consiglio di sicurezza",
+        script: [
+          { role: "guest", text: "Domani pensavamo di salire in cima, che dite?" },
+          {
+            role: "bot",
+            tag: "meteo + catalogo escursioni",
+            text: "Domani pomeriggio sono previsti temporali dalle 14:00. Se salite, partite presto e rientrate entro l'ora di pranzo.\n\nPortate giacca antipioggia e scarponi: l'ultimo tratto è su roccia e diventa scivoloso.",
+          },
+          { role: "guest", text: "Meglio rimandare?" },
+          {
+            role: "bot",
+            tag: "consiglio di prudenza",
+            text: "Con i bambini sì, rimanderei: giovedì è previsto sereno. Per domani vi consiglio il sentiero basso lungo il torrente, al riparo e senza tratti esposti.",
+          },
+        ],
+      },
+      {
+        title: "Foto e video, non solo testo",
+        rule: "catalogo → rifugi · media allegati",
+        script: [
+          { role: "guest", text: "Com'è il rifugio in quota? Vorrei capire prima di salire" },
+          {
+            role: "bot",
+            tag: "dal catalogo rifugi",
+            media: { kind: "video", emoji: "🎥", caption: "Il rifugio e la vista", duration: "0:45" },
+            text: "Ecco un video. Si sale in seggiovia e poi venti minuti a piedi; la cucina è aperta fino alle 16:00.",
+          },
+          { role: "guest", text: "Perfetto, e la chiesa antica del paese?" },
+          {
+            role: "bot",
+            tag: "dal catalogo chiese",
+            media: { kind: "photo", emoji: "⛪", caption: "L'interno affrescato" },
+            text: "È del Settecento, con gli affreschi originali. Aperta tutti i giorni, ingresso libero, a due passi dalla piazza.",
+          },
+        ],
+      },
+      {
+        title: "Turista straniero",
+        rule: "rilevamento lingua · stesso catalogo",
         script: [
           { role: "guest", text: "Hallo, wir suchen einen leichten Wanderweg für morgen" },
           {
@@ -364,12 +436,14 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
           { role: "guest", text: "Gibt es dort auch eine Einkehrmöglichkeit?" },
           {
             role: "bot",
-            tag: "dal catalogo ristoranti",
+            tag: "dal catalogo rifugi",
             text: "Ja, direkt am See gibt es eine Almhütte mit warmen Speisen, geöffnet bis 18:00 Uhr.",
           },
         ],
       },
     ],
+    scenarioLangs: "risponde nella lingua di chi scrive",
+    scenarioBoardTitle: "Ufficio del Turismo",
     faqTitle: "Le domande",
     faqAccent: "che ci fanno sempre.",
     faqItems: [
@@ -426,17 +500,10 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     heroModeIn: "Answers whoever writes",
     heroModeOut: "And writes first",
     heroScript: [
-      { role: "guest", text: "Hi! We're a family, what's going on Saturday?" },
       {
         role: "bot",
-        tag: "from events catalogue",
-        text: "On Saturday there's a market in the square at 5pm, and a live music night at 8:30pm — both free entry.",
-      },
-      { role: "guest", text: "Great, where can we get something local to eat afterwards?" },
-      {
-        role: "bot",
-        tag: "from restaurants catalogue",
-        text: "Two minutes' walk away is Locanda del Bosco, open until 10:30pm, known for its homemade dishes.",
+        tag: "welcome message",
+        text: "Welcome! 👋 We're the visitor office: we'll help you through your whole stay.\n\nAsk us what's on today, where to eat, which trails to walk, how to get around or for a useful number — we answer with photos and videos when they help.",
       },
     ],
     painTitle: "The same ten questions,",
@@ -534,34 +601,34 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "If a question falls outside the catalogue, the bot says so clearly — better \"I don't know\" than wrong information given to a guest.",
       },
     ],
-    pushTitle: "And when it matters,",
-    pushAccent: "it writes first.",
+    pushTitle: "And when the holiday ends,",
+    pushAccent: "it brings them back.",
     pushSub:
-      "A normal chatbot waits. This one doesn't: when something happens that concerns people who already wrote to you — a new event, a date coming up, a fair moved because of rain — the message goes out on its own. And before it goes, it checks it hasn't been said already.",
+      "A visitor who has written once is the most valuable contact you have: they know the place, they enjoyed it, and they left you their number. Before Christmas, Easter or the summer they get your offers for the next holiday — but only if they said yes, and a single NO stops it for good.",
     pushSteps: [
       {
-        badge: "What triggers it",
-        title: "Something happens that someone cares about",
-        desc: "You publish a new event, a date is approaching, a place flags its last rooms: the message goes to people who already wrote to you and match. Nobody at the office has to press anything.",
+        badge: "During the stay",
+        title: "Only what matters, while they're here",
+        desc: "Weather turning, an event tonight, a festival moved because of rain: the alert reaches whoever is in town at that moment. Nobody at the desk has to press anything.",
       },
       {
-        badge: "What stops it",
-        title: "A check before every send",
-        desc: "Before sending, the system looks at what that person has already received in recent days. If another campaign already flagged the same thing, the second message doesn't go out.",
+        badge: "Before the holidays",
+        title: "Christmas, Easter, summer: the message that brings them back",
+        desc: "The holiday ends, the contact stays. A few weeks before the season they receive offers and events for the next one — exactly when people decide where to go.",
       },
       {
-        badge: "Why it matters",
-        title: "Nobody feels flooded",
-        desc: "It's the difference between a useful heads-up and the spam that gets a chat muted. The check is automatic: nobody has to remember \"we already told this one\".",
+        badge: "Always with consent",
+        title: "They only receive it if they said yes",
+        desc: "Consent is asked for in the chat, and writing NO is enough to stop it. Before every send the system also checks it isn't repeating something another campaign already said.",
       },
     ],
     pushBoardTitle: "Tourist Information",
     pushBoardStatus: "outbound message",
-    pushFirstTag: "campaign: weekend events",
-    pushFirstText: "Hi! On Sunday there's the Autumn Fair in the square, from 9am — we thought it might interest you.",
-    pushGuardTag: "campaign: markets newsletter",
+    pushFirstTag: "campaign: Christmas offers",
+    pushFirstText: "Hello! The Christmas weeks in town are open: markets, ice rink and partner accommodation. Shall we send you the offers if you'd like to come back?",
+    pushGuardTag: "campaign: winter newsletter",
     pushGuardText:
-      "Same fair already flagged 3 days ago by another campaign: send cancelled automatically, the visitor gets no duplicate.",
+      "Same offer already sent 3 days ago by another campaign: the send was cancelled automatically, the visitor gets no duplicate.",
     pushLabelSent: "sent",
     pushLabelBlocked: "blocked before sending",
     metricsTitle: "What changes",
@@ -595,60 +662,120 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     tryReplay: "Replay the conversation",
     scenarios: [
       {
-        title: "What's on this weekend",
-        rule: "catalogue → events",
+        title: "Kids, and one is coeliac",
+        rule: "catalogue → restaurants · gluten-free filter",
         script: [
-          { role: "guest", text: "What is there to do this weekend?" },
+          { role: "guest", text: "We're with two kids and my daughter is coeliac, where can we eat?" },
           {
             role: "bot",
-            tag: "from events catalogue",
-            text: "This weekend: Saturday, craft market in the square (10am–7pm) and live music night (8:30pm); Sunday, guided walk to the mountain hut, meeting at 9am.",
+            tag: "from restaurants catalogue",
+            text: "Two places with a certified gluten-free kitchen and a children's menu: one in the centre, the other five minutes away with a garden and a play area. Shall I send you the contacts?",
           },
-          { role: "guest", text: "Is the walk ok for children?" },
+          { role: "guest", text: "Yes, the one with the garden" },
           {
             role: "bot",
-            tag: "from events catalogue",
-            text: "Yes, it's an easy family-friendly route: around 2 hours, gentle elevation, meeting point at the hut car park.",
+            tag: "from restaurants catalogue",
+            media: { kind: "photo", emoji: "🍽️", caption: "The dining room and garden" },
+            text: "Here it is. Separate kitchen for gluten-free, open until 10:30pm. Worth booking at the weekend — here's their direct number.",
           },
         ],
       },
       {
-        title: "Somewhere to sleep for 4",
-        rule: "catalogue → stays",
+        title: "No car",
+        rule: "catalogue → transport · reachable on foot",
         script: [
-          { role: "guest", text: "We're looking for a place to stay, there are 4 of us" },
+          { role: "guest", text: "We have no car, what can we manage today?" },
           {
             role: "bot",
-            tag: "from stays catalogue",
-            text: "I have a couple of options for 4 people: an apartment in the centre with a kitchen and balcony, and a B&B 5 minutes from the village. Do you prefer the centre?",
+            tag: "from transport catalogue",
+            text: "The shuttle gets you to the lifts in 10 minutes and stops 200 metres from you. On foot, the waterfall trail starts right in the village.",
           },
-          { role: "guest", text: "Centre is better, and near a car park" },
+          { role: "guest", text: "The walk sounds better, is it doable?" },
           {
             role: "bot",
-            tag: "from stays catalogue",
-            text: "The apartment in the centre includes a parking space. Here's the owner's direct contact to check the dates.",
+            tag: "from trails catalogue",
+            media: { kind: "photo", emoji: "🏞️", caption: "The waterfall trail" },
+            text: "Yes: an hour and a half, no exposed sections, starting from the square. There's a picnic area halfway.",
           },
         ],
       },
       {
-        title: "Foreign visitor, easy trail",
-        rule: "catalogue → outdoor · language detection",
+        title: "Useful numbers",
+        rule: "catalogue → contacts · always on",
+        script: [
+          { role: "guest", text: "My daughter has a fever, who can we call? It's Sunday" },
+          {
+            role: "bot",
+            tag: "from useful numbers",
+            text: "The out-of-hours doctor answers on 0435 000000, available on Sundays and holidays. The duty pharmacy this week is the one on the square, open until 7pm.\n\nFor an emergency the number is 112.",
+          },
+          { role: "guest", text: "Thanks, and what if we need a pharmacy at night?" },
+          {
+            role: "bot",
+            tag: "from useful numbers",
+            text: "At night it's an on-call service: you ring the same out-of-hours number and they direct you to the nearest pharmacy on duty.",
+          },
+        ],
+      },
+      {
+        title: "Safety and weather",
+        rule: "weather → catalogue · safety advice",
+        script: [
+          { role: "guest", text: "We were thinking of going up to the summit tomorrow, what do you think?" },
+          {
+            role: "bot",
+            tag: "weather + trails catalogue",
+            text: "Thunderstorms are forecast tomorrow from 2pm. If you go up, start early and be back by lunchtime.\n\nTake a rain jacket and proper boots: the last stretch is on rock and gets slippery.",
+          },
+          { role: "guest", text: "Better to postpone?" },
+          {
+            role: "bot",
+            tag: "safety advice",
+            text: "With children, yes, I'd postpone: Thursday is forecast clear. For tomorrow I'd suggest the lower trail along the stream — sheltered, with no exposed sections.",
+          },
+        ],
+      },
+      {
+        title: "Photos and video, not just text",
+        rule: "catalogue → huts · media attached",
+        script: [
+          { role: "guest", text: "What's the mountain hut like? I'd like to know before going up" },
+          {
+            role: "bot",
+            tag: "from huts catalogue",
+            media: { kind: "video", emoji: "🎥", caption: "The hut and the view", duration: "0:45" },
+            text: "Here's a video. Chairlift up, then twenty minutes on foot; the kitchen is open until 4pm.",
+          },
+          { role: "guest", text: "Great, and the old church in the village?" },
+          {
+            role: "bot",
+            tag: "from churches catalogue",
+            media: { kind: "photo", emoji: "⛪", caption: "The frescoed interior" },
+            text: "It's 18th century, with the original frescoes. Open daily, free entry, a short walk from the square.",
+          },
+        ],
+      },
+      {
+        title: "Visitor from abroad",
+        rule: "language detection · same catalogue",
         script: [
           { role: "guest", text: "Hallo, wir suchen einen leichten Wanderweg für morgen" },
           {
             role: "bot",
-            tag: "answers in German",
+            tag: "replies in German",
             text: "Guten Tag! Ich empfehle den Weg zum Waldsee: leicht, ca. 5 km, 1,5 Stunden, kaum Höhenunterschied.",
           },
           { role: "guest", text: "Gibt es dort auch eine Einkehrmöglichkeit?" },
           {
             role: "bot",
-            tag: "from restaurants catalogue",
+            tag: "from huts catalogue",
             text: "Ja, direkt am See gibt es eine Almhütte mit warmen Speisen, geöffnet bis 18:00 Uhr.",
           },
         ],
       },
     ],
+    scenarioLangs: "replies in the language the visitor writes in",
+    scenarioBoardTitle: "Tourist Information",
     faqTitle: "The questions",
     faqAccent: "we always get asked.",
     faqItems: [
@@ -705,17 +832,10 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     heroModeIn: "Responde a quien escribe",
     heroModeOut: "Y escribe primero",
     heroScript: [
-      { role: "guest", text: "¡Hola! Somos una familia, ¿qué hay el sábado?" },
       {
         role: "bot",
-        tag: "del catálogo de eventos",
-        text: "El sábado a las 17:00 hay mercadillo en la plaza, y a las 20:30 noche de música en el centro cívico — ambos con entrada libre.",
-      },
-      { role: "guest", text: "Perfecto, ¿dónde comemos algo típico después?" },
-      {
-        role: "bot",
-        tag: "del catálogo de restaurantes",
-        text: "A dos minutos a pie está la Locanda del Bosco, abierta hasta las 22:30, conocida por sus platos caseros.",
+        tag: "mensaje de bienvenida",
+        text: "¡Bienvenidos! 👋 Somos la oficina de turismo: os echamos una mano durante toda la estancia.\n\nPreguntadnos qué hacer hoy, dónde comer, qué senderos recorrer, cómo moveros o un número útil — respondemos con fotos y vídeos cuando hacen falta.",
       },
     ],
     painTitle: "Las mismas diez preguntas,",
@@ -813,34 +933,34 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Si una pregunta se sale del catálogo, el bot lo dice claramente — mejor un \"no lo sé\" que una información equivocada dada a un huésped.",
       },
     ],
-    pushTitle: "Y cuando hace falta,",
-    pushAccent: "escribe él primero.",
+    pushTitle: "Y cuando acaba las vacaciones,",
+    pushAccent: "es él quien les hace volver.",
     pushSub:
-      "Un chatbot normal espera. Este no: si pasa algo que afecta a quien ya os escribió — un evento nuevo, una fecha que se acerca, una fiesta aplazada por lluvia — el mensaje sale solo. Y antes de salir comprueba que no se haya dicho ya.",
+      "El visitante que ya os ha escrito una vez es el contacto más valioso que tenéis: conoce el sitio, se encontró a gusto y os dejó su número. Antes de Navidad, Semana Santa o el verano recibe vuestras ofertas para las próximas vacaciones — pero solo si dijo que sí, y con un NO deja de recibirlas.",
     pushSteps: [
       {
-        badge: "Qué lo dispara",
-        title: "Pasa algo que le interesa a alguien",
-        desc: "Publicáis un evento nuevo, se acerca una fecha, un alojamiento marca sus últimas plazas: el mensaje sale hacia quien ya os escribió y encaja. Nadie en la oficina tiene que pulsar nada.",
+        badge: "Durante la estancia",
+        title: "Solo lo que hace falta, mientras están aquí",
+        desc: "El tiempo cambia, un evento esta noche, una fiesta aplazada por lluvia: el aviso llega a quien está en el pueblo en ese momento. Nadie en la oficina tiene que pulsar nada.",
       },
       {
-        badge: "Qué lo frena",
-        title: "Una comprobación antes de cada envío",
-        desc: "Antes de enviar, el sistema mira qué ha recibido esa persona en los últimos días. Si otra campaña ya le avisó de lo mismo, el segundo mensaje no sale.",
+        badge: "Antes de las fiestas",
+        title: "Navidad, Semana Santa, verano: el mensaje que les trae de vuelta",
+        desc: "Acaban las vacaciones, el contacto se queda. Unas semanas antes de la temporada recibe ofertas y eventos de la siguiente — justo cuando se decide adónde ir.",
       },
       {
-        badge: "Por qué importa",
-        title: "Nadie se siente inundado",
-        desc: "Es la diferencia entre un aviso útil y el spam que hace silenciar el chat. La comprobación es automática: nadie tiene que acordarse de \"a este ya se lo dijimos\".",
+        badge: "Siempre con consentimiento",
+        title: "Solo lo reciben si han dicho que sí",
+        desc: "El consentimiento se pide en el chat, y basta con escribir NO para dejar de recibir. Antes de cada envío el sistema comprueba además que no repite algo que ya dijo otra campaña.",
       },
     ],
     pushBoardTitle: "Oficina de Turismo",
     pushBoardStatus: "mensaje saliente",
-    pushFirstTag: "campaña: eventos del fin de semana",
-    pushFirstText: "¡Hola! El domingo está la Feria de Otoño en la plaza, desde las 9:00 — pensamos que podría interesarte.",
-    pushGuardTag: "campaña: newsletter de mercadillos",
+    pushFirstTag: "campaña: ofertas de Navidad",
+    pushFirstText: "¡Hola! Las semanas de Navidad en el pueblo ya están en marcha: mercadillos, pista de hielo y alojamientos concertados. ¿Os mandamos las ofertas si queréis volver?",
+    pushGuardTag: "campaña: newsletter de invierno",
     pushGuardText:
-      "La misma feria ya avisada hace 3 días por otra campaña: envío cancelado automáticamente, el visitante no recibe el duplicado.",
+      "La misma oferta ya se envió hace 3 días desde otra campaña: envío cancelado automáticamente, el visitante no recibe el duplicado.",
     pushLabelSent: "enviado",
     pushLabelBlocked: "bloqueado antes del envío",
     metricsTitle: "Qué cambia",
@@ -874,44 +994,102 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     tryReplay: "Volver a ver la conversación",
     scenarios: [
       {
-        title: "Qué hay este fin de semana",
-        rule: "catálogo → eventos",
+        title: "Con niños y una celíaca",
+        rule: "catálogo → restaurantes · filtro sin gluten",
         script: [
-          { role: "guest", text: "¿Qué hay para hacer este fin de semana?" },
+          { role: "guest", text: "Vamos con dos niños y mi hija es celíaca, ¿dónde podemos comer?" },
           {
             role: "bot",
-            tag: "del catálogo de eventos",
-            text: "Este fin de semana: el sábado mercadillo artesanal en la plaza (10:00–19:00) y noche de música (20:30); el domingo caminata guiada al refugio, quedada a las 9:00.",
+            tag: "del catálogo de restaurantes",
+            text: "Dos locales con cocina sin gluten certificada y menú infantil: uno en el centro y otro a cinco minutos con jardín y zona de juegos. ¿Os paso los contactos?",
           },
-          { role: "guest", text: "¿La caminata va bien para niños?" },
+          { role: "guest", text: "Sí, el del jardín" },
           {
             role: "bot",
-            tag: "del catálogo de eventos",
-            text: "Sí, es un recorrido fácil y apto para familias: unas 2 horas, desnivel suave, punto de encuentro en el aparcamiento del refugio.",
+            tag: "del catálogo de restaurantes",
+            media: { kind: "photo", emoji: "🍽️", caption: "La sala y el jardín" },
+            text: "Aquí lo tenéis. Cocina separada para el sin gluten, abierto hasta las 22:30. Conviene reservar el fin de semana — os dejo el teléfono directo.",
           },
         ],
       },
       {
-        title: "Dónde dormir 4 personas",
-        rule: "catálogo → alojamientos",
+        title: "Sin coche",
+        rule: "catálogo → transporte · accesible a pie",
         script: [
-          { role: "guest", text: "Buscamos sitio para dormir, somos 4" },
+          { role: "guest", text: "Estamos sin coche, ¿qué podemos hacer hoy?" },
           {
             role: "bot",
-            tag: "del catálogo de alojamientos",
-            text: "Tengo un par de opciones para 4 personas: un apartamento en el centro con cocina y balcón, y una casa rural a 5 minutos del pueblo. ¿Preferís el centro?",
+            tag: "del catálogo de transporte",
+            text: "Con la lanzadera llegáis a los remontes en 10 minutos, para a 200 metros de vosotros. A pie, el sendero de las cascadas sale del propio pueblo.",
           },
-          { role: "guest", text: "Mejor en el centro, y cerca de un aparcamiento" },
+          { role: "guest", text: "Mejor el paseo, ¿es factible?" },
           {
             role: "bot",
-            tag: "del catálogo de alojamientos",
-            text: "El apartamento del centro incluye una plaza de aparcamiento. Os dejo el contacto directo de la propietaria para comprobar las fechas.",
+            tag: "del catálogo de senderos",
+            media: { kind: "photo", emoji: "🏞️", caption: "El sendero de las cascadas" },
+            text: "Sí: hora y media, sin tramos expuestos, se sale de la plaza. A mitad de camino hay zona de picnic.",
           },
         ],
       },
       {
-        title: "Turista extranjero, sendero fácil",
-        rule: "catálogo → aire libre · detección de idioma",
+        title: "Números útiles",
+        rule: "catálogo → contactos · siempre activo",
+        script: [
+          { role: "guest", text: "Mi hija tiene fiebre, ¿a quién podemos llamar? Es domingo" },
+          {
+            role: "bot",
+            tag: "del catálogo de números útiles",
+            text: "El médico de guardia responde en el 0435 000000, activo los festivos. La farmacia de guardia esta semana es la de la plaza, abierta hasta las 19:00.\n\nPara una emergencia el número es 112.",
+          },
+          { role: "guest", text: "Gracias, ¿y si hiciera falta una farmacia de noche?" },
+          {
+            role: "bot",
+            tag: "del catálogo de números útiles",
+            text: "De noche el servicio es a demanda: se llama al mismo número del médico de guardia y os indican la farmacia de guardia más cercana.",
+          },
+        ],
+      },
+      {
+        title: "Prudencia y meteo",
+        rule: "meteo → catálogo · consejo de seguridad",
+        script: [
+          { role: "guest", text: "Mañana pensábamos subir a la cima, ¿qué os parece?" },
+          {
+            role: "bot",
+            tag: "meteo + catálogo de senderos",
+            text: "Mañana por la tarde se prevén tormentas a partir de las 14:00. Si subís, salid temprano y volved antes de comer.\n\nLlevad chubasquero y botas: el último tramo es de roca y se vuelve resbaladizo.",
+          },
+          { role: "guest", text: "¿Mejor aplazarlo?" },
+          {
+            role: "bot",
+            tag: "consejo de prudencia",
+            text: "Con niños sí, yo lo aplazaría: el jueves se prevé despejado. Para mañana os recomiendo el sendero bajo junto al torrente, resguardado y sin tramos expuestos.",
+          },
+        ],
+      },
+      {
+        title: "Fotos y vídeo, no solo texto",
+        rule: "catálogo → refugios · media adjunta",
+        script: [
+          { role: "guest", text: "¿Cómo es el refugio de montaña? Me gustaría verlo antes de subir" },
+          {
+            role: "bot",
+            tag: "del catálogo de refugios",
+            media: { kind: "video", emoji: "🎥", caption: "El refugio y las vistas", duration: "0:45" },
+            text: "Aquí va un vídeo. Se sube en telesilla y luego veinte minutos a pie; la cocina está abierta hasta las 16:00.",
+          },
+          { role: "guest", text: "Perfecto, ¿y la iglesia antigua del pueblo?" },
+          {
+            role: "bot",
+            tag: "del catálogo de iglesias",
+            media: { kind: "photo", emoji: "⛪", caption: "El interior con frescos" },
+            text: "Es del siglo XVIII, con los frescos originales. Abierta a diario, entrada libre, a dos pasos de la plaza.",
+          },
+        ],
+      },
+      {
+        title: "Turista extranjero",
+        rule: "detección de idioma · mismo catálogo",
         script: [
           { role: "guest", text: "Hallo, wir suchen einen leichten Wanderweg für morgen" },
           {
@@ -922,12 +1100,14 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
           { role: "guest", text: "Gibt es dort auch eine Einkehrmöglichkeit?" },
           {
             role: "bot",
-            tag: "del catálogo de restaurantes",
+            tag: "del catálogo de refugios",
             text: "Ja, direkt am See gibt es eine Almhütte mit warmen Speisen, geöffnet bis 18:00 Uhr.",
           },
         ],
       },
     ],
+    scenarioLangs: "responde en el idioma de quien escribe",
+    scenarioBoardTitle: "Oficina de Turismo",
     faqTitle: "Las preguntas",
     faqAccent: "que siempre nos hacen.",
     faqItems: [
@@ -984,17 +1164,10 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     heroModeIn: "Antwortet allen, die schreiben",
     heroModeOut: "Und schreibt von sich aus",
     heroScript: [
-      { role: "guest", text: "Hallo! Wir sind mit der Familie da, was ist am Samstag los?" },
       {
         role: "bot",
-        tag: "aus dem Veranstaltungskatalog",
-        text: "Am Samstag um 17:00 Uhr ist Markt auf dem Platz, und um 20:30 Uhr Musikabend im Gemeindezentrum — beides bei freiem Eintritt.",
-      },
-      { role: "guest", text: "Super, wo können wir danach etwas Typisches essen?" },
-      {
-        role: "bot",
-        tag: "aus dem Restaurantkatalog",
-        text: "Zwei Gehminuten entfernt ist die Locanda del Bosco, geöffnet bis 22:30 Uhr, bekannt für hausgemachte Gerichte.",
+        tag: "Willkommensnachricht",
+        text: "Herzlich willkommen! 👋 Wir sind die Tourismusinformation und begleiten Sie durch Ihren ganzen Aufenthalt.\n\nFragen Sie uns, was heute los ist, wo man essen kann, welche Wege sich lohnen, wie Sie unterwegs sind oder nach einer nützlichen Nummer — wir antworten mit Fotos und Videos, wo sie helfen.",
       },
     ],
     painTitle: "Dieselben zehn Fragen,",
@@ -1092,34 +1265,34 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
         desc: "Fällt eine Frage aus dem Katalog heraus, sagt der Bot das klar — lieber ein \"weiß ich nicht\" als eine falsche Auskunft an einen Gast.",
       },
     ],
-    pushTitle: "Und wenn es darauf ankommt,",
-    pushAccent: "schreibt er von sich aus.",
+    pushTitle: "Und wenn der Urlaub endet,",
+    pushAccent: "holt er sie zurück.",
     pushSub:
-      "Ein normaler Chatbot wartet. Dieser nicht: Wenn etwas passiert, das Leute betrifft, die Ihnen schon geschrieben haben — eine neue Veranstaltung, ein näher rückendes Datum, ein wegen Regen verschobenes Fest — geht die Nachricht von selbst raus. Und bevor sie rausgeht, prüft sie, ob es nicht schon gesagt wurde.",
+      "Ein Gast, der Ihnen einmal geschrieben hat, ist Ihr wertvollster Kontakt: Er kennt den Ort, es hat ihm gefallen, und er hat Ihnen seine Nummer hinterlassen. Vor Weihnachten, Ostern oder dem Sommer bekommt er Ihre Angebote für den nächsten Urlaub — aber nur, wenn er zugestimmt hat, und ein einziges NEIN beendet es dauerhaft.",
     pushSteps: [
       {
-        badge: "Was ihn auslöst",
-        title: "Es passiert etwas, das jemanden betrifft",
-        desc: "Sie veröffentlichen eine neue Veranstaltung, ein Datum rückt näher, eine Unterkunft meldet letzte Plätze: Die Nachricht geht an alle, die Ihnen schon geschrieben haben und infrage kommen. Niemand im Büro muss etwas anklicken.",
+        badge: "Während des Aufenthalts",
+        title: "Nur das Nötige, solange sie hier sind",
+        desc: "Wetterumschwung, eine Veranstaltung heute Abend, ein wegen Regen verschobenes Fest: Die Nachricht erreicht, wer gerade im Ort ist. Niemand am Schalter muss etwas drücken.",
       },
       {
-        badge: "Was ihn stoppt",
-        title: "Eine Prüfung vor jedem Versand",
-        desc: "Vor dem Senden schaut das System nach, was diese Person in den letzten Tagen schon bekommen hat. Hat eine andere Kampagne dasselbe bereits gemeldet, geht die zweite Nachricht nicht raus.",
+        badge: "Vor den Feiertagen",
+        title: "Weihnachten, Ostern, Sommer: die Nachricht, die sie zurückholt",
+        desc: "Der Urlaub endet, der Kontakt bleibt. Einige Wochen vor der Saison kommen Angebote und Veranstaltungen für die nächste — genau dann, wenn entschieden wird, wohin es geht.",
       },
       {
-        badge: "Warum das zählt",
-        title: "Niemand fühlt sich überflutet",
-        desc: "Das ist der Unterschied zwischen einem nützlichen Hinweis und dem Spam, der dazu führt, dass der Chat stummgeschaltet wird. Die Prüfung läuft automatisch: Niemand muss sich merken, \"dem haben wir es schon geschrieben\".",
+        badge: "Immer mit Einwilligung",
+        title: "Sie erhalten es nur, wenn sie zugestimmt haben",
+        desc: "Die Einwilligung wird im Chat eingeholt, und ein NEIN genügt, um nichts mehr zu erhalten. Vor jedem Versand prüft das System zudem, dass es nichts wiederholt, was eine andere Kampagne bereits gesagt hat.",
       },
     ],
-    pushBoardTitle: "Tourist-Information",
+    pushBoardTitle: "Tourismusinformation",
     pushBoardStatus: "ausgehende Nachricht",
-    pushFirstTag: "Kampagne: Veranstaltungen am Wochenende",
-    pushFirstText: "Hallo! Am Sonntag ist ab 9:00 Uhr der Herbstmarkt auf dem Platz — wir dachten, das könnte Sie interessieren.",
-    pushGuardTag: "Kampagne: Markt-Newsletter",
+    pushFirstTag: "Kampagne: Weihnachtsangebote",
+    pushFirstText: "Hallo! Die Weihnachtswochen im Ort haben begonnen: Märkte, Eisbahn und Partnerunterkünfte. Sollen wir Ihnen die Angebote schicken, falls Sie wiederkommen möchten?",
+    pushGuardTag: "Kampagne: Winter-Newsletter",
     pushGuardText:
-      "Derselbe Markt wurde vor 3 Tagen bereits von einer anderen Kampagne gemeldet: Versand automatisch abgebrochen, der Gast bekommt keine Dopplung.",
+      "Dasselbe Angebot wurde vor 3 Tagen bereits von einer anderen Kampagne verschickt: Versand automatisch abgebrochen, der Gast erhält kein Duplikat.",
     pushLabelSent: "gesendet",
     pushLabelBlocked: "vor dem Versand gestoppt",
     metricsTitle: "Was sich ändert",
@@ -1153,60 +1326,120 @@ export const TOURISM_I18N: Record<TourismLang, TourismCopy> = {
     tryReplay: "Gespräch erneut ansehen",
     scenarios: [
       {
-        title: "Was ist dieses Wochenende los",
-        rule: "Katalog → Veranstaltungen",
+        title: "Mit Kindern, eines mit Zöliakie",
+        rule: "Katalog → Restaurants · glutenfrei-Filter",
         script: [
-          { role: "guest", text: "Was kann man dieses Wochenende unternehmen?" },
-          {
-            role: "bot",
-            tag: "aus dem Veranstaltungskatalog",
-            text: "Dieses Wochenende: Samstag Handwerkermarkt auf dem Platz (10:00–19:00 Uhr) und Musikabend (20:30 Uhr); Sonntag geführte Wanderung zur Hütte, Treffpunkt um 9:00 Uhr.",
-          },
-          { role: "guest", text: "Ist die Wanderung für Kinder geeignet?" },
-          {
-            role: "bot",
-            tag: "aus dem Veranstaltungskatalog",
-            text: "Ja, es ist ein leichter, familienfreundlicher Weg: etwa 2 Stunden, wenig Höhenunterschied, Treffpunkt am Parkplatz der Hütte.",
-          },
-        ],
-      },
-      {
-        title: "Unterkunft für 4 Personen",
-        rule: "Katalog → Unterkünfte",
-        script: [
-          { role: "guest", text: "Wir suchen eine Unterkunft, wir sind zu viert" },
-          {
-            role: "bot",
-            tag: "aus dem Unterkunftskatalog",
-            text: "Ich habe zwei Möglichkeiten für 4 Personen: eine Ferienwohnung im Zentrum mit Küche und Balkon, und eine Pension 5 Minuten außerhalb des Ortes. Lieber im Zentrum?",
-          },
-          { role: "guest", text: "Lieber im Zentrum, und in der Nähe eines Parkplatzes" },
-          {
-            role: "bot",
-            tag: "aus dem Unterkunftskatalog",
-            text: "Die Wohnung im Zentrum hat einen Stellplatz inklusive. Ich gebe Ihnen den direkten Kontakt der Eigentümerin, um die Termine zu prüfen.",
-          },
-        ],
-      },
-      {
-        title: "Gast aus dem Ausland, leichter Weg",
-        rule: "Katalog → Outdoor · Spracherkennung",
-        script: [
-          { role: "guest", text: "Hallo, wir suchen einen leichten Wanderweg für morgen" },
-          {
-            role: "bot",
-            tag: "antwortet auf Deutsch",
-            text: "Guten Tag! Ich empfehle den Weg zum Waldsee: leicht, ca. 5 km, 1,5 Stunden, kaum Höhenunterschied.",
-          },
-          { role: "guest", text: "Gibt es dort auch eine Einkehrmöglichkeit?" },
+          { role: "guest", text: "Wir sind mit zwei Kindern da und meine Tochter hat Zöliakie, wo können wir essen?" },
           {
             role: "bot",
             tag: "aus dem Restaurantkatalog",
-            text: "Ja, direkt am See gibt es eine Almhütte mit warmen Speisen, geöffnet bis 18:00 Uhr.",
+            text: "Zwei Lokale mit zertifizierter glutenfreier Küche und Kindermenü: eines im Zentrum, das andere fünf Minuten entfernt mit Garten und Spielplatz. Soll ich Ihnen die Kontakte schicken?",
+          },
+          { role: "guest", text: "Ja, das mit dem Garten" },
+          {
+            role: "bot",
+            tag: "aus dem Restaurantkatalog",
+            media: { kind: "photo", emoji: "🍽️", caption: "Gastraum und Garten" },
+            text: "Hier ist es. Getrennte Küche für glutenfrei, geöffnet bis 22:30 Uhr. Am Wochenende besser reservieren — hier die direkte Nummer.",
+          },
+        ],
+      },
+      {
+        title: "Ohne Auto",
+        rule: "Katalog → Verkehr · zu Fuß erreichbar",
+        script: [
+          { role: "guest", text: "Wir sind ohne Auto, was schaffen wir heute?" },
+          {
+            role: "bot",
+            tag: "aus dem Verkehrskatalog",
+            text: "Mit dem Shuttle sind Sie in 10 Minuten an den Liften, die Haltestelle ist 200 Meter entfernt. Zu Fuß beginnt der Wasserfallweg direkt im Ort.",
+          },
+          { role: "guest", text: "Der Spaziergang klingt besser, ist er machbar?" },
+          {
+            role: "bot",
+            tag: "aus dem Wanderkatalog",
+            media: { kind: "photo", emoji: "🏞️", caption: "Der Wasserfallweg" },
+            text: "Ja: anderthalb Stunden, keine ausgesetzten Stellen, Start am Platz. Auf halber Strecke gibt es einen Picknickplatz.",
+          },
+        ],
+      },
+      {
+        title: "Nützliche Nummern",
+        rule: "Katalog → Kontakte · immer erreichbar",
+        script: [
+          { role: "guest", text: "Meine Tochter hat Fieber, an wen können wir uns wenden? Es ist Sonntag" },
+          {
+            role: "bot",
+            tag: "aus den nützlichen Nummern",
+            text: "Der ärztliche Bereitschaftsdienst ist unter 0435 000000 erreichbar, auch an Feiertagen. Die diensthabende Apotheke ist diese Woche die am Platz, geöffnet bis 19:00 Uhr.\n\nIm Notfall gilt die 112.",
+          },
+          { role: "guest", text: "Danke, und wenn wir nachts eine Apotheke brauchen?" },
+          {
+            role: "bot",
+            tag: "aus den nützlichen Nummern",
+            text: "Nachts läuft es über Rufbereitschaft: Sie rufen dieselbe Nummer des Bereitschaftsdienstes an und man verweist Sie an die nächste diensthabende Apotheke.",
+          },
+        ],
+      },
+      {
+        title: "Vorsicht und Wetter",
+        rule: "Wetter → Katalog · Sicherheitshinweis",
+        script: [
+          { role: "guest", text: "Wir wollten morgen auf den Gipfel, was meinen Sie?" },
+          {
+            role: "bot",
+            tag: "Wetter + Wanderkatalog",
+            text: "Für morgen Nachmittag sind ab 14:00 Uhr Gewitter angesagt. Wenn Sie hinaufgehen, starten Sie früh und seien Sie bis mittags zurück.\n\nNehmen Sie Regenjacke und feste Schuhe mit: Das letzte Stück führt über Fels und wird rutschig.",
+          },
+          { role: "guest", text: "Lieber verschieben?" },
+          {
+            role: "bot",
+            tag: "Sicherheitshinweis",
+            text: "Mit Kindern ja, ich würde verschieben: Für Donnerstag ist es heiter gemeldet. Für morgen empfehle ich den unteren Weg am Bach — geschützt und ohne ausgesetzte Stellen.",
+          },
+        ],
+      },
+      {
+        title: "Fotos und Video, nicht nur Text",
+        rule: "Katalog → Hütten · Medien angehängt",
+        script: [
+          { role: "guest", text: "Wie ist die Berghütte? Ich würde es gern vorher sehen" },
+          {
+            role: "bot",
+            tag: "aus dem Hüttenkatalog",
+            media: { kind: "video", emoji: "🎥", caption: "Die Hütte und die Aussicht", duration: "0:45" },
+            text: "Hier ein Video. Mit dem Sessellift hinauf, dann zwanzig Minuten zu Fuß; die Küche ist bis 16:00 Uhr geöffnet.",
+          },
+          { role: "guest", text: "Super, und die alte Kirche im Ort?" },
+          {
+            role: "bot",
+            tag: "aus dem Kirchenkatalog",
+            media: { kind: "photo", emoji: "⛪", caption: "Der freskierte Innenraum" },
+            text: "Sie stammt aus dem 18. Jahrhundert, mit den originalen Fresken. Täglich geöffnet, Eintritt frei, wenige Schritte vom Platz.",
+          },
+        ],
+      },
+      {
+        title: "Gast aus dem Ausland",
+        rule: "Spracherkennung · derselbe Katalog",
+        script: [
+          { role: "guest", text: "Hello, we are looking for an easy walk for tomorrow" },
+          {
+            role: "bot",
+            tag: "antwortet auf Englisch",
+            text: "Hello! I'd suggest the forest lake trail: easy, about 5 km, 1.5 hours, hardly any climb.",
+          },
+          { role: "guest", text: "Is there somewhere to eat along the way?" },
+          {
+            role: "bot",
+            tag: "aus dem Hüttenkatalog",
+            text: "Yes, right by the lake there's an alpine hut serving hot food, open until 6pm.",
           },
         ],
       },
     ],
+    scenarioLangs: "antwortet in der Sprache des Gastes",
+    scenarioBoardTitle: "Tourismusinformation",
     faqTitle: "Die Fragen,",
     faqAccent: "die uns immer gestellt werden.",
     faqItems: [
