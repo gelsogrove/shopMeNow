@@ -14,15 +14,15 @@ interface Plan {
 /** Copy that frames each plan for a tourist office, not for a shop. */
 const PITCH: Record<string, { tagline: string; icon: typeof Star }> = {
   FREE_TRIAL: {
-    tagline: "Provatelo senza impegno, credito incluso",
+    tagline: "Il piano Basic, per 14 giorni",
     icon: Gift,
   },
   BASIC: {
-    tagline: "Per iniziare: il territorio risponde da solo",
+    tagline: "Il territorio risponde, senza scadenza",
     icon: Sparkles,
   },
   PREMIUM: {
-    tagline: "Il più scelto: si ripaga vendendo i push agli esercenti",
+    tagline: "Ogni lingua, e i dati per capire i vostri turisti",
     icon: Star,
   },
   ENTERPRISE: {
