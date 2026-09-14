@@ -107,9 +107,14 @@ export const createAuthRouter = (authController: AuthController): Router => {
 
   // 2FA Setup Verification (NEW)
   // 🔒 NO AUTH REQUIRED - User hasn't authenticated yet (just registered)
+  // 🚨 The limiter was removed here "temporarily, to test if it's causing 401"
+  // and never put back (found 2026-09-14). This route is unauthenticated and
+  // verifies a 6-digit TOTP: without throttling the whole keyspace is
+  // brute-forceable in minutes. Restored to match /2fa/verify and /verify-2fa,
+  // which both carry it.
   router.post(
     "/verify-2fa-setup",
-    // Temporarily remove rate limiter to test if it's causing 401
+    twoFactorLimiter,
     asyncHandler(enhancedAuthController.verify2FASetup.bind(enhancedAuthController))
   )
 

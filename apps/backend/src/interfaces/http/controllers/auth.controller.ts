@@ -382,8 +382,14 @@ export class AuthController {
       res.status(200).json({
         message:
           "If the email exists, password reset instructions will be sent",
-        // Only include token in development for testing
-        ...(process.env.NODE_ENV !== "production" && { token }),
+        // 🚨 Opt-IN, not opt-out. This used to be `NODE_ENV !== "production"`,
+        // so any box where NODE_ENV was simply unset — a staging deploy, a
+        // preview app, a misconfigured dyno — handed out working password
+        // reset tokens for ANY email address to anyone who asked. Now it
+        // requires someone to deliberately set EXPOSE_RESET_TOKEN=true, and a
+        // missing variable fails closed.
+        ...(process.env.EXPOSE_RESET_TOKEN === "true" &&
+          process.env.NODE_ENV !== "production" && { token }),
       })
     } catch (error) {
       logger.error("Forgot password error:", error)

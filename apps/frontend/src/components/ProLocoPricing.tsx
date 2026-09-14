@@ -1,5 +1,5 @@
 import { api } from "@/services/api"
-import { Check, Loader2, Server, Sparkles, Star } from "lucide-react"
+import { Check, Gift, Loader2, Server, Sparkles, Star } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface Plan {
@@ -13,6 +13,10 @@ interface Plan {
 
 /** Copy that frames each plan for a tourist office, not for a shop. */
 const PITCH: Record<string, { tagline: string; icon: typeof Star }> = {
+  FREE_TRIAL: {
+    tagline: "Provatelo senza impegno, credito incluso",
+    icon: Gift,
+  },
   BASIC: {
     tagline: "Per iniziare: il territorio risponde da solo",
     icon: Sparkles,
@@ -34,11 +38,11 @@ const euro = (n: number) =>
   n % 1 === 0 ? `€${n}` : `€${n.toFixed(2).replace(".", ",")}`
 
 /**
- * The three plans, read from the DATABASE — never hardcoded (CLAUDE.md §1).
+ * The plans, read from the DATABASE — never hardcoded (CLAUDE.md §1).
  *
  * The same `/api/subscription/plans` the billing pages use, so a price shown
- * here can never drift from the price actually charged. FREE_TRIAL is filtered
- * out: it is a state an account passes through, not something to choose.
+ * here can never drift from the price actually charged — including the usage
+ * costs printed underneath.
  */
 export function ProLocoPricing() {
   const [plans, setPlans] = useState<Plan[] | null>(null)
@@ -51,11 +55,10 @@ export function ProLocoPricing() {
       .then((res) => {
         if (cancelled) return
         const all: Plan[] = res.data?.data ?? []
-        setPlans(
-          all
-            .filter((p) => p.planType !== "FREE_TRIAL")
-            .sort((a, b) => a.monthlyFee - b.monthlyFee)
-        )
+        // FREE_TRIAL included (Andrea, 2026-09-14: "manca il free"): for a
+        // volunteer-run tourist office, "try it, nothing to pay" is the entry
+        // point — hiding it made the cheapest visible option €22/month.
+        setPlans(all.sort((a, b) => a.monthlyFee - b.monthlyFee))
       })
       .catch(() => !cancelled && setError(true))
     return () => {
@@ -78,7 +81,7 @@ export function ProLocoPricing() {
 
   return (
     <div>
-      <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
         {plans.map((plan) => {
           const featured = plan.planType === FEATURED
           const pitch = PITCH[plan.planType]
@@ -122,9 +125,11 @@ export function ProLocoPricing() {
 
               <div className="mt-5 flex items-baseline gap-1">
                 <span className="text-4xl font-semibold tracking-tight text-slate-900">
-                  {euro(plan.monthlyFee)}
+                  {plan.monthlyFee === 0 ? "Gratis" : euro(plan.monthlyFee)}
                 </span>
-                <span className="text-sm text-slate-500">/ mese</span>
+                {plan.monthlyFee > 0 && (
+                  <span className="text-sm text-slate-500">/ mese</span>
+                )}
               </div>
 
               <ul className="mt-6 flex-1 space-y-2.5">

@@ -51,11 +51,25 @@ export const publicMerchantPushPhotosRouter = (): Router => {
       // Stored as either a full data URI (data:image/png;base64,...) or raw
       // base64. The data URI carries its own mime type; raw defaults to jpeg.
       const dataUriMatch = push.photoBase64.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i)
-      const mimeType = dataUriMatch ? dataUriMatch[1] : "image/jpeg"
+      const declaredMime = dataUriMatch ? dataUriMatch[1].toLowerCase() : "image/jpeg"
       const base64 = dataUriMatch ? dataUriMatch[2] : push.photoBase64
 
+      // 🚨 Same hardening as public-tourist-photos (2026-09-14): this endpoint
+      // echoed the STORED mime type straight back with no allow-list, no
+      // nosniff and no CSP. A merchant who saved `data:image/svg+xml` with a
+      // <script> inside got it rendered, unauthenticated, from the API's own
+      // origin — stored XSS on api.echatbot.ai. Anything not on the list is
+      // now served as an opaque download instead of being rendered.
+      const RENDERABLE = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]
+      const isRenderable = RENDERABLE.includes(declaredMime)
+
       const bytes = Buffer.from(base64, "base64")
-      res.setHeader("Content-Type", mimeType)
+      res.setHeader("Content-Type", isRenderable ? declaredMime : "application/octet-stream")
+      if (!isRenderable) {
+        res.setHeader("Content-Disposition", "attachment")
+      }
+      res.setHeader("X-Content-Type-Options", "nosniff")
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox")
       res.setHeader("Cache-Control", "public, max-age=86400")
       return res.send(bytes)
     } catch (error) {

@@ -31,6 +31,7 @@ import { pushNotificationService } from "@/services/pushNotificationService"
 import { getLanguages, Language } from "@/services/workspaceApi"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  ArrowLeft,
   Ban,
   Bot,
   Check,
@@ -1590,7 +1591,18 @@ export function ChatPage() {
 
       <div className="flex h-full min-h-0">
         {/* Chat List - WhatsApp-style Left Sidebar */}
-        <div className="w-[360px] flex-shrink-0 flex flex-col h-full bg-white border-r border-gray-200 overflow-hidden">
+        {/* 📱 On a phone this is the WHOLE screen, and it gives way to the
+            conversation once one is picked — the WhatsApp pattern. It used to
+            be a hard w-[360px] at every width, which on a 390px screen left
+            ~30px for the conversation itself, with pinch-zoom disabled so
+            there was no way out (found 2026-09-14). */}
+        <div
+          className={[
+            "flex-col h-full bg-white border-r border-gray-200 overflow-hidden",
+            "w-full md:w-[360px] md:flex-shrink-0",
+            selectedChat ? "hidden md:flex" : "flex",
+          ].join(" ")}
+        >
           {/* Sidebar Header — WhatsApp green */}
           <div className="bg-[#075E54] px-4 h-14 flex items-center gap-3 flex-shrink-0">
             {workspace?.logoUrl ? (
@@ -1810,7 +1822,13 @@ export function ChatPage() {
         </div>
 
         {/* Chat Messages - Right Side */}
-        <div className="flex-1 flex flex-col h-full min-h-0 bg-white overflow-hidden">
+        <div
+          className={[
+            "flex-1 flex-col h-full min-h-0 bg-white overflow-hidden",
+            // Hidden on a phone until a chat is picked; always visible from md up.
+            selectedChat ? "flex" : "hidden md:flex",
+          ].join(" ")}
+        >
           {selectedChat ? (
             <>
               {/* 🚨 BANNERS ROW - Manual Control + Blocked Customer */}
@@ -1858,8 +1876,19 @@ export function ChatPage() {
 
               {/* Chat Header — WhatsApp-style green bar */}
               <div className="bg-[#075E54] px-4 h-14 flex items-center justify-between flex-shrink-0">
+                {/* 📱 Back to the conversation list. Phone only: from md up
+                    both panes are on screen and there is nothing to go back
+                    to. Without it a phone user who opens a chat is stuck. */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedChat(null)}
+                  aria-label="Back to conversations"
+                  className="md:hidden -ml-2 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
                 <div
-                  className="flex items-center gap-3 cursor-pointer group"
+                  className="flex items-center gap-3 cursor-pointer group min-w-0 flex-1"
                   onClick={handleEditCustomer}
                 >
                   <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">

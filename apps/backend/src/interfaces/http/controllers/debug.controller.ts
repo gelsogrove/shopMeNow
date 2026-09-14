@@ -80,8 +80,17 @@ export class DebugController {
         })
       }
 
+      // 🔒 Set by workspaceValidationMiddleware, and part of BOTH queries
+      // below: without it this searched every tenant's customers by phone and
+      // then wrote to whatever it found (CLAUDE.md §2).
+      const workspaceId = (req as any).workspaceId
+      if (!workspaceId) {
+        return res.status(400).json({ success: false, error: "workspaceId required" })
+      }
+
       const customer = await prisma.customers.findFirst({
         where: {
+          workspaceId,
           OR: [
             { phone: phoneNumber },
             { phone: { contains: phoneNumber.replace(/\D/g, "") } },
@@ -97,7 +106,7 @@ export class DebugController {
       }
 
       const result = await prisma.chatSession.updateMany({
-        where: { customerId: customer.id },
+        where: { customerId: customer.id, workspaceId },
         data: { isPlayground: false },
       })
 

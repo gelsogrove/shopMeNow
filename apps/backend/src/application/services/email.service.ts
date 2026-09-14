@@ -1397,6 +1397,95 @@ startxref
   }
 
   /**
+   * Tell an owner their chatbot has STOPPED answering customers, right now.
+   *
+   * 🚨 WHY THIS EXISTS (2026-09-14). When a workspace is blocked — credit
+   * exhausted, payment failed, subscription paused — the inbound pipeline
+   * drops the message silently: no reply to the guest, nothing saved. That
+   * silence is correct for the guest (a stranger must not be told about the
+   * tenant's billing), but the OWNER was told nothing either. They found out
+   * from angry customers. The low-balance alert fires at €5 and may be days
+   * old by then.
+   *
+   * Plain, specific and actionable: what stopped, why, and the one link that
+   * fixes it.
+   */
+  async sendServiceBlockedAlert(data: {
+    to: string
+    firstName: string
+    workspaceName: string
+    reason: "CREDIT_EXHAUSTED" | "PAYMENT_FAILED" | "PAUSED" | string
+  }): Promise<boolean> {
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+
+      const REASONS: Record<string, string> = {
+        CREDIT_EXHAUSTED:
+          "your credit balance has run out, so messages can no longer be sent",
+        PAYMENT_FAILED:
+          "the last payments could not be collected from your PayPal account",
+        PAUSED: "the subscription is paused",
+      }
+      const why = REASONS[data.reason] ?? "of a billing problem on the account"
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:40px 0;">
+        <table role="presentation" style="width:600px;max-width:95%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:36px 32px 24px;background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);border-radius:12px 12px 0 0;text-align:center;">
+              <p style="margin:0 0 8px;font-size:32px;">🔇</p>
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Your chatbot has stopped answering</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">Hi <strong>${data.firstName}</strong>,</p>
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">
+                <strong>${data.workspaceName}</strong> is no longer replying to customers on WhatsApp, because ${why}.
+              </p>
+              <p style="margin:0 0 24px;font-size:16px;color:#374151;">
+                People writing to you right now receive nothing at all — they are not told there is a problem, so they simply think you are ignoring them.
+              </p>
+              <p style="margin:0 0 8px;text-align:center;">
+                <a href="${frontendUrl}/billing" style="display:inline-block;padding:14px 28px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">Restore the service</a>
+              </p>
+              <p style="margin:24px 0 0;font-size:14px;color:#6b7280;">
+                Service resumes as soon as the account is back in order — nothing else to do on your side.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+      await this.getTransporter().sendMail({
+        from: `"eChatbot" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+        to: data.to,
+        subject: `🔇 ${data.workspaceName}: your chatbot has stopped answering`,
+        html: htmlContent,
+      })
+
+      logger.info(`Service blocked alert sent to ${data.to} (${data.reason})`)
+      return true
+    } catch (error) {
+      logger.error("Failed to send service blocked alert:", error)
+      return false
+    }
+  }
+
+  /**
    * Warn an owner that the free trial is about to end.
    * Sent by the trial-expiry scheduler job; until it existed, the trial
    * simply stopped and the chatbot went silent with no warning at all

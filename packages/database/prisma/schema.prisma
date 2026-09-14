@@ -68,7 +68,12 @@ model Workspace {
   channelType               ChannelType @default(WHATSAPP) // WhatsApp or Widget
   enableWhatsapp            Boolean     @default(true)
   enableWidget              Boolean     @default(false)
-  channelMode               ChannelMode @default(INFORMATIONAL) // Workspace mode: ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps), PRO_LOCO (flow + tourism-office-only features, e.g. Sappada)
+  // PRO_LOCO is the DEFAULT (Andrea, 2026-09-14: "un nuovo canale ora ha di
+  // default il type che è sempre FLOW PRO_LOCO"): the product is sold to
+  // tourist offices, so a channel created without an explicit mode is one of
+  // theirs. PRO_LOCO reuses the FLOW prompt templates (getTemplateFolder) and
+  // adds the tourism-only features on top.
+  channelMode               ChannelMode @default(PRO_LOCO) // ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps), PRO_LOCO (flow + tourism-office features)
   enableCalendarBooking     Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
   hasSalesAgents            Boolean     @default(false) // Has sales team for customer assignment?
   hasHumanSupport           Boolean     @default(true) // Can customers request human support?
@@ -748,6 +753,12 @@ model User {
   planStartedAt           DateTime  @default(now())
   nextBillingDate         DateTime?
   lowBalanceNotifiedAt    DateTime? // Last time low balance notification was sent
+  /// Last time the owner was told their chatbot had STOPPED answering.
+  /// Separate from lowBalanceNotifiedAt: that one warns while the service is
+  /// still running, this one reports that it is already down. Throttled on its
+  /// own clock so a warning sent yesterday cannot swallow today's outage
+  /// (2026-09-14 — before this, the bot went silent with no notice at all).
+  serviceBlockedNotifiedAt DateTime?
   trialExpiringNotifiedAt DateTime? // Last time the "trial is ending" warning was sent (throttles the daily job to one email per threshold)
   taxRate                 Decimal   @default(0.22) @db.Decimal(5, 4) // VAT rate applied to this owner's invoices (0.22 = 22%)
 

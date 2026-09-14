@@ -20,9 +20,9 @@ import type { ShowcaseContent } from "./HomeShowcase"
  * itself answers guests in their own language — which is what step 4 shows.
  */
 export const proLocoShowcaseContent: ShowcaseContent = {
-  title: "Dal primo “ciao” al ritorno l'anno dopo.",
+  title: "Accoglie, consiglia, ricorda.",
   subtitle:
-    "Un solo assistente accoglie l'ospite, gli organizza la vacanza, gli prenota il tavolo, gli chiede com'è andata e lo invita a tornare. Su WhatsApp, in ogni lingua, 24 ore su 24.",
+    "Un assistente che risponde al turista prima, durante e dopo la vacanza — su WhatsApp, nella sua lingua, 24 ore su 24.",
   everyLang: "Parla ogni lingua del mondo.",
   online: "online",
   opLabel: "PRO LOCO",

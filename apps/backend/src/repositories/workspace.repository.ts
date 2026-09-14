@@ -78,7 +78,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       channelType: data.channelType ?? "WHATSAPP",
       enableWhatsapp: data.enableWhatsapp ?? true,
       enableWidget: data.enableWidget ?? false,
-      channelMode: data.channelMode ?? "ECOMMERCE",
+      // Last fallback in the chain — PRO_LOCO, like the schema and the service.
+      channelMode: data.channelMode ?? "PRO_LOCO",
       hasSalesAgents: data.hasSalesAgents ?? false,
       hasHumanSupport: data.hasHumanSupport ?? true,
       speechToTextEnabled: data.speechToTextEnabled ?? false,

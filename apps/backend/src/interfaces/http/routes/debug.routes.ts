@@ -40,8 +40,15 @@ router.post(
   (req, res) => debugController.searchProducts(req, res)
 )
 
+// 🚨 SECURITY (2026-09-14): this route shipped with NO middleware at all,
+// while its sibling above had both. Unauthenticated, it looked a customer up
+// by phone across the WHOLE database and rewrote their chat sessions — a
+// cross-tenant write and a phone→name lookup oracle for anyone on the
+// internet. Guarded now like every other workspace route.
 router.post(
   "/fix-playground-flags",
+  authMiddleware,
+  workspaceValidationMiddleware,
   (req, res) => debugController.fixPlaygroundFlags(req, res)
 )
 

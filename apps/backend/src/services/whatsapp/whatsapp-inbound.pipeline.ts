@@ -28,6 +28,7 @@ import {
 import { SecurityCheckService } from "../../application/services/security-check.service"
 import { WorkspaceAccessService } from "../../application/services/workspace-access.service"
 import { SubscriptionBillingService } from "../../application/services/subscription-billing.service"
+import { EmailService } from "../../application/services/email.service"
 import { websocketService } from "../websocket.service"
 import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
 import { sendFlowStepMedia } from "./flow-step-media.send"
@@ -466,6 +467,12 @@ export class WhatsAppInboundPipeline {
         blockReason: accessResult.blockReason,
         message: accessResult.message,
       })
+
+      // Silent to the GUEST, never to the OWNER. Until this existed the bot
+      // just went quiet and the owner heard about it from angry customers
+      // (2026-09-14). Fire-and-forget on purpose: the block must return at
+      // once, and a mail server hiccup must not hold up the webhook.
+      void notifyOwnerOfBlock(workspaceId, accessResult.blockReason)
       return {
         statusCode: 402,
         status: "workspace_blocked",
@@ -986,3 +993,67 @@ export class WhatsAppInboundPipeline {
 
 /** Shared singleton — stateless, safe to reuse across controllers. */
 export const whatsAppInboundPipeline = new WhatsAppInboundPipeline()
+
+/**
+ * Email the workspace owner that their chatbot has stopped answering.
+ *
+ * Throttled to once every 24h per owner via `users.serviceBlockedNotifiedAt`:
+ * a blocked workspace can receive dozens of messages an hour, and each one
+ * reaches this path. Its own column, not lowBalanceNotifiedAt — a warning
+ * sent yesterday must not swallow today's outage notice.
+ *
+ * Never throws: this runs beside a webhook response.
+ */
+async function notifyOwnerOfBlock(
+  workspaceId: string,
+  blockReason: string | undefined
+): Promise<void> {
+  try {
+    // OWNER_DELETED has nobody left to tell.
+    if (!blockReason || blockReason === "OWNER_DELETED") return
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        name: true,
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            serviceBlockedNotifiedAt: true,
+          },
+        },
+      },
+    })
+
+    const owner = workspace?.owner
+    if (!owner?.email) return
+
+    const DAY_MS = 24 * 60 * 60 * 1000
+    if (
+      owner.serviceBlockedNotifiedAt &&
+      Date.now() - owner.serviceBlockedNotifiedAt.getTime() < DAY_MS
+    ) {
+      return
+    }
+
+    const sent = await new EmailService().sendServiceBlockedAlert({
+      to: owner.email,
+      firstName: owner.firstName || "there",
+      workspaceName: workspace?.name || "Your channel",
+      reason: blockReason,
+    })
+
+    // Stamped only on a successful send, so an SMTP failure retries on the
+    // next inbound message rather than silently burning the one notification.
+    if (sent) {
+      await prisma.user.update({
+        where: { id: owner.id },
+        data: { serviceBlockedNotifiedAt: new Date() },
+      })
+    }
+  } catch (error) {
+    logger.error("[PIPELINE] owner block notification failed", error)
+  }
+}

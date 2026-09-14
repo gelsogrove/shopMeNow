@@ -376,7 +376,10 @@ For privacy inquiries, please contact our support team.`
     // These can be overridden by wizard input, but provide sensible defaults
     if (data.hasHumanSupport === undefined) data.hasHumanSupport = true
     if (data.hasSalesAgents === undefined) data.hasSalesAgents = false
-    if (data.channelMode === undefined) data.channelMode = "ECOMMERCE"
+    // PRO_LOCO by default, matching the Prisma default and the wizard
+    // (Andrea, 2026-09-14). It was ECOMMERCE, which seeded shop agents and
+    // shop tools onto every channel created without an explicit mode.
+    if (data.channelMode === undefined) data.channelMode = "PRO_LOCO"
     if (data.toneOfVoice === undefined) data.toneOfVoice = "friendly"
     if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
     // 🌍 Default languages: force English as baseline for new workspaces
@@ -402,7 +405,11 @@ For privacy inquiries, please contact our support team.`
 
       data.enableWidget = true
       data.enableWhatsapp = false
-      data.channelMode = "INFORMATIONAL"  // Force informational for widget
+      // 🚨 Only force a mode when the caller did not choose one. This used to
+      // overwrite unconditionally, so picking "widget" in the wizard silently
+      // turned a PRO_LOCO channel into INFORMATIONAL — the tourist content
+      // pages then vanished from a workspace created to have them.
+      if (data.channelMode === undefined) data.channelMode = "INFORMATIONAL"
       data.hasSalesAgents = false            // No sales agents for widget
       data.whatsappPhoneNumber = null
     } else {
@@ -476,7 +483,10 @@ For privacy inquiries, please contact our support team.`
       // 3. 🆕 IMPORT ALL DEFAULT AGENTS (Feature: Import prompts on new workspace)
       // Use dynamicAgents with correct template folder based on workspace type
       try {
-        const wsChannelMode = (data.channelMode ?? "ECOMMERCE") as ChannelMode
+        // Falls back to PRO_LOCO, matching the Prisma default: a channel created
+      // without an explicit mode belongs to a tourist office (Andrea,
+      // 2026-09-14). It was ECOMMERCE, which seeded shop agents and shop tools.
+      const wsChannelMode = (data.channelMode ?? "PRO_LOCO") as ChannelMode
         const agents = dynamicAgents(createdWorkspace.id, wsChannelMode)
         logger.info(`Loading ${wsChannelMode} templates for workspace ${createdWorkspace.id}`)
         for (const agent of agents) {

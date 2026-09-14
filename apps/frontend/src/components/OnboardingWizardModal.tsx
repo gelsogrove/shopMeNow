@@ -1,8 +1,8 @@
 /**
  * OnboardingWizardModal – survey-style multi-step onboarding
  *
- * Flow:
- *   channel-mode → industry → business → channel-personality →
+ * Flow (channel-mode removed 2026-09-14 — every new channel is PRO_LOCO):
+ *   industry → business → channel-personality →
  *   channel-type → human-support →
  *   auth → creating →
  *   [qr-scan — only if whatsapp or both] →
@@ -55,13 +55,24 @@ interface Props {
 }
 
 // Data steps (shown in step counter) — 7 steps total
-const DATA_STEPS: WizardStep[] = ['channel-mode', 'industry', 'business', 'channel-personality', 'channel-type', 'human-support', 'auth']
+// Data steps (shown in the step counter).
+//
+// 'channel-mode' was the first question — "how will you use eChatbot?". It is
+// gone (Andrea, 2026-09-14: "un nuovo canale ora ha di default il type che è
+// sempre FLOW PRO_LOCO… anche il setting non ho bisogno che lo mostri"): the
+// product is sold to tourist offices, so asking is a question with one
+// sensible answer. The mode is set at submit time instead.
+const DATA_STEPS: WizardStep[] = ['industry', 'business', 'channel-personality', 'channel-type', 'human-support', 'auth']
 
 // Progress bar fill (0–100) per step
+// Rebalanced over the six data steps that remain, and `totp` dropped: it was
+// left behind by a step removed earlier and is not a WizardStep, so the whole
+// map failed to type-check.
 const STEP_PROGRESS: Record<WizardStep, number> = {
-  'channel-mode': 8, industry: 22, business: 36,
-  'channel-personality': 50, 'channel-type': 64, 'human-support': 78, auth: 88,
-  totp: 92, creating: 96, 'qr-scan': 98, done: 100,
+  'channel-mode': 0, // no longer in the flow; kept so the map stays total
+  industry: 14, business: 30, 'channel-personality': 46,
+  'channel-type': 62, 'human-support': 78, auth: 90,
+  creating: 96, 'qr-scan': 98, done: 100,
 }
 
 // Full-bleed image per step
@@ -153,7 +164,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Reset on open ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return
-    setStep('channel-mode'); setError(''); setDirection(1)
+    setStep('industry'); setError(''); setDirection(1)
     setIndustry('other'); setBusinessName(''); setBotName(''); setChannelTone('friendly')
     setWorkspaceType('ecommerce'); setChannelChoice('whatsapp'); setHasHumanSupport(true)
     setWhatsappPhoneNumber('')
@@ -177,7 +188,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         const workspace = await createWorkspace({
           name: businessName,
           language: lang,
-          channelMode: workspaceType === 'ecommerce' ? 'ECOMMERCE' as const : workspaceType === 'flow' ? 'FLOW' as const : 'INFORMATIONAL' as const,
+          // Always PRO_LOCO: this product is sold to tourist offices and the
+          // mode question is no longer asked. Other modes are still created
+          // via the API/seed for the workspaces that need them.
+          channelMode: 'PRO_LOCO' as const,
           hasHumanSupport,
           enableWhatsapp: needsWhatsApp,
           enableWidget: needsWidget,
@@ -427,7 +441,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Back navigation ───────────────────────────────────────────────────────────
   const getBackStep = (): WizardStep | null => {
     switch (step) {
-      case 'industry': return 'channel-mode'
       case 'business': return 'industry'
       case 'channel-personality': return 'business'
       case 'channel-type': return 'channel-personality'
