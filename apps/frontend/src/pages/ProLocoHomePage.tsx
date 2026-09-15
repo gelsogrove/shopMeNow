@@ -233,32 +233,52 @@ export default function ProLocoHomePage() {
                 robottino che avevamo prima verde"). Small and beside the
                 slogan, not above it: on this page the login form is the thing
                 that must stay above the fold. */}
-            <div className="mb-6 flex items-center gap-5">
-              <HeroRobot className="w-44 shrink-0 [&_img]:w-44 sm:[&_img]:w-56 [&_img]:h-auto" />
-              <p className="text-emerald-700 font-medium text-sm">
-                {t.eyebrow}
-              </p>
-            </div>
-            <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] text-slate-900">
-              {t.slogan1}
-              <br />
-              <span className="text-emerald-700">{t.slogan2}</span>
-            </h1>
-            <p className="mt-6 text-lg text-slate-600 leading-relaxed max-w-xl">
-              {t.lede}
-            </p>
+            {/* The robot sits beside the WHOLE block, not next to the eyebrow.
+                Pairing a 176px mascot with a 14px label left the label hanging
+                in space with nothing to relate to (Andrea, 2026-09-15:
+                "piccolo e fatto male e appeso nel nulla"). Now the eyebrow is
+                a chip above the headline, where it belongs, and the robot
+                balances the headline's mass. */}
+            <div className="flex items-start gap-6">
+              <HeroRobot className="hidden w-36 shrink-0 sm:block [&_img]:w-36 lg:[&_img]:w-44 [&_img]:h-auto" />
 
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-              <span className="flex items-center gap-1.5">
-                <Globe className="h-4 w-4 text-emerald-600" /> {t.chipMulti}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-emerald-600" /> {t.chip24}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-emerald-600" /> {t.chipNoApp}
-              </span>
+              <div className="min-w-0">
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                  {t.eyebrow}
+                </span>
+
+                <h1 className="font-display mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl">
+                  {t.slogan1}
+                  <br />
+                  <span className="text-emerald-700">{t.slogan2}</span>
+                </h1>
+
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
+                  {t.lede}
+                </p>
+
+              {/* Pills, not loose icons: a 16px glyph over a photographic
+                  backdrop has nothing to sit on and disappears (Andrea,
+                  2026-09-15: "icone in alto non si vedono"). The tinted chip
+                  gives each one its own ground, and the icon grows with it. */}
+              <div className="mt-8 flex flex-wrap gap-2.5 text-sm">
+                {[
+                  { Icon: Globe, label: t.chipMulti },
+                  { Icon: Clock, label: t.chip24 },
+                  { Icon: Sparkles, label: t.chipNoApp },
+                ].map(({ Icon, label }) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 font-medium text-emerald-800"
+                  >
+                    <Icon className="h-[18px] w-[18px] text-emerald-600" />
+                    {label}
+                  </span>
+                ))}
+              </div>
+              </div>
             </div>
+
           </div>
 
           {/* ── Login form, on the page ──────────────────────────── */}

@@ -535,18 +535,27 @@ export function HomeShowcase({
                 setVisible(flatStart)
                 iRef.current = flatStart
               }}
-              className="flex w-full items-start gap-4 rounded-2xl border px-5 py-3.5 text-left transition-all duration-500"
+              className="flex w-full items-start gap-4 rounded-2xl border px-5 py-5 text-left transition-all duration-500"
               style={
                 i === activeFeature
-                  ? { borderColor: WA_GREEN, background: WA_GREEN, boxShadow: `0 14px 34px -10px ${WA_GREEN}aa` }
+                  ? { borderColor: "#075E54", background: "#075E54", boxShadow: `0 14px 34px -10px ${WA_GREEN}80` }
                   : light
                     ? { borderColor: "rgb(226,232,240)", background: "#fff" }
                     : { borderColor: "rgba(255,255,255,0.10)", background: "rgba(15,23,42,0.40)" }
               }
             >
               <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
-                style={{ background: i === activeFeature ? "rgba(7,94,84,0.14)" : "rgba(255,255,255,0.05)" }}
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl"
+                style={{
+                  background: i === activeFeature
+                    // On the dark-green active card the tile has to be LIGHTER
+                    // to separate from it, not darker.
+                    ? "rgba(255,255,255,0.18)"
+                    : light
+                      // A 5%-white tile is invisible on a white card.
+                      ? "rgb(240,253,244)"
+                      : "rgba(255,255,255,0.05)",
+                }}
               >
                 {f.icon}
               </span>
@@ -555,15 +564,15 @@ export function HomeShowcase({
                   className={`block font-bold ${
                     i === activeFeature ? "" : light ? "text-slate-900" : "text-slate-200"
                   }`}
-                  style={i === activeFeature ? { color: "#075E54" } : undefined}
+                  style={i === activeFeature ? { color: "#fff" } : undefined}
                 >
                   {f.title}
                 </span>
                 <span
-                  className={`mt-0.5 block text-sm ${
+                  className={`mt-1 block text-[15px] leading-relaxed ${
                     i === activeFeature ? "" : light ? "text-slate-600" : "text-slate-400"
                   }`}
-                  style={i === activeFeature ? { color: "#075E54" } : undefined}
+                  style={i === activeFeature ? { color: "#fff" } : undefined}
                 >
                   {f.desc}
                 </span>

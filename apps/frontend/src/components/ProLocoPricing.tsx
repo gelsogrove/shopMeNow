@@ -124,8 +124,8 @@ export function ProLocoPricing() {
               </p>
 
               <div className="mt-5 flex items-baseline gap-1">
-                <span className="text-4xl font-semibold tracking-tight text-slate-900">
-                  {plan.monthlyFee === 0 ? "Gratis" : euro(plan.monthlyFee)}
+                <span className="font-display text-5xl font-bold tracking-tight text-slate-900">
+                  {euro(plan.monthlyFee)}
                 </span>
                 {plan.monthlyFee > 0 && (
                   <span className="text-sm text-slate-500">/ mese</span>
@@ -141,16 +141,24 @@ export function ProLocoPricing() {
                 ))}
               </ul>
 
+              {/* The free plan is the one you can start on your own: it goes
+                  to the sign-up wizard, which really does create the account
+                  (/auth/register). The paid plans stay a conversation —
+                  nothing on this page can take a payment yet. */}
               <a
-                href="#contatti"
+                href={plan.planType === "FREE_TRIAL" ? "/onboarding" : "#contatti"}
                 className={[
-                  "mt-7 block rounded-lg px-4 py-2.5 text-center text-sm font-medium transition-colors",
-                  featured
+                  "mt-7 block rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors",
+                  plan.planType === "FREE_TRIAL"
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "border border-slate-200 text-slate-700 hover:border-emerald-600 hover:text-emerald-700",
+                    : featured
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "border border-slate-200 text-slate-700 hover:border-emerald-600 hover:text-emerald-700",
                 ].join(" ")}
               >
-                Richiedi informazioni
+                {plan.planType === "FREE_TRIAL"
+                  ? "Inizia gratis"
+                  : "Richiedi informazioni"}
               </a>
             </div>
           )
