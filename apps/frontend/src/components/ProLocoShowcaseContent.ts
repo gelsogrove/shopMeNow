@@ -59,23 +59,23 @@ export const proLocoShowcaseContent: ShowcaseContent = {
     },
     {
       icon: "🌍",
-      title: "Ogni ospite nella sua lingua",
+      title: "Ogni turista nella sua lingua",
       desc: "Voi scrivete in italiano una volta sola. Lui risponde in tedesco, francese, inglese.",
     },
     {
       icon: "📅",
       title: "Prenota l'appuntamento",
-      desc: "Visite guidate, tavoli, noleggi: fissa l'orario e lo ricorda all'ospite.",
+      desc: "Visite guidate, tavoli, noleggi: fissa l'orario e lo ricorda al turista.",
     },
     {
       icon: "🧭",
       title: "Percorsi guidati",
-      desc: "Quando servono più risposte in fila, l'assistente conduce l'ospite passo per passo.",
+      desc: "Quando servono più risposte in fila, l'assistente conduce il turista passo per passo.",
     },
     {
       icon: "⭐",
       title: "Feedback di fine vacanza",
-      desc: "Il giorno dopo la partenza chiede com'è andata, e la risposta resta sulla scheda dell'ospite.",
+      desc: "Il giorno dopo la partenza chiede com'è andata, e la risposta resta sulla scheda del turista.",
     },
     {
       icon: "📣",
@@ -141,7 +141,7 @@ export const proLocoShowcaseContent: ShowcaseContent = {
         {
           role: "out",
           text: "Guten Tag! 👋 Ja — der Weg zum Wasserfall ist flach und schattig, etwa 20 Minuten. Ideal mit Kindern.",
-          sub: "L'ospite scrive in tedesco, l'assistente risponde in tedesco. I contenuti restano scritti in italiano.",
+          sub: "Il turista scrive in tedesco, l'assistente risponde in tedesco. I contenuti restano scritti in italiano.",
         },
       ],
     },
