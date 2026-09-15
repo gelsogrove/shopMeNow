@@ -382,30 +382,83 @@ export default function ProLocoHomePage() {
           nella bolla"). The sample questions fill the width that used to be
           empty AND give a reason to scan — you know what to type. */}
       <section className="border-t border-slate-100 bg-[#F6F2EA]">
-        <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
-          <div className="overflow-hidden rounded-[2rem] shadow-2xl ring-1 ring-white/10" style={{ backgroundColor: GREEN_SURFACE }}>
-            <div className="grid items-center gap-10 p-8 sm:p-12 lg:grid-cols-[1.15fr_auto] lg:gap-14">
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:py-28">
+          <div className="overflow-hidden rounded-[2.5rem] shadow-2xl ring-1 ring-white/10" style={{ backgroundColor: GREEN_SURFACE }}>
+            <div className="grid items-center gap-12 p-10 sm:p-16 lg:grid-cols-[1.4fr_auto] lg:gap-20">
               <div className="min-w-0">
                 <span
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-white"
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
                   style={{ backgroundColor: `${WA_GREEN}2e` }}
                 >
                   <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: WA_GREEN }} />
                   WhatsApp
                 </span>
 
-                <h3 className="font-display mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl">
+                <h3 className="font-display mt-6 text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
                   {t.demoTitle}
                 </h3>
-                <p className="mt-4 max-w-md text-lg leading-relaxed text-emerald-100/80">
+                <p className="mt-6 max-w-lg text-lg leading-relaxed text-emerald-100/85">
                   {t.demoSub}
                 </p>
+
+                {/* Example conversations - Two examples showing different content types */}
+                <div className="mt-10 space-y-6 max-w-lg">
+                  {/* Example 1: Bike rental with photo */}
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-emerald-50/10 p-5 border border-emerald-400/20 backdrop-blur-sm">
+                      <p className="text-emerald-50 font-medium leading-relaxed text-base">
+                        "📍 Dove possiamo noleggiare bici oggi?"
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-white/95 p-5 shadow-lg space-y-4 animate-in fade-in duration-500 delay-500">
+                      <p className="text-slate-900 leading-relaxed text-lg">
+                        Sì, due noleggi in paese: il più vicino è a 300 m 🚴 <span className="font-semibold">Meteo</span> non promette bene, vi consiglio domani mattina
+                      </p>
+                      {/* Photo placeholder */}
+                      <div className="rounded-xl overflow-hidden bg-slate-200 aspect-video flex items-center justify-center border border-slate-300">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">📸</div>
+                          <p className="text-xs text-slate-600 font-medium">Foto centro bici</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <p className="text-blue-600 text-sm font-medium">noleggi.proloco.it/ebike</p>
+                        <p className="text-slate-600 text-sm">+39 0400 111 264</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Example 2: Hiking with video */}
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-emerald-50/10 p-5 border border-emerald-400/20 backdrop-blur-sm">
+                      <p className="text-emerald-50 font-medium leading-relaxed text-base">
+                        "📍 Dove possiamo andare a farci una passeggiata oggi?"
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-white/95 p-5 shadow-lg space-y-4 animate-in fade-in duration-500 delay-500">
+                      <p className="text-slate-900 leading-relaxed text-lg">
+                        Oggi è sereno: vi consiglio il sentiero delle cascate, 40 minuti e ombra per tutto il percorso 🌲 Mettete scarpe chiuse, l'ultimo tratto vicino all'acqua è scivoloso
+                      </p>
+                      {/* Video placeholder */}
+                      <div className="rounded-xl overflow-hidden bg-slate-200 aspect-video flex items-center justify-center border border-slate-300">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🎬</div>
+                          <p className="text-xs text-slate-600 font-medium">Video cascate</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <p className="text-blue-600 text-sm font-medium">sentieri.proloco.it/cascate</p>
+                        <p className="text-slate-600 text-sm">+39 0400 111 221</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <a
                   href={DEMO_WA_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-8 inline-flex items-center gap-2.5 rounded-xl px-7 py-4 text-base font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] lg:hidden"
+                  className="mt-10 inline-flex items-center gap-2.5 rounded-xl px-8 py-5 text-base font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.05] lg:hidden"
                   style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
                   <MessageCircle className="h-5 w-5" />
@@ -414,11 +467,11 @@ export default function ProLocoHomePage() {
               </div>
 
               <div className="relative mx-auto shrink-0">
-                <div className="rounded-3xl bg-white p-5 shadow-2xl">
-                  <QRCode value={DEMO_WA_LINK} size={208} bgColor="#ffffff" fgColor="#052e20" />
+                <div className="rounded-3xl bg-white p-6 shadow-2xl">
+                  <QRCode value={DEMO_WA_LINK} size={240} bgColor="#ffffff" fgColor="#052e20" />
                 </div>
                 <span
-                  className="absolute -right-3 -top-3 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
+                  className="absolute -right-3 -top-3 flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
                   style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />

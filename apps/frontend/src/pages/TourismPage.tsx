@@ -52,10 +52,10 @@ function SectionHeading({
 }) {
   return (
     <motion.div {...reveal} className="mb-10 lg:mb-14 max-w-3xl">
-      <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
-        {title} {accent && <span className="text-green-400">{accent}</span>}
+      <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+        {title} {accent && <span className="text-green-600">{accent}</span>}
       </h2>
-      {sub && <p className="mt-3 text-lg text-slate-400 leading-relaxed">{sub}</p>}
+      {sub && <p className="mt-3 text-lg text-slate-600 leading-relaxed">{sub}</p>}
     </motion.div>
   )
 }
@@ -80,7 +80,7 @@ export function TourismPage() {
       />
       <SiteHeader />
 
-      <main className="bg-[#070d18] text-slate-200">
+      <main className="bg-white text-slate-900">
         {/* ============================ HERO ============================ */}
         <section className="relative overflow-hidden pt-24 pb-20 lg:pt-32 lg:pb-28">
           <div className="pointer-events-none absolute -top-40 -left-40 h-[34rem] w-[34rem] rounded-full bg-green-500/15 blur-3xl" />
@@ -100,16 +100,16 @@ export function TourismPage() {
                 <motion.h1
                   {...intro}
                   transition={{ ...intro.transition, delay: 0.05 }}
-                  className="mt-6 text-4xl font-extrabold leading-[1.08] text-white sm:text-5xl lg:text-6xl"
+                  className="mt-6 text-4xl font-extrabold leading-[1.08] text-slate-900 sm:text-5xl lg:text-6xl"
                 >
                   {t.heroTitleTop}
                   <br />
-                  <span className="text-green-400">{t.heroTitleAccent}</span>
+                  <span className="text-green-600">{t.heroTitleAccent}</span>
                 </motion.h1>
                 <motion.p
                   {...intro}
                   transition={{ ...intro.transition, delay: 0.1 }}
-                  className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300"
+                  className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600"
                 >
                   {t.heroSub}
                 </motion.p>

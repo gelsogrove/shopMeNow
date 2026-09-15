@@ -170,7 +170,7 @@ export function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070d18] text-slate-200">
+    <div className="min-h-screen bg-white text-slate-900">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/contact" lang={language} serviceType="WhatsApp AI Chatbot Demo & Contact" />
       <SiteHeader />
 
@@ -179,13 +179,13 @@ export function ContactPage() {
         <section className="pt-20 pb-12">
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <span className="inline-block bg-green-400/10 text-green-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+              <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                 {t.badge}
               </span>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
+              <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4 leading-tight">
                 {t.heroTitle}
               </h1>
-              <p className="text-xl text-slate-400 leading-relaxed">
+              <p className="text-xl text-slate-600 leading-relaxed">
                 {t.heroSub}
               </p>
             </motion.div>
@@ -199,68 +199,68 @@ export function ContactPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="grid grid-cols-1 lg:grid-cols-5 overflow-hidden rounded-3xl border border-white/10 bg-slate-900/50 shadow-2xl backdrop-blur"
+              className="grid grid-cols-1 lg:grid-cols-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg"
             >
               {/* Photo */}
               <div className="relative lg:col-span-2 min-h-[280px]">
                 <img src="/team.png" alt="Contact us" className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#070d18]/70 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/30 via-transparent to-transparent" />
               </div>
 
               {/* Contact Form */}
               <div className="lg:col-span-3 p-8 lg:p-10">
                   <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-white">{t.formTitle}</h2>
-                    <p className="text-slate-400 mt-2">{t.formSubtitle}</p>
+                    <h2 className="text-2xl font-bold text-slate-900">{t.formTitle}</h2>
+                    <p className="text-slate-600 mt-2">{t.formSubtitle}</p>
                   </div>
 
                   {success ? (
-                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-400/10 p-10 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400/10">
-                        <CheckCircle className="h-8 w-8 text-emerald-400" />
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-10 text-center">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                        <CheckCircle className="h-8 w-8 text-emerald-600" />
                       </div>
-                      <h3 className="text-2xl font-semibold text-white">{t.successTitle}</h3>
-                      <p className="mt-2 text-slate-400">{t.successDesc}</p>
+                      <h3 className="text-2xl font-semibold text-slate-900">{t.successTitle}</h3>
+                      <p className="mt-2 text-slate-600">{t.successDesc}</p>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit} className="space-y-5">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-name">{t.name}</label>
-                          <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.namePlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
+                          <label className="text-sm font-semibold text-slate-700" htmlFor="c-name">{t.name}</label>
+                          <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.namePlaceholder} className="h-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" required />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-surname">{t.surname}</label>
-                          <Input id="c-surname" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder={t.surnamePlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
+                          <label className="text-sm font-semibold text-slate-700" htmlFor="c-surname">{t.surname}</label>
+                          <Input id="c-surname" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder={t.surnamePlaceholder} className="h-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" required />
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-300" htmlFor="c-email">{t.email}</label>
-                        <Input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
+                        <label className="text-sm font-semibold text-slate-700" htmlFor="c-email">{t.email}</label>
+                        <Input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPlaceholder} className="h-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" required />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-300" htmlFor="c-subject">{t.subject}</label>
-                        <Input id="c-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t.subjectPlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
+                        <label className="text-sm font-semibold text-slate-700" htmlFor="c-subject">{t.subject}</label>
+                        <Input id="c-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t.subjectPlaceholder} className="h-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400" required />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-300" htmlFor="c-message">{t.message}</label>
+                        <label className="text-sm font-semibold text-slate-700" htmlFor="c-message">{t.message}</label>
                         <textarea
                           id="c-message"
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
                           placeholder={t.messagePlaceholder}
                           required
-                          className="min-h-[140px] w-full rounded-md border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-100 placeholder:text-slate-500 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                          className="min-h-[140px] w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                         />
                       </div>
 
                       {/* Honeypot */}
                       <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} className="hidden" tabIndex={-1} />
 
-                      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                      {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
                       <div className="flex justify-center pt-2">
                         <GreenCtaButton

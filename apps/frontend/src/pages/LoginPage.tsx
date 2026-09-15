@@ -390,7 +390,7 @@ export function LoginPage() {
     if (existingToken) {
       logger.info('👤 [LOGIN PAGE] Token exists - showing user avatar in header')
       // Load user data from localStorage
-      const cachedUser = storage.getUser<{ email?: string }>()
+      const cachedUser = storage.getUser<{ email?: string; isPlatformAdmin?: boolean; isDeveloperUser?: boolean; firstName?: string; lastName?: string; profilePicture?: string; authProvider?: string }>()
       if (cachedUser) {
         try {
           setLoggedInUser(cachedUser)
