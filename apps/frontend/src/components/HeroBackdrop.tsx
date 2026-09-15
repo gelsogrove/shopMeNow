@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react"
 
 /**
- * The hero backdrop: a muted looping video of the territory, with a still
- * photo behind it (Andrea, 2026-09-15: "mi piacciono quei siti dove hanno un
- * video di background").
+ * The hero backdrop: muted clips of the territory playing one after the other,
+ * with a still photo behind them (Andrea, 2026-09-15: "mi piacciono quei siti
+ * dove hanno un video di background").
  *
  * 🚨 THE PHOTO IS NOT A PLACEHOLDER — it is the load-bearing layer.
  * The video is an enhancement painted on top, and it is skipped entirely when
  * it would do more harm than good:
  *
- *   - no file on disk        → photo only (this is the state today: drop an
- *                              mp4 at public/hero.mp4 and it starts playing)
+ *   - no files on disk       → photo only (this is the state today: drop the
+ *                              mp4s in public/hero/ and they start playing)
  *   - `prefers-reduced-motion` → photo only, no autoplay
  *   - a metered/slow connection (`saveData`, 2g/3g) → photo only
  *
@@ -23,12 +23,34 @@ import { useEffect, useState } from "react"
  * usual way these backgrounds go wrong.
  */
 
-const VIDEO_SRC = "/hero.mp4"
+/**
+ * The clips, played in order and then looped (Andrea, 2026-09-15: "montagna,
+ * attivita' sci, cavallo, rafting, prodotti… magari piu' di uno in serie").
+ *
+ * One season or one sport sells one holiday; a sequence sells a territory
+ * that is worth coming back to in another month — which is exactly what the
+ * push campaigns further down the page are for.
+ *
+ * Drop any of these at public/hero/ and they join the rotation. Missing files
+ * are skipped, not awaited: the page never waits for a file that is not there,
+ * and with NONE of them present the photo alone carries the hero exactly as
+ * it does today. Order matters — this is the order they play in.
+ */
+const CLIPS = [
+  "/hero/mountain.mp4",
+  "/hero/ski.mp4",
+  "/hero/horse.mp4",
+  "/hero/rafting.mp4",
+  "/hero/food.mp4",
+]
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
 const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
 
 export function HeroBackdrop() {
-  const [playVideo, setPlayVideo] = useState(false)
+  /** The clips that actually exist on disk, in CLIPS order. */
+  const [clips, setClips] = useState<string[]>([])
+  /** Which one is on screen. Advances on 'ended', wraps to 0. */
+  const [i, setI] = useState(0)
 
   useEffect(() => {
     // Respect the OS "reduce motion" setting: a looping background is exactly
@@ -41,16 +63,21 @@ export function HeroBackdrop() {
     if (conn?.saveData) return
     if (/(^|-)(2g|3g)$/.test(conn?.effectiveType ?? "")) return
 
-    // Only mount the <video> once we know the file is actually there, so a
-    // missing hero.mp4 costs a HEAD request and nothing else.
+    // Ask for all of them at once and keep the ones that answer, preserving
+    // CLIPS order. A HEAD costs nothing and means a missing file never shows
+    // as a black frame mid-rotation.
     let cancelled = false
-    fetch(VIDEO_SRC, { method: "HEAD" })
-      .then((res) => {
-        if (!cancelled && res.ok) setPlayVideo(true)
-      })
-      .catch(() => {
-        /* no video: the photo already covers it */
-      })
+    Promise.all(
+      CLIPS.map((src) =>
+        fetch(src, { method: "HEAD" })
+          .then((res) => (res.ok ? src : null))
+          .catch(() => null)
+      )
+    ).then((found) => {
+      if (cancelled) return
+      const available = found.filter((src): src is string => src !== null)
+      if (available.length > 0) setClips(available)
+    })
     return () => {
       cancelled = true
     }
@@ -64,16 +91,28 @@ export function HeroBackdrop() {
         className="h-full w-full object-cover"
       />
 
-      {playVideo && (
+      {clips.length > 0 && (
         <video
-          className="absolute inset-0 h-full w-full object-cover"
-          src={VIDEO_SRC}
+          // Remounting on the key restarts playback cleanly when the source
+          // changes; without it Safari keeps the previous frame on screen.
+          key={clips[i]}
+          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-1000"
+          src={clips[i]}
+          onCanPlay={(e) => {
+            e.currentTarget.style.opacity = "1"
+          }}
           poster={POSTER_SRC}
           autoPlay
           muted
-          loop
+          // Loop only when it is the single clip available; otherwise the
+          // sequence itself is the loop.
+          loop={clips.length === 1}
           playsInline
-          preload="none"
+          preload="auto"
+          // Next clip, wrapping at the end.
+          onEnded={() => setI((n) => (n + 1) % clips.length)}
+          // A clip that fails mid-rotation must not freeze the hero: move on.
+          onError={() => setI((n) => (n + 1) % clips.length)}
         />
       )}
 

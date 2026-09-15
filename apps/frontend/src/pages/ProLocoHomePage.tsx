@@ -240,7 +240,7 @@ export default function ProLocoHomePage() {
                 a chip above the headline, where it belongs, and the robot
                 balances the headline's mass. */}
             <div className="flex items-start gap-6">
-              <HeroRobot className="hidden w-72 shrink-0 sm:block [&_img]:w-72 lg:[&_img]:w-[22rem] [&_img]:h-auto" />
+              <HeroRobot className="hidden w-56 shrink-0 lg:block xl:w-72 [&_img]:w-full [&_img]:h-auto" />
 
               <div className="min-w-0">
                 <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
@@ -359,12 +359,11 @@ export default function ProLocoHomePage() {
                   <span className="h-px flex-1 bg-slate-200" />
                 </div>
 
-                <div className="flex justify-center">
+                <div className="flex w-full justify-center [&>div]:w-full [&_iframe]:!w-full">
                   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
                     <GoogleLogin
                       onSuccess={(res) => handleGoogle(res.credential)}
                       onError={() => setError(t.errGeneric)}
-                      width="320"
                     />
                   </GoogleOAuthProvider>
                 </div>
