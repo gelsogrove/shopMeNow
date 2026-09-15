@@ -78,6 +78,8 @@ const DEMO_WA_LINK = `https://wa.me/${DEMO_WA_NUMBER}?text=${encodeURIComponent(
 const WA_GREEN = "#25D366"
 /** For solid fills behind WHITE text: #25D366 only reaches ~1.9:1 there. */
 const WA_GREEN_DEEP = "#0F7A3D"
+/** The dark surface: forest green, warmer than emerald-950's near-black. */
+const GREEN_SURFACE = "#0B3D2E"
 
 export default function ProLocoHomePage() {
   const navigate = useNavigate()
@@ -158,24 +160,6 @@ export default function ProLocoHomePage() {
               {t.audience}
             </span>
           </a>
-
-          <nav className="hidden items-center gap-6 text-sm text-slate-600 lg:flex">
-            {[
-              { to: "/features", label: t.navFeatures },
-              { to: "/human-support", label: t.navHuman },
-              { to: "/smart-push-ai", label: t.navPush },
-              { to: "/tourism", label: t.navTourism },
-            ].map((l) => (
-              <button
-                key={l.to}
-                type="button"
-                onClick={() => navigate(l.to)}
-                className="transition-colors duration-200 hover:text-emerald-800"
-              >
-                {l.label}
-              </button>
-            ))}
-          </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Language picker — the page itself proves the multilingual
@@ -340,7 +324,7 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── What you can load ────────────────────────────────────── */}
-      <section className="border-t border-slate-100 bg-emerald-950">
+      <section className="border-t border-slate-100" style={{ backgroundColor: GREEN_SURFACE }}>
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -399,7 +383,7 @@ export default function ProLocoHomePage() {
           empty AND give a reason to scan — you know what to type. */}
       <section className="border-t border-slate-100 bg-[#F6F2EA]">
         <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
-          <div className="overflow-hidden rounded-[2rem] bg-emerald-950 shadow-2xl ring-1 ring-emerald-900">
+          <div className="overflow-hidden rounded-[2rem] shadow-2xl ring-1 ring-white/10" style={{ backgroundColor: GREEN_SURFACE }}>
             <div className="grid items-center gap-10 p-8 sm:p-12 lg:grid-cols-[1.15fr_auto] lg:gap-14">
               <div className="min-w-0">
                 <span
@@ -416,19 +400,6 @@ export default function ProLocoHomePage() {
                 <p className="mt-4 max-w-md text-lg leading-relaxed text-emerald-100/80">
                   {t.demoSub}
                 </p>
-
-                {/* The questions a visitor really asks, reused from the copy
-                    deck: they double as prompts for whoever scans. */}
-                <ul className="mt-7 flex flex-wrap gap-2">
-                  {t.closingQuestions.slice(0, 3).map((q) => (
-                    <li
-                      key={q}
-                      className="rounded-full bg-white/10 px-4 py-2 text-sm text-emerald-50 ring-1 ring-white/15"
-                    >
-                      {q}
-                    </li>
-                  ))}
-                </ul>
 
                 <a
                   href={DEMO_WA_LINK}
@@ -541,8 +512,8 @@ export default function ProLocoHomePage() {
 
       {/* ── Privacy by design ────────────────────────────────────── */}
       <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-          <div className="overflow-hidden rounded-3xl bg-white p-7 text-left shadow-xl ring-1 ring-slate-200 sm:p-9">
+        <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
+          <div className="overflow-hidden rounded-[2rem] bg-white p-8 text-left shadow-xl ring-1 ring-slate-200 sm:p-12">
             <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
                 <span
@@ -631,7 +602,7 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── Closing CTA band ─────────────────────────────────────── */}
-      <section className="bg-emerald-950">
+      <section style={{ backgroundColor: GREEN_SURFACE }}>
         <div className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
           <p className="text-lg font-medium leading-relaxed text-white sm:text-xl">
             {t.ctaBand}

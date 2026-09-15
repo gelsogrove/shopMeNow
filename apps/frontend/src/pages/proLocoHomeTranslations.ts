@@ -61,7 +61,6 @@ export interface HomeCopy {
   faqItems: Array<{ q: string; a: string }>
   galleryTitle: string
   gallerySubtitle: string
-  closingQuestions: string[]
   closingBody: string
   demoTitle: string
   demoSub: string
@@ -81,10 +80,6 @@ export interface HomeCopy {
   footLegal: string
   footPrivacy: string
   footTerms: string
-  navFeatures: string
-  navHuman: string
-  navPush: string
-  navTourism: string
   footer: string
 }
 
@@ -154,9 +149,8 @@ const it: HomeCopy = {
     { t: "Prepara il suo messaggio", d: "Testo e foto della sua offerta, che approvate prima dell'invio." },
     { t: "Parte solo a chi ha acconsentito", d: "E ogni invio scala dal suo pacchetto, senza che dobbiate contare nulla." },
   ],
-  closingQuestions: ["Sono celiaco, dove andiamo a mangiare?", "Che escursioni possiamo fare?", "Che eventi ci sono questa settimana?", "Quali sono i piatti tipici?", "A che ora chiudono gli impianti?"],
   closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede.",
-  demoTitle: "PROVA LA DEMO",
+  demoTitle: "Provate la demo",
   demoSub: "Inquadrate il codice e scrivete quello che vi chiederebbe un turista.",
   demoOpen: "Aprilo su WhatsApp",
   surveyEyebrow: "Questionario",
@@ -174,10 +168,6 @@ const it: HomeCopy = {
   footLegal: "Legale",
   footPrivacy: "Privacy",
   footTerms: "Termini",
-  navFeatures: "Funzionalità",
-  navHuman: "Supporto umano",
-  navPush: "Notifiche push",
-  navTourism: "Turismo",
   footer: "eChatbot — assistenza su WhatsApp per Pro Loco e Consorzi turistici.",
 }
 
@@ -247,9 +237,8 @@ const en: HomeCopy = {
     { t: "They prepare their message", d: "Text and a photo of their offer, which you approve before it goes out." },
     { t: "It only reaches those who opted in", d: "And each send comes off their bundle, with nothing for you to count." },
   ],
-  closingQuestions: ["I'm coeliac, where can we eat?", "What hikes can we do?", "What's on this week?", "What are the local dishes?", "When do the lifts close?"],
   closingBody: "At the desk and on the phone, usually with a queue waiting. From now on the assistant answers for you — from what you loaded, in the language they asked in.",
-  demoTitle: "TRY THE DEMO",
+  demoTitle: "Try the demo",
   demoSub: "Scan the code and ask it whatever a visitor would ask you.",
   demoOpen: "Open it on WhatsApp",
   surveyEyebrow: "Survey",
@@ -267,10 +256,6 @@ const en: HomeCopy = {
   footLegal: "Legal",
   footPrivacy: "Privacy",
   footTerms: "Terms",
-  navFeatures: "Features",
-  navHuman: "Human support",
-  navPush: "Push notifications",
-  navTourism: "Tourism",
   footer: "eChatbot — WhatsApp assistance for tourist offices and visitor centres.",
 }
 
@@ -340,9 +325,8 @@ const es: HomeCopy = {
     { t: "Prepara su mensaje", d: "Texto y foto de su oferta, que aprobáis antes del envío." },
     { t: "Solo llega a quien dio su consentimiento", d: "Y cada envío se descuenta de su paquete, sin que tengáis que contar nada." },
   ],
-  closingQuestions: ["Soy celíaco, ¿dónde podemos comer?", "¿Qué excursiones podemos hacer?", "¿Qué eventos hay esta semana?", "¿Cuáles son los platos típicos?", "¿A qué hora cierran los remontes?"],
   closingBody: "En el mostrador y por teléfono, casi siempre con cola esperando. A partir de ahora responde el asistente — con lo que habéis cargado, en el idioma de quien pregunta.",
-  demoTitle: "PRUEBA LA DEMO",
+  demoTitle: "Probad la demo",
   demoSub: "Escanead el código y preguntadle lo que os preguntaría un turista.",
   demoOpen: "Abrir en WhatsApp",
   surveyEyebrow: "Cuestionario",
@@ -360,10 +344,6 @@ const es: HomeCopy = {
   footLegal: "Legal",
   footPrivacy: "Privacidad",
   footTerms: "Términos",
-  navFeatures: "Funciones",
-  navHuman: "Soporte humano",
-  navPush: "Notificaciones push",
-  navTourism: "Turismo",
   footer: "eChatbot — asistencia por WhatsApp para oficinas de turismo y patronatos.",
 }
 
@@ -434,9 +414,8 @@ const ca: HomeCopy = {
     { t: "Prepara el seu missatge", d: "Text i foto de la seva oferta, que aproveu abans de l'enviament." },
     { t: "Només arriba a qui hi ha consentit", d: "I cada enviament es descompta del seu paquet, sense que hàgiu de comptar res." },
   ],
-  closingQuestions: ["Sóc celíac, on podem menjar?", "Quines excursions podem fer?", "Quins esdeveniments hi ha aquesta setmana?", "Quins són els plats típics?", "A quina hora tanquen els remuntadors?"],
   closingBody: "Al taulell i per telèfon, gairebé sempre amb cua esperant. A partir d'ara respon l'assistent — amb el que heu carregat, en la llengua de qui pregunta.",
-  demoTitle: "PROVA LA DEMO",
+  demoTitle: "Proveu la demo",
   demoSub: "Escanegeu el codi i pregunteu-li el que us preguntaria un turista.",
   demoOpen: "Obrir a WhatsApp",
   surveyEyebrow: "Qüestionari",
@@ -454,10 +433,6 @@ const ca: HomeCopy = {
   footLegal: "Legal",
   footPrivacy: "Privadesa",
   footTerms: "Termes",
-  navFeatures: "Funcions",
-  navHuman: "Suport humà",
-  navPush: "Notificacions push",
-  navTourism: "Turisme",
   footer: "eChatbot — assistència per WhatsApp per a oficines de turisme i consorcis.",
 }
 
@@ -527,9 +502,8 @@ const fr: HomeCopy = {
     { t: "Il prépare son message", d: "Texte et photo de son offre, que vous validez avant l'envoi." },
     { t: "Il ne part qu'aux personnes consentantes", d: "Et chaque envoi est décompté de son forfait, sans rien à compter de votre côté." },
   ],
-  closingQuestions: ["Je suis cœliaque, où peut-on manger ?", "Quelles randonnées peut-on faire ?", "Quels événements cette semaine ?", "Quels sont les plats typiques ?", "À quelle heure ferment les remontées ?"],
   closingBody: "Au guichet et au téléphone, le plus souvent avec la file qui attend. Désormais l'assistant répond pour vous — avec ce que vous avez saisi, dans la langue de celui qui demande.",
-  demoTitle: "ESSAYEZ LA DÉMO",
+  demoTitle: "Essayez la démo",
   demoSub: "Scannez le code et posez-lui la question qu'un visiteur vous poserait.",
   demoOpen: "Ouvrir sur WhatsApp",
   surveyEyebrow: "Questionnaire",
@@ -547,10 +521,6 @@ const fr: HomeCopy = {
   footLegal: "Légal",
   footPrivacy: "Confidentialité",
   footTerms: "Conditions",
-  navFeatures: "Fonctionnalités",
-  navHuman: "Support humain",
-  navPush: "Notifications push",
-  navTourism: "Tourisme",
   footer: "eChatbot — assistance WhatsApp pour offices de tourisme et syndicats d'initiative.",
 }
 
@@ -620,9 +590,8 @@ const de: HomeCopy = {
     { t: "Er bereitet seine Nachricht vor", d: "Text und Foto seines Angebots, das Sie vor dem Versand freigeben." },
     { t: "Sie geht nur an Einwilligende", d: "Und jeder Versand wird von seinem Paket abgezogen, ohne dass Sie zählen müssen." },
   ],
-  closingQuestions: ["Ich bin Zöliakiebetroffener, wo können wir essen?", "Welche Wanderungen gibt es?", "Was ist diese Woche los?", "Was sind die typischen Gerichte?", "Wann schließen die Lifte?"],
   closingBody: "Am Schalter und am Telefon, meist mit wartender Schlange. Ab jetzt antwortet der Assistent für Sie — mit dem, was Sie eingetragen haben, in der Sprache des Gastes.",
-  demoTitle: "DEMO TESTEN",
+  demoTitle: "Testen Sie die Demo",
   demoSub: "Scannen Sie den Code und fragen Sie, was ein Gast Sie fragen würde.",
   demoOpen: "In WhatsApp öffnen",
   surveyEyebrow: "Fragebogen",
@@ -640,10 +609,6 @@ const de: HomeCopy = {
   footLegal: "Rechtliches",
   footPrivacy: "Datenschutz",
   footTerms: "AGB",
-  navFeatures: "Funktionen",
-  navHuman: "Menschlicher Support",
-  navPush: "Push-Nachrichten",
-  navTourism: "Tourismus",
   footer: "eChatbot — WhatsApp-Assistenz für Tourismusverbände und Tourismusbüros.",
 }
 

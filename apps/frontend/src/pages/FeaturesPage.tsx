@@ -239,10 +239,6 @@ export function FeaturesPage() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-4xl mx-auto"
             >
-              <span className="inline-block bg-[#25D366]/10 text-[#25D366] text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                {t.hero.badge}
-              </span>
-
               <h1
                 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight"
                 dangerouslySetInnerHTML={{ __html: t.hero.title }}
