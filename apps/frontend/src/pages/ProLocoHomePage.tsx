@@ -338,17 +338,50 @@ export default function ProLocoHomePage() {
                   {t.demoSub}
                 </p>
 
-                {/* One clean example conversation */}
-                <div className="mt-8 max-w-md space-y-3">
-                  <div className="rounded-2xl bg-white/10 px-4 py-3 border border-white/15">
-                    <p className="text-emerald-50 leading-relaxed text-lg">
-                      Dove possiamo noleggiare bici oggi?
-                    </p>
+                {/* Two example conversations, each its own breathing card */}
+                <div className="mt-8 max-w-md space-y-6">
+                  {/* Example 1: bike rental + photo */}
+                  <div className="space-y-3">
+                    <div className="rounded-2xl bg-white/10 px-4 py-3 border border-white/15">
+                      <p className="text-emerald-50 leading-relaxed text-lg">
+                        Dove possiamo noleggiare bici oggi?
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-white p-4 shadow-lg space-y-3">
+                      <p className="text-slate-900 leading-relaxed text-lg">
+                        Sì, due noleggi in paese: il più vicino è a 300 m 🚴 <span className="font-semibold">Meteo</span> non promette bene, vi consiglio domani mattina.
+                      </p>
+                      <div className="rounded-xl overflow-hidden bg-slate-100 border border-slate-200 aspect-video flex flex-col items-center justify-center gap-1">
+                        <span className="text-3xl">📸</span>
+                        <span className="text-xs text-slate-500 font-medium">Foto centro bici</span>
+                      </div>
+                      <div className="text-sm space-y-0.5 pt-1">
+                        <p className="text-blue-600 font-medium">noleggi.proloco.it/ebike</p>
+                        <p className="text-slate-500">+39 0400 111 264</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-2xl bg-white px-4 py-3 shadow-lg">
-                    <p className="text-slate-900 leading-relaxed text-lg">
-                      Due noleggi in paese, il più vicino è a 300 m 🚴 <span className="font-semibold">Meteo</span> incerto, vi consiglio domani mattina.
-                    </p>
+
+                  {/* Example 2: hiking trail + video */}
+                  <div className="space-y-3">
+                    <div className="rounded-2xl bg-white/10 px-4 py-3 border border-white/15">
+                      <p className="text-emerald-50 leading-relaxed text-lg">
+                        Dove possiamo andare a farci una passeggiata oggi?
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-white p-4 shadow-lg space-y-3">
+                      <p className="text-slate-900 leading-relaxed text-lg">
+                        Oggi è sereno: vi consiglio il sentiero delle cascate, 40 minuti e ombra per tutto il percorso 🌲 Mettete scarpe chiuse, l'ultimo tratto vicino all'acqua è scivoloso.
+                      </p>
+                      <div className="rounded-xl overflow-hidden bg-slate-100 border border-slate-200 aspect-video flex flex-col items-center justify-center gap-1">
+                        <span className="text-3xl">🎬</span>
+                        <span className="text-xs text-slate-500 font-medium">Video cascate (15s)</span>
+                      </div>
+                      <div className="text-sm space-y-0.5 pt-1">
+                        <p className="text-blue-600 font-medium">sentieri.proloco.it/cascate</p>
+                        <p className="text-slate-500">+39 0400 111 221</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
