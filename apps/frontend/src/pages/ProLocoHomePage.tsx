@@ -152,10 +152,10 @@ export default function ProLocoHomePage() {
       {/* ── Minimal top bar: logo + language flags only, no "Accedi" ── */}
       <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <a href="#top" className="flex items-center gap-2 shrink-0">
-            <MessageCircle className="h-5 w-5" style={{ color: "#25D366" }} />
-            <span className="font-display text-base font-bold tracking-tight" style={{ color: "#25D366" }}>
-              eChatbot<span className="text-slate-400">.AI</span>
+          <a href="#top" className="flex items-center gap-2 shrink-0 mr-auto">
+            <MessageCircle className="h-6 w-6" style={{ color: "#25D366" }} />
+            <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
+              eChatbot<span className="text-slate-600">.AI</span>
             </span>
           </a>
 
@@ -241,7 +241,8 @@ export default function ProLocoHomePage() {
 
           {/* ── The live conversation, where the login card used to be ── */}
           <div className="hidden justify-center lg:flex lg:justify-end">
-            <div id="hero-chat-slot" className="w-full max-w-lg" />
+            {/* Andrea, 2026-09-15: "la chat piu giu di 30px" */}
+            <div id="hero-chat-slot" className="w-full max-w-lg" style={{ marginTop: 30 }} />
           </div>
         </div>
         </div>
@@ -346,28 +347,26 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── Try the demo ─────────────────────────────────────────── */}
-      {/* The card is dark and full-bleed: it is the one place on the page
-          asking for an action, so it should not look like another white
-          panel (Andrea, 2026-09-15: "più grande, più bella, sembra appena
-          nella bolla"). The sample questions fill the width that used to be
-          empty AND give a reason to scan — you know what to type. */}
+      {/* White card like the rest of the page (Andrea, 2026-09-15: "non mi
+          piace per nulla lo sfondo verde" — the dark GREEN_SURFACE card was
+          replaced site-wide for this and Privacy by design). */}
       <section className="border-t border-slate-100 bg-[#F6F2EA]">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
-          <div className="overflow-hidden rounded-[2.5rem] shadow-2xl ring-1 ring-white/10" style={{ backgroundColor: GREEN_SURFACE }}>
+          <div className="overflow-hidden rounded-[2.5rem] bg-white shadow-xl ring-1 ring-slate-200">
             <div className="grid items-center gap-12 p-10 sm:p-14 lg:grid-cols-[1fr_auto] lg:gap-16">
               <div className="min-w-0">
                 <span
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                  style={{ backgroundColor: `${WA_GREEN}2e` }}
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
+                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN_DEEP }}
                 >
                   <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: WA_GREEN }} />
                   WhatsApp
                 </span>
 
-                <h3 className="font-display mt-5 text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl">
+                <h3 className="font-display mt-5 text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-5xl">
                   {t.demoTitle}
                 </h3>
-                <p className="mt-4 max-w-md text-lg leading-relaxed text-emerald-100/85">
+                <p className="mt-4 max-w-md text-lg leading-relaxed text-slate-600">
                   {t.demoSub}
                 </p>
 
@@ -384,7 +383,7 @@ export default function ProLocoHomePage() {
               </div>
 
               <div className="relative mx-auto shrink-0">
-                <div className="rounded-3xl bg-white p-5 shadow-2xl">
+                <div className="rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-slate-100">
                   <QRCode value={DEMO_WA_LINK} size={208} bgColor="#ffffff" fgColor="#052e20" />
                 </div>
                 <span
@@ -440,27 +439,6 @@ export default function ProLocoHomePage() {
               ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── Retention: the contact outlives the holiday ──────────── */}
-      {/* Andrea, 2026-09-15: "E quando la vacanza finisce, è lui a farli
-          tornare." The visitor who wrote once is the office's most valuable
-          contact — consented push is what turns that into a return visit. */}
-      <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
-          <span className="mb-4 inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800 ring-1 ring-emerald-100">
-            {t.retentionEyebrow}
-          </span>
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {t.retentionTitle}
-          </h2>
-          <p className="mt-4 text-slate-600 leading-relaxed">
-            {t.retentionBody1}
-          </p>
-          <p className="mt-4 text-slate-600 leading-relaxed">
-            {t.retentionBody2}
-          </p>
         </div>
       </section>
 

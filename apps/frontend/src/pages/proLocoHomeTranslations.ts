@@ -151,7 +151,7 @@ const it: HomeCopy = {
   ],
   closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede.",
   demoTitle: "Provate la demo",
-  demoSub: "Inquadrate il codice e scrivete quello che vi chiederebbe un turista.",
+  demoSub: "Semplicemente scansionate il codice QR e scrivete nella chat quello che vi chiederebbe un turista.",
   demoOpen: "Aprilo su WhatsApp",
   surveyEyebrow: "Questionario",
   surveyTitle: "Aiutateci a costruire l'assistente giusto per voi",

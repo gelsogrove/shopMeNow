@@ -261,8 +261,6 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             <a href="/#demo" className="hover:text-white transition-colors">Demo</a>
             <span className="text-white/20">|</span>
             <Link to="/contact" className="hover:text-white transition-colors">{t.contact}</Link>
-            <span className="text-white/20">|</span>
-            <a href="https://www.echatbot.ai/login" className="hover:text-white transition-colors">{t.signIn}</a>
           </div>
         </div>
 

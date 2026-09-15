@@ -110,6 +110,13 @@ type Scene = {
   /** Optional: a scene whose answer stands on its own shows no link bubble. */
   link?: { label: string; phone: string }
   /**
+   * A video the assistant sends of the place itself (Andrea, 2026-09-15: "al
+   * posto del link fai vedere un video che mandi sul posto"). Mutually
+   * exclusive with `link` on a scene — the point is showing the OTHER media
+   * type WhatsApp can carry, not stacking both on one reply.
+   */
+  video?: { label: string }
+  /**
    * The pinned location the assistant shares alongside the link (Andrea,
    * 2026-09-15: "e mandi la location !!!"). Like the link, it is a STILL:
    * rendered as a WhatsApp location card but never a real map link.
@@ -140,7 +147,7 @@ const CLIPS: Scene[] = [
       fr: "Le temps est clair aujourd'hui : je vous conseille le sentier des cascades, 40 minutes et à l'ombre tout du long 🌲 Prenez des chaussures fermées, le dernier tronçon près de l'eau glisse",
       de: "Heute ist es klar: Ich empfehle den Wasserfallweg, 40 Minuten und durchgehend schattig 🌲 Ziehen Sie feste Schuhe an — das letzte Stück am Wasser ist rutschig",
     },
-    link: { label: "sentieri.proloco.it/cascate", phone: "+39 0400 111 221" },
+    video: { label: "Video del sentiero" },
   },
   {
     // indoors: somewhere warm when the weather turns
@@ -154,14 +161,15 @@ const CLIPS: Scene[] = [
       de: "Was machen wir, wenn es regnet?",
     },
     reply: {
-      it: "Con questo tempo vi consiglio il pub del paese: si sta al caldo, e la zuppa d'orzo vale il viaggio ☔ La cucina chiude alle 21, meglio non tardare",
-      en: "With this weather I'd suggest the village pub: it's warm inside, and the barley soup is worth the trip ☔ The kitchen closes at 9, so don't leave it too late",
-      es: "Con este tiempo os aconsejo el pub del pueblo: se está caliente y la sopa de cebada merece la pena ☔ La cocina cierra a las 21 h, mejor no tardar",
-      ca: "Amb aquest temps us aconsello el pub del poble: s'hi està calent i la sopa d'ordi val la pena ☔ La cuina tanca a les 21 h, millor no fer tard",
-      fr: "Avec ce temps, je vous conseille le pub du village : on y est au chaud, et la soupe d'orge vaut le détour ☔ La cuisine ferme à 21h, ne tardez pas trop",
-      de: "Bei diesem Wetter empfehle ich den Dorfpub: drinnen ist es warm, und die Gerstensuppe lohnt den Weg ☔ Die Küche schließt um 21 Uhr, kommen Sie nicht zu spät",
+      it: "Con questo tempo vi consiglio il museo del paese, in centro: due sale su storia e tradizioni locali, e si sta all'asciutto ☔ Chiude alle 18, ultimo ingresso alle 17:30",
+      en: "With this weather I'd suggest the village museum, right in the centre: two rooms on local history and traditions, and you'll stay dry ☔ It closes at 6pm, last entry 5:30",
+      es: "Con este tiempo os aconsejo el museo del pueblo, en el centro: dos salas sobre historia y tradiciones locales, y se está seco ☔ Cierra a las 18 h, última entrada a las 17:30",
+      ca: "Amb aquest temps us aconsello el museu del poble, al centre: dues sales sobre història i tradicions locals, i s'hi està eixut ☔ Tanca a les 18 h, última entrada a les 17:30",
+      fr: "Avec ce temps, je vous conseille le musée du village, en plein centre : deux salles sur l'histoire et les traditions locales, et vous resterez au sec ☔ Il ferme à 18h, dernière entrée à 17h30",
+      de: "Bei diesem Wetter empfehle ich das Dorfmuseum mitten im Zentrum: zwei Räume zu lokaler Geschichte und Tradition, und Sie bleiben trocken ☔ Es schließt um 18 Uhr, letzter Einlass 17:30",
     },
-    link: { label: "pub.proloco.it/orari", phone: "+39 0400 111 232" },
+    link: { label: "museo.proloco.it/orari", phone: "+39 0400 111 232" },
+    place: { name: "Museo del Paese", address: "Piazza Centrale, 3" },
   },
   {
     // action: on the water — points at a rental business
@@ -286,7 +294,7 @@ const CLIPS: Scene[] = [
       fr: "Ouvert jeudi et dimanche, 10h–17h. Il y a une visite guidée à 11h 🏰 Voulez-vous que je vous réserve une place ?",
       de: "Donnerstag und Sonntag, 10–17 Uhr. Um 11 Uhr gibt es eine Führung 🏰 Soll ich Ihnen die Führung reservieren?",
     },
-    link: { label: "castello.proloco.it/visite", phone: "+39 0400 111 305" },
+    video: { label: "Video di presentazione del castello" },
   },
 ]
 
@@ -608,6 +616,26 @@ export function HeroBackdrop() {
                       </span>
                       <br />
                       <span className="text-slate-600">{clips[scene]?.link?.phone}</span>
+                    </span>
+                  )}
+                  {/* A video the assistant sends of the place — same still-frame
+                      rule as the map and the link: it is a picture of a chat,
+                      the play button is not clickable. */}
+                  {clips[scene]?.video && (
+                    <span className="w-[13.5rem] max-w-full overflow-hidden rounded-lg rounded-tl-sm bg-white shadow-sm">
+                      <span className="relative flex h-32 items-center justify-center bg-slate-800">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow">
+                          <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4 fill-slate-800" aria-hidden="true">
+                            <path d="M8 5v14l11-7Z" />
+                          </svg>
+                        </span>
+                        <span className="absolute bottom-1.5 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          0:15
+                        </span>
+                      </span>
+                      <span className="block px-3 py-2 text-sm leading-snug text-slate-900">
+                        {clips[scene]?.video?.label}
+                      </span>
                     </span>
                   )}
                   {/* The shared location, as WhatsApp renders one: a map
