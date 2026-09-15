@@ -55,7 +55,7 @@ export const proLocoShowcaseContent: ShowcaseContent = {
     {
       icon: "📸",
       title: "Foto e video",
-      desc: "Ogni luogo si porta dietro le sue immagini: una cascata si capisce vedendola.",
+      desc: "L'assistente manda foto e video direttamente in chat, come fa un amico del posto — non solo un link da aprire.",
     },
     {
       icon: "🌍",

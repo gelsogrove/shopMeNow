@@ -14,6 +14,7 @@ import { api, auth } from "@/services/api"
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"
 import { homeCopy } from "./proLocoHomeTranslations"
 import {
+  BarChart3,
   Bell,
   Building2,
   CalendarDays,
@@ -53,7 +54,7 @@ import { Link, useNavigate } from "react-router-dom"
 // translations file, indexed in the same order.
 const BENEFIT_ICONS = [Globe, Clock, MessageCircle, Image, Bell, Sparkles]
 const CONTENT_ICONS = [
-  Building2, UtensilsCrossed, Mountain, CalendarDays, Sparkles,
+  Building2, UtensilsCrossed, Mountain, CalendarDays, BarChart3,
   MapPin, Castle, ScrollText, Dumbbell, Phone,
 ]
 

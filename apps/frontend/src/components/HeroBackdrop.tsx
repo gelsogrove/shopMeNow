@@ -605,7 +605,15 @@ export function HeroBackdrop() {
   }, [scene, clips.length, handOver])
 
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+    // Andrea kept reporting "Provate la demo" showing up under/inside the
+    // video (2026-09-16, three times): the earlier fix only stretched the
+    // fade-to-white gradient, but the dark/video layer was still `inset-0`
+    // — it filled the WHOLE hero section, including its lg:pb-[24.4rem]
+    // padding (kept there only to leave room for the animated chat card).
+    // That padding must render on the page's own white, not on this layer.
+    // Fix: stop the layer at bottom-[24.4rem] on desktop, matching the
+    // section's padding exactly, so the padding is never painted over.
+    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 bottom-0 lg:bottom-[24.4rem] z-0 overflow-hidden">
       <img src={POSTER_SRC} alt="" className="h-full w-full object-cover" />
 
       {sources.map((src, slot) =>
