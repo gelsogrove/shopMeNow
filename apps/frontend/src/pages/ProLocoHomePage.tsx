@@ -155,8 +155,13 @@ export default function ProLocoHomePage() {
       <div className="sticky top-0 z-40 bg-[#070d18]/90 backdrop-blur border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <a href="#top" className="flex items-center shrink-0 mr-auto">
-            <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
-              eChatbot<span className="text-white">.AI</span>
+            {/* This page sells the product AS the tourist office's own
+                assistant — the visible brand here is the office, not
+                eChatbot.AI (Andrea, 2026-09-15: "al posto di eChatbot metti
+                Ufficio del turismo di..."). No place name, same rule as the
+                rest of the page's content (§ demo script note above). */}
+            <span className="font-display text-xl font-bold tracking-tight text-white">
+              Ufficio del turismo
             </span>
           </a>
 
@@ -303,10 +308,10 @@ export default function ProLocoHomePage() {
             <h2 className="font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               {t.contentTitle}
             </h2>
-            <p className="mt-4 leading-relaxed text-emerald-100/80">
+            <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
               {t.contentBody1}
             </p>
-            <p className="mt-4 leading-relaxed text-emerald-100/80">
+            <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
               {t.contentBody2}
             </p>
           </div>
@@ -367,7 +372,7 @@ export default function ProLocoHomePage() {
                 <h3 className="font-display mt-5 text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-5xl">
                   {t.demoTitle}
                 </h3>
-                <p className="mt-4 max-w-md text-lg leading-relaxed text-slate-600">
+                <p className="mt-4 max-w-md leading-relaxed text-slate-600" style={{ fontSize: 20 }}>
                   {t.demoSub}
                 </p>
 

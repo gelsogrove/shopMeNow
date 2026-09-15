@@ -43,9 +43,9 @@ const PITCH: Record<string, { tagline: Record<string, string>; icon: typeof Star
   },
   ENTERPRISE: {
     tagline: {
-      it: "Server dedicato, solo per il vostro ente", en: "A dedicated server, yours alone",
-      es: "Servidor dedicado, solo para vuestra entidad", ca: "Servidor dedicat, només per a vosaltres",
-      fr: "Serveur dédié, rien que pour vous", de: "Dedizierter Server, nur für Sie",
+      it: "Server dedicato, solo per il vostro ente, e customizzazioni", en: "A dedicated server, yours alone, plus custom work",
+      es: "Servidor dedicado, solo para vuestra entidad, y personalizaciones", ca: "Servidor dedicat, només per a vosaltres, i personalitzacions",
+      fr: "Serveur dédié, rien que pour vous, et des personnalisations", de: "Dedizierter Server, nur für Sie, plus individuelle Anpassungen",
     },
     icon: Server,
   },

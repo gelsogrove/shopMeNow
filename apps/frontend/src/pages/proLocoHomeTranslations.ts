@@ -107,7 +107,7 @@ const it: HomeCopy = {
   errBadCredentials: "Email o password non corretti.",
   errGeneric: "Accesso non riuscito. Riprova fra poco.",
   benefitsTitle: "Cosa cambia per i vostri ospiti",
-  benefitsSub: "E per chi, in ufficio, risponde ogni giorno alle stesse domande.",
+  benefitsSub: "E per chi, in ufficio, risponde ogni giorno alle stesse domande. Sono molteplici i vantaggi: ve ne elenchiamo alcuni qui sotto.",
   benefits: [
     { title: "Ogni ospite nella sua lingua", body: "Un tedesco scrive in tedesco, un francese in francese. Voi scrivete i contenuti una volta sola: alla traduzione pensa l'assistente." },
     { title: "Nessuno aspetta il suo turno", body: "Cento turisti possono chiedere nello stesso momento, ognuno riceve la sua risposta. Allo sportello, invece, si fa la fila." },
