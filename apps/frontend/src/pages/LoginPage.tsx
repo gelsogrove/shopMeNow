@@ -2359,16 +2359,6 @@ export function LoginPage() {
                     </p>
                   </div>
                   
-                  <div className="pt-4 flex flex-wrap items-center gap-4 justify-center lg:justify-start">
-                    <Link
-                      to="/crm-integration"
-                      className="w-full sm:w-[220px] sm:h-[52px] inline-flex justify-center items-center px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-                    >
-                      <span className="flex items-center gap-3">
-                        <span>{t("integration.crm.button")}</span>
-                      </span>
-                    </Link>
-                  </div>
                 </div>
               </div>
             </GlowCard>

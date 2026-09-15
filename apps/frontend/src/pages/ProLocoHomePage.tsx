@@ -1,7 +1,6 @@
 import { HomeShowcase } from "@/components/HomeShowcase"
 import { HeroBackdrop } from "@/components/HeroBackdrop"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import HeroRobot from "@/components/landing/HeroRobot"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
 import { Typewriter } from "@/components/Typewriter"
 import QRCode from "react-qr-code"
@@ -17,7 +16,6 @@ import {
   Building2,
   CalendarDays,
   Castle,
-  ClipboardList,
   ChevronRight,
   Clock,
   Globe,
@@ -78,6 +76,8 @@ const DEMO_WA_LINK = `https://wa.me/${DEMO_WA_NUMBER}?text=${encodeURIComponent(
 
 /** WhatsApp's brand green — the same #25D366 HomeShowcase uses for the phone. */
 const WA_GREEN = "#25D366"
+/** For solid fills behind WHITE text: #25D366 only reaches ~1.9:1 there. */
+const WA_GREEN_DEEP = "#0F7A3D"
 
 export default function ProLocoHomePage() {
   const navigate = useNavigate()
@@ -233,7 +233,9 @@ export default function ProLocoHomePage() {
           is the load-bearing layer and the video only an enhancement. */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20 lg:pb-[34.4rem]">
+        {/* 24.4rem, 160px shorter than it was (Andrea, 2026-09-15): the hero
+            was pushing everything below it past the fold. */}
+        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20 lg:pb-[24.4rem]">
         <div className="grid items-start gap-12 lg:grid-cols-[3fr_2fr] lg:gap-16">
           <div>
             <div>
@@ -248,10 +250,17 @@ export default function ProLocoHomePage() {
                   <span style={{ color: WA_GREEN }}>{t.slogan2}</span>
                 </h1>
 
+                {/* The hero chat holds off until this sentence is typed out
+                    (Andrea, 2026-09-15: "il primo messaggio deve uscire solo
+                    quando la frase è finita"): one thing moving at a time. */}
                 <Typewriter
                   key={language}
                   text={t.lede}
                   className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-100 sm:mt-6 sm:text-xl lg:text-2xl lg:leading-relaxed"
+                  onDone={() => {
+                    window.__heroLedeDone = true
+                    window.dispatchEvent(new Event("hero:lede-done"))
+                  }}
                 />
 
                 <div id="accedi" className="mt-7 flex flex-col items-start gap-2">
@@ -383,46 +392,65 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── Try the demo ─────────────────────────────────────────── */}
-      <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 text-center">
-          <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-white p-7 text-left shadow-xl ring-1 ring-slate-200 sm:p-9">
-            <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
-              <div className="min-w-0 flex-1">
+      {/* The card is dark and full-bleed: it is the one place on the page
+          asking for an action, so it should not look like another white
+          panel (Andrea, 2026-09-15: "più grande, più bella, sembra appena
+          nella bolla"). The sample questions fill the width that used to be
+          empty AND give a reason to scan — you know what to type. */}
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
+        <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
+          <div className="overflow-hidden rounded-[2rem] bg-emerald-950 shadow-2xl ring-1 ring-emerald-900">
+            <div className="grid items-center gap-10 p-8 sm:p-12 lg:grid-cols-[1.15fr_auto] lg:gap-14">
+              <div className="min-w-0">
                 <span
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN }}
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-white"
+                  style={{ backgroundColor: `${WA_GREEN}2e` }}
                 >
                   <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: WA_GREEN }} />
                   WhatsApp
                 </span>
 
-                <h3 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                <h3 className="font-display mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl">
                   {t.demoTitle}
                 </h3>
-                <p className="mt-3 leading-relaxed text-slate-600">
+                <p className="mt-4 max-w-md text-lg leading-relaxed text-emerald-100/80">
                   {t.demoSub}
                 </p>
+
+                {/* The questions a visitor really asks, reused from the copy
+                    deck: they double as prompts for whoever scans. */}
+                <ul className="mt-7 flex flex-wrap gap-2">
+                  {t.closingQuestions.slice(0, 3).map((q) => (
+                    <li
+                      key={q}
+                      className="rounded-full bg-white/10 px-4 py-2 text-sm text-emerald-50 ring-1 ring-white/15"
+                    >
+                      {q}
+                    </li>
+                  ))}
+                </ul>
 
                 <a
                   href={DEMO_WA_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] lg:hidden"
-                  style={{ backgroundColor: WA_GREEN }}
+                  className="mt-8 inline-flex items-center gap-2.5 rounded-xl px-7 py-4 text-base font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] lg:hidden"
+                  style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
                   <MessageCircle className="h-5 w-5" />
                   {t.demoOpen}
                 </a>
               </div>
 
-              <div className="relative shrink-0">
-                <div className="rounded-2xl bg-white p-4 shadow-md ring-1 ring-slate-200">
-                  <QRCode value={DEMO_WA_LINK} size={148} bgColor="#ffffff" fgColor="#0f172a" />
+              <div className="relative mx-auto shrink-0">
+                <div className="rounded-3xl bg-white p-5 shadow-2xl">
+                  <QRCode value={DEMO_WA_LINK} size={208} bgColor="#ffffff" fgColor="#052e20" />
                 </div>
                 <span
-                  className="absolute -right-3 -top-3 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
-                  style={{ backgroundColor: WA_GREEN }}
+                  className="absolute -right-3 -top-3 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
+                  style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
                   Live
                 </span>
               </div>
@@ -440,9 +468,9 @@ export default function ProLocoHomePage() {
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <p className="text-emerald-700 font-medium text-sm mb-3">
-              {t.revenueEyebrow}
-              </p>
+              <span className="mb-4 inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800 ring-1 ring-emerald-100">
+                {t.revenueEyebrow}
+              </span>
               <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 {t.revenueTitle}
               </h2>
@@ -460,7 +488,7 @@ export default function ProLocoHomePage() {
                   key={step.t}
                   className="flex gap-4 rounded-xl bg-white border border-emerald-100 px-5 py-4"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white">
                     {i + 1}
                   </span>
                   <div>
@@ -482,9 +510,9 @@ export default function ProLocoHomePage() {
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <p className="text-emerald-700 font-medium text-sm mb-3">
+              <span className="mb-4 inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800 ring-1 ring-emerald-100">
                 {t.retentionEyebrow}
-              </p>
+              </span>
               <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 {t.retentionTitle}
               </h2>
@@ -519,7 +547,7 @@ export default function ProLocoHomePage() {
               <div className="min-w-0 flex-1">
                 <span
                   className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN }}
+                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN_DEEP }}
                 >
                   <ShieldCheck className="h-3.5 w-3.5" />
                   {t.privacyBadge}
@@ -536,7 +564,7 @@ export default function ProLocoHomePage() {
                   type="button"
                   onClick={() => navigate("/privacy-by-design")}
                   className="mt-6 inline-flex items-center gap-2 rounded-xl px-6 py-3.5 font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03]"
-                  style={{ backgroundColor: WA_GREEN }}
+                  style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
                   {t.privacyCta}
                   <ChevronRight className="h-4 w-4" />
@@ -544,14 +572,21 @@ export default function ProLocoHomePage() {
               </div>
 
               <div className="relative shrink-0">
-                {/* The mascot, reused here (Andrea, 2026-09-15: "per la privacy
-                    hai l'immagine del robottino che puoi riutilizzare"). */}
-                <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-emerald-100">
-                  <HeroRobot className="w-28 [&_img]:w-full [&_img]:h-auto" />
+                {/* The privacy illustration Andrea drew for this section
+                    (2026-09-15: "Privacy by design era questa immagine").
+                    4:3, so it gets its own aspect box rather than the square
+                    the mascot sat in. */}
+                <div className="w-64 max-w-full overflow-hidden rounded-2xl bg-emerald-50 ring-1 ring-emerald-100">
+                  <img
+                    src="/privacy.png"
+                    alt=""
+                    loading="lazy"
+                    className="block h-auto w-full"
+                  />
                 </div>
                 <span
                   className="absolute -right-3 -top-3 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
-                  style={{ backgroundColor: WA_GREEN }}
+                  style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
                   GDPR
                 </span>
@@ -566,49 +601,32 @@ export default function ProLocoHomePage() {
           from the /tourism page (Andrea, 2026-09-15: "prendi spunto se c'è
           qualcosa di interessante"). Plain <details>: no state, and the
           answers stay in the HTML for search engines. */}
-      <section className="border-t border-slate-100">
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
         <div className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="font-display text-center text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
             {t.faqTitle}
           </h2>
 
-          <div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+          {/* Cards rather than ruled rows: each question is its own object to
+              open, and the open one lifts out of the stack. */}
+          <div className="mt-10 space-y-3">
             {t.faqItems.map((item) => (
-              <details key={item.q} className="group py-4">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 font-medium text-slate-900 marker:content-none [&::-webkit-details-marker]:hidden">
+              <details
+                key={item.q}
+                className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/80 transition-shadow duration-200 open:shadow-lg open:ring-emerald-200 hover:ring-slate-300"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-[15px] font-semibold text-slate-900 marker:content-none sm:px-6 sm:py-5 [&::-webkit-details-marker]:hidden">
                   {item.q}
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 transition-transform duration-200 group-open:rotate-90 group-open:bg-emerald-700 group-open:text-white">
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                <p className="px-5 pb-5 text-[15px] leading-relaxed text-slate-600 sm:px-6 sm:pb-6">
                   {item.a}
                 </p>
               </details>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── Survey ───────────────────────────────────────────────── */}
-      <section className="border-t border-slate-100 bg-[#F6F2EA]">
-        <div className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
-          <span className="inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800">
-            {t.surveyEyebrow}
-          </span>
-          <h2 className="font-display mt-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {t.surveyTitle}
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl leading-relaxed text-slate-600">
-            {t.surveyBody}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate("/survey")}
-            className="mt-8 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 font-semibold text-white shadow-lg transition-colors duration-200"
-            style={{ backgroundColor: WA_GREEN }}
-          >
-            <ClipboardList className="h-5 w-5" />
-            {t.surveyCta}
-          </button>
         </div>
       </section>
 
@@ -622,7 +640,7 @@ export default function ProLocoHomePage() {
             type="button"
             onClick={() => navigate("/contact")}
             className="mt-8 inline-flex items-center gap-2 rounded-xl px-8 py-4 font-bold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03]"
-            style={{ backgroundColor: WA_GREEN }}
+            style={{ backgroundColor: WA_GREEN_DEEP }}
           >
             {t.ctaBandBtn}
             <ChevronRight className="h-5 w-5" />

@@ -33,7 +33,6 @@ const translations = {
     resources: "Risorse",
     contact: "Contatti",
     humanSupport: "Supporto Umano",
-    crmIntegration: "Integrazione CRM",
     teamCollaboration: "Collaborazione Team",
     privacyDesign: "Privacy by Design",
     widgetToWhatsApp: "Widget → WhatsApp",
@@ -53,7 +52,6 @@ const translations = {
     resources: "Resources",
     contact: "Contact",
     humanSupport: "Human Support",
-    crmIntegration: "CRM Integration",
     teamCollaboration: "Team Collaboration",
     privacyDesign: "Privacy by Design",
     widgetToWhatsApp: "Widget → WhatsApp",
@@ -73,7 +71,6 @@ const translations = {
     resources: "Recursos",
     contact: "Contacto",
     humanSupport: "Soporte Humano",
-    crmIntegration: "Integración CRM",
     teamCollaboration: "Colaboración en Equipo",
     privacyDesign: "Privacy by Design",
     widgetToWhatsApp: "Widget → WhatsApp",
@@ -93,7 +90,6 @@ const translations = {
     resources: "Ressourcen",
     contact: "Kontakt",
     humanSupport: "Menschlicher Support",
-    crmIntegration: "CRM-Integration",
     teamCollaboration: "Team-Zusammenarbeit",
     privacyDesign: "Privacy by Design",
     widgetToWhatsApp: "Widget → WhatsApp",
@@ -457,7 +453,6 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.resources}</p>
                 <div className="flex flex-col gap-3 ml-4">
                   <Link to="/human-support" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.humanSupport}</Link>
-                  <Link to="/crm-integration" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.crmIntegration}</Link>
                   <Link to="/privacy-by-design" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.privacyDesign}</Link>
                 </div>
               </div>

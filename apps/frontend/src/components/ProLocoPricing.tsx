@@ -66,10 +66,6 @@ const CTA_SIGNUP: Record<string, string> = {
   it: "Registrati", en: "Sign up", es: "Regístrate",
   ca: "Registra't", fr: "Inscrivez-vous", de: "Registrieren",
 }
-const CTA_INFO: Record<string, string> = {
-  it: "Richiedi informazioni", en: "Request information", es: "Solicitar información",
-  ca: "Demana informació", fr: "Demander des informations", de: "Informationen anfordern",
-}
 
 /** The plan highlighted as recommended. */
 const FEATURED = "PREMIUM"
@@ -182,25 +178,21 @@ export function ProLocoPricing() {
                 ))}
               </ul>
 
-              {/* The free plan is the one you can start on your own: it goes
-                  to the sign-up wizard, which really does create the account
-                  (/auth/register). The paid plans stay a conversation —
-                  nothing on this page can take a payment yet. */}
-              <a
-                href={plan.planType === "FREE_TRIAL" ? "/onboarding" : "#contatti"}
-                className={[
-                  "mt-7 block rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors",
-                  plan.planType === "FREE_TRIAL"
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : featured
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "border border-slate-200 text-slate-700 hover:border-emerald-600 hover:text-emerald-700",
-                ].join(" ")}
-              >
-                {plan.planType === "FREE_TRIAL"
-                  ? (CTA_SIGNUP[language] ?? CTA_SIGNUP.it)
-                  : (CTA_INFO[language] ?? CTA_INFO.it)}
-              </a>
+              {/* The free plan is the only one you can start on your own, so
+                  it is the only one with a button: it goes to the sign-up
+                  wizard, which really does create the account. The paid plans
+                  are read, not clicked (Andrea, 2026-09-15: "togli richiedi
+                  informazioni alle colonne basic, premium, enterprise") — the
+                  page already closes with one contact band, and nothing here
+                  can take a payment anyway. */}
+              {plan.planType === "FREE_TRIAL" && (
+                <a
+                  href="/onboarding"
+                  className="mt-7 block rounded-lg bg-emerald-600 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  {CTA_SIGNUP[language] ?? CTA_SIGNUP.it}
+                </a>
+              )}
             </div>
           )
         })}

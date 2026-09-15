@@ -26,25 +26,40 @@ export function Typewriter({
   speed = 28,
   /** Pause before the first character — the caret blinks alone during it. */
   delay = 900,
+  /**
+   * Fired once the last character lands (and immediately under reduced
+   * motion). The hero waits on it before starting its chat, so the visitor
+   * reads the sentence first and the conversation second.
+   */
+  onDone,
 }: {
   text: string
   className?: string
   speed?: number
   delay?: number
+  onDone?: () => void
 }) {
   const [shown, setShown] = useState(0)
   const done = shown >= text.length
   const timers = useRef<number[]>([])
 
+  // Kept in a ref so an inline arrow from the caller does not restart typing
+  // on every render of the page.
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
+
   useEffect(() => {
     timers.current.forEach(clearTimeout)
     timers.current = []
     setShown(0)
+    // Retyping (a language switch) means the sentence is unfinished again.
+    window.__heroLedeDone = false
 
     // Respect the OS setting: a sentence assembling itself is exactly the kind
     // of motion "reduce motion" exists to stop. Show it whole instead.
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       setShown(text.length)
+      onDoneRef.current?.()
       return
     }
 
@@ -54,6 +69,8 @@ export function Typewriter({
       setShown(i)
       if (i < text.length) {
         timers.current.push(window.setTimeout(tick, speed))
+      } else {
+        onDoneRef.current?.()
       }
     }, delay)
     timers.current.push(start)

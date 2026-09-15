@@ -27,7 +27,6 @@ const PUBLIC_PATHS = [
   "/laundries",
   "/appointment-booking",
   "/smart-push-ai",
-  "/crm-integration",
   "/team-collaboration",
   "/privacy-by-design",
   "/survey",

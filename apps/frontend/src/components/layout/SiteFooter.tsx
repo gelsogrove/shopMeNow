@@ -15,7 +15,6 @@ const translations = {
     resources: "Risorse",
     teamCollaboration: "Collaborazione Team",
     privacyDesign: "Privacy by Design",
-    crmIntegration: "Integrazione CRM",
     solutions: "Soluzioni",
     tourism: "Turismo e Pro Loco",
     company: "Azienda",
@@ -40,7 +39,6 @@ const translations = {
     resources: "Resources",
     teamCollaboration: "Team Collaboration",
     privacyDesign: "Privacy by Design",
-    crmIntegration: "CRM Integration",
     solutions: "Solutions",
     tourism: "Tourism & Visitor Offices",
     company: "Company",
@@ -65,7 +63,6 @@ const translations = {
     resources: "Recursos",
     teamCollaboration: "Colaboración en Equipo",
     privacyDesign: "Privacy by Design",
-    crmIntegration: "Integración CRM",
     solutions: "Soluciones",
     tourism: "Turismo y Oficinas de Turismo",
     company: "Empresa",
@@ -90,7 +87,6 @@ const translations = {
     resources: "Ressourcen",
     teamCollaboration: "Team-Zusammenarbeit",
     privacyDesign: "Privacy by Design",
-    crmIntegration: "CRM-Integration",
     solutions: "Lösungen",
     tourism: "Tourismus & Tourismusbüros",
     company: "Unternehmen",
@@ -129,7 +125,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
           <div>
             <h3 className="text-white font-semibold mb-4">{t.resources}</h3>
             <ul className="space-y-3">
-              <li><Link to="/crm-integration" className="text-sm hover:text-green-500 transition-colors">{t.crmIntegration}</Link></li>
               <li><Link to="/privacy-by-design" className="text-sm hover:text-green-500 transition-colors">{t.privacyDesign}</Link></li>
             </ul>
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>

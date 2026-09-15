@@ -84,7 +84,6 @@ export const proLocoShowcaseContent: ShowcaseContent = {
     {
       feature: 0,
       msgs: [
-        { role: "in", text: "Ciao! Veniamo da voi la settimana prossima 🏔️" },
         {
           role: "out",
           text: "Ciao e benvenuti! 👋 Sono l'assistente della Pro Loco. Vi do una mano con alloggi, sentieri, eventi e tutto il resto — a qualsiasi ora.",

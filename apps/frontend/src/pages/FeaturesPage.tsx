@@ -13,7 +13,6 @@ import {
   Smartphone,
   Brain,
   Clock,
-  TrendingUp,
   CalendarCheck,
 } from "lucide-react"
 import { SEO } from "@/components/SEO"
@@ -341,13 +340,6 @@ export function FeaturesPage() {
                     <p className="text-lg text-slate-400 leading-relaxed">
                       {t.integration.description}
                     </p>
-                    <Link
-                      to="/crm-integration"
-                      className="inline-flex items-center gap-2 text-[#25D366] hover:text-[#1ebe5a] font-semibold text-lg group"
-                    >
-                      {t.integration.cta}
-                      <TrendingUp className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                    </Link>
                   </div>
 
                   {/* Right: Image placeholder */}

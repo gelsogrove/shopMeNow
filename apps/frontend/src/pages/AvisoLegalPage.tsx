@@ -345,7 +345,7 @@ export function AvisoLegalPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#070d18] text-slate-200">
+    <div className="min-h-screen bg-white text-slate-700">
       <SEO title={t.seoTitle} description={t.seoDesc} url="/aviso-legal" lang={language} />
       <SiteHeader />
 
@@ -354,10 +354,10 @@ export function AvisoLegalPage() {
         <section className="pt-20 pb-8">
           <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <span className="inline-block bg-green-400/10 text-green-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+              <span className="inline-block bg-emerald-50 text-emerald-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                 {t.badge}
               </span>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">{t.title}</h1>
+              <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4 leading-tight">{t.title}</h1>
               <p className="text-sm text-slate-500">
                 {t.lastUpdated}: {LAST_UPDATED}
               </p>
@@ -368,14 +368,14 @@ export function AvisoLegalPage() {
         {/* Content */}
         <section className="pb-20">
           <div className="max-w-3xl mx-auto px-6 lg:px-8">
-            <p className="text-lg text-slate-300 leading-relaxed mb-10">{t.intro}</p>
+            <p className="text-lg text-slate-600 leading-relaxed mb-10">{t.intro}</p>
 
             <div className="space-y-8">
               {t.sections.map((section) => (
                 <div key={section.heading}>
-                  <h2 className="text-xl font-semibold text-white mb-3">{section.heading}</h2>
+                  <h2 className="text-xl font-semibold text-slate-900 mb-3">{section.heading}</h2>
                   {section.body.map((paragraph, i) => (
-                    <p key={i} className="text-slate-400 leading-relaxed mb-2">
+                    <p key={i} className="text-slate-600 leading-relaxed mb-2">
                       {paragraph}
                     </p>
                   ))}
@@ -383,8 +383,8 @@ export function AvisoLegalPage() {
               ))}
             </div>
 
-            <div className="mt-12 pt-8 border-t border-white/10">
-              <Link to="/privacy" className="text-green-400 hover:text-green-300 transition-colors font-medium">
+            <div className="mt-12 pt-8 border-t border-slate-200">
+              <Link to="/privacy" className="text-emerald-700 hover:text-emerald-800 transition-colors font-medium">
                 {t.privacyLinkLabel} →
               </Link>
             </div>

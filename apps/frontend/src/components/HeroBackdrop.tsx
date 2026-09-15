@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useLanguage } from "@/contexts/LanguageContext"
 
+declare global {
+  interface Window {
+    /** Set by the hero lede once it has finished typing. */
+    __heroLedeDone?: boolean
+  }
+}
+
 /**
  * The hero backdrop: muted clips of the territory cross-fading into one
  * another, with a still photo behind them (Andrea, 2026-09-15: "mi piacciono
@@ -106,8 +113,11 @@ type Scene = {
    * The pinned location the assistant shares alongside the link (Andrea,
    * 2026-09-15: "e mandi la location !!!"). Like the link, it is a STILL:
    * rendered as a WhatsApp location card but never a real map link.
+   *
+   * Omitted when the answer offers SEVERAL places — pinning one of three
+   * taverns contradicts the list the link points at.
    */
-  place: { name: string; address: string }
+  place?: { name: string; address: string }
 }
 
 const CLIPS: Scene[] = [
@@ -131,7 +141,6 @@ const CLIPS: Scene[] = [
       de: "Heute ist es klar: Ich empfehle den Wasserfallweg, 40 Minuten und durchgehend schattig 🌲 Ziehen Sie feste Schuhe an — das letzte Stück am Wasser ist rutschig",
     },
     link: { label: "sentieri.proloco.it/cascate", phone: "+39 0400 111 221" },
-    place: { name: "Sentiero delle Cascate", address: "Imbocco via Val Fredda, 2" },
   },
   {
     // indoors: somewhere warm when the weather turns
@@ -153,29 +162,6 @@ const CLIPS: Scene[] = [
       de: "Bei diesem Wetter empfehle ich den Dorfpub: drinnen ist es warm, und die Gerstensuppe lohnt den Weg ☔ Die Küche schließt um 21 Uhr, kommen Sie nicht zu spät",
     },
     link: { label: "pub.proloco.it/orari", phone: "+39 0400 111 232" },
-    place: { name: "Pub del Paese", address: "Piazza Grande, 7" },
-  },
-  {
-    // action: a live gig — tonight's events
-    src: "/hero/music.mp4",
-    ask: {
-      it: "C'è musica dal vivo stasera?",
-      en: "Is there live music tonight?",
-      es: "¿Hay música en vivo esta noche?",
-      ca: "Hi ha música en directe aquesta nit?",
-      fr: "Y a-t-il de la musique live ce soir ?",
-      de: "Gibt es heute Abend Livemusik?",
-    },
-    reply: {
-      it: "Sì, alle 21 in piazza: coro di montagna, ingresso libero 🎶 Portatevi una giacca, la sera in piazza si sente il fresco anche d'estate",
-      en: "Yes, 9pm in the square: mountain choir, free entry 🎶 Bring a jacket — the square gets chilly in the evening, even in summer",
-      es: "Sí, a las 21 h en la plaza: coro de montaña, entrada libre 🎶 Llevad una chaqueta, por la noche en la plaza refresca incluso en verano",
-      ca: "Sí, a les 21 h a la plaça: cor de muntanya, entrada lliure 🎶 Porteu una jaqueta, al vespre a la plaça refresca fins i tot a l'estiu",
-      fr: "Oui, 21h sur la place : chœur de montagne, entrée libre 🎶 Prenez une veste, le soir il fait frais sur la place, même en été",
-      de: "Ja, 21 Uhr auf dem Platz: Bergchor, Eintritt frei 🎶 Nehmen Sie eine Jacke mit — abends wird es auf dem Platz frisch, auch im Sommer",
-    },
-    link: { label: "eventi.proloco.it/concerti", phone: "+39 0400 111 245" },
-    place: { name: "Arena in Piazza", address: "Piazza Municipio, 1" },
   },
   {
     // action: on the water — points at a rental business
@@ -218,7 +204,6 @@ const CLIPS: Scene[] = [
       de: "Ja, zwei Verleihe im Ort: der nächste ist 300 m entfernt 🚲 Heute wird das Wetter aber nicht gut — ich empfehle morgen früh",
     },
     link: { label: "noleggi.proloco.it/ebike", phone: "+39 0400 111 264" },
-    place: { name: "Noleggio E-Bike", address: "Via Stazione, 5" },
   },
   {
     // action: skiing the slope
@@ -239,7 +224,6 @@ const CLIPS: Scene[] = [
       fr: "Les remontées ferment à 17h. Je vous conseille de redescendre à temps, pour ne pas arriver juste à la fermeture 😊",
       de: "Die Lifte schließen um 17 Uhr. Ich empfehle, rechtzeitig ins Tal aufzubrechen, damit Sie nicht knapp vor Schluss ankommen 😊",
     },
-    place: { name: "Stazione a valle", address: "Via Impianti, 3" },
   },
   {
     // close: meat on the grill — where to eat the local food
@@ -261,7 +245,6 @@ const CLIPS: Scene[] = [
       de: "Drei Gasthäuser im Zentrum servieren lokale Gerichte: hier Adressen und Nummern 🍽️ Abends sind sie voll — reservieren Sie besser einen Tisch",
     },
     link: { label: "osterie.proloco.it/tipici", phone: "+39 0400 111 283" },
-    place: { name: "Osteria del Centro", address: "Via Roma, 22" },
   },
   {
     // wide: an alpine lake
@@ -283,7 +266,6 @@ const CLIPS: Scene[] = [
       de: "Ja, natürlich: Ihre Kinder mit 8 und 9 Jahren sind groß genug für eine mittelschwere Route, und heute ist ein herrlicher Tag dafür — es ist kein Regen angesagt 🚶",
     },
     link: { label: "sentieri.proloco.it/lago", phone: "+39 0400 111 290" },
-    place: { name: "Sentiero del Lago", address: "Parcheggio Malga Alta" },
   },
   {
     // wide: a castle on the mountain
@@ -297,15 +279,14 @@ const CLIPS: Scene[] = [
       de: "Kann man die Burg besichtigen?",
     },
     reply: {
-      it: "Aperto giovedì e domenica, 10–17. Visita guidata alle 11 🏰 Oggi è domenica e l'ufficio è chiuso, ma io rispondo lo stesso",
-      en: "Open Thursdays and Sundays, 10–5. Guided tour at 11 🏰 It's Sunday and the office is closed, but I'm here anyway",
-      es: "Abierto jueves y domingos, 10–17. Visita guiada a las 11 🏰 Hoy es domingo y la oficina está cerrada, pero yo respondo igual",
-      ca: "Obert dijous i diumenges, 10–17. Visita guiada a les 11 🏰 Avui és diumenge i l'oficina és tancada, però jo responc igualment",
-      fr: "Ouvert jeudi et dimanche, 10h–17h. Visite guidée à 11h 🏰 C'est dimanche et l'office est fermé, mais je réponds quand même",
-      de: "Donnerstag und Sonntag, 10–17 Uhr. Führung um 11 Uhr 🏰 Heute ist Sonntag, das Büro ist zu — ich antworte trotzdem",
+      it: "Aperto giovedì e domenica, 10–17. C'è la visita guidata alle 11 🏰 Volete che vi prenoti la visita?",
+      en: "Open Thursdays and Sundays, 10–5. There's a guided tour at 11 🏰 Would you like me to book you a place?",
+      es: "Abierto jueves y domingos, 10–17. Hay visita guiada a las 11 🏰 ¿Queréis que os reserve la visita?",
+      ca: "Obert dijous i diumenges, 10–17. Hi ha visita guiada a les 11 🏰 Voleu que us reservi la visita?",
+      fr: "Ouvert jeudi et dimanche, 10h–17h. Il y a une visite guidée à 11h 🏰 Voulez-vous que je vous réserve une place ?",
+      de: "Donnerstag und Sonntag, 10–17 Uhr. Um 11 Uhr gibt es eine Führung 🏰 Soll ich Ihnen die Führung reservieren?",
     },
     link: { label: "castello.proloco.it/visite", phone: "+39 0400 111 305" },
-    place: { name: "Castello", address: "Colle San Pietro, 1" },
   },
 ]
 
@@ -322,6 +303,16 @@ const CLIPS: Scene[] = [
  * the name when it starts, not in front of every answer.
  */
 const GUEST_NAME = "Luca"
+
+/** "Apri in Google Maps" — the line under a shared WhatsApp location. */
+const OPEN_IN_MAPS: Record<string, string> = {
+  it: "Apri in Google Maps",
+  en: "Open in Google Maps",
+  es: "Abrir en Google Maps",
+  ca: "Obre al Google Maps",
+  fr: "Ouvrir dans Google Maps",
+  de: "In Google Maps öffnen",
+}
 
 /** "Ciao Luca," — the opening greeting, in each language the hero speaks. */
 const GREETING: Record<string, string> = {
@@ -421,13 +412,37 @@ export function HeroBackdrop() {
       // one again when there is only one, so the loop still dissolves).
       setSources([available[0].src, available[1 % available.length].src])
       setClips(available)
-      // Let the first clip establish the shot before the question appears.
-      window.setTimeout(() => setAsking(true), 1200)
     })
     return () => {
       cancelled = true
     }
   }, [])
+
+  /**
+   * The first question waits for the headline to finish typing (Andrea,
+   * 2026-09-15: "il primo messaggio deve uscire solo quando la frase è
+   * finita") — two things animating at once means neither gets read.
+   *
+   * The page fires `hero:lede-done` from the Typewriter's onDone. The flag on
+   * window covers the race where typing finishes before this effect mounts;
+   * the fallback timer covers a hero rendered without a Typewriter at all.
+   */
+  useEffect(() => {
+    if (clips.length === 0) return
+    if (window.__heroLedeDone) {
+      const t = window.setTimeout(() => setAsking(true), 400)
+      return () => window.clearTimeout(t)
+    }
+    const onLedeDone = () => setAsking(true)
+    window.addEventListener("hero:lede-done", onLedeDone, { once: true })
+    // Nothing is listening for us to give up on: if the sentence never
+    // reports back, the conversation still happens.
+    const fallback = window.setTimeout(() => setAsking(true), 9000)
+    return () => {
+      window.removeEventListener("hero:lede-done", onLedeDone)
+      window.clearTimeout(fallback)
+    }
+  }, [clips.length])
 
   // Let the dots run for a beat, then answer. 1.4s is long enough to read as
   // "thinking" and short enough that nobody scrolls past before the payoff —
@@ -595,22 +610,45 @@ export function HeroBackdrop() {
                       <span className="text-slate-600">{clips[scene]?.link?.phone}</span>
                     </span>
                   )}
-                  {/* The shared location. Also a still: a pin card, not a map. */}
-                  <span className="overflow-hidden rounded-lg rounded-tl-sm bg-white shadow-sm">
-                    <span className="flex h-16 items-center justify-center bg-[#dfe4e1]">
-                      <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#ea4335]" fill="currentColor" aria-hidden="true">
+                  {/* The shared location, as WhatsApp renders one: a map
+                      thumbnail with the pin, then the place and the line that
+                      opens Google Maps. It does NOT fill the row — WhatsApp
+                      sizes a location card to its thumbnail. Still a picture
+                      of a chat: the map is drawn, nothing is clickable. */}
+                  {clips[scene]?.place && (
+                  <span className="w-[13.5rem] max-w-full overflow-hidden rounded-lg rounded-tl-sm bg-white shadow-sm">
+                    <span className="relative flex h-24 items-center justify-center bg-[#e8eae6]">
+                      {/* Stylised streets, so the thumbnail reads as a map. */}
+                      <svg viewBox="0 0 200 80" className="absolute inset-0 h-full w-full" aria-hidden="true">
+                        <path d="M0 52 H200" stroke="#ffffff" strokeWidth="7" fill="none" />
+                        <path d="M0 22 H200" stroke="#ffffff" strokeWidth="4" fill="none" />
+                        <path d="M58 0 V80" stroke="#ffffff" strokeWidth="5" fill="none" />
+                        <path d="M142 0 V80" stroke="#ffffff" strokeWidth="4" fill="none" />
+                        <rect x="66" y="28" width="34" height="18" fill="#dcdfda" />
+                        <rect x="150" y="28" width="30" height="18" fill="#dcdfda" />
+                        <rect x="12" y="58" width="34" height="16" fill="#dcdfda" />
+                        <path d="M0 68 H200" stroke="#d6e8c8" strokeWidth="10" fill="none" />
+                      </svg>
+                      <svg viewBox="0 0 24 24" className="relative h-8 w-8 drop-shadow text-[#ea4335]" fill="currentColor" aria-hidden="true">
                         <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />
                       </svg>
                     </span>
                     <span className="block px-3 py-2">
                       <span className="block text-sm font-medium leading-snug text-slate-900">
-                        {clips[scene]?.place.name}
+                        {clips[scene]?.place?.name}
                       </span>
                       <span className="block text-xs leading-snug text-slate-500">
-                        {clips[scene]?.place.address}
+                        {clips[scene]?.place?.address}
+                      </span>
+                      <span className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-[#027EB5]">
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path d="M3 11l18-8-8 18-2-8-8-2Z" strokeLinejoin="round" />
+                        </svg>
+                        {OPEN_IN_MAPS[language] ?? OPEN_IN_MAPS.it}
                       </span>
                     </span>
                   </span>
+                  )}
                 </div>
               ) : (
                 <span className="flex items-center gap-1 rounded-lg rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
