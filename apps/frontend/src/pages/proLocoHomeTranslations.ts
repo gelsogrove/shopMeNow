@@ -88,7 +88,7 @@ export interface HomeCopy {
 
 const it: HomeCopy = {
   galleryTitle: "Il vostro territorio, com'è davvero",
-  gallerySubtitle: "Ogni scheda può portarsi dietro le sue foto: l'ospite vede il posto prima di arrivarci.",
+  gallerySubtitle: "Ogni scheda può portarsi dietro le sue foto: il turista vede il posto prima di arrivarci.",
   audience: "per Pro Loco e Consorzi",
   navPricing: "Prezzi",
   navDemo: "Demo",
@@ -96,7 +96,7 @@ const it: HomeCopy = {
   eyebrow: "Solo per uffici turistici",
   slogan1: "Il vostro territorio risponde",
   slogan2: "su WhatsApp",
-  lede: "Un assistente che incrocia il meteo, le esigenze dell'ospite e le informazioni del territorio per assisterlo durante tutta la vacanza, 24 ore su 24, nella sua lingua madre, direttamente su WhatsApp.",
+  lede: "Un assistente che incrocia il meteo, le esigenze del turista e le informazioni del territorio per assisterlo durante tutta la vacanza, 24 ore su 24, nella sua lingua madre, direttamente su WhatsApp.",
   chipMulti: "Multilingua",
   chip24: "24 ore su 24",
   chipFaq: "Le solite domande",
