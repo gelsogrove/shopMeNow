@@ -113,18 +113,22 @@ type Scene = {
    * A video the assistant sends of the place itself (Andrea, 2026-09-15: "al
    * posto del link fai vedere un video che mandi sul posto"). Mutually
    * exclusive with `link` on a scene — the point is showing the OTHER media
-   * type WhatsApp can carry, not stacking both on one reply.
+   * type WhatsApp can carry, not stacking both on one reply. The label is
+   * translated like ask/reply (Andrea: "i testi non sono tutti tradotti?") —
+   * a caption under a video is still copy a visitor reads.
    */
-  video?: { label: string }
+  video?: { label: Record<string, string> }
   /**
    * The pinned location the assistant shares alongside the link (Andrea,
    * 2026-09-15: "e mandi la location !!!"). Like the link, it is a STILL:
    * rendered as a WhatsApp location card but never a real map link.
    *
    * Omitted when the answer offers SEVERAL places — pinning one of three
-   * taverns contradicts the list the link points at.
+   * taverns contradicts the list the link points at. `name` is translated;
+   * `address` is not — a street name/number reads the same in every language,
+   * same as the invented phone numbers on `link`.
    */
-  place?: { name: string; address: string }
+  place?: { name: Record<string, string>; address: string }
 }
 
 const CLIPS: Scene[] = [
@@ -147,7 +151,16 @@ const CLIPS: Scene[] = [
       fr: "Le temps est clair aujourd'hui : je vous conseille le sentier des cascades, 40 minutes et à l'ombre tout du long 🌲 Prenez des chaussures fermées, le dernier tronçon près de l'eau glisse",
       de: "Heute ist es klar: Ich empfehle den Wasserfallweg, 40 Minuten und durchgehend schattig 🌲 Ziehen Sie feste Schuhe an — das letzte Stück am Wasser ist rutschig",
     },
-    video: { label: "Video del sentiero" },
+    video: {
+      label: {
+        it: "Video del sentiero",
+        en: "Trail video",
+        es: "Vídeo de la ruta",
+        ca: "Vídeo del camí",
+        fr: "Vidéo du sentier",
+        de: "Wegvideo",
+      },
+    },
   },
   {
     // indoors: somewhere warm when the weather turns
@@ -168,8 +181,17 @@ const CLIPS: Scene[] = [
       fr: "Avec ce temps, je vous conseille le musée du village, en plein centre : deux salles sur l'histoire et les traditions locales, et vous resterez au sec ☔ Il ferme à 18h, dernière entrée à 17h30",
       de: "Bei diesem Wetter empfehle ich das Dorfmuseum mitten im Zentrum: zwei Räume zu lokaler Geschichte und Tradition, und Sie bleiben trocken ☔ Es schließt um 18 Uhr, letzter Einlass 17:30",
     },
-    link: { label: "museo.proloco.it/orari", phone: "+39 0400 111 232" },
-    place: { name: "Museo del Paese", address: "Piazza Centrale, 3" },
+    place: {
+      name: {
+        it: "Museo del Paese",
+        en: "Village Museum",
+        es: "Museo del Pueblo",
+        ca: "Museu del Poble",
+        fr: "Musée du Village",
+        de: "Dorfmuseum",
+      },
+      address: "Piazza Centrale, 3",
+    },
   },
   {
     // action: on the water — points at a rental business
@@ -190,7 +212,17 @@ const CLIPS: Scene[] = [
       fr: "Au centre sportif, ouvert de 9h à 18h. Voici le numéro 📞 car il est indispensable de réserver à l'avance : +39 0400 111 258. Pensez aussi à porter le gilet de sauvetage pendant l'activité 🛶",
       de: "Im Sportzentrum, von 9 bis 18 Uhr geöffnet. Hier die Nummer 📞 — eine Reservierung vorab ist unerlässlich: +39 0400 111 258. Denken Sie außerdem daran, während der Tour eine Schwimmweste zu tragen 🛶",
     },
-    place: { name: "Centro Sportivo", address: "Via dello Sport, 14" },
+    place: {
+      name: {
+        it: "Centro Sportivo",
+        en: "Sports Centre",
+        es: "Centro Deportivo",
+        ca: "Centre Esportiu",
+        fr: "Centre Sportif",
+        de: "Sportzentrum",
+      },
+      address: "Via dello Sport, 14",
+    },
   },
   {
     // action: cycling
@@ -294,7 +326,16 @@ const CLIPS: Scene[] = [
       fr: "Ouvert jeudi et dimanche, 10h–17h. Il y a une visite guidée à 11h 🏰 Voulez-vous que je vous réserve une place ?",
       de: "Donnerstag und Sonntag, 10–17 Uhr. Um 11 Uhr gibt es eine Führung 🏰 Soll ich Ihnen die Führung reservieren?",
     },
-    video: { label: "Video di presentazione del castello" },
+    video: {
+      label: {
+        it: "Video di presentazione del castello",
+        en: "Castle introduction video",
+        es: "Vídeo de presentación del castillo",
+        ca: "Vídeo de presentació del castell",
+        fr: "Vidéo de présentation du château",
+        de: "Vorstellungsvideo der Burg",
+      },
+    },
   },
 ]
 
@@ -598,7 +639,7 @@ export function HeroBackdrop() {
           >
             {/* Outgoing: the guest's question. */}
             <div className="mt-1.5 flex justify-end">
-              <span className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
+              <span className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#D9FDD3] px-3 py-2 leading-snug text-slate-900 shadow-sm" style={{ fontSize: 16 }}>
                 {clips[scene]?.ask[language] ?? clips[scene]?.ask.it}
                 <span className="ml-2 inline-flex translate-y-[3px] items-center gap-0.5 text-[10px] text-slate-500">
                   {sentAt}
@@ -646,7 +687,7 @@ export function HeroBackdrop() {
                         </span>
                       </span>
                       <span className="block px-3 py-2 text-sm leading-snug text-slate-900">
-                        {clips[scene]?.video?.label}
+                        {clips[scene]?.video?.label[language] ?? clips[scene]?.video?.label.it}
                       </span>
                     </span>
                   )}
@@ -675,7 +716,7 @@ export function HeroBackdrop() {
                     </span>
                     <span className="block px-3 py-2">
                       <span className="block text-sm font-medium leading-snug text-slate-900">
-                        {clips[scene]?.place?.name}
+                        {clips[scene]?.place?.name[language] ?? clips[scene]?.place?.name.it}
                       </span>
                       <span className="block text-xs leading-snug text-slate-500">
                         {clips[scene]?.place?.address}
