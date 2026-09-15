@@ -179,7 +179,7 @@ export default function ProLocoHomePage() {
 
           <div className="flex items-center justify-between gap-4 py-3">
             <a href="#top" className="flex items-center shrink-0 mr-auto">
-              <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 24 }}>
+              <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 28 }}>
                 eChatbot<span className="text-white">.AI</span>
               </span>
             </a>
@@ -395,7 +395,7 @@ export default function ProLocoHomePage() {
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <h2 className="font-display font-semibold tracking-tight text-white" style={{ fontSize: 26 }}>
               {t.contentTitle}
             </h2>
             <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
