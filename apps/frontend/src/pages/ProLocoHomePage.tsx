@@ -33,7 +33,7 @@ import {
   Dumbbell,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 /**
  * Public landing page for tourist offices (Pro Loco and Consorzi).
@@ -153,31 +153,48 @@ export default function ProLocoHomePage() {
           logo needs a dark surface to read well (Andrea, 2026-09-15: "sfondo
           nero dell'header solo header !!! così il logo si vede bene"). ── */}
       <div className="sticky top-0 z-40 bg-[#070d18]/90 backdrop-blur border-b border-white/10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <a href="#top" className="flex items-center shrink-0 mr-auto">
-            <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
-              eChatbot<span className="text-white">.AI</span>
-            </span>
-          </a>
+        <div className="mx-auto max-w-6xl px-6">
+          {/* Nav links above the flags, desktop only — same pattern as
+              SiteHeader's mini top-bar (Andrea, 2026-09-15: "sopra le
+              bandierine vorrei Pricing, Demo Contact us in lingua"). Hidden
+              below lg: this row is pure overhead on a phone-width header
+              that already has to fit logo + 6 flags. */}
+          <div className="hidden lg:flex justify-end pt-2">
+            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
+              <a href="#pricing" className="hover:text-white transition-colors">{t.navPricing}</a>
+              <span className="text-white/20">|</span>
+              <a href="#prova" className="hover:text-white transition-colors">{t.navDemo}</a>
+              <span className="text-white/20">|</span>
+              <Link to="/contact" className="hover:text-white transition-colors">{t.navContact}</Link>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-0.5 sm:gap-1">
-            {SUPPORTED_LANGUAGES.map((l) => (
-              <button
-                key={l.code}
-                type="button"
-                onClick={() => setLanguage(l.code)}
-                aria-label={l.name}
-                aria-current={language === l.code}
-                className={[
-                  "flex items-center rounded-lg px-1.5 py-1 text-lg leading-none transition-colors sm:px-2",
-                  language === l.code
-                    ? "bg-white/10 ring-1 ring-white/20"
-                    : "hover:bg-white/5",
-                ].join(" ")}
-              >
-                <FlagIcon flag={l.flag} name={l.name} />
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-4 py-3">
+            <a href="#top" className="flex items-center shrink-0 mr-auto">
+              <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
+                eChatbot<span className="text-white">.AI</span>
+              </span>
+            </a>
+
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => setLanguage(l.code)}
+                  aria-label={l.name}
+                  aria-current={language === l.code}
+                  className={[
+                    "flex items-center rounded-lg px-1.5 py-1 text-lg leading-none transition-colors sm:px-2",
+                    language === l.code
+                      ? "bg-white/10 ring-1 ring-white/20"
+                      : "hover:bg-white/5",
+                  ].join(" ")}
+                >
+                  <FlagIcon flag={l.flag} name={l.name} />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -335,7 +352,7 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── Pricing, straight from the database ──────────────────── */}
-      <section className="border-t border-slate-100">
+      <section id="pricing" className="border-t border-slate-100 scroll-mt-24">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <p className="mx-auto max-w-2xl text-center text-slate-600">
             {t.pricingSub}
@@ -350,7 +367,7 @@ export default function ProLocoHomePage() {
       {/* White card like the rest of the page (Andrea, 2026-09-15: "non mi
           piace per nulla lo sfondo verde" — the dark GREEN_SURFACE card was
           replaced site-wide for this and Privacy by design). */}
-      <section className="border-t border-slate-100 bg-[#F6F2EA]">
+      <section id="prova" className="border-t border-slate-100 bg-[#F6F2EA] scroll-mt-24">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
           <div className="overflow-hidden rounded-[2.5rem] bg-white shadow-xl ring-1 ring-slate-200">
             <div className="grid items-center gap-12 p-10 sm:p-14 lg:grid-cols-[1fr_auto] lg:gap-16">
