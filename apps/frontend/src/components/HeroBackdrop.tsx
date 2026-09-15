@@ -44,7 +44,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
  * that is worth coming back to in another month — which is exactly what the
  * push campaigns further down the page are for.
  *
- * These ten ship in public/hero/ — 360p clips from coverr.co (free for
+ * These eleven ship in public/hero/ — 360p clips from coverr.co (free for
  * commercial use, no attribution required), 6 MB for the whole set, close to
  * the single hero video on the site this was modelled on. 360p is
  * deliberate: the footage sits behind a dark veil and is motion-blurred, so
@@ -56,7 +56,11 @@ import { useLanguage } from "@/contexts/LanguageContext"
  *
  * Add or drop files freely: missing ones are skipped, not awaited, so the page
  * never waits for a file that is not there, and with NONE present the photo
- * alone carries the hero. Order matters — this is the order they play in.
+ * alone carries the hero.
+ *
+ * The order here is NOT the playing order: the rotation is shuffled on every
+ * visit, so no clip is condemned to be the one nobody ever reaches. Keep this
+ * list grouped by theme for the humans reading it.
  */
 /**
  * Each clip carries the question a guest would actually ask while looking at
@@ -88,6 +92,18 @@ const CLIPS: Scene[] = [
       ca: "On podem anar a fer un tomb avui?",
       fr: "Où peut-on aller se promener aujourd'hui ?",
       de: "Wo können wir heute spazieren gehen?",
+    },
+  },
+  {
+    // indoors: somewhere warm when the weather turns
+    src: "/hero/bar.mp4",
+    ask: {
+      it: "Cosa facciamo se piove?",
+      en: "What can we do if it rains?",
+      es: "¿Qué hacemos si llueve?",
+      ca: "Què fem si plou?",
+      fr: "Que faire s'il pleut ?",
+      de: "Was machen wir, wenn es regnet?",
     },
   },
   {
@@ -262,6 +278,11 @@ export function HeroBackdrop() {
       if (cancelled) return
       const available = found.filter((scene): scene is Scene => scene !== null)
       if (available.length === 0) return
+
+      for (let i = available.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[available[i], available[j]] = [available[j], available[i]]
+      }
       // Slot 0 shows the first clip; slot 1 pre-loads the second (or the same
       // one again when there is only one, so the loop still dissolves).
       setSources([available[0].src, available[1 % available.length].src])
