@@ -167,6 +167,12 @@ export default function ProLocoHomePage() {
               <a href="#prova" className="hover:text-white transition-colors">{t.navDemo}</a>
               <span className="text-white/20">|</span>
               <Link to="/contact" className="hover:text-white transition-colors">{t.navContact}</Link>
+              <span className="text-white/20">|</span>
+              {/* Andrea, 2026-09-16: "se hai fatto la pagina [/login] ok
+                  allora la devi collegare" — the platform's own login (email/
+                  password, registration, Google) lives at /login, reachable
+                  from nowhere on this landing until now. */}
+              <Link to="/login" className="hover:text-white transition-colors">{t.navSignIn}</Link>
             </div>
           </div>
 
@@ -236,7 +242,7 @@ export default function ProLocoHomePage() {
                   }}
                 />
 
-                <div id="accedi" className="mt-7 flex flex-col items-start gap-2">
+                <div id="accedi" className="mt-7 flex flex-col items-start gap-3">
                   <div className="[&_iframe]:!w-auto">
                     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
                       <GoogleLogin
@@ -253,6 +259,14 @@ export default function ProLocoHomePage() {
                       {error}
                     </p>
                   )}
+                  {/* Email/password sign-in lives at /login, not duplicated
+                      here (Andrea, 2026-09-16: link it, don't rebuild it). */}
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+                  >
+                    {t.loginCta}
+                  </Link>
                 </div>
 
               </div>

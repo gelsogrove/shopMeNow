@@ -22,6 +22,7 @@ export interface HomeCopy {
   navPricing: string
   navDemo: string
   navContact: string
+  navSignIn: string
   eyebrow: string
   slogan1: string
   slogan2: string
@@ -88,6 +89,7 @@ const it: HomeCopy = {
   navPricing: "Prezzi",
   navDemo: "Demo",
   navContact: "Contattaci",
+  navSignIn: "Accedi",
   eyebrow: "Solo per uffici turistici",
   slogan1: "Il vostro territorio risponde",
   slogan2: "su WhatsApp",
@@ -170,6 +172,7 @@ const en: HomeCopy = {
   navPricing: "Pricing",
   navDemo: "Demo",
   navContact: "Contact us",
+  navSignIn: "Sign In",
   eyebrow: "Only for tourist information offices",
   slogan1: "Your region answers",
   slogan2: "on WhatsApp",
@@ -252,6 +255,7 @@ const es: HomeCopy = {
   navPricing: "Precios",
   navDemo: "Demo",
   navContact: "Contacto",
+  navSignIn: "Acceder",
   eyebrow: "Solo para oficinas de turismo",
   slogan1: "Vuestro territorio responde",
   slogan2: "por WhatsApp",
@@ -335,6 +339,7 @@ const ca: HomeCopy = {
   navPricing: "Preus",
   navDemo: "Demo",
   navContact: "Contacte",
+  navSignIn: "Accedeix",
   eyebrow: "Només per a oficines de turisme",
   slogan1: "El vostre territori respon",
   slogan2: "per WhatsApp",
@@ -417,6 +422,7 @@ const fr: HomeCopy = {
   navPricing: "Tarifs",
   navDemo: "Démo",
   navContact: "Contact",
+  navSignIn: "Connexion",
   eyebrow: "Uniquement pour les offices de tourisme",
   slogan1: "Votre territoire répond",
   slogan2: "sur WhatsApp",
@@ -499,6 +505,7 @@ const de: HomeCopy = {
   navPricing: "Preise",
   navDemo: "Demo",
   navContact: "Kontakt",
+  navSignIn: "Anmelden",
   eyebrow: "Nur für Tourismusbüros",
   slogan1: "Ihre Region antwortet",
   slogan2: "auf WhatsApp",

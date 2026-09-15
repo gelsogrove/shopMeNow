@@ -430,7 +430,15 @@ export function HeroBackdrop() {
   const [asking, setAsking] = useState(false)
   /** Dots first, then the answer — the assistant has to actually reply. */
   const [answered, setAnswered] = useState(false)
+  /**
+   * A video/link/place is its own WhatsApp message, sent after the text —
+   * not glued to it (Andrea, 2026-09-16: "quando manda il video aspetta fai
+   * finta che scrive", "anche per i video ovviamente"). So it gets its own
+   * typing beat: dots reappear once the text lands, then the attachment.
+   */
+  const [attachmentShown, setAttachmentShown] = useState(false)
   const replyTimer = useRef<number | null>(null)
+  const attachmentTimer = useRef<number | null>(null)
   const { language } = useLanguage()
   /** Where the page wants the thread drawn. */
   const [slot, setSlot] = useState<HTMLElement | null>(null)
@@ -513,17 +521,31 @@ export function HeroBackdrop() {
     }
   }, [clips.length])
 
-  // Let the dots run for a beat, then answer. 1.4s is long enough to read as
+  // Let the dots run for a beat, then answer. 2s is long enough to read as
   // "thinking" and short enough that nobody scrolls past before the payoff —
   // which is the whole point of the exchange (Andrea: "deve rispondere il
-  // chatbot!!").
+  // chatbot!!"; 2026-09-16: "il loading...mettilo 300 millisecondi piu
+  // lungo", up from 1.7s).
   useEffect(() => {
     if (!asking) return
-    replyTimer.current = window.setTimeout(() => setAnswered(true), 1700)
+    replyTimer.current = window.setTimeout(() => setAnswered(true), 2000)
     return () => {
       if (replyTimer.current) window.clearTimeout(replyTimer.current)
     }
   }, [asking, scene])
+
+  // The attachment (video/link/place) is a second message: dots again, then
+  // it lands. Skipped when the scene has none, so a plain-text reply never
+  // pauses on a typing indicator nothing follows.
+  useEffect(() => {
+    if (!answered) return
+    const hasAttachment = clips[scene]?.video || clips[scene]?.link || clips[scene]?.place
+    if (!hasAttachment) return
+    attachmentTimer.current = window.setTimeout(() => setAttachmentShown(true), 1500)
+    return () => {
+      if (attachmentTimer.current) window.clearTimeout(attachmentTimer.current)
+    }
+  }, [answered, clips, scene])
 
   /**
    * Hand over to the other slot: start it, bring it to the front, and queue
@@ -550,7 +572,9 @@ export function HeroBackdrop() {
     // caption for the wrong picture.
     setAsking(false)
     setAnswered(false)
+    setAttachmentShown(false)
     if (replyTimer.current) window.clearTimeout(replyTimer.current)
+    if (attachmentTimer.current) window.clearTimeout(attachmentTimer.current)
     setScene(playing.current)
 
     // Queue the one AFTER the incoming clip into the slot going to the back.
@@ -623,9 +647,14 @@ export function HeroBackdrop() {
           picture does its work. */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/35 to-slate-950/75" />
 
-      {/* The hand-off into the page: the last few hundred pixels resolve to
-          the page's own white so the section ends without a seam. */}
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white" />
+      {/* The hand-off into the page: the last stretch resolves to the page's
+          own white so the section ends without a seam. Andrea, 2026-09-16:
+          "Provate la demo va sotto i video" — h-40 (160px) was shorter than
+          the hero's own lg:pb-[24.4rem] (390px), so the dark/video layer was
+          still fully opaque where the next section's content actually sits.
+          Matches lg:pb-[24.4rem] on the section below so the fade always
+          finishes before the padding runs out. */}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white lg:h-[24.4rem]" />
 
       {/* The question this clip provokes, staged as a real WhatsApp exchange.
           A plain white pill read as a tooltip, not as a message, and it sat in
@@ -672,8 +701,21 @@ export function HeroBackdrop() {
                     {scene === 0 ? `${GREETING[language] ?? GREETING.it} ` : ""}
                     {clips[scene]?.reply[language] ?? clips[scene]?.reply.it}
                   </span>
+                  {/* The attachment is a separate WhatsApp message: dots
+                      again while attachmentShown catches up, then it lands. */}
+                  {!attachmentShown && (clips[scene]?.link || clips[scene]?.video || clips[scene]?.place) && (
+                    <span className="flex w-fit items-center gap-1 rounded-lg rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
+                      {[0, 1, 2].map((d) => (
+                        <span
+                          key={d}
+                          className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400"
+                          style={{ animationDelay: `${d * 140}ms` }}
+                        />
+                      ))}
+                    </span>
+                  )}
                   {/* Not an <a>: a still of a conversation, not one you can have. */}
-                  {clips[scene]?.link && (
+                  {attachmentShown && clips[scene]?.link && (
                     <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
                       <span className="text-[#027EB5] underline">
                         {clips[scene]?.link?.label}
@@ -685,7 +727,7 @@ export function HeroBackdrop() {
                   {/* A video the assistant sends of the place — same still-frame
                       rule as the map and the link: it is a picture of a chat,
                       the play button is not clickable. */}
-                  {clips[scene]?.video && (
+                  {attachmentShown && clips[scene]?.video && (
                     <span className="w-[13.5rem] max-w-full overflow-hidden rounded-lg rounded-tl-sm bg-white shadow-sm">
                       <span className="relative flex h-32 items-center justify-center bg-slate-800">
                         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow">
@@ -707,7 +749,7 @@ export function HeroBackdrop() {
                       opens Google Maps. It does NOT fill the row — WhatsApp
                       sizes a location card to its thumbnail. Still a picture
                       of a chat: the map is drawn, nothing is clickable. */}
-                  {clips[scene]?.place && (
+                  {attachmentShown && clips[scene]?.place && (
                   <span className="w-[13.5rem] max-w-full overflow-hidden rounded-lg rounded-tl-sm bg-white shadow-sm">
                     <span className="relative flex h-24 items-center justify-center bg-[#e8eae6]">
                       {/* Stylised streets, so the thumbnail reads as a map. */}
