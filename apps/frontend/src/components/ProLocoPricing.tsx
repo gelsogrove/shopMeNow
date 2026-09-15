@@ -142,17 +142,6 @@ export function ProLocoPricing() {
                 </span>
               )}
 
-              <div
-                className={[
-                  "mb-4 flex h-11 w-11 items-center justify-center rounded-xl transition-colors",
-                  featured
-                    ? "bg-emerald-600 text-white"
-                    : "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100",
-                ].join(" ")}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
-
               <h3 className="text-lg font-semibold text-slate-900">
                 {plan.displayName}
               </h3>

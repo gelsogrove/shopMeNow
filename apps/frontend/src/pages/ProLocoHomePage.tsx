@@ -428,7 +428,7 @@ export default function ProLocoHomePage() {
                   key={step.t}
                   className="flex gap-4 rounded-xl bg-white border border-emerald-100 px-5 py-4"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-2xl font-bold text-white">
                     {i + 1}
                   </span>
                   <div>

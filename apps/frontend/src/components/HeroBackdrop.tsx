@@ -344,10 +344,19 @@ const FADE_SECONDS = 1.2
 
 /**
  * How long each clip holds before handing over, regardless of its own length.
- * Ten seconds is enough to read the question, watch the dots and take in the
- * answer without the hero feeling like it is stalling.
+ * Fourteen seconds — up from ten — to make room for ASK_DELAY_SECONDS: the
+ * footage needs a few silent seconds up front before the chat card interrupts
+ * it (Andrea, 2026-09-15: "animazione a destra non deve apparire subito...
+ * fallo dopo alcuni secondi del video").
  */
-const SCENE_SECONDS = 10
+const SCENE_SECONDS = 14
+
+/**
+ * How long the new clip plays on its own, in silence, before the chat card
+ * dissolves in over it. Without this pause the card competed with the video
+ * for the very first thing a visitor's eye catches.
+ */
+const ASK_DELAY_SECONDS = 3
 
 export function HeroBackdrop() {
   /** The scenes whose clip actually exists on disk, in CLIPS order. */
@@ -503,8 +512,11 @@ export function HeroBackdrop() {
         return copy
       })
       swapping.current = false
-      setAsking(true)
     }, FADE_SECONDS * 1000)
+
+    // The chat card waits its own beat after the fade settles, so the new
+    // footage gets a few seconds of quiet before the card dissolves in.
+    window.setTimeout(() => setAsking(true), ASK_DELAY_SECONDS * 1000)
   }, [clips, front])
 
   // Every scene lasts SCENE_SECONDS, then hands over. Clips loop in place if
