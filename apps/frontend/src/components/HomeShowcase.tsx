@@ -471,10 +471,10 @@ export function HomeShowcase({
       </div>
 
       {/* Phone + capability cards */}
-      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[26.4rem_34rem] lg:justify-center">
+      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[32rem_34rem] lg:justify-center">
         {/* WhatsApp phone — live auto-play conversation on every size (mobile
             included), so the story plays the same as on desktop. */}
-        <div className="mx-auto w-full max-w-[422px] lg:sticky lg:top-24">
+        <div className="mx-auto w-full max-w-[512px] lg:sticky lg:top-24">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
               {/* header */}

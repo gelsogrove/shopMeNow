@@ -44,7 +44,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
  * that is worth coming back to in another month — which is exactly what the
  * push campaigns further down the page are for.
  *
- * These eleven ship in public/hero/ — 360p clips from coverr.co (free for
+ * These ten ship in public/hero/ — 360p clips from coverr.co (free for
  * commercial use, no attribution required), 6 MB for the whole set, close to
  * the single hero video on the site this was modelled on. 360p is
  * deliberate: the footage sits behind a dark veil and is motion-blurred, so
@@ -79,6 +79,16 @@ type Scene = {
   src: string
   /** it, en, es, ca, fr, de — same six the page's switcher offers. */
   ask: Record<string, string>
+  /**
+   * What the assistant answers (Andrea, 2026-09-15: "deve rispondere il
+   * chatbot!!"). Without it the three dots typed forever and the demo showed
+   * a bot that never delivers — the opposite of the point.
+   *
+   * Deliberately SHORT and specific: a real answer names a place, a time, a
+   * number. Vague encouragement ("certo, ci sono tanti sentieri!") is exactly
+   * what the rest of the page promises the product does NOT do.
+   */
+  reply: Record<string, string>
 }
 
 const CLIPS: Scene[] = [
@@ -93,6 +103,14 @@ const CLIPS: Scene[] = [
       fr: "Où peut-on aller se promener aujourd'hui ?",
       de: "Wo können wir heute spazieren gehen?",
     },
+    reply: {
+      it: "Oggi sereno: il sentiero delle cascate, 40 min, ombra tutto il percorso 🌲",
+      en: "Clear today: the waterfall trail, 40 min, shaded the whole way 🌲",
+      es: "Hoy despejado: la ruta de las cascadas, 40 min, con sombra 🌲",
+      ca: "Avui serè: el camí de les cascades, 40 min, amb ombra 🌲",
+      fr: "Beau temps : le sentier des cascades, 40 min, à l'ombre 🌲",
+      de: "Heute klar: der Wasserfallweg, 40 Min., durchgehend schattig 🌲",
+    },
   },
   {
     // indoors: somewhere warm when the weather turns
@@ -105,17 +123,13 @@ const CLIPS: Scene[] = [
       fr: "Que faire s'il pleut ?",
       de: "Was machen wir, wenn es regnet?",
     },
-  },
-  {
-    // action: a picnic — the one question that needs the live forecast
-    src: "/hero/picnic.mp4",
-    ask: {
-      it: "Domani è una bella giornata per un picnic?",
-      en: "Is tomorrow a good day for a picnic?",
-      es: "¿Mañana es buen día para un picnic?",
-      ca: "Demà fa bon dia per a un pícnic?",
-      fr: "Demain, c'est un bon jour pour un pique-nique ?",
-      de: "Ist morgen ein guter Tag für ein Picknick?",
+    reply: {
+      it: "Il museo è aperto fino alle 18, e alle 17 c'è la degustazione in malga ☔",
+      en: "The museum is open till 6pm, and there's a tasting at the dairy at 5 ☔",
+      es: "El museo abre hasta las 18 h, y a las 17 h hay una cata ☔",
+      ca: "El museu obre fins a les 18 h, i a les 17 h hi ha un tast ☔",
+      fr: "Le musée est ouvert jusqu'à 18h, et dégustation à 17h ☔",
+      de: "Das Museum hat bis 18 Uhr offen, um 17 Uhr gibt es eine Verkostung ☔",
     },
   },
   {
@@ -129,6 +143,14 @@ const CLIPS: Scene[] = [
       fr: "Y a-t-il de la musique live ce soir ?",
       de: "Gibt es heute Abend Livemusik?",
     },
+    reply: {
+      it: "Sì, alle 21 in piazza: coro di montagna, ingresso libero 🎶",
+      en: "Yes, 9pm in the square: mountain choir, free entry 🎶",
+      es: "Sí, a las 21 h en la plaza: coro de montaña, entrada libre 🎶",
+      ca: "Sí, a les 21 h a la plaça: cor de muntanya, entrada lliure 🎶",
+      fr: "Oui, 21h sur la place : chœur de montagne, entrée libre 🎶",
+      de: "Ja, 21 Uhr auf dem Platz: Bergchor, Eintritt frei 🎶",
+    },
   },
   {
     // action: on the water — points at a rental business
@@ -140,6 +162,14 @@ const CLIPS: Scene[] = [
       ca: "On podem llogar una canoa?",
       fr: "Où peut-on louer un canoë ?",
       de: "Wo können wir ein Kanu mieten?",
+    },
+    reply: {
+      it: "Al centro sportivo, aperto 9–18. Vi lascio il numero 📞",
+      en: "At the sports centre, open 9–6. Here's the number 📞",
+      es: "En el centro deportivo, abierto 9–18. Os paso el número 📞",
+      ca: "Al centre esportiu, obert 9–18. Us passo el número 📞",
+      fr: "Au centre sportif, ouvert 9h–18h. Voici le numéro 📞",
+      de: "Im Sportzentrum, 9–18 Uhr geöffnet. Hier die Nummer 📞",
     },
   },
   {
@@ -153,6 +183,14 @@ const CLIPS: Scene[] = [
       fr: "Peut-on louer des vélos électriques ici ?",
       de: "Kann man hier E-Bikes mieten?",
     },
+    reply: {
+      it: "Sì, due noleggi in paese. Il più vicino a voi è a 300 m 🚲",
+      en: "Yes, two rentals in the village. The nearest is 300 m away 🚲",
+      es: "Sí, dos alquileres en el pueblo. El más cercano a 300 m 🚲",
+      ca: "Sí, dos lloguers al poble. El més proper a 300 m 🚲",
+      fr: "Oui, deux loueurs au village. Le plus proche à 300 m 🚲",
+      de: "Ja, zwei Verleihe im Ort. Der nächste ist 300 m entfernt 🚲",
+    },
   },
   {
     // action: skiing the slope
@@ -164,6 +202,14 @@ const CLIPS: Scene[] = [
       ca: "A quina hora tanquen els remuntadors?",
       fr: "À quelle heure ferment les remontées ?",
       de: "Wann schließen die Lifte?",
+    },
+    reply: {
+      it: "Ultima risalita alle 16:30, rientro in valle entro le 17 ⛷️",
+      en: "Last lift at 4:30pm, back in the valley by 5 ⛷️",
+      es: "Último remonte a las 16:30, regreso antes de las 17 ⛷️",
+      ca: "Últim remuntador a les 16:30, tornada abans de les 17 ⛷️",
+      fr: "Dernière remontée à 16h30, retour avant 17h ⛷️",
+      de: "Letzte Bergfahrt 16:30 Uhr, Rückkehr bis 17 Uhr ⛷️",
     },
   },
   {
@@ -177,6 +223,14 @@ const CLIPS: Scene[] = [
       fr: "Où manger les produits locaux ?",
       de: "Wo isst man die regionalen Spezialitäten?",
     },
+    reply: {
+      it: "Tre osterie in centro fanno piatti del posto. Prenoto per stasera? 🍽️",
+      en: "Three inns in the centre serve local dishes. Shall I book for tonight? 🍽️",
+      es: "Tres tabernas del centro sirven platos locales. ¿Reservo? 🍽️",
+      ca: "Tres tavernes del centre serveixen plats locals. Reservo? 🍽️",
+      fr: "Trois auberges au centre servent local. Je réserve ce soir ? 🍽️",
+      de: "Drei Gasthäuser im Zentrum kochen regional. Soll ich reservieren? 🍽️",
+    },
   },
   {
     // action: someone photographing the landscape
@@ -188,6 +242,14 @@ const CLIPS: Scene[] = [
       ca: "On són els millors miradors?",
       fr: "Où sont les plus beaux points de vue ?",
       de: "Wo sind die schönsten Aussichtspunkte?",
+    },
+    reply: {
+      it: "Il belvedere sopra il paese, 20 min a piedi. Al tramonto è il massimo 📸",
+      en: "The viewpoint above the village, 20 min on foot. Best at sunset 📸",
+      es: "El mirador sobre el pueblo, 20 min a pie. Mejor al atardecer 📸",
+      ca: "El mirador sobre el poble, 20 min a peu. Millor al capvespre 📸",
+      fr: "Le belvédère au-dessus du village, 20 min à pied. Au coucher 📸",
+      de: "Der Aussichtspunkt über dem Ort, 20 Min. zu Fuß. Bei Sonnenuntergang 📸",
     },
   },
   {
@@ -201,6 +263,14 @@ const CLIPS: Scene[] = [
       fr: "Peut-on faire le tour du lac à pied ?",
       de: "Kann man den See umrunden?",
     },
+    reply: {
+      it: "Sì, 4 km pianeggianti, circa un'ora. Adatto anche ai passeggini 🚶",
+      en: "Yes, 4 km flat, about an hour. Pushchair-friendly too 🚶",
+      es: "Sí, 4 km llanos, una hora. Apto para carritos 🚶",
+      ca: "Sí, 4 km plans, una hora. Apte per a cotxets 🚶",
+      fr: "Oui, 4 km plats, environ une heure. Poussettes possibles 🚶",
+      de: "Ja, 4 km eben, etwa eine Stunde. Auch mit Kinderwagen 🚶",
+    },
   },
   {
     // wide: a castle on the mountain
@@ -213,10 +283,35 @@ const CLIPS: Scene[] = [
       fr: "Peut-on visiter le château ?",
       de: "Kann man die Burg besichtigen?",
     },
+    reply: {
+      it: "Aperto giovedì e domenica, 10–17. Visita guidata alle 11 🏰",
+      en: "Open Thursdays and Sundays, 10–5. Guided tour at 11 🏰",
+      es: "Abierto jueves y domingos, 10–17. Visita guiada a las 11 🏰",
+      ca: "Obert dijous i diumenges, 10–17. Visita guiada a les 11 🏰",
+      fr: "Ouvert jeudi et dimanche, 10h–17h. Visite guidée à 11h 🏰",
+      de: "Donnerstag und Sonntag, 10–17 Uhr. Führung um 11 Uhr 🏰",
+    },
   },
 ]
 
 
+
+/**
+ * The assistant's opening message, shown above every exchange.
+ *
+ * Same text for every clip: a guest gets greeted once, and keeping it fixed
+ * turns the bubble into one continuous conversation instead of eleven
+ * unrelated ones. It also does the introducing — "Sono l'assistente della Pro
+ * Loco" — so the questions below need no framing of their own.
+ */
+const WELCOME: Record<string, string> = {
+  it: "Ciao e benvenuti! 👋 Sono l'assistente della Pro Loco. Vi do una mano con alloggi, sentieri, eventi e tutto il resto — a qualsiasi ora.",
+  en: "Hello and welcome! 👋 I'm the tourist office assistant. I can help with places to stay, trails, events and everything else — at any hour.",
+  es: "¡Hola y bienvenidos! 👋 Soy el asistente de la oficina de turismo. Os ayudo con alojamientos, rutas, eventos y todo lo demás — a cualquier hora.",
+  ca: "Hola i benvinguts! 👋 Sóc l'assistent de l'oficina de turisme. Us ajudo amb allotjaments, camins, esdeveniments i tota la resta — a qualsevol hora.",
+  fr: "Bonjour et bienvenue ! 👋 Je suis l'assistant de l'office de tourisme. Je vous aide pour les hébergements, les sentiers, les événements et le reste — à toute heure.",
+  de: "Hallo und willkommen! 👋 Ich bin der Assistent des Tourismusbüros. Ich helfe bei Unterkünften, Wegen, Veranstaltungen und allem anderen — zu jeder Zeit.",
+}
 
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
 const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
@@ -246,6 +341,9 @@ export function HeroBackdrop() {
   const [scene, setScene] = useState(0)
   /** The bubble is hidden during the dissolve, so it never straddles two clips. */
   const [asking, setAsking] = useState(false)
+  /** Dots first, then the answer — the assistant has to actually reply. */
+  const [answered, setAnswered] = useState(false)
+  const replyTimer = useRef<number | null>(null)
   const { language } = useLanguage()
   const [sentAt] = useState(() =>
     new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
@@ -298,6 +396,18 @@ export function HeroBackdrop() {
     }
   }, [])
 
+  // Let the dots run for a beat, then answer. 1.4s is long enough to read as
+  // "thinking" and short enough that nobody scrolls past before the payoff —
+  // which is the whole point of the exchange (Andrea: "deve rispondere il
+  // chatbot!!").
+  useEffect(() => {
+    if (!asking) return
+    replyTimer.current = window.setTimeout(() => setAnswered(true), 1400)
+    return () => {
+      if (replyTimer.current) window.clearTimeout(replyTimer.current)
+    }
+  }, [asking, scene])
+
   /**
    * Hand over to the other slot: start it, bring it to the front, and queue
    * the clip after next into the slot just vacated — so the next hand-over is
@@ -322,6 +432,8 @@ export function HeroBackdrop() {
     // dissolve has settled: a bubble that outlives its own footage reads as a
     // caption for the wrong picture.
     setAsking(false)
+    setAnswered(false)
+    if (replyTimer.current) window.clearTimeout(replyTimer.current)
     setScene(playing.current)
 
     // Queue the one AFTER the incoming clip into the slot going to the back.
@@ -416,16 +528,24 @@ export function HeroBackdrop() {
           the dark part of the veil, and given a dark ring so it detaches from
           whatever frame is playing behind it. */}
       {clips.length > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 hidden justify-center px-6 lg:flex">
+        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 hidden justify-center px-6 lg:flex">
           <div
             className={[
-              "w-full max-w-sm rounded-2xl bg-[#ECE5DD] p-3 shadow-2xl shadow-slate-950/50 ring-1 ring-slate-950/10 transition-all duration-700 ease-out",
+              "w-full max-w-lg rounded-2xl bg-[#ECE5DD] p-3.5 shadow-2xl shadow-slate-950/50 ring-1 ring-slate-950/10 transition-all duration-700 ease-out",
               asking ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
             ].join(" ")}
           >
+            {/* Incoming: the welcome, always first — it opens the conversation
+                and introduces who is answering. */}
+            <div className="flex justify-start">
+              <span className="max-w-[92%] rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
+                {WELCOME[language] ?? WELCOME.it}
+              </span>
+            </div>
+
             {/* Outgoing: the guest's question. */}
-            <div className="flex justify-end">
-              <span className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-[13px] leading-snug text-slate-900 shadow-sm">
+            <div className="mt-1.5 flex justify-end">
+              <span className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
                 {clips[scene]?.ask[language] ?? clips[scene]?.ask.it}
                 <span className="ml-2 inline-flex translate-y-[3px] items-center gap-0.5 text-[10px] text-slate-500">
                   {sentAt}
@@ -438,18 +558,24 @@ export function HeroBackdrop() {
               </span>
             </div>
 
-            {/* Incoming: the assistant, mid-answer. Three dots say "replying"
-                in every language, which a translated label could not. */}
+            {/* Incoming: the assistant types, then answers. The dots alone
+                showed a bot that never delivers. */}
             <div className="mt-1.5 flex justify-start">
-              <span className="flex items-center gap-1 rounded-lg rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
-                {[0, 1, 2].map((d) => (
-                  <span
-                    key={d}
-                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400"
-                    style={{ animationDelay: `${d * 140}ms` }}
-                  />
-                ))}
-              </span>
+              {answered ? (
+                <span className="max-w-[90%] rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
+                  {clips[scene]?.reply[language] ?? clips[scene]?.reply.it}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 rounded-lg rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
+                  {[0, 1, 2].map((d) => (
+                    <span
+                      key={d}
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400"
+                      style={{ animationDelay: `${d * 140}ms` }}
+                    />
+                  ))}
+                </span>
+              )}
             </div>
           </div>
         </div>

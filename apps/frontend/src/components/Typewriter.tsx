@@ -24,8 +24,8 @@ export function Typewriter({
   className = "",
   /** Milliseconds per character. ~28ms reads as brisk typing, not as a stutter. */
   speed = 28,
-  /** Pause before the first character, so the page settles first. */
-  delay = 400,
+  /** Pause before the first character — the caret blinks alone during it. */
+  delay = 900,
 }: {
   text: string
   className?: string
@@ -75,10 +75,11 @@ export function Typewriter({
         {text.slice(0, shown)}
         <span
           className={[
-            "ml-0.5 inline-block w-[2px] translate-y-[2px] self-center bg-current align-middle",
-            // Blink only once finished: while typing the moving text already
-            // shows where the caret is, and a blinking one there reads as a glitch.
-            done ? "animate-pulse" : "",
+            "ml-0.5 inline-block w-[3px] translate-y-[2px] self-center bg-current align-middle",
+            // Blinks while waiting and once finished; solid while typing, where
+            // the moving text already shows where it is and a blink reads as a
+            // glitch.
+            shown === 0 || done ? "animate-pulse" : "",
           ].join(" ")}
           style={{ height: "1em" }}
         />

@@ -58,6 +58,9 @@ export interface HomeCopy {
   closingQuestions: string[]
   closingBody: string
   closingCta: string
+  demoTitle: string
+  demoSub: string
+  demoOpen: string
   footer: string
 }
 
@@ -97,7 +100,7 @@ const it: HomeCopy = {
   contentTitle: "Tutto il territorio, in un posto solo",
   contentBody1: "Un albergo nuovo, un orario che cambia, la sagra di settembre: lo scrivete nel pannello e l'assistente lo sa subito. Senza chiamare nessuno.",
   contentBody2: "E risponde solo con quello che avete caricato voi. Se un dato non c'è, lo dice: non lo inventa. Un nome, un numero o un orario che non è nelle vostre schede viene tolto dalla risposta prima che parta.",
-  contentTypes: ["Hotel e B&B", "Ristoranti e agriturismi", "Escursioni e rifugi", "Sagre ed eventi", "Prodotti tipici", "Borghi e punti panoramici", "Castelli e chiese", "Cenni storici", "Numeri utili"],
+  contentTypes: ["Hotel e B&B", "Ristoranti e agriturismi", "Escursioni e rifugi", "Sagre ed eventi", "Prodotti tipici", "Borghi e punti panoramici", "Castelli e chiese", "Cenni storici", "Strutture sportive", "Numeri utili"],
   pricingTitle: "Prezzi chiari, nessuna sorpresa",
   pricingSub: "Il canone copre il servizio. I consumi si pagano a parte, solo quando li usate.",
   revenueEyebrow: "Il canale che si ripaga",
@@ -111,8 +114,11 @@ const it: HomeCopy = {
   ],
   closingTitle: "Ogni giorno, le stesse",
   closingQuestions: ["Sono celiaco, dove andiamo a mangiare?", "Che escursioni possiamo fare?", "Che eventi ci sono questa settimana?", "Quali sono i piatti tipici?", "A che ora chiudono gli impianti?"],
-  closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede. Voi restate per le cose che meritano una persona.",
+  closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede.",
   closingCta: "Accedi al tuo canale",
+  demoTitle: "PROVA LA DEMO",
+  demoSub: "Inquadrate il codice e scrivete quello che vi chiederebbe un turista.",
+  demoOpen: "Aprilo su WhatsApp",
   footer: "eChatbot — assistenza su WhatsApp per Pro Loco e Consorzi turistici.",
 }
 
@@ -152,7 +158,7 @@ const en: HomeCopy = {
   contentTitle: "The whole region, in one place",
   contentBody1: "A new hotel, a changed opening time, September's festival: you write it in the panel and the assistant knows it straight away. Without calling anyone.",
   contentBody2: "And it answers only with what you loaded. If something is not there, it says so instead of inventing it. A name, a number or a time that is not in your records is removed from the reply before it is sent.",
-  contentTypes: ["Hotels and B&Bs", "Restaurants and farm stays", "Hikes and mountain huts", "Festivals and events", "Local produce", "Villages and viewpoints", "Castles and churches", "Local history", "Useful numbers"],
+  contentTypes: ["Hotels and B&Bs", "Restaurants and farm stays", "Hikes and mountain huts", "Festivals and events", "Local produce", "Villages and viewpoints", "Castles and churches", "Local history", "Sports facilities", "Useful numbers"],
   pricingTitle: "Clear pricing, no surprises",
   pricingSub: "The subscription covers the service. Usage is billed separately, only when you use it.",
   revenueEyebrow: "The channel that pays for itself",
@@ -166,8 +172,11 @@ const en: HomeCopy = {
   ],
   closingTitle: "Every day, the same ones",
   closingQuestions: ["I'm coeliac, where can we eat?", "What hikes can we do?", "What's on this week?", "What are the local dishes?", "When do the lifts close?"],
-  closingBody: "At the desk and on the phone, usually with a queue waiting. From now on the assistant answers for you — from what you loaded, in the language they asked in. You stay for the things that deserve a person.",
+  closingBody: "At the desk and on the phone, usually with a queue waiting. From now on the assistant answers for you — from what you loaded, in the language they asked in.",
   closingCta: "Sign in to your channel",
+  demoTitle: "TRY THE DEMO",
+  demoSub: "Scan the code and ask it whatever a visitor would ask you.",
+  demoOpen: "Open it on WhatsApp",
   footer: "eChatbot — WhatsApp assistance for tourist offices and visitor centres.",
 }
 
@@ -207,7 +216,7 @@ const es: HomeCopy = {
   contentTitle: "Todo el territorio, en un solo sitio",
   contentBody1: "Un hotel nuevo, un horario que cambia, la fiesta de septiembre: lo escribís en el panel y el asistente lo sabe al momento. Sin llamar a nadie.",
   contentBody2: "Y responde solo con lo que habéis cargado. Si un dato no está, lo dice: no se lo inventa. Un nombre, un número o un horario que no esté en vuestras fichas se elimina de la respuesta antes de enviarla.",
-  contentTypes: ["Hoteles y casas rurales", "Restaurantes y agroturismos", "Rutas y refugios", "Fiestas y eventos", "Productos típicos", "Pueblos y miradores", "Castillos e iglesias", "Historia local", "Teléfonos útiles"],
+  contentTypes: ["Hoteles y casas rurales", "Restaurantes y agroturismos", "Rutas y refugios", "Fiestas y eventos", "Productos típicos", "Pueblos y miradores", "Castillos e iglesias", "Historia local", "Instalaciones deportivas", "Teléfonos útiles"],
   pricingTitle: "Precios claros, sin sorpresas",
   pricingSub: "La cuota cubre el servicio. El consumo se paga aparte, solo cuando se usa.",
   revenueEyebrow: "El canal que se paga solo",
@@ -221,8 +230,11 @@ const es: HomeCopy = {
   ],
   closingTitle: "Cada día, las mismas",
   closingQuestions: ["Soy celíaco, ¿dónde podemos comer?", "¿Qué excursiones podemos hacer?", "¿Qué eventos hay esta semana?", "¿Cuáles son los platos típicos?", "¿A qué hora cierran los remontes?"],
-  closingBody: "En el mostrador y por teléfono, casi siempre con cola esperando. A partir de ahora responde el asistente — con lo que habéis cargado, en el idioma de quien pregunta. Vosotros quedáis para lo que merece una persona.",
+  closingBody: "En el mostrador y por teléfono, casi siempre con cola esperando. A partir de ahora responde el asistente — con lo que habéis cargado, en el idioma de quien pregunta.",
   closingCta: "Accede a tu canal",
+  demoTitle: "PRUEBA LA DEMO",
+  demoSub: "Escanead el código y preguntadle lo que os preguntaría un turista.",
+  demoOpen: "Abrir en WhatsApp",
   footer: "eChatbot — asistencia por WhatsApp para oficinas de turismo y patronatos.",
 }
 
@@ -263,7 +275,7 @@ const ca: HomeCopy = {
   contentTitle: "Tot el territori, en un sol lloc",
   contentBody1: "Un hotel nou, un horari que canvia, la festa de setembre: ho escriviu al tauler i l'assistent ho sap de seguida. Sense trucar a ningú.",
   contentBody2: "I respon només amb allò que heu carregat. Si una dada no hi és, ho diu: no se la inventa. Un nom, un número o un horari que no sigui a les vostres fitxes s'elimina de la resposta abans d'enviar-la.",
-  contentTypes: ["Hotels i cases rurals", "Restaurants i agroturismes", "Rutes i refugis", "Festes i esdeveniments", "Productes típics", "Pobles i miradors", "Castells i esglésies", "Història local", "Telèfons útils"],
+  contentTypes: ["Hotels i cases rurals", "Restaurants i agroturismes", "Rutes i refugis", "Festes i esdeveniments", "Productes típics", "Pobles i miradors", "Castells i esglésies", "Història local", "Instal·lacions esportives", "Telèfons útils"],
   pricingTitle: "Preus clars, sense sorpreses",
   pricingSub: "La quota cobreix el servei. El consum es paga a part, només quan es fa servir.",
   revenueEyebrow: "No només una despesa",
@@ -277,8 +289,11 @@ const ca: HomeCopy = {
   ],
   closingTitle: "Cada dia, les mateixes",
   closingQuestions: ["Sóc celíac, on podem menjar?", "Quines excursions podem fer?", "Quins esdeveniments hi ha aquesta setmana?", "Quins són els plats típics?", "A quina hora tanquen els remuntadors?"],
-  closingBody: "Al taulell i per telèfon, gairebé sempre amb cua esperant. A partir d'ara respon l'assistent — amb el que heu carregat, en la llengua de qui pregunta. Vosaltres quedeu per al que mereix una persona.",
+  closingBody: "Al taulell i per telèfon, gairebé sempre amb cua esperant. A partir d'ara respon l'assistent — amb el que heu carregat, en la llengua de qui pregunta.",
   closingCta: "Accedeix al teu canal",
+  demoTitle: "PROVA LA DEMO",
+  demoSub: "Escanegeu el codi i pregunteu-li el que us preguntaria un turista.",
+  demoOpen: "Obrir a WhatsApp",
   footer: "eChatbot — assistència per WhatsApp per a oficines de turisme i consorcis.",
 }
 
@@ -318,7 +333,7 @@ const fr: HomeCopy = {
   contentTitle: "Tout le territoire, au même endroit",
   contentBody1: "Un nouvel hôtel, un horaire qui change, la fête de septembre : vous l'écrivez dans le panneau et l'assistant le sait aussitôt. Sans appeler personne.",
   contentBody2: "Et il ne répond qu'avec ce que vous avez saisi. Si une information manque, il le dit : il ne l'invente pas. Un nom, un numéro ou un horaire absent de vos fiches est retiré de la réponse avant l'envoi.",
-  contentTypes: ["Hôtels et chambres d'hôtes", "Restaurants et fermes-auberges", "Randonnées et refuges", "Fêtes et événements", "Produits du terroir", "Villages et points de vue", "Châteaux et églises", "Histoire locale", "Numéros utiles"],
+  contentTypes: ["Hôtels et chambres d'hôtes", "Restaurants et fermes-auberges", "Randonnées et refuges", "Fêtes et événements", "Produits du terroir", "Villages et points de vue", "Châteaux et églises", "Histoire locale", "Équipements sportifs", "Numéros utiles"],
   pricingTitle: "Des prix clairs, sans surprise",
   pricingSub: "L'abonnement couvre le service. La consommation est facturée à part, uniquement à l'usage.",
   revenueEyebrow: "Le canal qui se rembourse",
@@ -332,8 +347,11 @@ const fr: HomeCopy = {
   ],
   closingTitle: "Chaque jour, les mêmes",
   closingQuestions: ["Je suis cœliaque, où peut-on manger ?", "Quelles randonnées peut-on faire ?", "Quels événements cette semaine ?", "Quels sont les plats typiques ?", "À quelle heure ferment les remontées ?"],
-  closingBody: "Au guichet et au téléphone, le plus souvent avec la file qui attend. Désormais l'assistant répond pour vous — avec ce que vous avez saisi, dans la langue de celui qui demande. Vous restez pour ce qui mérite quelqu'un.",
+  closingBody: "Au guichet et au téléphone, le plus souvent avec la file qui attend. Désormais l'assistant répond pour vous — avec ce que vous avez saisi, dans la langue de celui qui demande.",
   closingCta: "Connectez-vous à votre canal",
+  demoTitle: "ESSAYEZ LA DÉMO",
+  demoSub: "Scannez le code et posez-lui la question qu'un visiteur vous poserait.",
+  demoOpen: "Ouvrir sur WhatsApp",
   footer: "eChatbot — assistance WhatsApp pour offices de tourisme et syndicats d'initiative.",
 }
 
@@ -373,7 +391,7 @@ const de: HomeCopy = {
   contentTitle: "Die ganze Region, an einem Ort",
   contentBody1: "Ein neues Hotel, eine geänderte Öffnungszeit, das Fest im September: Sie tragen es im Panel ein, und der Assistent weiß es sofort. Ohne jemanden anzurufen.",
   contentBody2: "Und er antwortet nur mit dem, was Sie hinterlegt haben. Fehlt eine Angabe, sagt er das — er erfindet sie nicht. Ein Name, eine Nummer oder eine Uhrzeit, die nicht in Ihren Daten steht, wird aus der Antwort entfernt, bevor sie rausgeht.",
-  contentTypes: ["Hotels und Pensionen", "Restaurants und Almhütten", "Wanderungen und Schutzhütten", "Feste und Veranstaltungen", "Regionale Produkte", "Dörfer und Aussichtspunkte", "Burgen und Kirchen", "Ortsgeschichte", "Wichtige Nummern"],
+  contentTypes: ["Hotels und Pensionen", "Restaurants und Almhütten", "Wanderungen und Schutzhütten", "Feste und Veranstaltungen", "Regionale Produkte", "Dörfer und Aussichtspunkte", "Burgen und Kirchen", "Ortsgeschichte", "Sportanlagen", "Wichtige Nummern"],
   pricingTitle: "Klare Preise, keine Überraschungen",
   pricingSub: "Die Gebühr deckt den Dienst. Der Verbrauch wird getrennt abgerechnet, nur bei Nutzung.",
   revenueEyebrow: "Der Kanal, der sich selbst trägt",
@@ -387,8 +405,11 @@ const de: HomeCopy = {
   ],
   closingTitle: "Jeden Tag dieselben",
   closingQuestions: ["Ich bin Zöliakiebetroffener, wo können wir essen?", "Welche Wanderungen gibt es?", "Was ist diese Woche los?", "Was sind die typischen Gerichte?", "Wann schließen die Lifte?"],
-  closingBody: "Am Schalter und am Telefon, meist mit wartender Schlange. Ab jetzt antwortet der Assistent für Sie — mit dem, was Sie eingetragen haben, in der Sprache des Gastes. Sie bleiben für das, was einen Menschen verdient.",
+  closingBody: "Am Schalter und am Telefon, meist mit wartender Schlange. Ab jetzt antwortet der Assistent für Sie — mit dem, was Sie eingetragen haben, in der Sprache des Gastes.",
   closingCta: "Zu Ihrem Kanal anmelden",
+  demoTitle: "DEMO TESTEN",
+  demoSub: "Scannen Sie den Code und fragen Sie, was ein Gast Sie fragen würde.",
+  demoOpen: "In WhatsApp öffnen",
   footer: "eChatbot — WhatsApp-Assistenz für Tourismusverbände und Tourismusbüros.",
 }
 

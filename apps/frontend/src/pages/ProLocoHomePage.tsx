@@ -4,6 +4,7 @@ import HeroRobot from "@/components/landing/HeroRobot"
 import { ProLocoGallery } from "@/components/ProLocoGallery"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
 import { Typewriter } from "@/components/Typewriter"
+import QRCode from "react-qr-code"
 import { proLocoShowcaseContent } from "@/components/ProLocoShowcaseContent"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
@@ -27,6 +28,7 @@ import {
   ScrollText,
   Sparkles,
   UtensilsCrossed,
+  Dumbbell,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -49,13 +51,27 @@ import { useNavigate } from "react-router-dom"
 const BENEFIT_ICONS = [Globe, Clock, MessageCircle, Image, Bell, Sparkles]
 const CONTENT_ICONS = [
   Building2, UtensilsCrossed, Mountain, CalendarDays, Sparkles,
-  MapPin, Castle, ScrollText, Phone,
+  MapPin, Castle, ScrollText, Dumbbell, Phone,
 ]
 
 // Same client id the main LoginPage uses — one Google app, one consent screen.
 const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
   "988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com"
+
+/**
+ * The demo line the QR and the mobile button point at.
+ *
+ * 🚨 PLACEHOLDER (Andrea, 2026-09-15: "il numero ancora non ce l'ho, metti
+ * +34 654728753"). Replace it with the real Pro Loco demo number — it is
+ * printed on a public page, so whoever owns it will receive whatever visitors
+ * decide to send.
+ *
+ * `?text=` pre-fills the opening message: a visitor who scans lands in a chat
+ * that is already started, which is one less reason to give up.
+ */
+const DEMO_WA_NUMBER = "34654728753"
+const DEMO_WA_LINK = `https://wa.me/${DEMO_WA_NUMBER}?text=${encodeURIComponent("Ciao!")}`
 
 export default function ProLocoHomePage() {
   const navigate = useNavigate()
@@ -191,7 +207,7 @@ export default function ProLocoHomePage() {
           is the load-bearing layer and the video only an enhancement. */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20 lg:pb-[19rem]">
+        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20 lg:pb-[25rem]">
         <div className="grid items-start gap-12 lg:grid-cols-[3fr_2fr] lg:gap-16">
           <div>
             {/* The mascot used to sit here, beside the headline. It moved to
@@ -214,30 +230,9 @@ export default function ProLocoHomePage() {
                 <Typewriter
                   key={language}
                   text={t.lede}
-                  className="mt-5 max-w-xl text-base leading-relaxed text-slate-100/90 sm:mt-6 sm:text-lg"
+                  className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-100 sm:mt-6 sm:text-xl lg:text-2xl lg:leading-relaxed"
                 />
 
-              {/* Pills, not loose icons: a 16px glyph over a photographic
-                  backdrop has nothing to sit on and disappears (Andrea,
-                  2026-09-15: "icone in alto non si vedono"). The tinted chip
-                  gives each one its own ground, and the icon grows with it. */}
-              <div className="mt-6 flex flex-wrap gap-2 text-xs sm:mt-8 sm:gap-2.5 sm:text-sm">
-                {[
-                  { Icon: Globe, label: t.chipMulti },
-                  { Icon: Clock, label: t.chip24 },
-                  { Icon: MessageCircle, label: t.chipFaq },
-                  { Icon: Bell, label: t.chipPush },
-                  { Icon: Sparkles, label: t.chipMix },
-                ].map(({ Icon, label }) => (
-                  <span
-                    key={label}
-                    className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 font-medium text-white backdrop-blur-md"
-                  >
-                    <Icon className="h-[18px] w-[18px] text-emerald-300" />
-                    {label}
-                  </span>
-                ))}
-              </div>
               </div>
             </div>
 
@@ -285,7 +280,33 @@ export default function ProLocoHomePage() {
             {t.closingTitle}
           </h2>
 
-          <HeroRobot className="mx-auto mt-6 w-32 sm:w-40 [&_img]:w-full [&_img]:h-auto" />
+          <div className="mx-auto mt-8 flex max-w-lg flex-col items-center gap-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 sm:flex-row sm:gap-6 sm:p-7">
+            <HeroRobot className="w-24 shrink-0 sm:w-28 [&_img]:w-full [&_img]:h-auto" />
+
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <p className="font-display text-lg font-bold tracking-tight text-emerald-900">
+                {t.demoTitle}
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                {t.demoSub}
+              </p>
+
+              {/* Phones get the link, desktops get the code. */}
+              <a
+                href={DEMO_WA_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-emerald-700 lg:hidden"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {t.demoOpen}
+              </a>
+            </div>
+
+            <div className="hidden shrink-0 rounded-xl bg-white p-3 shadow-sm ring-1 ring-emerald-200/70 lg:block">
+              <QRCode value={DEMO_WA_LINK} size={104} bgColor="#ffffff" fgColor="#064e3b" />
+            </div>
+          </div>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2.5 sm:gap-3">
             {t.closingQuestions.map((q) => (

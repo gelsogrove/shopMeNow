@@ -34,8 +34,8 @@ const PITCH: Record<string, { tagline: string; icon: typeof Star }> = {
 /** The plan highlighted as recommended. */
 const FEATURED = "PREMIUM"
 
-const euro = (n: number) =>
-  n % 1 === 0 ? `€${n}` : `€${n.toFixed(2).replace(".", ",")}`
+const usd = (n: number) =>
+  n % 1 === 0 ? `$${n}` : `$${n.toFixed(2)}`
 
 /**
  * The plans, read from the DATABASE — never hardcoded (CLAUDE.md §1).
@@ -57,7 +57,7 @@ export function ProLocoPricing() {
         const all: Plan[] = res.data?.data ?? []
         // FREE_TRIAL included (Andrea, 2026-09-14: "manca il free"): for a
         // volunteer-run tourist office, "try it, nothing to pay" is the entry
-        // point — hiding it made the cheapest visible option €22/month.
+        // point — hiding it made the cheapest visible option the paid plan.
         setPlans(all.sort((a, b) => a.monthlyFee - b.monthlyFee))
       })
       .catch(() => !cancelled && setError(true))
@@ -125,7 +125,7 @@ export function ProLocoPricing() {
 
               <div className="mt-5 flex items-baseline gap-1">
                 <span className="text-5xl font-bold tracking-tight text-slate-900 tabular-nums">
-                  {euro(plan.monthlyFee)}
+                  {usd(plan.monthlyFee)}
                 </span>
                 {plan.monthlyFee > 0 && (
                   <span className="text-sm text-slate-500">/ mese</span>
@@ -168,8 +168,8 @@ export function ProLocoPricing() {
       {/* Usage costs, from the same rows — the numbers the system really bills. */}
       {perMessage !== undefined && (
         <p className="mt-8 text-center text-sm text-slate-500">
-          Consumi a parte: {euro(perMessage)} a messaggio ·{" "}
-          {euro(perPush!)} a notifica push. Si paga solo quello che si usa.
+          Consumi a parte: {usd(perMessage)} a messaggio ·{" "}
+          {usd(perPush!)} a notifica push. Si paga solo quello che si usa.
         </p>
       )}
     </div>
