@@ -155,13 +155,8 @@ export default function ProLocoHomePage() {
       <div className="sticky top-0 z-40 bg-[#070d18]/90 backdrop-blur border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <a href="#top" className="flex items-center shrink-0 mr-auto">
-            {/* This page sells the product AS the tourist office's own
-                assistant — the visible brand here is the office, not
-                eChatbot.AI (Andrea, 2026-09-15: "al posto di eChatbot metti
-                Ufficio del turismo di..."). No place name, same rule as the
-                rest of the page's content (§ demo script note above). */}
-            <span className="font-display text-xl font-bold tracking-tight text-white">
-              Ufficio del turismo
+            <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
+              eChatbot<span className="text-white">.AI</span>
             </span>
           </a>
 
@@ -200,7 +195,7 @@ export default function ProLocoHomePage() {
           <div>
             <div>
               <div className="min-w-0">
-                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-sm" style={{ backgroundColor: `${WA_GREEN}33`, boxShadow: `inset 0 0 0 1px ${WA_GREEN}80` }}>
+                <span className="inline-flex items-center rounded-full px-3 py-1 font-semibold uppercase tracking-wide text-white backdrop-blur-sm" style={{ backgroundColor: `${WA_GREEN}33`, boxShadow: `inset 0 0 0 1px ${WA_GREEN}80`, fontSize: 16 }}>
                   {t.eyebrow}
                 </span>
 
@@ -230,6 +225,8 @@ export default function ProLocoHomePage() {
                         onSuccess={(res) => handleGoogle(res.credential)}
                         onError={() => setError(t.errGeneric)}
                         shape="pill"
+                        useOneTap={false}
+                        auto_select={false}
                       />
                     </GoogleOAuthProvider>
                   </div>
