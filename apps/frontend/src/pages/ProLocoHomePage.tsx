@@ -149,13 +149,14 @@ export default function ProLocoHomePage() {
 
   return (
     <div id="top" className="min-h-screen bg-white text-slate-900">
-      {/* ── Minimal top bar: logo + language flags only, no "Accedi" ── */}
-      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
+      {/* ── Minimal top bar: dark, like LoginPage's header — the green/white
+          logo needs a dark surface to read well (Andrea, 2026-09-15: "sfondo
+          nero dell'header solo header !!! così il logo si vede bene"). ── */}
+      <div className="sticky top-0 z-40 bg-[#070d18]/90 backdrop-blur border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <a href="#top" className="flex items-center gap-2 shrink-0 mr-auto">
-            <MessageCircle className="h-6 w-6" style={{ color: "#25D366" }} />
+          <a href="#top" className="flex items-center shrink-0 mr-auto">
             <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
-              eChatbot<span className="text-slate-600">.AI</span>
+              eChatbot<span className="text-white">.AI</span>
             </span>
           </a>
 
@@ -170,8 +171,8 @@ export default function ProLocoHomePage() {
                 className={[
                   "flex items-center rounded-lg px-1.5 py-1 text-lg leading-none transition-colors sm:px-2",
                   language === l.code
-                    ? "bg-emerald-50 ring-1 ring-emerald-200"
-                    : "hover:bg-slate-50",
+                    ? "bg-white/10 ring-1 ring-white/20"
+                    : "hover:bg-white/5",
                 ].join(" ")}
               >
                 <FlagIcon flag={l.flag} name={l.name} />

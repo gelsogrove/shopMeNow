@@ -467,7 +467,7 @@ export function HeroBackdrop() {
   // chatbot!!").
   useEffect(() => {
     if (!asking) return
-    replyTimer.current = window.setTimeout(() => setAnswered(true), 1400)
+    replyTimer.current = window.setTimeout(() => setAnswered(true), 1700)
     return () => {
       if (replyTimer.current) window.clearTimeout(replyTimer.current)
     }
@@ -613,7 +613,7 @@ export function HeroBackdrop() {
 
             {/* Incoming: the assistant types, then answers. The dots alone
                 showed a bot that never delivers. */}
-            <div className="mt-1.5 flex justify-start">
+            <div className="mt-2.5 flex justify-start">
               {answered ? (
                 <div className="flex max-w-[90%] flex-col gap-1.5">
                   <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
