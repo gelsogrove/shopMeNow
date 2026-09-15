@@ -137,14 +137,14 @@ const CLIPS: Scene[] = [
       de: "Was machen wir, wenn es regnet?",
     },
     reply: {
-      it: "Il museo è aperto fino alle 18, e alle 17 c'è la degustazione in malga ☔",
-      en: "The museum is open till 6pm, and there's a tasting at the dairy at 5 ☔",
-      es: "El museo abre hasta las 18 h, y a las 17 h hay una cata ☔",
-      ca: "El museu obre fins a les 18 h, i a les 17 h hi ha un tast ☔",
-      fr: "Le musée est ouvert jusqu'à 18h, et dégustation à 17h ☔",
-      de: "Das Museum hat bis 18 Uhr offen, um 17 Uhr gibt es eine Verkostung ☔",
+      it: "Bevete qualcosa al pub del paese e assaggiate i piatti tipici: si sta al caldo e si fa due chiacchiere ☔",
+      en: "Have a drink at the village pub and try the local dishes: it's warm inside and easy to get chatting ☔",
+      es: "Tomad algo en el pub del pueblo y probad los platos típicos: se está caliente y se charla a gusto ☔",
+      ca: "Preneu alguna cosa al pub del poble i tasteu els plats típics: s'hi està calent i es xerra a gust ☔",
+      fr: "Prenez un verre au pub du village et goûtez les plats typiques : on est au chaud et on discute ☔",
+      de: "Trinken Sie etwas im Dorfpub und probieren Sie die typischen Gerichte: warm drinnen, und man kommt ins Gespräch ☔",
     },
-    link: { label: "museo.proloco.it/orari", phone: "+39 0400 111 232" },
+    link: { label: "pub.proloco.it/orari", phone: "+39 0400 111 232" },
   },
   {
     // action: a live gig — tonight's events
