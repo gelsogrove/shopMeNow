@@ -148,6 +148,38 @@ export default function ProLocoHomePage() {
 
   return (
     <div id="top" className="min-h-screen bg-white text-slate-900">
+      {/* ── Minimal top bar: logo + language flags only, no "Accedi" ── */}
+      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+          <a href="#top" className="flex items-center gap-2 shrink-0">
+            <MessageCircle className="h-5 w-5 text-emerald-700" />
+            <span className="font-display text-base font-bold tracking-tight text-emerald-800">
+              eChatbot<span className="text-slate-400">.AI</span>
+            </span>
+          </a>
+
+          <div className="flex items-center gap-0.5 sm:gap-1">
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => setLanguage(l.code)}
+                aria-label={l.name}
+                aria-current={language === l.code}
+                className={[
+                  "flex items-center rounded-lg px-1.5 py-1 text-lg leading-none transition-colors sm:px-2",
+                  language === l.code
+                    ? "bg-emerald-50 ring-1 ring-emerald-200"
+                    : "hover:bg-slate-50",
+                ].join(" ")}
+              >
+                {l.flag}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ── Hero + login side by side ────────────────────────────── */}
       {/* A photo of the territory behind the hero, with a video layered on
           top when public/hero.mp4 exists — see HeroBackdrop for why the photo
