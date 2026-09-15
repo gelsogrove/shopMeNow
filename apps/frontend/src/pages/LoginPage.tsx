@@ -1076,8 +1076,6 @@ export function LoginPage() {
               <a href="#demo" className="hover:text-white transition-colors">Demo</a>
               <span className="text-white/20">|</span>
               <a href="/contact" className="hover:text-white transition-colors">{t("nav.contact")}</a>
-              <span className="text-white/20">|</span>
-              <a href="https://www.echatbot.ai/login" className="hover:text-white transition-colors">{t("nav.signIn")}</a>
             </div>
           </div>
 
