@@ -31,7 +31,7 @@ import {
   Sparkles,
   UtensilsCrossed,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 /**
@@ -64,6 +64,22 @@ export default function ProLocoHomePage() {
   const navigate = useNavigate()
   const { language, setLanguage } = useLanguage()
   const t = homeCopy(language)
+
+  // This page opens in Italian unless the visitor has chosen otherwise
+  // (Andrea, 2026-09-15: "LO VEDO IN TEDESCO? COME MAI NON VA DI DEFAULT?").
+  // The shared LanguageContext guesses from navigator.language, which is right
+  // for the app — a German operator wants a German backoffice — but wrong
+  // here: this page is sold to Italian tourist offices, and a German-locale
+  // browser opened it in German.
+  //
+  // Only when NOTHING was stored: a language picked from the header is written
+  // to localStorage and left alone, so the switcher keeps working and the
+  // choice survives a reload. LanguageContext itself is untouched (rule 13) —
+  // the rest of the app keeps its own behaviour.
+  useEffect(() => {
+    if (!localStorage.getItem("language")) setLanguage("it")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -187,8 +203,24 @@ export default function ProLocoHomePage() {
 
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Language picker — the page itself proves the multilingual
-                claim it makes. Flags only on wide screens: on a phone the
-                two-letter code is legible and the flags are not. */}
+                claim it makes. Two controls, one per size: a native select on
+                phones (one tap, no horizontal room) and the flag row from sm
+                up, where six targets fit and read. */}
+            <label className="sm:hidden">
+              <span className="sr-only">{language}</span>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as typeof language)}
+                className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.flag} {l.code.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <div className="hidden items-center gap-0.5 sm:flex">
               {SUPPORTED_LANGUAGES.map((l) => (
                 <button
