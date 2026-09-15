@@ -292,11 +292,7 @@ export default function ProLocoHomePage() {
       {/* ── The questions they answer every day ─────────────────── */}
       <section className="border-t border-slate-100">
         <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 text-center">
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {t.closingTitle}
-          </h2>
-
-          <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-3xl bg-slate-900 p-7 text-left shadow-2xl ring-1 ring-white/10 sm:p-9">
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-slate-900 p-7 text-left shadow-2xl ring-1 ring-white/10 sm:p-9">
             <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
                 <span
