@@ -655,14 +655,12 @@ export function HeroBackdrop() {
           picture does its work. */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/35 to-slate-950/75" />
 
-      {/* The hand-off into the page: the last stretch resolves to the page's
-          own white so the section ends without a seam. Andrea, 2026-09-16:
-          "Provate la demo va sotto i video" — h-40 (160px) was shorter than
-          the hero's own lg:pb-[24.4rem] (390px), so the dark/video layer was
-          still fully opaque where the next section's content actually sits.
-          Matches lg:pb-[24.4rem] on the section below so the fade always
-          finishes before the padding runs out. */}
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white lg:h-[24.4rem]" />
+      {/* The hand-off into the page: the last few hundred pixels resolve to
+          the page's own white so the section ends without a seam. Sized
+          against THIS layer's own (now shorter) height, not the section's —
+          see the note on the outer div above for why the layer itself no
+          longer spans the section's full lg:pb-[24.4rem] padding. */}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white" />
 
       {/* The question this clip provokes, staged as a real WhatsApp exchange.
           A plain white pill read as a tooltip, not as a message, and it sat in
