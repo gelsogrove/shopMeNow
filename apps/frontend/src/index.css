@@ -138,12 +138,21 @@
        smoothing settings matter as much as the family: without them the same
        text looks heavier and blurrier, which is what made small copy hard to
        read. */
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
       "Roboto", "Helvetica Neue", Arial, sans-serif;
     font-feature-settings: "liga" 1, "kern" 1, "cv11" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Headings carry the display face; body copy never does. Applied by class
+     so only the pages that want this voice opt in — the backoffice keeps the
+     single-face setting it has always had. */
+  .font-display {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
   }
 
   input:not([type="checkbox"]),

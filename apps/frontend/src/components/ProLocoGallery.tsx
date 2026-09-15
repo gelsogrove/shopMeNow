@@ -61,7 +61,7 @@ interface ProLocoGalleryProps {
 export function ProLocoGallery({ title, subtitle }: ProLocoGalleryProps) {
   return (
     <div>
-      <h2 className="text-center text-3xl font-semibold tracking-tight">
+      <h2 className="font-display text-center text-3xl font-semibold tracking-tight">
         {title}
       </h2>
       <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">

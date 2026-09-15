@@ -456,7 +456,7 @@ export function HomeShowcase({
       <div className="relative mb-8 max-w-2xl">
         <h2
           className={[
-            "text-2xl font-bold leading-tight sm:text-3xl",
+            "font-display text-2xl font-bold leading-tight sm:text-3xl",
             light ? "text-slate-900" : "text-white",
           ].join(" ")}
         >

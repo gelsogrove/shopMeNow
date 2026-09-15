@@ -180,7 +180,7 @@ export default function ProLocoHomePage() {
           <a href="#top" className="flex items-center gap-2 shrink-0">
             <MessageCircle className="h-6 w-6 text-emerald-600" />
             <span className="font-semibold tracking-tight">eChatbot</span>
-            <span className="hidden text-sm text-slate-400 lg:inline">
+            <span className="hidden text-sm text-slate-500 lg:inline">
               {t.audience}
             </span>
           </a>
@@ -239,7 +239,7 @@ export default function ProLocoHomePage() {
                 {t.eyebrow}
               </p>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] text-slate-900">
+            <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] text-slate-900">
               {t.slogan1}
               <br />
               <span className="text-emerald-700">{t.slogan2}</span>
@@ -248,7 +248,7 @@ export default function ProLocoHomePage() {
               {t.lede}
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
               <span className="flex items-center gap-1.5">
                 <Globe className="h-4 w-4 text-emerald-600" /> {t.chipMulti}
               </span>
@@ -267,7 +267,7 @@ export default function ProLocoHomePage() {
               <h2 className="text-xl font-semibold text-slate-900">
                 {t.loginTitle}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-600">
                 {t.loginSub}
               </p>
 
@@ -333,7 +333,7 @@ export default function ProLocoHomePage() {
                     offices run on a Gmail account and never set a password. */}
                 <div className="flex items-center gap-3 pt-2">
                   <span className="h-px flex-1 bg-slate-200" />
-                  <span className="text-xs text-slate-400">{t.orDivider}</span>
+                  <span className="text-xs text-slate-500">{t.orDivider}</span>
                   <span className="h-px flex-1 bg-slate-200" />
                 </div>
 
@@ -367,7 +367,7 @@ export default function ProLocoHomePage() {
       {/* ── Benefits ─────────────────────────────────────────────── */}
       <section className="border-t border-slate-100 bg-slate-50/50">
         <div className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="text-3xl font-semibold tracking-tight text-center">
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-center">
             {t.benefitsTitle}
           </h2>
           <p className="mt-3 text-center text-slate-600 max-w-2xl mx-auto">
@@ -403,7 +403,7 @@ export default function ProLocoHomePage() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight">
+            <h2 className="font-display text-3xl font-semibold tracking-tight">
               {t.contentTitle}
             </h2>
             <p className="mt-4 text-slate-600 leading-relaxed">
@@ -465,7 +465,7 @@ export default function ProLocoHomePage() {
               <p className="text-emerald-700 font-medium text-sm mb-3">
               {t.revenueEyebrow}
               </p>
-              <h2 className="text-3xl font-semibold tracking-tight">
+              <h2 className="font-display text-3xl font-semibold tracking-tight">
                 {t.revenueTitle}
               </h2>
               <p className="mt-4 text-slate-600 leading-relaxed">
@@ -499,7 +499,7 @@ export default function ProLocoHomePage() {
       {/* ── Closing ──────────────────────────────────────────────── */}
       <section className="border-t border-slate-100">
         <div className="mx-auto max-w-3xl px-6 py-20 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">
+          <h2 className="font-display text-3xl font-semibold tracking-tight">
             {t.closingTitle}
           </h2>
           <p className="mt-4 text-slate-600 leading-relaxed">
@@ -516,7 +516,7 @@ export default function ProLocoHomePage() {
       </section>
 
       <footer className="border-t border-slate-100">
-        <div className="mx-auto max-w-6xl px-6 py-8 text-sm text-slate-400">
+        <div className="mx-auto max-w-6xl px-6 py-8 text-sm text-slate-500">
           {t.footer}
         </div>
       </footer>

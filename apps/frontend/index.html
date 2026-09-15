@@ -12,15 +12,23 @@
          on any screen that overflows (2026-09-14). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Inter: a typeface drawn FOR interfaces — taller x-height, open
-         apertures, and a real distinction between I, l and 1. The app was
-         falling back to whatever the browser picked, which at small sizes read
-         as mush (Andrea, 2026-09-15: "le font non sono fatte bene, non si
-         capiscono"). Preconnect first so the text does not reflow late. -->
+    <!-- Two faces, two jobs (Andrea, 2026-09-15: "le font non sono fatte bene,
+         non si capiscono"). The app was loading NO webfont at all and falling
+         back to whatever the browser picked, unsmoothed — which at small sizes
+         read as mush.
+
+         Public Sans for everything that is read: a public-sector face, drawn
+         for forms and civic documents, with unmistakable I / l / 1 — the right
+         register for an office that answers to a comune.
+
+         Fraunces for headings only: a warm, slightly old-style display face.
+         It gives the page a voice without costing legibility, because it never
+         touches body copy. Deliberately not Inter — the safe default that
+         makes every landing page look like every other one. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <!-- Google Tag Manager -->
