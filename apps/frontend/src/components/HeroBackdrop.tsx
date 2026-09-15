@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 /**
  * The hero backdrop: muted clips of the territory cross-fading into one
@@ -43,9 +44,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
  * that is worth coming back to in another month — which is exactly what the
  * push campaigns further down the page are for.
  *
- * These four ship in public/hero/ — 360p clips from coverr.co (free for
- * commercial use, no attribution required), 4 MB for the whole set, which is
- * less than the single hero video on the site this was modelled on. 360p is
+ * These ten ship in public/hero/ — 360p clips from coverr.co (free for
+ * commercial use, no attribution required), 6 MB for the whole set, close to
+ * the single hero video on the site this was modelled on. 360p is
  * deliberate: the footage sits behind a dark veil and is motion-blurred, so
  * resolution buys nothing a rural connection should pay for.
  *
@@ -57,12 +58,149 @@ import { useCallback, useEffect, useRef, useState } from "react"
  * never waits for a file that is not there, and with NONE present the photo
  * alone carries the hero. Order matters — this is the order they play in.
  */
-const CLIPS = [
-  "/hero/mountain.mp4",
-  "/hero/ski.mp4",
-  "/hero/forest.mp4",
-  "/hero/road.mp4",
+/**
+ * Each clip carries the question a guest would actually ask while looking at
+ * it (Andrea, 2026-09-15: "non so se sale bike? Dove possiamo andare a fare
+ * una passeggiata e il chatbot risponde… ovviamente sincronizzate").
+ *
+ * This is the page's argument made visible: the footage shows the holiday,
+ * the bubble shows the question it provokes, and the product is what answers.
+ * A hero video that is only scenery says "nice place"; this one says "this is
+ * what people ask us, all day".
+ *
+ * The questions are SHORT on purpose — a bubble competing with the headline
+ * for attention loses, and loses the headline too.
+ */
+type Scene = {
+  src: string
+  /** it, en, es, ca, fr, de — same six the page's switcher offers. */
+  ask: Record<string, string>
+}
+
+const CLIPS: Scene[] = [
+  {
+    // action: walking a misty forest trail
+    src: "/hero/forest.mp4",
+    ask: {
+      it: "Dove possiamo andare a farci una passeggiata oggi?",
+      en: "Where can we go for a walk today?",
+      es: "¿Dónde podemos ir a dar un paseo hoy?",
+      ca: "On podem anar a fer un tomb avui?",
+      fr: "Où peut-on aller se promener aujourd'hui ?",
+      de: "Wo können wir heute spazieren gehen?",
+    },
+  },
+  {
+    // action: a picnic — the one question that needs the live forecast
+    src: "/hero/picnic.mp4",
+    ask: {
+      it: "Domani è una bella giornata per un picnic?",
+      en: "Is tomorrow a good day for a picnic?",
+      es: "¿Mañana es buen día para un picnic?",
+      ca: "Demà fa bon dia per a un pícnic?",
+      fr: "Demain, c'est un bon jour pour un pique-nique ?",
+      de: "Ist morgen ein guter Tag für ein Picknick?",
+    },
+  },
+  {
+    // action: a live gig — tonight's events
+    src: "/hero/music.mp4",
+    ask: {
+      it: "C'è musica dal vivo stasera?",
+      en: "Is there live music tonight?",
+      es: "¿Hay música en vivo esta noche?",
+      ca: "Hi ha música en directe aquesta nit?",
+      fr: "Y a-t-il de la musique live ce soir ?",
+      de: "Gibt es heute Abend Livemusik?",
+    },
+  },
+  {
+    // action: on the water — points at a rental business
+    src: "/hero/rafting.mp4",
+    ask: {
+      it: "Dove possiamo affittare una canoa?",
+      en: "Where can we rent a canoe?",
+      es: "¿Dónde podemos alquilar una canoa?",
+      ca: "On podem llogar una canoa?",
+      fr: "Où peut-on louer un canoë ?",
+      de: "Wo können wir ein Kanu mieten?",
+    },
+  },
+  {
+    // action: cycling
+    src: "/hero/bike.mp4",
+    ask: {
+      it: "Si noleggiano e-bike qui?",
+      en: "Can we rent e-bikes here?",
+      es: "¿Se alquilan bicis eléctricas aquí?",
+      ca: "Es lloguen bicis elèctriques aquí?",
+      fr: "Peut-on louer des vélos électriques ici ?",
+      de: "Kann man hier E-Bikes mieten?",
+    },
+  },
+  {
+    // action: skiing the slope
+    src: "/hero/ski.mp4",
+    ask: {
+      it: "A che ora chiudono gli impianti?",
+      en: "When do the lifts close?",
+      es: "¿A qué hora cierran los remontes?",
+      ca: "A quina hora tanquen els remuntadors?",
+      fr: "À quelle heure ferment les remontées ?",
+      de: "Wann schließen die Lifte?",
+    },
+  },
+  {
+    // close: meat on the grill — where to eat the local food
+    src: "/hero/food.mp4",
+    ask: {
+      it: "Dove si mangiano i prodotti tipici?",
+      en: "Where can we eat the local food?",
+      es: "¿Dónde se comen los productos típicos?",
+      ca: "On es mengen els productes típics?",
+      fr: "Où manger les produits locaux ?",
+      de: "Wo isst man die regionalen Spezialitäten?",
+    },
+  },
+  {
+    // action: someone photographing the landscape
+    src: "/hero/photo.mp4",
+    ask: {
+      it: "Dove si vedono i panorami più belli?",
+      en: "Where are the best viewpoints?",
+      es: "¿Dónde están los mejores miradores?",
+      ca: "On són els millors miradors?",
+      fr: "Où sont les plus beaux points de vue ?",
+      de: "Wo sind die schönsten Aussichtspunkte?",
+    },
+  },
+  {
+    // wide: an alpine lake
+    src: "/hero/lake.mp4",
+    ask: {
+      it: "Si fa il giro del lago a piedi?",
+      en: "Can you walk around the lake?",
+      es: "¿Se puede rodear el lago a pie?",
+      ca: "Es pot voltar el llac a peu?",
+      fr: "Peut-on faire le tour du lac à pied ?",
+      de: "Kann man den See umrunden?",
+    },
+  },
+  {
+    // wide: a castle on the mountain
+    src: "/hero/castle.mp4",
+    ask: {
+      it: "Si può visitare il castello?",
+      en: "Can we visit the castle?",
+      es: "¿Se puede visitar el castillo?",
+      ca: "Es pot visitar el castell?",
+      fr: "Peut-on visiter le château ?",
+      de: "Kann man die Burg besichtigen?",
+    },
+  },
 ]
+
+
 
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
 const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
@@ -75,8 +213,8 @@ const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
 const FADE_SECONDS = 1.2
 
 export function HeroBackdrop() {
-  /** The clips that actually exist on disk, in CLIPS order. */
-  const [clips, setClips] = useState<string[]>([])
+  /** The scenes whose clip actually exists on disk, in CLIPS order. */
+  const [clips, setClips] = useState<Scene[]>([])
   /** Which of the two <video> slots is currently in front. */
   const [front, setFront] = useState(0)
   /** Which clip each slot holds. Slot 0 opens on the first, slot 1 on the next. */
@@ -87,8 +225,12 @@ export function HeroBackdrop() {
   const slots = [slotA, slotB]
   /** Guards against the timeupdate handler firing the same hand-over twice. */
   const swapping = useRef(false)
-  /** Index of the clip playing in front, so we know what to queue next. */
+  /** Index of the scene in front — drives both the queue and the bubble. */
   const playing = useRef(0)
+  const [scene, setScene] = useState(0)
+  /** The bubble is hidden during the dissolve, so it never straddles two clips. */
+  const [asking, setAsking] = useState(false)
+  const { language } = useLanguage()
 
   useEffect(() => {
     // Desktop only — see the note above CLIPS. matchMedia, not a resize
@@ -111,19 +253,21 @@ export function HeroBackdrop() {
     // as a black frame mid-rotation.
     let cancelled = false
     Promise.all(
-      CLIPS.map((src) =>
-        fetch(src, { method: "HEAD" })
-          .then((res) => (res.ok ? src : null))
+      CLIPS.map((scene) =>
+        fetch(scene.src, { method: "HEAD" })
+          .then((res) => (res.ok ? scene : null))
           .catch(() => null)
       )
     ).then((found) => {
       if (cancelled) return
-      const available = found.filter((src): src is string => src !== null)
+      const available = found.filter((scene): scene is Scene => scene !== null)
       if (available.length === 0) return
       // Slot 0 shows the first clip; slot 1 pre-loads the second (or the same
       // one again when there is only one, so the loop still dissolves).
-      setSources([available[0], available[1 % available.length]])
+      setSources([available[0].src, available[1 % available.length].src])
       setClips(available)
+      // Let the first clip establish the shot before the question appears.
+      window.setTimeout(() => setAsking(true), 1200)
     })
     return () => {
       cancelled = true
@@ -150,11 +294,16 @@ export function HeroBackdrop() {
 
     playing.current = (playing.current + 1) % clips.length
     setFront(next)
+    // Hide the outgoing question immediately and bring the new one in once the
+    // dissolve has settled: a bubble that outlives its own footage reads as a
+    // caption for the wrong picture.
+    setAsking(false)
+    setScene(playing.current)
 
     // Queue the one AFTER the incoming clip into the slot going to the back.
     // Deferred past the fade so swapping the src cannot disturb a frame that
     // is still visible underneath.
-    const upcoming = clips[(playing.current + 1) % clips.length]
+    const upcoming = clips[(playing.current + 1) % clips.length].src
     window.setTimeout(() => {
       setSources((cur) => {
         const copy: [string | null, string | null] = [cur[0], cur[1]]
@@ -162,6 +311,7 @@ export function HeroBackdrop() {
         return copy
       })
       swapping.current = false
+      setAsking(true)
     }, FADE_SECONDS * 1000)
   }, [clips, front])
 
@@ -228,6 +378,34 @@ export function HeroBackdrop() {
       {/* The hand-off into the page: the last few hundred pixels resolve to
           the page's own white so the section ends without a seam. */}
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white" />
+
+      {/* The question this clip provokes — see the note above CLIPS. */}
+      {clips.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 hidden justify-center px-6 lg:flex">
+          <div
+            className={[
+              "flex max-w-md items-end gap-2.5 transition-all duration-700 ease-out",
+              asking ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
+            ].join(" ")}
+          >
+            <span className="rounded-2xl rounded-br-sm bg-white/95 px-4 py-2.5 text-sm font-medium text-slate-800 shadow-lg backdrop-blur-sm">
+              {clips[scene]?.ask[language] ?? clips[scene]?.ask.it}
+            </span>
+            {/* The assistant, mid-answer: three dots say "it is replying" in
+                every language, which a translated label could not. */}
+            <span className="flex shrink-0 items-center gap-1 rounded-2xl rounded-bl-sm bg-emerald-600/95 px-3 py-3 shadow-lg">
+              {[0, 1, 2].map((d) => (
+                <span
+                  key={d}
+                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/90"
+                  style={{ animationDelay: `${d * 140}ms` }}
+                />
+              ))}
+            </span>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
