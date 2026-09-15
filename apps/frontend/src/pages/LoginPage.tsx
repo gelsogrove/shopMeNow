@@ -1083,7 +1083,7 @@ export function LoginPage() {
           <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
             {/* Left: Logo + Brand */}
             <div className="flex items-center justify-start gap-1">
-              <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>eChatbot<span style={{ color: "#10B981" }}>.AI</span></span>
+              <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>eChatbot<span className="text-white">.AI</span></span>
             </div>
 
             {/* Right: Language Selector + Auth */}
@@ -1101,10 +1101,10 @@ export function LoginPage() {
                     key={l.code}
                     type="button"
                     onClick={() => setLanguage(l.code)}
-                    className={`flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors sm:px-2 ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
+                    aria-label={l.code}
+                    className={`flex items-center rounded-lg px-1.5 py-1 transition-colors sm:px-2 ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                   >
                     <span className="text-lg leading-none">{l.flag}</span>
-                    <span className="hidden text-xs font-semibold uppercase sm:inline">{l.code}</span>
                   </button>
                 ))}
               </div>
