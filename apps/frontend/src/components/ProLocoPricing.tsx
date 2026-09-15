@@ -12,43 +12,12 @@ interface Plan {
   pushCost: number
 }
 
-/** Copy that frames each plan for a tourist office, not for a shop. */
-const PITCH: Record<string, { tagline: Record<string, string>; icon: typeof Star }> = {
-  FREE_TRIAL: {
-    tagline: {
-      it: "Il piano Basic, per 14 giorni", en: "The Basic plan, for 14 days",
-      es: "El plan Basic, 14 días", ca: "El pla Basic, 14 dies",
-      fr: "Le plan Basic, 14 jours", de: "Der Basic-Plan, 14 Tage",
-    },
-    icon: Gift,
-  },
-  BASIC: {
-    tagline: {
-      it: "Il territorio risponde, senza scadenza", en: "Your area answers, with no end date",
-      es: "El territorio responde, sin caducidad", ca: "El territori respon, sense caducitat",
-      fr: "Votre territoire répond, sans échéance", de: "Ihre Region antwortet, ohne Ablaufdatum",
-    },
-    icon: Sparkles,
-  },
-  PREMIUM: {
-    tagline: {
-      it: "Ogni lingua, e i dati per capire i vostri turisti",
-      en: "Every language, plus the data to understand your visitors",
-      es: "Todos los idiomas y los datos para entender a vuestros turistas",
-      ca: "Totes les llengües i les dades per entendre els vostres turistes",
-      fr: "Toutes les langues, et les données pour comprendre vos visiteurs",
-      de: "Jede Sprache und die Daten, um Ihre Gäste zu verstehen",
-    },
-    icon: Star,
-  },
-  ENTERPRISE: {
-    tagline: {
-      it: "Server dedicato, solo per il vostro ente, e customizzazioni", en: "A dedicated server, yours alone, plus custom work",
-      es: "Servidor dedicado, solo para vuestra entidad, y personalizaciones", ca: "Servidor dedicat, només per a vosaltres, i personalitzacions",
-      fr: "Serveur dédié, rien que pour vous, et des personnalisations", de: "Dedizierter Server, nur für Sie, plus individuelle Anpassungen",
-    },
-    icon: Server,
-  },
+/** Icon per plan for a tourist office, not for a shop. */
+const PITCH: Record<string, { icon: typeof Star }> = {
+  FREE_TRIAL: { icon: Gift },
+  BASIC: { icon: Sparkles },
+  PREMIUM: { icon: Star },
+  ENTERPRISE: { icon: Server },
 }
 
 /** The usage line under the plans. */
@@ -145,9 +114,6 @@ export function ProLocoPricing() {
               <h3 className="text-lg font-semibold text-slate-900">
                 {plan.displayName}
               </h3>
-              <p className="mt-1 min-h-[2.5rem] text-sm text-slate-500">
-                {pitch?.tagline[language] ?? pitch?.tagline.it}
-              </p>
 
               <div className="mt-5 flex items-baseline gap-1">
                 <span className="text-5xl font-bold tracking-tight text-slate-900 tabular-nums">
