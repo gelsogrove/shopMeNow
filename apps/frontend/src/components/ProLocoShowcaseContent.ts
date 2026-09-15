@@ -91,7 +91,7 @@ export const proLocoShowcaseContent: ShowcaseContent = {
         {
           role: "out",
           video: true,
-          text: "Intanto guardate com'è il posto in questa stagione 🎥",
+          text: "Ecco una breve presentazione del luogo 🎥",
         },
         { role: "out", text: "Quanti siete e quanto vi fermate?" },
         { role: "in", text: "Io e mia moglie, dal 20 al 26 🙂" },
