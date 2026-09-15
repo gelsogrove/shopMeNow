@@ -240,7 +240,7 @@ export default function ProLocoHomePage() {
                 a chip above the headline, where it belongs, and the robot
                 balances the headline's mass. */}
             <div className="flex items-start gap-6">
-              <HeroRobot className="hidden w-36 shrink-0 sm:block [&_img]:w-36 lg:[&_img]:w-44 [&_img]:h-auto" />
+              <HeroRobot className="hidden w-72 shrink-0 sm:block [&_img]:w-72 lg:[&_img]:w-[22rem] [&_img]:h-auto" />
 
               <div className="min-w-0">
                 <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
@@ -265,7 +265,9 @@ export default function ProLocoHomePage() {
                 {[
                   { Icon: Globe, label: t.chipMulti },
                   { Icon: Clock, label: t.chip24 },
-                  { Icon: Sparkles, label: t.chipNoApp },
+                  { Icon: MessageCircle, label: t.chipFaq },
+                  { Icon: Bell, label: t.chipPush },
+                  { Icon: Sparkles, label: t.chipMix },
                 ].map(({ Icon, label }) => (
                   <span
                     key={label}
@@ -370,6 +372,38 @@ export default function ProLocoHomePage() {
             </div>
           </div>
         </div>
+        </div>
+      </section>
+
+      {/* ── The questions they answer every day ─────────────────── */}
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 text-center">
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            {t.closingTitle}
+          </h2>
+
+          <div className="mt-8 flex flex-wrap justify-center gap-2.5 sm:gap-3">
+            {t.closingQuestions.map((q) => (
+              <span
+                key={q}
+                className="rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-2.5 text-left text-sm text-slate-700 shadow-sm sm:text-base"
+              >
+                «{q}»
+              </span>
+            ))}
+          </div>
+
+          <p className="mx-auto mt-8 max-w-2xl text-slate-600 leading-relaxed">
+            {t.closingBody}
+          </p>
+
+          <a
+            href="#accedi"
+            className="mt-8 inline-flex items-center gap-1.5 font-medium text-emerald-700 transition-all hover:gap-2.5"
+          >
+            {t.closingCta}
+            <ChevronRight className="h-4 w-4" />
+          </a>
         </div>
       </section>
 
@@ -516,25 +550,7 @@ export default function ProLocoHomePage() {
         </div>
       </section>
 
-      {/* ── Closing ──────────────────────────────────────────────── */}
-      <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-3xl px-6 py-20 text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-tight">
-            {t.closingTitle}
-          </h2>
-          <p className="mt-4 text-slate-600 leading-relaxed">
-            {t.closingBody}
-          </p>
-          <a
-            href="#accedi"
-            className="mt-8 inline-flex items-center gap-1.5 text-emerald-700 font-medium hover:gap-2.5 transition-all"
-          >
-            {t.closingCta}
-            <ChevronRight className="h-4 w-4" />
-          </a>
-        </div>
-      </section>
-
+      {/* ── Footer ───────────────────────────────────────────────── */}
       <footer className="border-t border-slate-100">
         <div className="mx-auto max-w-6xl px-6 py-8 text-sm text-slate-500">
           {t.footer}

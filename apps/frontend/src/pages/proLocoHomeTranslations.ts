@@ -25,7 +25,9 @@ export interface HomeCopy {
   lede: string
   chipMulti: string
   chip24: string
-  chipNoApp: string
+  chipFaq: string
+  chipPush: string
+  chipMix: string
   loginTitle: string
   loginSub: string
   email: string
@@ -53,6 +55,7 @@ export interface HomeCopy {
   galleryTitle: string
   gallerySubtitle: string
   closingTitle: string
+  closingQuestions: string[]
   closingBody: string
   closingCta: string
   footer: string
@@ -68,7 +71,9 @@ const it: HomeCopy = {
   lede: "Un assistente che conosce i vostri hotel, i sentieri, le sagre e i numeri utili — e li racconta a ogni ospite nella sua lingua, a qualsiasi ora.",
   chipMulti: "Multilingua",
   chip24: "24 ore su 24",
-  chipNoApp: "Nessuna app da installare",
+  chipFaq: "Risponde alle solite domande",
+  chipPush: "Notifiche push",
+  chipMix: "Incrocia meteo, eventi e preferenze",
   loginTitle: "Accedi al tuo canale",
   loginSub: "Gestisci contenuti, notifiche e conversazioni.",
   email: "Email",
@@ -90,8 +95,8 @@ const it: HomeCopy = {
     { title: "Su WhatsApp, non su un'app", body: "Nessuna installazione, nessuna registrazione. L'applicazione che il turista ha già sul telefono." },
   ],
   contentTitle: "Tutto il territorio, in un posto solo",
-  contentBody1: "Inserite i contenuti dal pannello, come compilereste una scheda. L'assistente li usa dal momento in cui li salvate — nessuna configurazione, nessun tecnico da chiamare.",
-  contentBody2: "Scrivete nella vostra lingua: le traduzioni arrivano da sole, e restano allineate ogni volta che cambiate una riga.",
+  contentBody1: "Un albergo nuovo, un orario che cambia, la sagra di settembre: lo scrivete nel pannello e l'assistente lo sa subito. Senza chiamare nessuno.",
+  contentBody2: "E risponde solo con quello che avete caricato voi. Se un dato non c'è, lo dice: non lo inventa. Un nome, un numero o un orario che non è nelle vostre schede viene tolto dalla risposta prima che parta.",
   contentTypes: ["Hotel e B&B", "Ristoranti e agriturismi", "Escursioni e rifugi", "Sagre ed eventi", "Prodotti tipici", "Borghi e punti panoramici", "Castelli e chiese", "Cenni storici", "Numeri utili"],
   pricingTitle: "Prezzi chiari, nessuna sorpresa",
   pricingSub: "Il canone copre il servizio. I consumi si pagano a parte, solo quando li usate.",
@@ -105,7 +110,8 @@ const it: HomeCopy = {
     { t: "Parte solo a chi ha acconsentito", d: "E ogni invio scala dal suo pacchetto, senza che dobbiate contare nulla." },
   ],
   closingTitle: "Ogni giorno, le stesse",
-  closingBody: "«Sono celiaco, dove andiamo a mangiare?» · «Che escursioni possiamo fare?» · «Che eventi ci sono questa settimana?» · «Quali sono i piatti tipici?» · «A che ora chiudono gli impianti?»\n\nAllo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede. Voi restate per le cose che meritano una persona.",
+  closingQuestions: ["Sono celiaco, dove andiamo a mangiare?", "Che escursioni possiamo fare?", "Che eventi ci sono questa settimana?", "Quali sono i piatti tipici?", "A che ora chiudono gli impianti?"],
+  closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede. Voi restate per le cose che meritano una persona.",
   closingCta: "Accedi al tuo canale",
   footer: "eChatbot — assistenza su WhatsApp per Pro Loco e Consorzi turistici.",
 }
@@ -120,7 +126,9 @@ const en: HomeCopy = {
   lede: "An assistant that knows your hotels, trails, festivals and useful numbers — and tells every visitor about them in their own language, at any hour.",
   chipMulti: "Every language",
   chip24: "24 hours a day",
-  chipNoApp: "No app to install",
+  chipFaq: "Answers the usual questions",
+  chipPush: "Push notifications",
+  chipMix: "Combines weather, events and preferences",
   loginTitle: "Sign in to your channel",
   loginSub: "Manage content, notifications and conversations.",
   email: "Email",
@@ -142,8 +150,8 @@ const en: HomeCopy = {
     { title: "On WhatsApp, not an app", body: "No install, no sign-up. The app the visitor already has on their phone." },
   ],
   contentTitle: "The whole region, in one place",
-  contentBody1: "Add content from the panel, like filling in a form. The assistant uses it the moment you save — no configuration, no technician to call.",
-  contentBody2: "Write in your own language: translations follow by themselves, and stay in step every time you change a line.",
+  contentBody1: "A new hotel, a changed opening time, September's festival: you write it in the panel and the assistant knows it straight away. Without calling anyone.",
+  contentBody2: "And it answers only with what you loaded. If something is not there, it says so instead of inventing it. A name, a number or a time that is not in your records is removed from the reply before it is sent.",
   contentTypes: ["Hotels and B&Bs", "Restaurants and farm stays", "Hikes and mountain huts", "Festivals and events", "Local produce", "Villages and viewpoints", "Castles and churches", "Local history", "Useful numbers"],
   pricingTitle: "Clear pricing, no surprises",
   pricingSub: "The subscription covers the service. Usage is billed separately, only when you use it.",
@@ -157,7 +165,8 @@ const en: HomeCopy = {
     { t: "It only reaches those who opted in", d: "And each send comes off their bundle, with nothing for you to count." },
   ],
   closingTitle: "Every day, the same ones",
-  closingBody: "\"I'm coeliac, where can we eat?\" · \"What hikes can we do?\" · \"What's on this week?\" · \"What are the local dishes?\" · \"When do the lifts close?\"\n\nAt the desk and on the phone, usually with a queue waiting. From now on the assistant answers for you — from what you loaded, in the language they asked in. You stay for the things that deserve a person.",
+  closingQuestions: ["I'm coeliac, where can we eat?", "What hikes can we do?", "What's on this week?", "What are the local dishes?", "When do the lifts close?"],
+  closingBody: "At the desk and on the phone, usually with a queue waiting. From now on the assistant answers for you — from what you loaded, in the language they asked in. You stay for the things that deserve a person.",
   closingCta: "Sign in to your channel",
   footer: "eChatbot — WhatsApp assistance for tourist offices and visitor centres.",
 }
@@ -172,7 +181,9 @@ const es: HomeCopy = {
   lede: "Un asistente que conoce vuestros hoteles, senderos, fiestas y teléfonos útiles — y se lo cuenta a cada visitante en su idioma, a cualquier hora.",
   chipMulti: "Todos los idiomas",
   chip24: "24 horas al día",
-  chipNoApp: "Sin app que instalar",
+  chipFaq: "Responde a las preguntas de siempre",
+  chipPush: "Notificaciones push",
+  chipMix: "Cruza tiempo, eventos y preferencias",
   loginTitle: "Accede a tu canal",
   loginSub: "Gestiona contenidos, notificaciones y conversaciones.",
   email: "Email",
@@ -194,8 +205,8 @@ const es: HomeCopy = {
     { title: "En WhatsApp, no en una app", body: "Sin instalación, sin registro. La aplicación que el turista ya tiene en el móvil." },
   ],
   contentTitle: "Todo el territorio, en un solo sitio",
-  contentBody1: "Añadid los contenidos desde el panel, como rellenaríais una ficha. El asistente los usa desde el momento en que los guardáis — sin configuración, sin llamar a ningún técnico.",
-  contentBody2: "Escribid en vuestro idioma: las traducciones llegan solas y se mantienen al día cada vez que cambiáis una línea.",
+  contentBody1: "Un hotel nuevo, un horario que cambia, la fiesta de septiembre: lo escribís en el panel y el asistente lo sabe al momento. Sin llamar a nadie.",
+  contentBody2: "Y responde solo con lo que habéis cargado. Si un dato no está, lo dice: no se lo inventa. Un nombre, un número o un horario que no esté en vuestras fichas se elimina de la respuesta antes de enviarla.",
   contentTypes: ["Hoteles y casas rurales", "Restaurantes y agroturismos", "Rutas y refugios", "Fiestas y eventos", "Productos típicos", "Pueblos y miradores", "Castillos e iglesias", "Historia local", "Teléfonos útiles"],
   pricingTitle: "Precios claros, sin sorpresas",
   pricingSub: "La cuota cubre el servicio. El consumo se paga aparte, solo cuando se usa.",
@@ -209,7 +220,8 @@ const es: HomeCopy = {
     { t: "Solo llega a quien dio su consentimiento", d: "Y cada envío se descuenta de su paquete, sin que tengáis que contar nada." },
   ],
   closingTitle: "Cada día, las mismas",
-  closingBody: "«Soy celíaco, ¿dónde podemos comer?» · «¿Qué excursiones podemos hacer?» · «¿Qué eventos hay esta semana?» · «¿Cuáles son los platos típicos?» · «¿A qué hora cierran los remontes?»\n\nEn el mostrador y por teléfono, casi siempre con cola esperando. A partir de ahora responde el asistente — con lo que habéis cargado, en el idioma de quien pregunta. Vosotros quedáis para lo que merece una persona.",
+  closingQuestions: ["Soy celíaco, ¿dónde podemos comer?", "¿Qué excursiones podemos hacer?", "¿Qué eventos hay esta semana?", "¿Cuáles son los platos típicos?", "¿A qué hora cierran los remontes?"],
+  closingBody: "En el mostrador y por teléfono, casi siempre con cola esperando. A partir de ahora responde el asistente — con lo que habéis cargado, en el idioma de quien pregunta. Vosotros quedáis para lo que merece una persona.",
   closingCta: "Accede a tu canal",
   footer: "eChatbot — asistencia por WhatsApp para oficinas de turismo y patronatos.",
 }
@@ -225,7 +237,9 @@ const ca: HomeCopy = {
   lede: "Un assistent que coneix els vostres hotels, camins, festes i telèfons útils — i ho explica a cada visitant en la seva llengua, a qualsevol hora.",
   chipMulti: "Totes les llengües",
   chip24: "24 hores al dia",
-  chipNoApp: "Sense cap app per instal·lar",
+  chipFaq: "Respon les preguntes de sempre",
+  chipPush: "Notificacions push",
+  chipMix: "Creua temps, esdeveniments i preferències",
   loginTitle: "Accedeix al teu canal",
   loginSub: "Gestiona continguts, notificacions i converses.",
   email: "Correu electrònic",
@@ -247,8 +261,8 @@ const ca: HomeCopy = {
     { title: "A WhatsApp, no en una app", body: "Sense instal·lació, sense registre. L'aplicació que el turista ja té al mòbil." },
   ],
   contentTitle: "Tot el territori, en un sol lloc",
-  contentBody1: "Afegiu els continguts des del tauler, com ompliríeu una fitxa. L'assistent els fa servir des del moment en què els deseu — sense configuració, sense trucar a cap tècnic.",
-  contentBody2: "Escriviu en la vostra llengua: les traduccions arriben soles i es mantenen al dia cada vegada que canvieu una línia.",
+  contentBody1: "Un hotel nou, un horari que canvia, la festa de setembre: ho escriviu al tauler i l'assistent ho sap de seguida. Sense trucar a ningú.",
+  contentBody2: "I respon només amb allò que heu carregat. Si una dada no hi és, ho diu: no se la inventa. Un nom, un número o un horari que no sigui a les vostres fitxes s'elimina de la resposta abans d'enviar-la.",
   contentTypes: ["Hotels i cases rurals", "Restaurants i agroturismes", "Rutes i refugis", "Festes i esdeveniments", "Productes típics", "Pobles i miradors", "Castells i esglésies", "Història local", "Telèfons útils"],
   pricingTitle: "Preus clars, sense sorpreses",
   pricingSub: "La quota cobreix el servei. El consum es paga a part, només quan es fa servir.",
@@ -262,7 +276,8 @@ const ca: HomeCopy = {
     { t: "Només arriba a qui hi ha consentit", d: "I cada enviament es descompta del seu paquet, sense que hàgiu de comptar res." },
   ],
   closingTitle: "Cada dia, les mateixes",
-  closingBody: "«Sóc celíac, on podem menjar?» · «Quines excursions podem fer?» · «Quins esdeveniments hi ha aquesta setmana?» · «Quins són els plats típics?» · «A quina hora tanquen els remuntadors?»\n\nAl taulell i per telèfon, gairebé sempre amb cua esperant. A partir d'ara respon l'assistent — amb el que heu carregat, en la llengua de qui pregunta. Vosaltres quedeu per al que mereix una persona.",
+  closingQuestions: ["Sóc celíac, on podem menjar?", "Quines excursions podem fer?", "Quins esdeveniments hi ha aquesta setmana?", "Quins són els plats típics?", "A quina hora tanquen els remuntadors?"],
+  closingBody: "Al taulell i per telèfon, gairebé sempre amb cua esperant. A partir d'ara respon l'assistent — amb el que heu carregat, en la llengua de qui pregunta. Vosaltres quedeu per al que mereix una persona.",
   closingCta: "Accedeix al teu canal",
   footer: "eChatbot — assistència per WhatsApp per a oficines de turisme i consorcis.",
 }
@@ -277,7 +292,9 @@ const fr: HomeCopy = {
   lede: "Un assistant qui connaît vos hôtels, vos sentiers, vos fêtes et vos numéros utiles — et les raconte à chaque visiteur dans sa langue, à toute heure.",
   chipMulti: "Toutes les langues",
   chip24: "24 heures sur 24",
-  chipNoApp: "Aucune application à installer",
+  chipFaq: "Répond aux questions habituelles",
+  chipPush: "Notifications push",
+  chipMix: "Croise météo, événements et préférences",
   loginTitle: "Connectez-vous à votre canal",
   loginSub: "Gérez contenus, notifications et conversations.",
   email: "Email",
@@ -299,8 +316,8 @@ const fr: HomeCopy = {
     { title: "Sur WhatsApp, pas une application", body: "Aucune installation, aucune inscription. L'application que le touriste a déjà sur son téléphone." },
   ],
   contentTitle: "Tout le territoire, au même endroit",
-  contentBody1: "Saisissez les contenus depuis le panneau, comme vous rempliriez une fiche. L'assistant les utilise dès que vous enregistrez — aucune configuration, aucun technicien à appeler.",
-  contentBody2: "Écrivez dans votre langue : les traductions suivent toutes seules et restent à jour à chaque modification.",
+  contentBody1: "Un nouvel hôtel, un horaire qui change, la fête de septembre : vous l'écrivez dans le panneau et l'assistant le sait aussitôt. Sans appeler personne.",
+  contentBody2: "Et il ne répond qu'avec ce que vous avez saisi. Si une information manque, il le dit : il ne l'invente pas. Un nom, un numéro ou un horaire absent de vos fiches est retiré de la réponse avant l'envoi.",
   contentTypes: ["Hôtels et chambres d'hôtes", "Restaurants et fermes-auberges", "Randonnées et refuges", "Fêtes et événements", "Produits du terroir", "Villages et points de vue", "Châteaux et églises", "Histoire locale", "Numéros utiles"],
   pricingTitle: "Des prix clairs, sans surprise",
   pricingSub: "L'abonnement couvre le service. La consommation est facturée à part, uniquement à l'usage.",
@@ -314,7 +331,8 @@ const fr: HomeCopy = {
     { t: "Il ne part qu'aux personnes consentantes", d: "Et chaque envoi est décompté de son forfait, sans rien à compter de votre côté." },
   ],
   closingTitle: "Chaque jour, les mêmes",
-  closingBody: "« Je suis cœliaque, où peut-on manger ? » · « Quelles randonnées peut-on faire ? » · « Quels événements cette semaine ? » · « Quels sont les plats typiques ? » · « À quelle heure ferment les remontées ? »\n\nAu guichet et au téléphone, le plus souvent avec la file qui attend. Désormais l'assistant répond pour vous — avec ce que vous avez saisi, dans la langue de celui qui demande. Vous restez pour ce qui mérite quelqu'un.",
+  closingQuestions: ["Je suis cœliaque, où peut-on manger ?", "Quelles randonnées peut-on faire ?", "Quels événements cette semaine ?", "Quels sont les plats typiques ?", "À quelle heure ferment les remontées ?"],
+  closingBody: "Au guichet et au téléphone, le plus souvent avec la file qui attend. Désormais l'assistant répond pour vous — avec ce que vous avez saisi, dans la langue de celui qui demande. Vous restez pour ce qui mérite quelqu'un.",
   closingCta: "Connectez-vous à votre canal",
   footer: "eChatbot — assistance WhatsApp pour offices de tourisme et syndicats d'initiative.",
 }
@@ -329,7 +347,9 @@ const de: HomeCopy = {
   lede: "Ein Assistent, der Ihre Hotels, Wege, Feste und wichtigen Nummern kennt — und sie jedem Gast in seiner Sprache erzählt, zu jeder Uhrzeit.",
   chipMulti: "Jede Sprache",
   chip24: "Rund um die Uhr",
-  chipNoApp: "Keine App nötig",
+  chipFaq: "Beantwortet die üblichen Fragen",
+  chipPush: "Push-Nachrichten",
+  chipMix: "Verbindet Wetter, Events und Vorlieben",
   loginTitle: "Zu Ihrem Kanal anmelden",
   loginSub: "Inhalte, Benachrichtigungen und Gespräche verwalten.",
   email: "E-Mail",
@@ -351,8 +371,8 @@ const de: HomeCopy = {
     { title: "Auf WhatsApp, keine App", body: "Keine Installation, keine Registrierung. Die App, die der Gast ohnehin auf dem Handy hat." },
   ],
   contentTitle: "Die ganze Region, an einem Ort",
-  contentBody1: "Inhalte im Panel eintragen, wie beim Ausfüllen eines Formulars. Der Assistent nutzt sie ab dem Moment des Speicherns — keine Konfiguration, kein Techniker.",
-  contentBody2: "Schreiben Sie in Ihrer Sprache: Die Übersetzungen kommen von selbst und bleiben bei jeder Änderung aktuell.",
+  contentBody1: "Ein neues Hotel, eine geänderte Öffnungszeit, das Fest im September: Sie tragen es im Panel ein, und der Assistent weiß es sofort. Ohne jemanden anzurufen.",
+  contentBody2: "Und er antwortet nur mit dem, was Sie hinterlegt haben. Fehlt eine Angabe, sagt er das — er erfindet sie nicht. Ein Name, eine Nummer oder eine Uhrzeit, die nicht in Ihren Daten steht, wird aus der Antwort entfernt, bevor sie rausgeht.",
   contentTypes: ["Hotels und Pensionen", "Restaurants und Almhütten", "Wanderungen und Schutzhütten", "Feste und Veranstaltungen", "Regionale Produkte", "Dörfer und Aussichtspunkte", "Burgen und Kirchen", "Ortsgeschichte", "Wichtige Nummern"],
   pricingTitle: "Klare Preise, keine Überraschungen",
   pricingSub: "Die Gebühr deckt den Dienst. Der Verbrauch wird getrennt abgerechnet, nur bei Nutzung.",
@@ -366,7 +386,8 @@ const de: HomeCopy = {
     { t: "Sie geht nur an Einwilligende", d: "Und jeder Versand wird von seinem Paket abgezogen, ohne dass Sie zählen müssen." },
   ],
   closingTitle: "Jeden Tag dieselben",
-  closingBody: "„Ich bin Zöliakiebetroffener, wo können wir essen?\" · „Welche Wanderungen gibt es?\" · „Was ist diese Woche los?\" · „Was sind die typischen Gerichte?\" · „Wann schließen die Lifte?\"\n\nAm Schalter und am Telefon, meist mit wartender Schlange. Ab jetzt antwortet der Assistent für Sie — mit dem, was Sie eingetragen haben, in der Sprache des Gastes. Sie bleiben für das, was einen Menschen verdient.",
+  closingQuestions: ["Ich bin Zöliakiebetroffener, wo können wir essen?", "Welche Wanderungen gibt es?", "Was ist diese Woche los?", "Was sind die typischen Gerichte?", "Wann schließen die Lifte?"],
+  closingBody: "Am Schalter und am Telefon, meist mit wartender Schlange. Ab jetzt antwortet der Assistent für Sie — mit dem, was Sie eingetragen haben, in der Sprache des Gastes. Sie bleiben für das, was einen Menschen verdient.",
   closingCta: "Zu Ihrem Kanal anmelden",
   footer: "eChatbot — WhatsApp-Assistenz für Tourismusverbände und Tourismusbüros.",
 }

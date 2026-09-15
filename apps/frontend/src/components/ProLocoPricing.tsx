@@ -124,7 +124,7 @@ export function ProLocoPricing() {
               </p>
 
               <div className="mt-5 flex items-baseline gap-1">
-                <span className="font-display text-5xl font-bold tracking-tight text-slate-900">
+                <span className="text-5xl font-bold tracking-tight text-slate-900 tabular-nums">
                   {euro(plan.monthlyFee)}
                 </span>
                 {plan.monthlyFee > 0 && (

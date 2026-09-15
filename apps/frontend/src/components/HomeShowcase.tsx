@@ -523,8 +523,8 @@ export function HomeShowcase({
           </div>
         </div>
 
-        {/* Capability cards */}
-        <div className="space-y-2.5">
+        {/* Capability cards — desktop only, see note above the grid. */}
+        <div className="hidden space-y-2.5 lg:block">
           {c.features.map((f, i) => (
             <button
               key={f.title}

@@ -43,9 +43,9 @@ export const proLocoShowcaseContent: ShowcaseContent = {
   // Ordered to match the story: the highlight travels top→bottom as it plays.
   features: [
     {
-      icon: "👋",
-      title: "Messaggio di benvenuto",
-      desc: "Accoglie chi scrive per la prima volta, anche con un video del territorio.",
+      icon: "🎬",
+      title: "Video di benvenuto",
+      desc: "Chi scrive per la prima volta viene accolto con un video del territorio.",
     },
     {
       icon: "🏔️",
