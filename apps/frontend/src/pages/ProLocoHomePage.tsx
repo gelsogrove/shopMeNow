@@ -8,6 +8,7 @@ import { proLocoShowcaseContent } from "@/components/ProLocoShowcaseContent"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { SUPPORTED_LANGUAGES, useLanguage } from "@/contexts/LanguageContext"
+import { FlagIcon } from "@/components/shared/FlagIcon"
 import { api, auth } from "@/services/api"
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"
 import { homeCopy } from "./proLocoHomeTranslations"
@@ -152,8 +153,8 @@ export default function ProLocoHomePage() {
       <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <a href="#top" className="flex items-center gap-2 shrink-0">
-            <MessageCircle className="h-5 w-5 text-emerald-700" />
-            <span className="font-display text-base font-bold tracking-tight text-emerald-800">
+            <MessageCircle className="h-5 w-5" style={{ color: "#25D366" }} />
+            <span className="font-display text-base font-bold tracking-tight" style={{ color: "#25D366" }}>
               eChatbot<span className="text-slate-400">.AI</span>
             </span>
           </a>
@@ -173,7 +174,7 @@ export default function ProLocoHomePage() {
                     : "hover:bg-slate-50",
                 ].join(" ")}
               >
-                {l.flag}
+                <FlagIcon flag={l.flag} />
               </button>
             ))}
           </div>
@@ -370,30 +371,6 @@ export default function ProLocoHomePage() {
                   {t.demoSub}
                 </p>
 
-                {/* Example conversation: hiking trail + video */}
-                <div className="mt-8 max-w-md space-y-6">
-                  <div className="space-y-3">
-                    <div className="rounded-2xl bg-white/10 px-4 py-3 border border-white/15">
-                      <p className="text-emerald-50 leading-relaxed text-lg">
-                        Dove possiamo andare a farci una passeggiata oggi?
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-white p-4 shadow-lg space-y-3">
-                      <p className="text-slate-900 leading-relaxed text-lg">
-                        Oggi è sereno: vi consiglio il sentiero delle cascate, 40 minuti e ombra per tutto il percorso 🌲 Mettete scarpe chiuse, l'ultimo tratto vicino all'acqua è scivoloso.
-                      </p>
-                      <div className="rounded-xl overflow-hidden bg-slate-100 border border-slate-200 aspect-video flex flex-col items-center justify-center gap-1">
-                        <span className="text-3xl">🎬</span>
-                        <span className="text-xs text-slate-500 font-medium">Video cascate (15s)</span>
-                      </div>
-                      <div className="text-sm space-y-0.5 pt-1">
-                        <p className="text-blue-600 font-medium">sentieri.proloco.it/cascate</p>
-                        <p className="text-slate-500">+39 0400 111 221</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <a
                   href={DEMO_WA_LINK}
                   target="_blank"
@@ -471,56 +448,43 @@ export default function ProLocoHomePage() {
           tornare." The visitor who wrote once is the office's most valuable
           contact — consented push is what turns that into a return visit. */}
       <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="mb-4 inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800 ring-1 ring-emerald-100">
-                {t.retentionEyebrow}
-              </span>
-              <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                {t.retentionTitle}
-              </h2>
-              <p className="mt-4 text-slate-600 leading-relaxed">
-                {t.retentionBody1}
-              </p>
-              <p className="mt-4 text-slate-600 leading-relaxed">
-                {t.retentionBody2}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {t.retentionSteps.map((step) => (
-                <div
-                  key={step.t}
-                  className="rounded-xl bg-white border border-slate-200 px-5 py-4 shadow-sm"
-                >
-                  <h3 className="font-medium text-slate-900">{step.t}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-600">{step.d}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
+          <span className="mb-4 inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800 ring-1 ring-emerald-100">
+            {t.retentionEyebrow}
+          </span>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {t.retentionTitle}
+          </h2>
+          <p className="mt-4 text-slate-600 leading-relaxed">
+            {t.retentionBody1}
+          </p>
+          <p className="mt-4 text-slate-600 leading-relaxed">
+            {t.retentionBody2}
+          </p>
         </div>
       </section>
 
       {/* ── Privacy by design ────────────────────────────────────── */}
-      <section className="border-t border-slate-100">
+      {/* Same dark-card treatment as "Prova la demo" above, for visual
+          consistency between the two full-bleed feature cards on the page
+          (Andrea, 2026-09-15: "stessa grafica per Prova la demo"). */}
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
         <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
-          <div className="overflow-hidden rounded-[2rem] bg-white p-8 text-left shadow-xl ring-1 ring-slate-200 sm:p-12">
-            <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
+          <div className="overflow-hidden rounded-[2.5rem] shadow-2xl ring-1 ring-white/10" style={{ backgroundColor: GREEN_SURFACE }}>
+            <div className="flex flex-col-reverse items-center gap-8 p-8 sm:flex-row sm:items-center sm:p-12">
               <div className="min-w-0 flex-1">
                 <span
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN_DEEP }}
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                  style={{ backgroundColor: `${WA_GREEN}2e` }}
                 >
-                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <ShieldCheck className="h-3.5 w-3.5" style={{ color: WA_GREEN }} />
                   {t.privacyBadge}
                 </span>
 
-                <h3 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                <h3 className="font-display mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                   {t.privacyTitle}
                 </h3>
-                <p className="mt-3 leading-relaxed text-slate-600">
+                <p className="mt-4 leading-relaxed text-emerald-100/85">
                   {t.privacyBody}
                 </p>
 
@@ -540,16 +504,16 @@ export default function ProLocoHomePage() {
                     (2026-09-15: "Privacy by design era questa immagine").
                     4:3, so it gets its own aspect box rather than the square
                     the mascot sat in. */}
-                <div className="w-64 max-w-full overflow-hidden rounded-2xl bg-emerald-50 ring-1 ring-emerald-100">
+                <div className="w-64 max-w-full overflow-hidden rounded-2xl bg-white p-2 shadow-2xl">
                   <img
                     src="/privacy.png"
                     alt=""
                     loading="lazy"
-                    className="block h-auto w-full"
+                    className="block h-auto w-full rounded-xl"
                   />
                 </div>
                 <span
-                  className="absolute -right-3 -top-3 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
+                  className="absolute -right-3 -top-3 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
                   style={{ backgroundColor: WA_GREEN_DEEP }}
                 >
                   GDPR

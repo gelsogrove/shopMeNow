@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import { Menu, X, ChevronDown, Mail, Crown, LogOut, User, CreditCard, MessageSquare } from "lucide-react"
 import { useLanguage, SUPPORTED_LANGUAGES } from "@/contexts/LanguageContext"
+import { FlagIcon } from "@/components/shared/FlagIcon"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -297,7 +298,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                   onClick={() => setLanguage(l.code)}
                   className={`flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors sm:px-2 ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                 >
-                  <span className="text-lg leading-none">{l.flag}</span>
+                  <FlagIcon flag={l.flag} />
                   <span className="hidden text-xs font-semibold uppercase sm:inline">{l.code}</span>
                 </button>
               ))}
@@ -471,7 +472,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                           : "text-slate-200 hover:bg-white/10"
                       }`}
                     >
-                      <span className="text-xl">{lang.flag}</span>
+                      <FlagIcon flag={lang.flag} className="text-xl" />
                       <span>{lang.name}</span>
                     </button>
                   ))}

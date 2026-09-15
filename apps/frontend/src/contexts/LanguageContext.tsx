@@ -9,13 +9,23 @@ interface LanguageContextType {
   t: (key: string) => string
 }
 
+// The Catalan flag has no standard emoji — the "es-ct" tag-sequence emoji
+// (🏴󠁥󠁳󠁣󠁴󠁿) only renders on recent Apple platforms; everywhere else it falls
+// back to a plain black flag, which is wrong. An inline SVG (Senyera: four
+// red stripes on yellow) renders identically on every OS/browser.
+const CATALAN_FLAG_SVG =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><rect width="900" height="600" fill="#FCDD09"/><g fill="#DA121A"><rect y="0" width="900" height="66.7"/><rect y="133.3" width="900" height="66.7"/><rect y="266.7" width="900" height="66.7"/><rect y="400" width="900" height="66.7"/><rect y="533.3" width="900" height="66.7"/></g></svg>'
+  )
+
 export const SUPPORTED_LANGUAGES = [
   { code: "it" as Language, name: "Italiano", flag: "🇮🇹" },
   { code: "en" as Language, name: "English", flag: "🇬🇧" },
   { code: "es" as Language, name: "Español", flag: "🇪🇸" },
   { code: "de" as Language, name: "Deutsch", flag: "🇩🇪" },
   { code: "fr" as Language, name: "Français", flag: "🇫🇷" },
-  { code: "ca" as Language, name: "Català", flag: "🏴󠁥󠁳󠁣󠁴󠁿" },
+  { code: "ca" as Language, name: "Català", flag: CATALAN_FLAG_SVG },
 ]
 
 const LanguageContext = createContext<LanguageContextType | undefined>(
