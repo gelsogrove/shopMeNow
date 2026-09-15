@@ -150,7 +150,7 @@ const it: HomeCopy = {
     { t: "Parte solo a chi ha acconsentito", d: "E ogni invio scala dal suo pacchetto, senza che dobbiate contare nulla." },
   ],
   closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede.",
-  demoTitle: "Provate la demo",
+  demoTitle: "Provate la demo — provare per credere! 🙂",
   demoSub: "Semplicemente scansionate il codice QR e scrivete nella chat quello che vi chiederebbe un turista.",
   demoOpen: "Aprilo su WhatsApp",
   surveyEyebrow: "Questionario",
