@@ -3328,7 +3328,7 @@ Confermi la tua presenza?`,
     {
       planType: "PREMIUM" as const,
       displayName: "Premium",
-      monthlyFee: 90.00,
+      monthlyFee: 70.00,
       maxChannels: 3,
       maxProducts: 9999,
       maxCustomers: 100,
@@ -3353,7 +3353,7 @@ Confermi la tua presenza?`,
     {
       planType: "ENTERPRISE" as const,
       displayName: "Enterprise",
-      monthlyFee: 160.00,
+      monthlyFee: 149.00,
       maxChannels: 999, // Unlimited
       maxProducts: 9999, // Unlimited
       maxCustomers: 9999, // Unlimited
