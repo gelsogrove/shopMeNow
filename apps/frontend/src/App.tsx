@@ -13,9 +13,7 @@ import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
 import { SmartPushAiPage } from "@/pages/SmartPushAiPage"
 import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
-import { RealEstatePage } from "@/pages/RealEstatePage"
 import { TourismPage } from "@/pages/TourismPage"
-import { BeautyPage } from "@/pages/BeautyPage"
 import { Industry40Page } from "@/pages/Industry40Page"
 import { ContactPage } from "@/pages/ContactPage"
 import { AvisoLegalPage } from "@/pages/AvisoLegalPage"
@@ -450,9 +448,7 @@ function AppWithProviders() {
                 <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/widget-to-whatsapp" element={<Navigate to="/" replace />} />
                 <Route path="/human-support" element={<HumanSupportPage />} />
-                <Route path="/real-estate" element={<RealEstatePage />} />
                 <Route path="/tourism" element={<TourismPage />} />
-                <Route path="/beauty" element={<BeautyPage />} />
                 {/* Edge AI / Industry 4.0 — standalone marketing page,
                     reachable by URL only (not linked from header/footer/menu). */}
                 <Route path="/edgeai" element={<Industry40Page />} />

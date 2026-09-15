@@ -17,8 +17,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integrazione CRM",
     solutions: "Soluzioni",
-    realEstate: "Agenzie Immobiliari",
-    beauty: "Centri Estetici",
     tourism: "Turismo e Pro Loco",
     company: "Azienda",
     about: "Chi Siamo",
@@ -44,8 +42,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM Integration",
     solutions: "Solutions",
-    realEstate: "Real Estate Agencies",
-    beauty: "Beauty Centers",
     tourism: "Tourism & Visitor Offices",
     company: "Company",
     about: "About Us",
@@ -71,8 +67,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integración CRM",
     solutions: "Soluciones",
-    realEstate: "Agencias Inmobiliarias",
-    beauty: "Centros de Estética",
     tourism: "Turismo y Oficinas de Turismo",
     company: "Empresa",
     about: "Sobre Nosotros",
@@ -98,8 +92,6 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM-Integration",
     solutions: "Lösungen",
-    realEstate: "Immobilienagenturen",
-    beauty: "Kosmetikstudios",
     tourism: "Tourismus & Tourismusbüros",
     company: "Unternehmen",
     about: "Über uns",
@@ -142,8 +134,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             </ul>
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
             <ul className="space-y-3">
-              <li><Link to="/real-estate" className="text-sm hover:text-green-500 transition-colors">{t.realEstate}</Link></li>
-              <li><Link to="/beauty" className="text-sm hover:text-green-500 transition-colors">{t.beauty}</Link></li>
               <li><Link to="/tourism" className="text-sm hover:text-green-500 transition-colors">{t.tourism}</Link></li>
             </ul>
           </div>

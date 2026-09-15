@@ -1,7 +1,7 @@
 import { HomeShowcase } from "@/components/HomeShowcase"
 import { HeroBackdrop } from "@/components/HeroBackdrop"
-import HeroRobot from "@/components/landing/HeroRobot"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import HeroRobot from "@/components/landing/HeroRobot"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
 import { Typewriter } from "@/components/Typewriter"
 import QRCode from "react-qr-code"
@@ -236,11 +236,6 @@ export default function ProLocoHomePage() {
         <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20 lg:pb-[34.4rem]">
         <div className="grid items-start gap-12 lg:grid-cols-[3fr_2fr] lg:gap-16">
           <div>
-            {/* The mascot used to sit here, beside the headline. It moved to
-                the questions section below (Andrea, 2026-09-15: "robottino
-                mettilo sotto 'Ogni giorno, le stesse'"), where it introduces
-                the questions it is the one answering instead of competing with
-                the headline for the same width. */}
             <div>
               <div className="min-w-0">
                 <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-sm" style={{ backgroundColor: `${WA_GREEN}33`, boxShadow: `inset 0 0 0 1px ${WA_GREEN}80` }}>
@@ -286,56 +281,6 @@ export default function ProLocoHomePage() {
             <div id="hero-chat-slot" className="w-full max-w-lg" />
           </div>
         </div>
-        </div>
-      </section>
-
-      {/* ── The questions they answer every day ─────────────────── */}
-      <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 text-center">
-          <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-slate-900 p-7 text-left shadow-2xl ring-1 ring-white/10 sm:p-9">
-            <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
-              <div className="min-w-0 flex-1">
-                <span
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN }}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: WA_GREEN }} />
-                  WhatsApp
-                </span>
-
-                <h3 className="font-display mt-3 text-3xl font-bold tracking-tight text-white">
-                  {t.demoTitle}
-                </h3>
-                <p className="mt-3 leading-relaxed text-slate-300">
-                  {t.demoSub}
-                </p>
-
-                <a
-                  href={DEMO_WA_LINK}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] lg:hidden"
-                  style={{ backgroundColor: WA_GREEN }}
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  {t.demoOpen}
-                </a>
-              </div>
-
-              <div className="relative shrink-0">
-                <div className="rounded-2xl bg-white p-4 shadow-lg">
-                  <QRCode value={DEMO_WA_LINK} size={148} bgColor="#ffffff" fgColor="#0f172a" />
-                </div>
-                <span
-                  className="absolute -right-3 -top-3 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
-                  style={{ backgroundColor: WA_GREEN }}
-                >
-                  Live
-                </span>
-                <HeroRobot className="pointer-events-none absolute -bottom-6 -left-8 w-16 [&_img]:w-full [&_img]:h-auto" />
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -437,6 +382,55 @@ export default function ProLocoHomePage() {
         </div>
       </section>
 
+      {/* ── Try the demo ─────────────────────────────────────────── */}
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 text-center">
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-white p-7 text-left shadow-xl ring-1 ring-slate-200 sm:p-9">
+            <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
+              <div className="min-w-0 flex-1">
+                <span
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ backgroundColor: `${WA_GREEN}1f`, color: WA_GREEN }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: WA_GREEN }} />
+                  WhatsApp
+                </span>
+
+                <h3 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                  {t.demoTitle}
+                </h3>
+                <p className="mt-3 leading-relaxed text-slate-600">
+                  {t.demoSub}
+                </p>
+
+                <a
+                  href={DEMO_WA_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-6 inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] lg:hidden"
+                  style={{ backgroundColor: WA_GREEN }}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  {t.demoOpen}
+                </a>
+              </div>
+
+              <div className="relative shrink-0">
+                <div className="rounded-2xl bg-white p-4 shadow-md ring-1 ring-slate-200">
+                  <QRCode value={DEMO_WA_LINK} size={148} bgColor="#ffffff" fgColor="#0f172a" />
+                </div>
+                <span
+                  className="absolute -right-3 -top-3 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
+                  style={{ backgroundColor: WA_GREEN }}
+                >
+                  Live
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Revenue: selling push to local merchants ─────────────── */}
       {/* Andrea, 2026-09-14: "deve essere chiaro che si possono vendere i push
           pubblicitari agli esercenti, una nuova entrata economica per le Pro
@@ -480,10 +474,47 @@ export default function ProLocoHomePage() {
         </div>
       </section>
 
+      {/* ── Retention: the contact outlives the holiday ──────────── */}
+      {/* Andrea, 2026-09-15: "E quando la vacanza finisce, è lui a farli
+          tornare." The visitor who wrote once is the office's most valuable
+          contact — consented push is what turns that into a return visit. */}
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <p className="text-emerald-700 font-medium text-sm mb-3">
+                {t.retentionEyebrow}
+              </p>
+              <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+                {t.retentionTitle}
+              </h2>
+              <p className="mt-4 text-slate-600 leading-relaxed">
+                {t.retentionBody1}
+              </p>
+              <p className="mt-4 text-slate-600 leading-relaxed">
+                {t.retentionBody2}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {t.retentionSteps.map((step) => (
+                <div
+                  key={step.t}
+                  className="rounded-xl bg-white border border-slate-200 px-5 py-4 shadow-sm"
+                >
+                  <h3 className="font-medium text-slate-900">{step.t}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">{step.d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Privacy by design ────────────────────────────────────── */}
       <section className="border-t border-slate-100">
         <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-          <div className="overflow-hidden rounded-3xl bg-slate-900 p-7 text-left shadow-2xl ring-1 ring-white/10 sm:p-9">
+          <div className="overflow-hidden rounded-3xl bg-white p-7 text-left shadow-xl ring-1 ring-slate-200 sm:p-9">
             <div className="flex flex-col-reverse items-center gap-8 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
                 <span
@@ -494,10 +525,10 @@ export default function ProLocoHomePage() {
                   {t.privacyBadge}
                 </span>
 
-                <h3 className="font-display mt-3 text-3xl font-bold tracking-tight text-white">
+                <h3 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900">
                   {t.privacyTitle}
                 </h3>
-                <p className="mt-3 leading-relaxed text-slate-300">
+                <p className="mt-3 leading-relaxed text-slate-600">
                   {t.privacyBody}
                 </p>
 
@@ -513,8 +544,10 @@ export default function ProLocoHomePage() {
               </div>
 
               <div className="relative shrink-0">
-                <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
-                  <ShieldCheck className="h-24 w-24" style={{ color: WA_GREEN }} strokeWidth={1.2} />
+                {/* The mascot, reused here (Andrea, 2026-09-15: "per la privacy
+                    hai l'immagine del robottino che puoi riutilizzare"). */}
+                <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-emerald-100">
+                  <HeroRobot className="w-28 [&_img]:w-full [&_img]:h-auto" />
                 </div>
                 <span
                   className="absolute -right-3 -top-3 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
@@ -524,6 +557,33 @@ export default function ProLocoHomePage() {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────── */}
+      {/* The six objections a tourist office actually raises, brought over
+          from the /tourism page (Andrea, 2026-09-15: "prendi spunto se c'è
+          qualcosa di interessante"). Plain <details>: no state, and the
+          answers stay in the HTML for search engines. */}
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {t.faqTitle}
+          </h2>
+
+          <div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+            {t.faqItems.map((item) => (
+              <details key={item.q} className="group py-4">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 font-medium text-slate-900 marker:content-none [&::-webkit-details-marker]:hidden">
+                  {item.q}
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                  {item.a}
+                </p>
+              </details>
+            ))}
           </div>
         </div>
       </section>

@@ -135,6 +135,7 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_q: "Onestamente, quanto vi interessa un assistente così per il vostro ufficio? Da 0 (per niente) a 5 (molto interessati).\n\nSe scegliete 0 non vi chiediamo nessun dato. Se siete interessati vi mostriamo una breve form di contatto.",
 
     // Contact form
+    contact_opt2: "No, grazie",
     form_title: "Come vi contattiamo?",
     form_desc: "Lasciate i vostri dati e vi ricontattiamo entro 24 ore per mostrarvi l'assistente al lavoro.",
     form_fullName: "Nome e Cognome *",
@@ -260,6 +261,7 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_title: "How interested are you?",
     interest_q: "Honestly, how interested are you in an assistant like this for your office? From 0 (not at all) to 5 (very interested).\n\nIf you pick 0 we won't ask for any details. If you're interested, we'll show you a short contact form.",
 
+    contact_opt2: "No, thanks",
     form_title: "How can we reach you?",
     form_desc: "Leave your details and we'll get back to you within 24 hours to show you the assistant at work.",
     form_fullName: "Full Name *",
@@ -382,6 +384,7 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_title: "¿Cuánto os interesa?",
     interest_q: "Sinceramente, ¿cuánto os interesa un asistente así para vuestra oficina? De 0 (nada) a 5 (mucho).\n\nSi elegís 0 no os pedimos ningún dato. Si os interesa, os mostramos un breve formulario de contacto.",
 
+    contact_opt2: "No, gracias",
     form_title: "¿Cómo os contactamos?",
     form_desc: "Dejadnos vuestros datos y os escribimos en 24 horas para enseñaros el asistente en funcionamiento.",
     form_fullName: "Nombre y Apellidos *",
@@ -504,6 +507,7 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_title: "Wie interessiert sind Sie?",
     interest_q: "Ehrlich gefragt: Wie interessiert sind Sie an so einem Assistenten für Ihr Büro? Von 0 (gar nicht) bis 5 (sehr interessiert).\n\nBei 0 fragen wir Sie nach keinerlei Daten. Bei Interesse zeigen wir Ihnen ein kurzes Kontaktformular.",
 
+    contact_opt2: "Nein, danke",
     form_title: "Wie erreichen wir Sie?",
     form_desc: "Hinterlassen Sie Ihre Daten und wir melden uns innerhalb von 24 Stunden, um Ihnen den Assistenten im Einsatz zu zeigen.",
     form_fullName: "Vor- und Nachname *",
@@ -783,7 +787,7 @@ export default function QuestionnairePage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState(1)
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
-  const [industryOtherText, setIndustryOtherText] = useState("")
+  const [orgOtherText, setOrgOtherText] = useState("")
   const [contact, setContact] = useState({ fullName: "", email: "", phone: "", company: "" })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
@@ -855,8 +859,8 @@ export default function QuestionnairePage() {
     setSubmitError("")
     try {
       const finalAnswers = { ...answers }
-      if (finalAnswers.stepIndustry === "other" && industryOtherText.trim()) {
-        finalAnswers.stepIndustry = industryOtherText.trim()
+      if (finalAnswers.stepOrg === "other" && orgOtherText.trim()) {
+        finalAnswers.stepOrg = orgOtherText.trim()
       }
       // Serialize arrays to comma-separated strings for the API
       const serialized: Record<string, string> = {}
@@ -895,21 +899,21 @@ export default function QuestionnairePage() {
       <SEO
         title={
           ({
-            it: "Survey - Costruiamo insieme il chatbot perfetto",
-            en: "Survey - Let's build the perfect chatbot together",
-            es: "Survey - Construyamos juntos el chatbot perfecto",
-            de: "Survey - Lass uns gemeinsam den perfekten Chatbot bauen",
+            it: "Questionario - L'assistente WhatsApp per la vostra Pro Loco",
+            en: "Survey - The WhatsApp assistant for your tourist office",
+            es: "Cuestionario - El asistente de WhatsApp para vuestra oficina de turismo",
+            de: "Fragebogen - Der WhatsApp-Assistent für Ihr Tourismusbüro",
           } as Record<string, string>)[lang] ||
-          "Survey - Let's build the perfect chatbot together"
+          "Survey - The WhatsApp assistant for your tourist office"
         }
         description={
           ({
-            it: "Rispondi a qualche domanda sulle tue esigenze e ti mostriamo come eChatbot può trasformare il tuo business su WhatsApp. Circa 2 minuti, zero impegno.",
-            en: "Answer a few questions about your needs and we'll show how eChatbot can transform your business on WhatsApp. About 2 minutes, no commitment.",
-            es: "Responde unas preguntas sobre tus necesidades y te mostramos cómo eChatbot puede transformar tu negocio en WhatsApp. Unos 2 minutos, sin compromiso.",
-            de: "Beantworte ein paar Fragen zu deinen Anforderungen und wir zeigen dir, wie eChatbot dein Geschäft auf WhatsApp verändern kann. Etwa 2 Minuten, völlig unverbindlich.",
+            it: "Rispondete a qualche domanda sul vostro territorio e su cosa vi chiedono i turisti: vi mostriamo come l'assistente WhatsApp lavorerebbe per voi. Due minuti, senza impegno.",
+            en: "Answer a few questions about your area and what visitors ask you: we'll show you how the WhatsApp assistant would work for you. Two minutes, no commitment.",
+            es: "Responded a unas preguntas sobre vuestro territorio y sobre lo que os preguntan los turistas: os mostramos cómo trabajaría el asistente de WhatsApp. Dos minutos, sin compromiso.",
+            de: "Beantworten Sie ein paar Fragen zu Ihrer Region und dazu, was Gäste Sie fragen: Wir zeigen Ihnen, wie der WhatsApp-Assistent für Sie arbeiten würde. Zwei Minuten, unverbindlich."
           } as Record<string, string>)[lang] ||
-          "Answer a few questions about your needs and we'll show how eChatbot can transform your business on WhatsApp."
+          "Answer a few questions about your area and what visitors ask you, and we'll show you how the WhatsApp assistant would work for you."
         }
         keywords="echatbot survey, chatbot whatsapp survey, valutazione chatbot, demo chatbot whatsapp"
         url="/survey"
@@ -1104,20 +1108,14 @@ export default function QuestionnairePage() {
                       </div>
                     )}
 
-                    {/* Select dropdown (industry) */}
+                    {/* Select dropdown (organisation type) */}
                     {step.type === "select" && step.options && (
                       <div className="space-y-3">
                         <select
                           value={answers[step.id] || ""}
                           onChange={(e) => {
-                            const val = e.target.value
-                            if (val === "other") {
-                              handleAnswer(step.id, "other")
-                              setIndustryOtherText("")
-                            } else {
-                              handleAnswer(step.id, val)
-                              setIndustryOtherText("")
-                            }
+                            handleAnswer(step.id, e.target.value)
+                            setOrgOtherText("")
                           }}
                           className="w-full border-2 border-white/10 rounded-xl px-4 py-3.5 text-sm text-slate-100 focus:border-[#25D366] focus:outline-none transition-colors bg-slate-900/60 appearance-none cursor-pointer"
                         >
@@ -1133,9 +1131,9 @@ export default function QuestionnairePage() {
                         {answers[step.id] === "other" && (
                           <input
                             type="text"
-                            placeholder={T.industry_other_placeholder || "Specify your industry…"}
-                            value={industryOtherText}
-                            onChange={(e) => setIndustryOtherText(e.target.value)}
+                            placeholder={T.org_other_placeholder}
+                            value={orgOtherText}
+                            onChange={(e) => setOrgOtherText(e.target.value)}
                             className="w-full border-2 border-white/10 bg-slate-900/60 rounded-xl px-4 py-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#25D366] focus:outline-none transition-colors"
                             autoFocus
                           />

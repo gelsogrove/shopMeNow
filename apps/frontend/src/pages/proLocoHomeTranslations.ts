@@ -52,6 +52,13 @@ export interface HomeCopy {
   revenueBody1: string
   revenueBody2: string
   revenueSteps: Array<{ t: string; d: string }>
+  retentionEyebrow: string
+  retentionTitle: string
+  retentionBody1: string
+  retentionBody2: string
+  retentionSteps: Array<{ t: string; d: string }>
+  faqTitle: string
+  faqItems: Array<{ q: string; a: string }>
   galleryTitle: string
   gallerySubtitle: string
   closingQuestions: string[]
@@ -124,6 +131,24 @@ const it: HomeCopy = {
   revenueTitle: "Gli esercenti possono sponsorizzarsi sul canale",
   revenueBody1: "Un albergo, un ristorante, un noleggio attrezzature — per esempio — possono sponsorizzarsi sul vostro canale, con un messaggio che arriva ai turisti che hanno dato il consenso. Voi decidete il prezzo, il sistema tiene il conto del numero di invii fatti.",
   revenueBody2: "Per molti uffici turistici basta a coprire il costo del servizio. Quello che arriva dopo è guadagno.",
+  retentionEyebrow: "Oltre il soggiorno",
+  retentionTitle: "E quando la vacanza finisce, è lui a farli tornare.",
+  retentionBody1: "Il visitatore che ha già scritto una volta è il contatto più prezioso che avete: sa dov'è, si è trovato bene, e vi ha lasciato il numero.",
+  retentionBody2: "Prima di Natale, di Pasqua o dell'estate riceve le vostre offerte per la prossima vacanza — ma solo se ha detto di sì, e con un NO che basta scrivere per non riceverne più.",
+  retentionSteps: [
+    { t: "Durante il soggiorno", d: "Meteo che cambia, un evento di stasera, una sagra spostata per pioggia: arriva l'avviso a chi è in paese in quel momento. Nessuno in ufficio deve premere niente." },
+    { t: "Prima delle feste", d: "Finita la vacanza, il contatto resta. Qualche settimana prima di Natale, Pasqua o dell'estate riceve offerte ed eventi della prossima stagione — il periodo in cui si decide davvero dove andare." },
+    { t: "Sempre con il consenso", d: "Il consenso viene chiesto in chat, e basta scrivere NO per smettere di ricevere. Prima di ogni invio il sistema controlla anche di non ripetere una cosa già detta da un'altra iniziativa." },
+  ],
+  faqTitle: "Le domande che ci fanno sempre",
+  faqItems: [
+    { q: "Serve un numero WhatsApp nuovo?", a: "No, si può usare il numero che avete già, purché non sia collegato all'app WhatsApp su un telefono. Se preferite tenere separato il numero dell'ufficio, ne attiviamo uno dedicato: decidete voi." },
+    { q: "Chi aggiorna le informazioni?", a: "Le aggiornate voi, da un pannello che si usa come un foglio di calcolo: si apre la scheda dell'evento, si cambia l'orario, si salva. Nessuno deve toccare codice e non serve chiamarci per una modifica." },
+    { q: "E se l'assistente non sa rispondere?", a: "Lo dice, invece di inventare. Se la domanda esce dal catalogo — o se la persona chiede di parlare con qualcuno — la conversazione passa a un operatore vero, che la vede e risponde dal pannello." },
+    { q: "Quanto ci vuole per partire?", a: "Dipende quasi solo da quanto materiale avete già pronto. Con un elenco di eventi e strutture da importare si parte in pochi giorni; se il catalogo va costruito da zero, serve qualche settimana di raccolta dati." },
+    { q: "I dati dei turisti dove finiscono?", a: "Restano vostri. I contatti e le conversazioni sono nel vostro spazio, separati da quelli di ogni altro ente, e la gestione è conforme al GDPR. Non vengono usati per addestrare modelli né ceduti a terzi." },
+    { q: "Funziona anche se non siamo in montagna?", a: "Sì. L'assistente non sa niente della montagna in particolare: sa quello che c'è nel vostro catalogo. Mare, città d'arte, lago o borgo cambiano le schede, non il funzionamento." },
+  ],
   revenueSteps: [
     { t: "L'esercente compra un pacchetto", d: "Dieci, cinquanta, cento messaggi. Decidete voi il prezzo." },
     { t: "Prepara il suo messaggio", d: "Testo e foto della sua offerta, che approvate prima dell'invio." },
@@ -199,6 +224,24 @@ const en: HomeCopy = {
   revenueTitle: "Local businesses can sponsor themselves on the channel",
   revenueBody1: "A hotel, a restaurant, an equipment rental — for example — can sponsor themselves on your channel, with a message that reaches visitors who opted in. You set the price, the system keeps count of how many messages have been sent.",
   revenueBody2: "For many tourist offices it covers the cost of the service. What comes after that is income.",
+  retentionEyebrow: "Beyond the stay",
+  retentionTitle: "And when the holiday ends, it is what brings them back.",
+  retentionBody1: "A visitor who has written once is the most valuable contact you have: they know the place, they enjoyed it, and they left you their number.",
+  retentionBody2: "Before Christmas, Easter or the summer they get your offers for the next holiday — but only if they said yes, and a single NO is enough to stop them.",
+  retentionSteps: [
+    { t: "During the stay", d: "Changing weather, tonight's event, a festival moved because of rain: the alert reaches whoever is in the village at that moment. Nobody in the office has to press anything." },
+    { t: "Before the holidays", d: "Once the holiday is over, the contact remains. A few weeks before Christmas, Easter or the summer they get offers and events for the coming season — the moment people actually decide where to go." },
+    { t: "Always with consent", d: "Consent is asked for in the chat, and writing NO is enough to stop receiving. Before each send the system also checks it is not repeating something another campaign has already said." },
+  ],
+  faqTitle: "The questions we always get",
+  faqItems: [
+    { q: "Do we need a new WhatsApp number?", a: "No, you can use the number you already have, as long as it isn't tied to the WhatsApp app on a phone. If you'd rather keep the office number separate, we activate a dedicated one: your call." },
+    { q: "Who updates the information?", a: "You do, from a panel that works like a spreadsheet: open the event, change the time, save. Nobody has to touch code, and you don't need to call us for an edit." },
+    { q: "What if the assistant doesn't know the answer?", a: "It says so instead of inventing one. If the question falls outside the catalogue — or the person asks to speak to somebody — the conversation is handed to a real operator, who sees it and replies from the panel." },
+    { q: "How long before we're live?", a: "It depends almost entirely on how much material you already have. With a list of events and venues to import you're live in a few days; if the catalogue has to be built from scratch, allow a few weeks of data gathering." },
+    { q: "Where does visitor data end up?", a: "It stays yours. Contacts and conversations sit in your own space, separate from every other organisation, and handling is GDPR-compliant. It is never used to train models or passed to third parties." },
+    { q: "Does it work if we're not a mountain destination?", a: "Yes. The assistant knows nothing about mountains in particular: it knows what is in your catalogue. Seaside, art city, lake or village changes the entries, not how it works." },
+  ],
   revenueSteps: [
     { t: "The business buys a bundle", d: "Ten, fifty, a hundred messages. You set the price." },
     { t: "They prepare their message", d: "Text and a photo of their offer, which you approve before it goes out." },
@@ -274,6 +317,24 @@ const es: HomeCopy = {
   revenueTitle: "Los negocios pueden patrocinarse en el canal",
   revenueBody1: "Un hotel, un restaurante, un alquiler de material — por ejemplo — pueden patrocinarse en vuestro canal, con un mensaje que llega a los turistas que dieron su consentimiento. Vosotros ponéis el precio, el sistema lleva la cuenta del número de envíos realizados.",
   revenueBody2: "Para muchas oficinas de turismo basta para cubrir el coste del servicio. Lo que llega después es ganancia.",
+  retentionEyebrow: "Más allá de la estancia",
+  retentionTitle: "Y cuando acaban las vacaciones, es él quien los hace volver.",
+  retentionBody1: "El visitante que ya os ha escrito una vez es el contacto más valioso que tenéis: conoce el lugar, se encontró a gusto y os dejó su número.",
+  retentionBody2: "Antes de Navidad, de Semana Santa o del verano recibe vuestras ofertas para las próximas vacaciones — pero solo si dijo que sí, y con un NO basta para dejar de recibirlas.",
+  retentionSteps: [
+    { t: "Durante la estancia", d: "Un cambio de tiempo, un evento de esta noche, una fiesta aplazada por lluvia: el aviso llega a quien está en el pueblo en ese momento. Nadie en la oficina tiene que pulsar nada." },
+    { t: "Antes de las fiestas", d: "Acabadas las vacaciones, el contacto se queda. Unas semanas antes de Navidad, Semana Santa o el verano recibe ofertas y eventos de la próxima temporada — cuando de verdad se decide adónde ir." },
+    { t: "Siempre con consentimiento", d: "El consentimiento se pide en el chat, y basta escribir NO para dejar de recibir. Antes de cada envío el sistema comprueba además que no repite algo que ya dijo otra campaña." },
+  ],
+  faqTitle: "Las preguntas que siempre nos hacen",
+  faqItems: [
+    { q: "¿Hace falta un número de WhatsApp nuevo?", a: "No, se puede usar el número que ya tenéis, siempre que no esté vinculado a la app de WhatsApp en un teléfono. Si preferís mantener aparte el número de la oficina, activamos uno dedicado: lo decidís vosotros." },
+    { q: "¿Quién actualiza la información?", a: "La actualizáis vosotros, desde un panel que se usa como una hoja de cálculo: se abre la ficha del evento, se cambia el horario, se guarda. Nadie tiene que tocar código ni hace falta llamarnos para un cambio." },
+    { q: "¿Y si el asistente no sabe responder?", a: "Lo dice, en vez de inventar. Si la pregunta se sale del catálogo — o la persona pide hablar con alguien — la conversación pasa a un operador real, que la ve y responde desde el panel." },
+    { q: "¿Cuánto se tarda en empezar?", a: "Depende casi solo del material que ya tengáis. Con un listado de eventos y alojamientos por importar se empieza en pocos días; si el catálogo hay que construirlo de cero, harán falta unas semanas de recogida de datos." },
+    { q: "¿Dónde acaban los datos de los turistas?", a: "Siguen siendo vuestros. Los contactos y las conversaciones están en vuestro espacio, separados de los de cualquier otra entidad, y la gestión cumple el RGPD. No se usan para entrenar modelos ni se ceden a terceros." },
+    { q: "¿Funciona si no estamos en la montaña?", a: "Sí. El asistente no sabe nada de la montaña en particular: sabe lo que hay en vuestro catálogo. Costa, ciudad de arte, lago o pueblo cambian las fichas, no el funcionamiento." },
+  ],
   revenueSteps: [
     { t: "El negocio compra un paquete", d: "Diez, cincuenta, cien mensajes. El precio lo ponéis vosotros." },
     { t: "Prepara su mensaje", d: "Texto y foto de su oferta, que aprobáis antes del envío." },
@@ -350,6 +411,24 @@ const ca: HomeCopy = {
   revenueTitle: "Els negocis poden patrocinar-se al canal",
   revenueBody1: "Un hotel, un restaurant, un lloguer de material — per exemple — es poden patrocinar al vostre canal, amb un missatge que arriba als turistes que hi han donat el consentiment. Vosaltres poseu el preu, el sistema porta el compte del nombre d'enviaments fets.",
   revenueBody2: "Per a moltes oficines de turisme n'hi ha prou per cobrir el cost del servei. El que arriba després és guany.",
+  retentionEyebrow: "Més enllà de l'estada",
+  retentionTitle: "I quan s'acaben les vacances, és ell qui els fa tornar.",
+  retentionBody1: "El visitant que ja us ha escrit un cop és el contacte més valuós que teniu: coneix el lloc, s'hi va trobar bé i us ha deixat el número.",
+  retentionBody2: "Abans de Nadal, de Setmana Santa o de l'estiu rep les vostres ofertes per a les pròximes vacances — però només si ha dit que sí, i amb un NO n'hi ha prou per deixar de rebre'n.",
+  retentionSteps: [
+    { t: "Durant l'estada", d: "Un canvi de temps, un acte d'aquesta nit, una festa ajornada per pluja: l'avís arriba a qui és al poble en aquell moment. Ningú de l'oficina ha de prémer res." },
+    { t: "Abans de les festes", d: "Acabades les vacances, el contacte es queda. Unes setmanes abans de Nadal, Setmana Santa o l'estiu rep ofertes i actes de la pròxima temporada — quan de debò es decideix on anar." },
+    { t: "Sempre amb consentiment", d: "El consentiment es demana al xat, i n'hi ha prou d'escriure NO per deixar de rebre. Abans de cada enviament el sistema comprova també que no repeteix una cosa que ja ha dit una altra iniciativa." },
+  ],
+  faqTitle: "Les preguntes que ens fan sempre",
+  faqItems: [
+    { q: "Cal un número de WhatsApp nou?", a: "No, es pot fer servir el número que ja teniu, sempre que no estigui vinculat a l'app de WhatsApp en un telèfon. Si preferiu mantenir a part el número de l'oficina, n'activem un de dedicat: ho decidiu vosaltres." },
+    { q: "Qui actualitza la informació?", a: "L'actualitzeu vosaltres, des d'un panell que es fa servir com un full de càlcul: s'obre la fitxa de l'acte, es canvia l'horari, es desa. Ningú no ha de tocar codi ni cal trucar-nos per un canvi." },
+    { q: "I si l'assistent no sap respondre?", a: "Ho diu, en comptes d'inventar-s'ho. Si la pregunta surt del catàleg — o la persona demana parlar amb algú — la conversa passa a un operador real, que la veu i respon des del panell." },
+    { q: "Quant es triga a començar?", a: "Depèn gairebé només del material que ja tingueu. Amb un llistat d'actes i allotjaments per importar es comença en pocs dies; si el catàleg s'ha de construir de zero, calen unes setmanes de recollida de dades." },
+    { q: "On acaben les dades dels turistes?", a: "Continuen sent vostres. Els contactes i les converses són al vostre espai, separats dels de qualsevol altra entitat, i la gestió compleix el RGPD. No s'usen per entrenar models ni es cedeixen a tercers." },
+    { q: "Funciona si no som a la muntanya?", a: "Sí. L'assistent no sap res de la muntanya en particular: sap el que hi ha al vostre catàleg. Costa, ciutat d'art, llac o poble canvien les fitxes, no el funcionament." },
+  ],
   revenueSteps: [
     { t: "El negoci compra un paquet", d: "Deu, cinquanta, cent missatges. El preu el poseu vosaltres." },
     { t: "Prepara el seu missatge", d: "Text i foto de la seva oferta, que aproveu abans de l'enviament." },
@@ -425,6 +504,24 @@ const fr: HomeCopy = {
   revenueTitle: "Les commerçants peuvent se sponsoriser sur le canal",
   revenueBody1: "Un hôtel, un restaurant, un loueur de matériel — par exemple — peuvent se sponsoriser sur votre canal, avec un message qui atteint les visiteurs qui ont donné leur accord. Vous fixez le prix, le système compte le nombre d'envois effectués.",
   revenueBody2: "Pour beaucoup d'offices de tourisme, cela suffit à couvrir le coût du service. Ce qui vient après est du gain.",
+  retentionEyebrow: "Au-delà du séjour",
+  retentionTitle: "Et quand les vacances se terminent, c'est lui qui les fait revenir.",
+  retentionBody1: "Le visiteur qui vous a déjà écrit une fois est le contact le plus précieux que vous ayez : il connaît l'endroit, il s'y est plu, et il vous a laissé son numéro.",
+  retentionBody2: "Avant Noël, Pâques ou l'été, il reçoit vos offres pour les prochaines vacances — mais seulement s'il a dit oui, et un simple NON suffit pour ne plus rien recevoir.",
+  retentionSteps: [
+    { t: "Pendant le séjour", d: "Un changement de météo, un événement ce soir, une fête reportée pour cause de pluie : l'alerte arrive à ceux qui sont au village à ce moment-là. Personne à l'office n'a rien à faire." },
+    { t: "Avant les fêtes", d: "Les vacances finies, le contact reste. Quelques semaines avant Noël, Pâques ou l'été, il reçoit offres et événements de la saison à venir — le moment où l'on choisit vraiment où aller." },
+    { t: "Toujours avec le consentement", d: "Le consentement est demandé dans la conversation, et il suffit d'écrire NON pour ne plus rien recevoir. Avant chaque envoi, le système vérifie aussi qu'il ne répète pas ce qu'une autre campagne a déjà dit." },
+  ],
+  faqTitle: "Les questions qu'on nous pose toujours",
+  faqItems: [
+    { q: "Faut-il un nouveau numéro WhatsApp ?", a: "Non, vous pouvez utiliser celui que vous avez déjà, à condition qu'il ne soit pas lié à l'application WhatsApp sur un téléphone. Si vous préférez garder le numéro de l'office à part, nous en activons un dédié : c'est vous qui décidez." },
+    { q: "Qui met à jour les informations ?", a: "Vous, depuis un panneau qui s'utilise comme un tableur : on ouvre la fiche de l'événement, on change l'horaire, on enregistre. Personne n'a à toucher au code et il n'est pas nécessaire de nous appeler pour une modification." },
+    { q: "Et si l'assistant ne sait pas répondre ?", a: "Il le dit, au lieu d'inventer. Si la question sort du catalogue — ou si la personne demande à parler à quelqu'un — la conversation passe à un vrai opérateur, qui la voit et répond depuis le panneau." },
+    { q: "Combien de temps avant de démarrer ?", a: "Cela dépend presque uniquement du matériel dont vous disposez déjà. Avec une liste d'événements et d'hébergements à importer, on démarre en quelques jours ; s'il faut construire le catalogue de zéro, comptez quelques semaines de collecte." },
+    { q: "Où vont les données des visiteurs ?", a: "Elles restent les vôtres. Les contacts et les conversations sont dans votre espace, séparés de ceux de tout autre organisme, et la gestion est conforme au RGPD. Elles ne servent jamais à entraîner des modèles ni ne sont cédées à des tiers." },
+    { q: "Cela marche-t-il si nous ne sommes pas en montagne ?", a: "Oui. L'assistant ne sait rien de la montagne en particulier : il sait ce qui figure dans votre catalogue. Mer, ville d'art, lac ou village changent les fiches, pas le fonctionnement." },
+  ],
   revenueSteps: [
     { t: "Le commerçant achète un forfait", d: "Dix, cinquante, cent messages. C'est vous qui fixez le prix." },
     { t: "Il prépare son message", d: "Texte et photo de son offre, que vous validez avant l'envoi." },
@@ -500,6 +597,24 @@ const de: HomeCopy = {
   revenueTitle: "Betriebe können sich auf dem Kanal präsentieren",
   revenueBody1: "Ein Hotel, ein Restaurant, ein Materialverleih — zum Beispiel — können sich auf Ihrem Kanal präsentieren, mit einer Nachricht an Gäste mit Einwilligung. Sie legen den Preis fest, das System zählt mit, wie viele Nachrichten gesendet wurden.",
   revenueBody2: "Für viele Tourismusbüros deckt das die Kosten des Dienstes. Was danach kommt, ist Gewinn.",
+  retentionEyebrow: "Über den Aufenthalt hinaus",
+  retentionTitle: "Und wenn der Urlaub endet, holt er sie zurück.",
+  retentionBody1: "Ein Gast, der Ihnen einmal geschrieben hat, ist der wertvollste Kontakt, den Sie haben: Er kennt den Ort, es hat ihm gefallen, und er hat Ihnen seine Nummer hinterlassen.",
+  retentionBody2: "Vor Weihnachten, Ostern oder dem Sommer bekommt er Ihre Angebote für den nächsten Urlaub — aber nur, wenn er zugestimmt hat, und ein einziges NEIN genügt, um nichts mehr zu erhalten.",
+  retentionSteps: [
+    { t: "Während des Aufenthalts", d: "Wetterumschwung, eine Veranstaltung heute Abend, ein wegen Regen verschobenes Fest: Die Meldung erreicht, wer gerade im Ort ist. Niemand im Büro muss etwas drücken." },
+    { t: "Vor den Feiertagen", d: "Nach dem Urlaub bleibt der Kontakt. Einige Wochen vor Weihnachten, Ostern oder dem Sommer erhält er Angebote und Veranstaltungen der kommenden Saison — genau dann, wenn entschieden wird, wohin es geht." },
+    { t: "Immer mit Einwilligung", d: "Die Einwilligung wird im Chat eingeholt, und ein NEIN genügt, um nichts mehr zu bekommen. Vor jedem Versand prüft das System zudem, dass es nicht wiederholt, was eine andere Kampagne schon gesagt hat." },
+  ],
+  faqTitle: "Die Fragen, die uns immer gestellt werden",
+  faqItems: [
+    { q: "Brauchen wir eine neue WhatsApp-Nummer?", a: "Nein, Sie können Ihre bestehende Nummer nutzen, solange sie nicht mit der WhatsApp-App auf einem Telefon verknüpft ist. Wenn Sie die Büronummer lieber getrennt halten, richten wir eine eigene ein — Sie entscheiden." },
+    { q: "Wer aktualisiert die Informationen?", a: "Sie selbst, über ein Panel, das sich wie eine Tabelle bedienen lässt: Veranstaltung öffnen, Uhrzeit ändern, speichern. Niemand muss Code anfassen, und für eine Änderung müssen Sie uns nicht anrufen." },
+    { q: "Und wenn der Assistent nicht antworten kann?", a: "Dann sagt er das, statt sich etwas auszudenken. Fällt die Frage aus dem Katalog — oder bittet die Person darum, mit jemandem zu sprechen — geht das Gespräch an eine echte Person, die es sieht und aus dem Panel antwortet." },
+    { q: "Wie lange dauert es bis zum Start?", a: "Das hängt fast nur davon ab, wie viel Material Sie schon haben. Mit einer Liste von Veranstaltungen und Unterkünften zum Importieren starten Sie in wenigen Tagen; muss der Katalog von Grund auf entstehen, rechnen Sie mit einigen Wochen Datenerfassung." },
+    { q: "Wo landen die Gästedaten?", a: "Sie bleiben Ihre. Kontakte und Gespräche liegen in Ihrem eigenen Bereich, getrennt von denen jeder anderen Einrichtung, und die Verarbeitung ist DSGVO-konform. Sie werden nicht zum Training von Modellen genutzt und nicht an Dritte weitergegeben." },
+    { q: "Funktioniert es auch, wenn wir nicht in den Bergen liegen?", a: "Ja. Der Assistent weiß nichts über Berge im Besonderen: Er weiß, was in Ihrem Katalog steht. Meer, Kunststadt, See oder Dorf ändern die Einträge, nicht die Funktionsweise." },
+  ],
   revenueSteps: [
     { t: "Der Betrieb kauft ein Paket", d: "Zehn, fünfzig, hundert Nachrichten. Den Preis bestimmen Sie." },
     { t: "Er bereitet seine Nachricht vor", d: "Text und Foto seines Angebots, das Sie vor dem Versand freigeben." },

@@ -100,7 +100,14 @@ type Scene = {
    * invented and deliberately non-routable (the 0400 prefix does not exist in
    * Italy) so nobody's real line rings.
    */
-  link: { label: string; phone: string }
+  /** Optional: a scene whose answer stands on its own shows no link bubble. */
+  link?: { label: string; phone: string }
+  /**
+   * The pinned location the assistant shares alongside the link (Andrea,
+   * 2026-09-15: "e mandi la location !!!"). Like the link, it is a STILL:
+   * rendered as a WhatsApp location card but never a real map link.
+   */
+  place: { name: string; address: string }
 }
 
 const CLIPS: Scene[] = [
@@ -124,6 +131,7 @@ const CLIPS: Scene[] = [
       de: "Heute klar: der Wasserfallweg, 40 Min., durchgehend schattig 🌲",
     },
     link: { label: "sentieri.proloco.it/cascate", phone: "+39 0400 111 221" },
+    place: { name: "Sentiero delle Cascate", address: "Imbocco via Val Fredda, 2" },
   },
   {
     // indoors: somewhere warm when the weather turns
@@ -145,6 +153,7 @@ const CLIPS: Scene[] = [
       de: "Trinken Sie etwas im Dorfpub und probieren Sie die typischen Gerichte: warm drinnen, und man kommt ins Gespräch ☔",
     },
     link: { label: "pub.proloco.it/orari", phone: "+39 0400 111 232" },
+    place: { name: "Pub del Paese", address: "Piazza Grande, 7" },
   },
   {
     // action: a live gig — tonight's events
@@ -166,6 +175,7 @@ const CLIPS: Scene[] = [
       de: "Ja, 21 Uhr auf dem Platz: Bergchor, Eintritt frei 🎶",
     },
     link: { label: "eventi.proloco.it/concerti", phone: "+39 0400 111 245" },
+    place: { name: "Arena in Piazza", address: "Piazza Municipio, 1" },
   },
   {
     // action: on the water — points at a rental business
@@ -179,35 +189,36 @@ const CLIPS: Scene[] = [
       de: "Wo können wir ein Kanu mieten?",
     },
     reply: {
-      it: "Al centro sportivo, aperto 9–18. Vi lascio il numero 📞",
-      en: "At the sports centre, open 9–6. Here's the number 📞",
-      es: "En el centro deportivo, abierto 9–18. Os paso el número 📞",
-      ca: "Al centre esportiu, obert 9–18. Us passo el número 📞",
-      fr: "Au centre sportif, ouvert 9h–18h. Voici le numéro 📞",
-      de: "Im Sportzentrum, 9–18 Uhr geöffnet. Hier die Nummer 📞",
+      it: "Al centro sportivo, aperto dalle 9 alle 18. Vi lascio il numero 📞 perché è fondamentale prenotare in anticipo: +39 0400 111 258. Vi ricordo inoltre di indossare il giubbotto salvagente durante l'attività 🛶",
+      en: "At the sports centre, open 9 to 6. Here's the number 📞 — booking ahead is essential: +39 0400 111 258. And do remember to wear a life jacket while you're out 🛶",
+      es: "En el centro deportivo, abierto de 9 a 18. Os paso el número 📞 porque es fundamental reservar con antelación: +39 0400 111 258. Y recordad llevar el chaleco salvavidas durante la actividad 🛶",
+      ca: "Al centre esportiu, obert de 9 a 18. Us passo el número 📞 perquè és fonamental reservar amb antelació: +39 0400 111 258. I recordeu dur l'armilla salvavides durant l'activitat 🛶",
+      fr: "Au centre sportif, ouvert de 9h à 18h. Voici le numéro 📞 car il est indispensable de réserver à l'avance : +39 0400 111 258. Pensez aussi à porter le gilet de sauvetage pendant l'activité 🛶",
+      de: "Im Sportzentrum, von 9 bis 18 Uhr geöffnet. Hier die Nummer 📞 — eine Reservierung vorab ist unerlässlich: +39 0400 111 258. Denken Sie außerdem daran, während der Tour eine Schwimmweste zu tragen 🛶",
     },
-    link: { label: "sport.proloco.it/noleggi", phone: "+39 0400 111 258" },
+    place: { name: "Centro Sportivo", address: "Via dello Sport, 14" },
   },
   {
     // action: cycling
     src: "/hero/bike.mp4",
     ask: {
-      it: "Si noleggiano e-bike qui?",
-      en: "Can we rent e-bikes here?",
-      es: "¿Se alquilan bicis eléctricas aquí?",
-      ca: "Es lloguen bicis elèctriques aquí?",
-      fr: "Peut-on louer des vélos électriques ici ?",
-      de: "Kann man hier E-Bikes mieten?",
+      it: "Dove possiamo noleggiare bici oggi?",
+      en: "Where can we rent bikes today?",
+      es: "¿Dónde podemos alquilar bicis hoy?",
+      ca: "On podem llogar bicis avui?",
+      fr: "Où peut-on louer des vélos aujourd'hui ?",
+      de: "Wo können wir heute Fahrräder mieten?",
     },
     reply: {
-      it: "Sì, due noleggi in paese. Il più vicino a voi è a 300 m 🚲",
-      en: "Yes, two rentals in the village. The nearest is 300 m away 🚲",
-      es: "Sí, dos alquileres en el pueblo. El más cercano a 300 m 🚲",
-      ca: "Sí, dos lloguers al poble. El més proper a 300 m 🚲",
-      fr: "Oui, deux loueurs au village. Le plus proche à 300 m 🚲",
-      de: "Ja, zwei Verleihe im Ort. Der nächste ist 300 m entfernt 🚲",
+      it: "Sì, due noleggi in paese: il più vicino è a 300 m 🚲 Oggi però il tempo non promette bene, vi consiglio domani mattina",
+      en: "Yes, two rentals in the village: the nearest is 300 m away 🚲 Today's weather doesn't look good though — I'd suggest tomorrow morning",
+      es: "Sí, dos alquileres en el pueblo: el más cercano a 300 m 🚲 Pero hoy el tiempo no acompaña, os aconsejo mañana por la mañana",
+      ca: "Sí, dos lloguers al poble: el més proper a 300 m 🚲 Però avui el temps no acompanya, us aconsello demà al matí",
+      fr: "Oui, deux loueurs au village : le plus proche à 300 m 🚲 Mais la météo n'est pas bonne aujourd'hui, je conseille demain matin",
+      de: "Ja, zwei Verleihe im Ort: der nächste ist 300 m entfernt 🚲 Heute wird das Wetter aber nicht gut — ich empfehle morgen früh",
     },
     link: { label: "noleggi.proloco.it/ebike", phone: "+39 0400 111 264" },
+    place: { name: "Noleggio E-Bike", address: "Via Stazione, 5" },
   },
   {
     // action: skiing the slope
@@ -221,14 +232,14 @@ const CLIPS: Scene[] = [
       de: "Wann schließen die Lifte?",
     },
     reply: {
-      it: "Ultima risalita alle 16:30, rientro in valle entro le 17 ⛷️",
-      en: "Last lift at 4:30pm, back in the valley by 5 ⛷️",
-      es: "Último remonte a las 16:30, regreso antes de las 17 ⛷️",
-      ca: "Últim remuntador a les 16:30, tornada abans de les 17 ⛷️",
-      fr: "Dernière remontée à 16h30, retour avant 17h ⛷️",
-      de: "Letzte Bergfahrt 16:30 Uhr, Rückkehr bis 17 Uhr ⛷️",
+      it: "Gli impianti chiudono alle 17:00. Vi consiglio di avviarvi per tempo verso valle, così da evitare di arrivare a ridosso della chiusura 😊",
+      en: "The lifts close at 5pm. I'd suggest heading down in good time, so you don't arrive right on closing 😊",
+      es: "Los remontes cierran a las 17:00. Os aconsejo bajar con tiempo, para no llegar justo al cierre 😊",
+      ca: "Els remuntadors tanquen a les 17:00. Us aconsello baixar amb temps, per no arribar just al tancament 😊",
+      fr: "Les remontées ferment à 17h. Je vous conseille de redescendre à temps, pour ne pas arriver juste à la fermeture 😊",
+      de: "Die Lifte schließen um 17 Uhr. Ich empfehle, rechtzeitig ins Tal aufzubrechen, damit Sie nicht knapp vor Schluss ankommen 😊",
     },
-    link: { label: "impianti.proloco.it/orari", phone: "+39 0400 111 277" },
+    place: { name: "Stazione a valle", address: "Via Impianti, 3" },
   },
   {
     // close: meat on the grill — where to eat the local food
@@ -250,27 +261,29 @@ const CLIPS: Scene[] = [
       de: "Drei Gasthäuser im Zentrum kochen regional — hier Adressen und Nummern 🍽️",
     },
     link: { label: "osterie.proloco.it/tipici", phone: "+39 0400 111 283" },
+    place: { name: "Osteria del Centro", address: "Via Roma, 22" },
   },
   {
     // wide: an alpine lake
     src: "/hero/lake.mp4",
     ask: {
-      it: "Si fa il giro del lago a piedi?",
-      en: "Can you walk around the lake?",
-      es: "¿Se puede rodear el lago a pie?",
-      ca: "Es pot voltar el llac a peu?",
-      fr: "Peut-on faire le tour du lac à pied ?",
-      de: "Kann man den See umrunden?",
+      it: "È possibile fare il giro del lago a piedi?",
+      en: "Is it possible to walk around the lake?",
+      es: "¿Es posible rodear el lago a pie?",
+      ca: "És possible voltar el llac a peu?",
+      fr: "Est-il possible de faire le tour du lac à pied ?",
+      de: "Ist es möglich, den See zu Fuß zu umrunden?",
     },
     reply: {
-      it: "Sì, 4 km pianeggianti, circa un'ora. Adatto anche ai passeggini 🚶",
-      en: "Yes, 4 km flat, about an hour. Pushchair-friendly too 🚶",
-      es: "Sí, 4 km llanos, una hora. Apto para carritos 🚶",
-      ca: "Sí, 4 km plans, una hora. Apte per a cotxets 🚶",
-      fr: "Oui, 4 km plats, environ une heure. Poussettes possibles 🚶",
-      de: "Ja, 4 km eben, etwa eine Stunde. Auch mit Kinderwagen 🚶",
+      it: "Sì certo: i vostri bimbi di 8 e 9 anni sono abbastanza grandi per un percorso di media difficoltà, e oggi è una giornata stupenda per farlo, non sono previste piogge 🚶",
+      en: "Yes of course: your children of 8 and 9 are big enough for a moderate route, and today is a perfect day for it — no rain forecast 🚶",
+      es: "Sí, claro: vuestros niños de 8 y 9 años son bastante mayores para un recorrido de dificultad media, y hoy es un día estupendo para hacerlo, no se prevén lluvias 🚶",
+      ca: "Sí, és clar: els vostres nens de 8 i 9 anys són prou grans per a un recorregut de dificultat mitjana, i avui és un dia esplèndid per fer-lo, no es preveuen pluges 🚶",
+      fr: "Oui bien sûr : vos enfants de 8 et 9 ans sont assez grands pour un parcours de difficulté moyenne, et aujourd'hui est une journée idéale, aucune pluie prévue 🚶",
+      de: "Ja, natürlich: Ihre Kinder mit 8 und 9 Jahren sind groß genug für eine mittelschwere Route, und heute ist ein herrlicher Tag dafür — es ist kein Regen angesagt 🚶",
     },
     link: { label: "sentieri.proloco.it/lago", phone: "+39 0400 111 290" },
+    place: { name: "Sentiero del Lago", address: "Parcheggio Malga Alta" },
   },
   {
     // wide: a castle on the mountain
@@ -284,14 +297,15 @@ const CLIPS: Scene[] = [
       de: "Kann man die Burg besichtigen?",
     },
     reply: {
-      it: "Aperto giovedì e domenica, 10–17. Visita guidata alle 11 🏰",
-      en: "Open Thursdays and Sundays, 10–5. Guided tour at 11 🏰",
-      es: "Abierto jueves y domingos, 10–17. Visita guiada a las 11 🏰",
-      ca: "Obert dijous i diumenges, 10–17. Visita guiada a les 11 🏰",
-      fr: "Ouvert jeudi et dimanche, 10h–17h. Visite guidée à 11h 🏰",
-      de: "Donnerstag und Sonntag, 10–17 Uhr. Führung um 11 Uhr 🏰",
+      it: "Aperto giovedì e domenica, 10–17. Visita guidata alle 11 🏰 Oggi è domenica e l'ufficio è chiuso, ma io rispondo lo stesso",
+      en: "Open Thursdays and Sundays, 10–5. Guided tour at 11 🏰 It's Sunday and the office is closed, but I'm here anyway",
+      es: "Abierto jueves y domingos, 10–17. Visita guiada a las 11 🏰 Hoy es domingo y la oficina está cerrada, pero yo respondo igual",
+      ca: "Obert dijous i diumenges, 10–17. Visita guiada a les 11 🏰 Avui és diumenge i l'oficina és tancada, però jo responc igualment",
+      fr: "Ouvert jeudi et dimanche, 10h–17h. Visite guidée à 11h 🏰 C'est dimanche et l'office est fermé, mais je réponds quand même",
+      de: "Donnerstag und Sonntag, 10–17 Uhr. Führung um 11 Uhr 🏰 Heute ist Sonntag, das Büro ist zu — ich antworte trotzdem",
     },
     link: { label: "castello.proloco.it/visite", phone: "+39 0400 111 305" },
+    place: { name: "Castello", address: "Colle San Pietro, 1" },
   },
 ]
 
@@ -302,8 +316,22 @@ const CLIPS: Scene[] = [
  * e poi la frase"). A name in front of the answer shows the assistant knows
  * WHO is asking — on WhatsApp it always does, because the number is the
  * identity. That is the difference from a web widget, and it costs one word.
+ *
+ * It greets ONCE, on the opening scene only (Andrea, 2026-09-15: "fallo solo
+ * una volta non sempre saluta! sembra ripetitivo"): a real conversation says
+ * the name when it starts, not in front of every answer.
  */
 const GUEST_NAME = "Luca"
+
+/** "Ciao Luca," — the opening greeting, in each language the hero speaks. */
+const GREETING: Record<string, string> = {
+  it: `Ciao ${GUEST_NAME},`,
+  en: `Hi ${GUEST_NAME},`,
+  es: `Hola ${GUEST_NAME},`,
+  ca: `Hola ${GUEST_NAME},`,
+  fr: `Bonjour ${GUEST_NAME},`,
+  de: `Hallo ${GUEST_NAME},`,
+}
 
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
 const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
@@ -554,15 +582,34 @@ export function HeroBackdrop() {
               {answered ? (
                 <div className="flex max-w-[90%] flex-col gap-1.5">
                   <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
-                    Ciao {GUEST_NAME}, {clips[scene]?.reply[language] ?? clips[scene]?.reply.it}
+                    {scene === 0 ? `${GREETING[language] ?? GREETING.it} ` : ""}
+                    {clips[scene]?.reply[language] ?? clips[scene]?.reply.it}
                   </span>
                   {/* Not an <a>: a still of a conversation, not one you can have. */}
-                  <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
-                    <span className="text-[#027EB5] underline">
-                      {clips[scene]?.link.label}
+                  {clips[scene]?.link && (
+                    <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
+                      <span className="text-[#027EB5] underline">
+                        {clips[scene]?.link?.label}
+                      </span>
+                      <br />
+                      <span className="text-slate-600">{clips[scene]?.link?.phone}</span>
                     </span>
-                    <br />
-                    <span className="text-slate-600">{clips[scene]?.link.phone}</span>
+                  )}
+                  {/* The shared location. Also a still: a pin card, not a map. */}
+                  <span className="overflow-hidden rounded-lg rounded-tl-sm bg-white shadow-sm">
+                    <span className="flex h-16 items-center justify-center bg-[#dfe4e1]">
+                      <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#ea4335]" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />
+                      </svg>
+                    </span>
+                    <span className="block px-3 py-2">
+                      <span className="block text-sm font-medium leading-snug text-slate-900">
+                        {clips[scene]?.place.name}
+                      </span>
+                      <span className="block text-xs leading-snug text-slate-500">
+                        {clips[scene]?.place.address}
+                      </span>
+                    </span>
                   </span>
                 </div>
               ) : (
