@@ -44,7 +44,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
  * that is worth coming back to in another month — which is exactly what the
  * push campaigns further down the page are for.
  *
- * These ten ship in public/hero/ — 360p clips from coverr.co (free for
+ * These nine ship in public/hero/ — 360p clips from coverr.co (free for
  * commercial use, no attribution required), 6 MB for the whole set, close to
  * the single hero video on the site this was modelled on. 360p is
  * deliberate: the footage sits behind a dark veil and is motion-blurred, so
@@ -233,26 +233,6 @@ const CLIPS: Scene[] = [
     },
   },
   {
-    // action: someone photographing the landscape
-    src: "/hero/photo.mp4",
-    ask: {
-      it: "Dove si vedono i panorami più belli?",
-      en: "Where are the best viewpoints?",
-      es: "¿Dónde están los mejores miradores?",
-      ca: "On són els millors miradors?",
-      fr: "Où sont les plus beaux points de vue ?",
-      de: "Wo sind die schönsten Aussichtspunkte?",
-    },
-    reply: {
-      it: "Il belvedere sopra il paese, 20 min a piedi. Al tramonto è il massimo 📸",
-      en: "The viewpoint above the village, 20 min on foot. Best at sunset 📸",
-      es: "El mirador sobre el pueblo, 20 min a pie. Mejor al atardecer 📸",
-      ca: "El mirador sobre el poble, 20 min a peu. Millor al capvespre 📸",
-      fr: "Le belvédère au-dessus du village, 20 min à pied. Au coucher 📸",
-      de: "Der Aussichtspunkt über dem Ort, 20 Min. zu Fuß. Bei Sonnenuntergang 📸",
-    },
-  },
-  {
     // wide: an alpine lake
     src: "/hero/lake.mp4",
     ask: {
@@ -322,6 +302,13 @@ const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
  * the hand-over starts BEFORE the clip ends rather than on its 'ended' event.
  */
 const FADE_SECONDS = 1.2
+
+/**
+ * How long each clip holds before handing over, regardless of its own length.
+ * Ten seconds is enough to read the question, watch the dots and take in the
+ * answer without the hero feeling like it is stalling.
+ */
+const SCENE_SECONDS = 10
 
 export function HeroBackdrop() {
   /** The scenes whose clip actually exists on disk, in CLIPS order. */
@@ -451,20 +438,14 @@ export function HeroBackdrop() {
     }, FADE_SECONDS * 1000)
   }, [clips, front])
 
-  /**
-   * Start the dissolve FADE_SECONDS before the end instead of waiting for
-   * 'ended': by the time that event fires the last frame is already frozen on
-   * screen, which reads as a stall.
-   */
-  const onTimeUpdate = useCallback(
-    (slot: number) => (e: React.SyntheticEvent<HTMLVideoElement>) => {
-      if (slot !== front) return
-      const v = e.currentTarget
-      if (!Number.isFinite(v.duration)) return
-      if (v.duration - v.currentTime <= FADE_SECONDS) handOver()
-    },
-    [front, handOver]
-  )
+  // Every scene lasts SCENE_SECONDS, then hands over. Clips loop in place if
+  // they are shorter than that, so a 6-second file simply plays twice rather
+  // than freezing on its last frame.
+  useEffect(() => {
+    if (clips.length < 2) return
+    const t = window.setTimeout(handOver, SCENE_SECONDS * 1000)
+    return () => window.clearTimeout(t)
+  }, [scene, clips.length, handOver])
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -486,13 +467,11 @@ export function HeroBackdrop() {
             autoPlay={slot === 0}
             muted
             // A single clip loops on its own — there is nothing to cross to.
-            loop={clips.length === 1}
+            loop
             playsInline
             preload="auto"
-            onTimeUpdate={onTimeUpdate(slot)}
-            // Belt and braces: if a clip is shorter than the fade, or metadata
-            // never arrives, 'ended' still moves the rotation along.
-            onEnded={() => slot === front && handOver()}
+            // Shorter clips loop until their 10 seconds are up; the timer,
+            // not the file, decides when to move on.
             // A clip that fails mid-rotation must not freeze the hero.
             onError={() => slot === front && handOver()}
           />

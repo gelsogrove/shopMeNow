@@ -61,6 +61,26 @@ export interface HomeCopy {
   demoTitle: string
   demoSub: string
   demoOpen: string
+  infoCta: string
+  surveyEyebrow: string
+  surveyTitle: string
+  surveyBody: string
+  surveyCta: string
+  privacyBadge: string
+  privacyTitle: string
+  privacyBody: string
+  privacyCta: string
+  ctaBand: string
+  ctaBandBtn: string
+  footTagline: string
+  footResources: string
+  footLegal: string
+  footPrivacy: string
+  footTerms: string
+  navFeatures: string
+  navHuman: string
+  navPush: string
+  navTourism: string
   footer: string
 }
 
@@ -103,10 +123,10 @@ const it: HomeCopy = {
   contentTypes: ["Hotel e B&B", "Ristoranti e agriturismi", "Escursioni e rifugi", "Sagre ed eventi", "Prodotti tipici", "Borghi e punti panoramici", "Castelli e chiese", "Cenni storici", "Strutture sportive", "Numeri utili"],
   pricingTitle: "Prezzi chiari, nessuna sorpresa",
   pricingSub: "Il canone copre il servizio. I consumi si pagano a parte, solo quando li usate.",
-  revenueEyebrow: "Il canale che si ripaga",
+  revenueEyebrow: "Modello economico",
   revenueTitle: "Gli esercenti possono sponsorizzarsi sul canale",
-  revenueBody1: "L'albergo, il ristorante, il noleggio sci: ognuno può comprare da voi un messaggio ai turisti che hanno dato il consenso. Voi vendete lo spazio, il sistema tiene il conto dei messaggi rimasti a ciascuno.",
-  revenueBody2: "Per molti uffici turistici è la voce che ripaga il servizio — e poi diventa un'entrata.",
+  revenueBody1: "Un albergo, un ristorante, un noleggio attrezzature — per esempio — possono pagarvi per far arrivare un messaggio ai turisti che hanno dato il consenso. Voi decidete il prezzo, il sistema tiene il conto degli invii rimasti a ciascuno.",
+  revenueBody2: "Per molti uffici turistici basta a coprire il costo del servizio. Quello che arriva dopo è guadagno.",
   revenueSteps: [
     { t: "L'esercente compra un pacchetto", d: "Dieci, cinquanta, cento messaggi. Decidete voi il prezzo." },
     { t: "Prepara il suo messaggio", d: "Testo e foto della sua offerta, che approvate prima dell'invio." },
@@ -119,6 +139,26 @@ const it: HomeCopy = {
   demoTitle: "PROVA LA DEMO",
   demoSub: "Inquadrate il codice e scrivete quello che vi chiederebbe un turista.",
   demoOpen: "Aprilo su WhatsApp",
+  infoCta: "Preferite parlarne? Richiedete informazioni",
+  surveyEyebrow: "Questionario",
+  surveyTitle: "Aiutateci a costruire l'assistente giusto per voi",
+  surveyBody: "Rispondete a qualche domanda sul vostro territorio e su cosa vi chiedono i turisti: vi mostriamo come l'assistente lavorerebbe per voi. Due minuti, senza impegno.",
+  surveyCta: "Inizia il questionario →",
+  privacyBadge: "Conforme al GDPR",
+  privacyTitle: "Privacy by design",
+  privacyBody: "I dati dei vostri turisti restano vostri. Nessun dato sensibile finisce a terzi o ai modelli AI, le notifiche partono solo a chi ha dato il consenso, e quel consenso si può revocare in qualsiasi momento con una parola.",
+  privacyCta: "Come funziona",
+  ctaBand: "Parliamo del vostro territorio: vi mostriamo l'assistente al lavoro, senza impegno.",
+  ctaBandBtn: "Contattateci",
+  footTagline: "Assistenza su WhatsApp per Pro Loco e Consorzi turistici.",
+  footResources: "Risorse",
+  footLegal: "Legale",
+  footPrivacy: "Privacy",
+  footTerms: "Termini",
+  navFeatures: "Funzionalità",
+  navHuman: "Supporto umano",
+  navPush: "Notifiche push",
+  navTourism: "Turismo",
   footer: "eChatbot — assistenza su WhatsApp per Pro Loco e Consorzi turistici.",
 }
 
@@ -161,10 +201,10 @@ const en: HomeCopy = {
   contentTypes: ["Hotels and B&Bs", "Restaurants and farm stays", "Hikes and mountain huts", "Festivals and events", "Local produce", "Villages and viewpoints", "Castles and churches", "Local history", "Sports facilities", "Useful numbers"],
   pricingTitle: "Clear pricing, no surprises",
   pricingSub: "The subscription covers the service. Usage is billed separately, only when you use it.",
-  revenueEyebrow: "The channel that pays for itself",
+  revenueEyebrow: "The business model",
   revenueTitle: "Local businesses can sponsor themselves on the channel",
-  revenueBody1: "The hotel, the restaurant, the ski rental: each can buy a message to visitors who opted in. You sell the space, the system keeps count of what each has left.",
-  revenueBody2: "For many tourist offices this is what pays for the service — and then becomes income.",
+  revenueBody1: "A hotel, a restaurant, an equipment rental — for example — can pay you to send a message to visitors who opted in. You set the price, the system keeps count of the sends each one has left.",
+  revenueBody2: "For many tourist offices it covers the cost of the service. What comes after that is income.",
   revenueSteps: [
     { t: "The business buys a bundle", d: "Ten, fifty, a hundred messages. You set the price." },
     { t: "They prepare their message", d: "Text and a photo of their offer, which you approve before it goes out." },
@@ -177,6 +217,26 @@ const en: HomeCopy = {
   demoTitle: "TRY THE DEMO",
   demoSub: "Scan the code and ask it whatever a visitor would ask you.",
   demoOpen: "Open it on WhatsApp",
+  infoCta: "Rather talk first? Request information",
+  surveyEyebrow: "Survey",
+  surveyTitle: "Help us build the right assistant for you",
+  surveyBody: "Answer a few questions about your area and what visitors ask you, and we'll show you how the assistant would work for you. Two minutes, no commitment.",
+  surveyCta: "Start the survey →",
+  privacyBadge: "GDPR compliant",
+  privacyTitle: "Privacy by design",
+  privacyBody: "Your visitors' data stays yours. No sensitive data reaches third parties or AI models, notifications only go to those who opted in, and that consent can be withdrawn at any time with a single word.",
+  privacyCta: "How it works",
+  ctaBand: "Let's talk about your area: we'll show you the assistant at work, no commitment.",
+  ctaBandBtn: "Contact us",
+  footTagline: "WhatsApp assistance for tourist offices and consortia.",
+  footResources: "Resources",
+  footLegal: "Legal",
+  footPrivacy: "Privacy",
+  footTerms: "Terms",
+  navFeatures: "Features",
+  navHuman: "Human support",
+  navPush: "Push notifications",
+  navTourism: "Tourism",
   footer: "eChatbot — WhatsApp assistance for tourist offices and visitor centres.",
 }
 
@@ -219,10 +279,10 @@ const es: HomeCopy = {
   contentTypes: ["Hoteles y casas rurales", "Restaurantes y agroturismos", "Rutas y refugios", "Fiestas y eventos", "Productos típicos", "Pueblos y miradores", "Castillos e iglesias", "Historia local", "Instalaciones deportivas", "Teléfonos útiles"],
   pricingTitle: "Precios claros, sin sorpresas",
   pricingSub: "La cuota cubre el servicio. El consumo se paga aparte, solo cuando se usa.",
-  revenueEyebrow: "El canal que se paga solo",
+  revenueEyebrow: "Modelo económico",
   revenueTitle: "Los negocios pueden patrocinarse en el canal",
-  revenueBody1: "El hotel, el restaurante, el alquiler de esquís: cada uno puede compraros un mensaje para los turistas que dieron su consentimiento. Vosotros vendéis el espacio, el sistema lleva la cuenta de lo que le queda a cada uno.",
-  revenueBody2: "Para muchas oficinas de turismo es lo que paga el servicio — y después se convierte en un ingreso.",
+  revenueBody1: "Un hotel, un restaurante, un alquiler de material — por ejemplo — pueden pagaros por enviar un mensaje a los turistas que dieron su consentimiento. Vosotros ponéis el precio, el sistema lleva la cuenta de los envíos que le quedan a cada uno.",
+  revenueBody2: "Para muchas oficinas de turismo basta para cubrir el coste del servicio. Lo que llega después es ganancia.",
   revenueSteps: [
     { t: "El negocio compra un paquete", d: "Diez, cincuenta, cien mensajes. El precio lo ponéis vosotros." },
     { t: "Prepara su mensaje", d: "Texto y foto de su oferta, que aprobáis antes del envío." },
@@ -235,6 +295,26 @@ const es: HomeCopy = {
   demoTitle: "PRUEBA LA DEMO",
   demoSub: "Escanead el código y preguntadle lo que os preguntaría un turista.",
   demoOpen: "Abrir en WhatsApp",
+  infoCta: "¿Preferís hablarlo? Solicitad información",
+  surveyEyebrow: "Cuestionario",
+  surveyTitle: "Ayudadnos a construir el asistente adecuado para vosotros",
+  surveyBody: "Responded a unas preguntas sobre vuestro territorio y sobre lo que os preguntan los turistas: os mostramos cómo trabajaría el asistente para vosotros. Dos minutos, sin compromiso.",
+  surveyCta: "Empezar el cuestionario →",
+  privacyBadge: "Conforme al RGPD",
+  privacyTitle: "Privacy by design",
+  privacyBody: "Los datos de vuestros turistas siguen siendo vuestros. Ningún dato sensible llega a terceros ni a modelos de IA, las notificaciones solo se envían a quien dio su consentimiento, y ese consentimiento se puede revocar en cualquier momento.",
+  privacyCta: "Cómo funciona",
+  ctaBand: "Hablemos de vuestro territorio: os mostramos el asistente en acción, sin compromiso.",
+  ctaBandBtn: "Contactadnos",
+  footTagline: "Asistencia en WhatsApp para oficinas de turismo y consorcios.",
+  footResources: "Recursos",
+  footLegal: "Legal",
+  footPrivacy: "Privacidad",
+  footTerms: "Términos",
+  navFeatures: "Funciones",
+  navHuman: "Soporte humano",
+  navPush: "Notificaciones push",
+  navTourism: "Turismo",
   footer: "eChatbot — asistencia por WhatsApp para oficinas de turismo y patronatos.",
 }
 
@@ -278,10 +358,10 @@ const ca: HomeCopy = {
   contentTypes: ["Hotels i cases rurals", "Restaurants i agroturismes", "Rutes i refugis", "Festes i esdeveniments", "Productes típics", "Pobles i miradors", "Castells i esglésies", "Història local", "Instal·lacions esportives", "Telèfons útils"],
   pricingTitle: "Preus clars, sense sorpreses",
   pricingSub: "La quota cobreix el servei. El consum es paga a part, només quan es fa servir.",
-  revenueEyebrow: "No només una despesa",
+  revenueEyebrow: "Model econòmic",
   revenueTitle: "Els negocis poden patrocinar-se al canal",
-  revenueBody1: "L'hotel, el restaurant, el lloguer d'esquís: cadascun us pot comprar un missatge per als turistes que hi han donat el consentiment. Vosaltres veneu l'espai, el sistema porta el compte del que li queda a cadascun.",
-  revenueBody2: "Per a moltes oficines de turisme és el que paga el servei — i després es converteix en un ingrés.",
+  revenueBody1: "Un hotel, un restaurant, un lloguer de material — per exemple — us poden pagar per enviar un missatge als turistes que hi han donat el consentiment. Vosaltres poseu el preu, el sistema porta el compte dels enviaments que li queden a cadascun.",
+  revenueBody2: "Per a moltes oficines de turisme n'hi ha prou per cobrir el cost del servei. El que arriba després és guany.",
   revenueSteps: [
     { t: "El negoci compra un paquet", d: "Deu, cinquanta, cent missatges. El preu el poseu vosaltres." },
     { t: "Prepara el seu missatge", d: "Text i foto de la seva oferta, que aproveu abans de l'enviament." },
@@ -294,6 +374,26 @@ const ca: HomeCopy = {
   demoTitle: "PROVA LA DEMO",
   demoSub: "Escanegeu el codi i pregunteu-li el que us preguntaria un turista.",
   demoOpen: "Obrir a WhatsApp",
+  infoCta: "Preferiu parlar-ne? Demaneu informació",
+  surveyEyebrow: "Qüestionari",
+  surveyTitle: "Ajudeu-nos a construir l'assistent adequat per a vosaltres",
+  surveyBody: "Responeu unes preguntes sobre el vostre territori i sobre què us pregunten els turistes: us mostrem com treballaria l'assistent per a vosaltres. Dos minuts, sense compromís.",
+  surveyCta: "Comença el qüestionari →",
+  privacyBadge: "Compleix el RGPD",
+  privacyTitle: "Privacy by design",
+  privacyBody: "Les dades dels vostres turistes continuen sent vostres. Cap dada sensible arriba a tercers ni a models d'IA, les notificacions només s'envien a qui hi ha donat el consentiment, i es pot revocar en qualsevol moment.",
+  privacyCta: "Com funciona",
+  ctaBand: "Parlem del vostre territori: us mostrem l'assistent en acció, sense compromís.",
+  ctaBandBtn: "Contacteu-nos",
+  footTagline: "Assistència a WhatsApp per a oficines de turisme i consorcis.",
+  footResources: "Recursos",
+  footLegal: "Legal",
+  footPrivacy: "Privadesa",
+  footTerms: "Termes",
+  navFeatures: "Funcions",
+  navHuman: "Suport humà",
+  navPush: "Notificacions push",
+  navTourism: "Turisme",
   footer: "eChatbot — assistència per WhatsApp per a oficines de turisme i consorcis.",
 }
 
@@ -336,10 +436,10 @@ const fr: HomeCopy = {
   contentTypes: ["Hôtels et chambres d'hôtes", "Restaurants et fermes-auberges", "Randonnées et refuges", "Fêtes et événements", "Produits du terroir", "Villages et points de vue", "Châteaux et églises", "Histoire locale", "Équipements sportifs", "Numéros utiles"],
   pricingTitle: "Des prix clairs, sans surprise",
   pricingSub: "L'abonnement couvre le service. La consommation est facturée à part, uniquement à l'usage.",
-  revenueEyebrow: "Le canal qui se rembourse",
+  revenueEyebrow: "Modèle économique",
   revenueTitle: "Les commerçants peuvent se sponsoriser sur le canal",
-  revenueBody1: "L'hôtel, le restaurant, le loueur de skis : chacun peut vous acheter un message vers les visiteurs qui ont donné leur accord. Vous vendez l'espace, le système compte ce qu'il reste à chacun.",
-  revenueBody2: "Pour beaucoup d'offices de tourisme, c'est ce qui paie le service — puis cela devient une recette.",
+  revenueBody1: "Un hôtel, un restaurant, un loueur de matériel — par exemple — peuvent vous payer pour envoyer un message aux visiteurs qui ont donné leur accord. Vous fixez le prix, le système compte les envois qu'il reste à chacun.",
+  revenueBody2: "Pour beaucoup d'offices de tourisme, cela suffit à couvrir le coût du service. Ce qui vient après est du gain.",
   revenueSteps: [
     { t: "Le commerçant achète un forfait", d: "Dix, cinquante, cent messages. C'est vous qui fixez le prix." },
     { t: "Il prépare son message", d: "Texte et photo de son offre, que vous validez avant l'envoi." },
@@ -352,6 +452,26 @@ const fr: HomeCopy = {
   demoTitle: "ESSAYEZ LA DÉMO",
   demoSub: "Scannez le code et posez-lui la question qu'un visiteur vous poserait.",
   demoOpen: "Ouvrir sur WhatsApp",
+  infoCta: "Vous préférez en parler ? Demandez des informations",
+  surveyEyebrow: "Questionnaire",
+  surveyTitle: "Aidez-nous à construire l'assistant qu'il vous faut",
+  surveyBody: "Répondez à quelques questions sur votre territoire et sur ce que les visiteurs vous demandent : nous vous montrons comment l'assistant travaillerait pour vous. Deux minutes, sans engagement.",
+  surveyCta: "Commencer le questionnaire →",
+  privacyBadge: "Conforme au RGPD",
+  privacyTitle: "Privacy by design",
+  privacyBody: "Les données de vos visiteurs restent les vôtres. Aucune donnée sensible ne part vers des tiers ou des modèles d'IA, les notifications ne vont qu'à ceux qui ont consenti, et ce consentement est révocable à tout moment.",
+  privacyCta: "Comment ça marche",
+  ctaBand: "Parlons de votre territoire : nous vous montrons l'assistant à l'œuvre, sans engagement.",
+  ctaBandBtn: "Contactez-nous",
+  footTagline: "Assistance WhatsApp pour offices de tourisme et consortiums.",
+  footResources: "Ressources",
+  footLegal: "Légal",
+  footPrivacy: "Confidentialité",
+  footTerms: "Conditions",
+  navFeatures: "Fonctionnalités",
+  navHuman: "Support humain",
+  navPush: "Notifications push",
+  navTourism: "Tourisme",
   footer: "eChatbot — assistance WhatsApp pour offices de tourisme et syndicats d'initiative.",
 }
 
@@ -394,10 +514,10 @@ const de: HomeCopy = {
   contentTypes: ["Hotels und Pensionen", "Restaurants und Almhütten", "Wanderungen und Schutzhütten", "Feste und Veranstaltungen", "Regionale Produkte", "Dörfer und Aussichtspunkte", "Burgen und Kirchen", "Ortsgeschichte", "Sportanlagen", "Wichtige Nummern"],
   pricingTitle: "Klare Preise, keine Überraschungen",
   pricingSub: "Die Gebühr deckt den Dienst. Der Verbrauch wird getrennt abgerechnet, nur bei Nutzung.",
-  revenueEyebrow: "Der Kanal, der sich selbst trägt",
+  revenueEyebrow: "Geschäftsmodell",
   revenueTitle: "Betriebe können sich auf dem Kanal präsentieren",
-  revenueBody1: "Das Hotel, das Restaurant, der Skiverleih: Jeder kann bei Ihnen eine Nachricht an Gäste mit Einwilligung kaufen. Sie verkaufen den Platz, das System zählt mit, was jedem noch bleibt.",
-  revenueBody2: "Für viele Tourismusbüros trägt das die Kosten des Dienstes — und wird dann zur Einnahme.",
+  revenueBody1: "Ein Hotel, ein Restaurant, ein Materialverleih — zum Beispiel — können Sie dafür bezahlen, eine Nachricht an Gäste mit Einwilligung zu senden. Sie legen den Preis fest, das System zählt mit, wie viele Sendungen jedem bleiben.",
+  revenueBody2: "Für viele Tourismusbüros deckt das die Kosten des Dienstes. Was danach kommt, ist Gewinn.",
   revenueSteps: [
     { t: "Der Betrieb kauft ein Paket", d: "Zehn, fünfzig, hundert Nachrichten. Den Preis bestimmen Sie." },
     { t: "Er bereitet seine Nachricht vor", d: "Text und Foto seines Angebots, das Sie vor dem Versand freigeben." },
@@ -410,6 +530,26 @@ const de: HomeCopy = {
   demoTitle: "DEMO TESTEN",
   demoSub: "Scannen Sie den Code und fragen Sie, was ein Gast Sie fragen würde.",
   demoOpen: "In WhatsApp öffnen",
+  infoCta: "Lieber sprechen? Informationen anfordern",
+  surveyEyebrow: "Fragebogen",
+  surveyTitle: "Helfen Sie uns, den richtigen Assistenten für Sie zu bauen",
+  surveyBody: "Beantworten Sie ein paar Fragen zu Ihrer Region und dazu, was Gäste Sie fragen — wir zeigen Ihnen, wie der Assistent für Sie arbeiten würde. Zwei Minuten, unverbindlich.",
+  surveyCta: "Fragebogen starten →",
+  privacyBadge: "DSGVO-konform",
+  privacyTitle: "Privacy by design",
+  privacyBody: "Die Daten Ihrer Gäste bleiben Ihre. Keine sensiblen Daten gehen an Dritte oder KI-Modelle, Benachrichtigungen erhalten nur Gäste mit Einwilligung, und diese lässt sich jederzeit widerrufen.",
+  privacyCta: "So funktioniert es",
+  ctaBand: "Sprechen wir über Ihre Region: Wir zeigen Ihnen den Assistenten im Einsatz, unverbindlich.",
+  ctaBandBtn: "Kontakt aufnehmen",
+  footTagline: "WhatsApp-Assistenz für Tourismusbüros und Verbände.",
+  footResources: "Ressourcen",
+  footLegal: "Rechtliches",
+  footPrivacy: "Datenschutz",
+  footTerms: "AGB",
+  navFeatures: "Funktionen",
+  navHuman: "Menschlicher Support",
+  navPush: "Push-Nachrichten",
+  navTourism: "Tourismus",
   footer: "eChatbot — WhatsApp-Assistenz für Tourismusverbände und Tourismusbüros.",
 }
 

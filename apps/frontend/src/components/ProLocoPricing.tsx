@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext"
 import { api } from "@/services/api"
 import { Check, Gift, Loader2, Server, Sparkles, Star } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -31,6 +32,16 @@ const PITCH: Record<string, { tagline: string; icon: typeof Star }> = {
   },
 }
 
+/** Button labels per language — the component had Italian literals only. */
+const CTA_SIGNUP: Record<string, string> = {
+  it: "Registrati", en: "Sign up", es: "Regístrate",
+  ca: "Registra't", fr: "Inscrivez-vous", de: "Registrieren",
+}
+const CTA_INFO: Record<string, string> = {
+  it: "Richiedi informazioni", en: "Request information", es: "Solicitar información",
+  ca: "Demana informació", fr: "Demander des informations", de: "Informationen anfordern",
+}
+
 /** The plan highlighted as recommended. */
 const FEATURED = "PREMIUM"
 
@@ -45,6 +56,7 @@ const usd = (n: number) =>
  * costs printed underneath.
  */
 export function ProLocoPricing() {
+  const { language } = useLanguage()
   const [plans, setPlans] = useState<Plan[] | null>(null)
   const [error, setError] = useState(false)
 
@@ -157,8 +169,8 @@ export function ProLocoPricing() {
                 ].join(" ")}
               >
                 {plan.planType === "FREE_TRIAL"
-                  ? "Inizia gratis"
-                  : "Richiedi informazioni"}
+                  ? (CTA_SIGNUP[language] ?? CTA_SIGNUP.it)
+                  : (CTA_INFO[language] ?? CTA_INFO.it)}
               </a>
             </div>
           )

@@ -17,15 +17,18 @@ import {
   Building2,
   CalendarDays,
   Castle,
+  ClipboardList,
   ChevronRight,
   Clock,
   Globe,
   Image,
+  Mail,
   MapPin,
   MessageCircle,
   Mountain,
   Phone,
   ScrollText,
+  ShieldCheck,
   Sparkles,
   UtensilsCrossed,
   Dumbbell,
@@ -72,6 +75,9 @@ const GOOGLE_CLIENT_ID =
  */
 const DEMO_WA_NUMBER = "34654728753"
 const DEMO_WA_LINK = `https://wa.me/${DEMO_WA_NUMBER}?text=${encodeURIComponent("Ciao!")}`
+
+/** WhatsApp's brand green — the same #25D366 HomeShowcase uses for the phone. */
+const WA_GREEN = "#25D366"
 
 export default function ProLocoHomePage() {
   const navigate = useNavigate()
@@ -151,6 +157,24 @@ export default function ProLocoHomePage() {
             </span>
           </a>
 
+          <nav className="hidden items-center gap-6 text-sm text-slate-600 lg:flex">
+            {[
+              { to: "/features", label: t.navFeatures },
+              { to: "/human-support", label: t.navHuman },
+              { to: "/smart-push-ai", label: t.navPush },
+              { to: "/tourism", label: t.navTourism },
+            ].map((l) => (
+              <button
+                key={l.to}
+                type="button"
+                onClick={() => navigate(l.to)}
+                className="transition-colors duration-200 hover:text-emerald-700"
+              >
+                {l.label}
+              </button>
+            ))}
+          </nav>
+
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Language picker — the page itself proves the multilingual
                 claim it makes. Two controls, one per size: a native select on
@@ -217,14 +241,14 @@ export default function ProLocoHomePage() {
                 the headline for the same width. */}
             <div>
               <div className="min-w-0">
-                <span className="inline-flex items-center rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-300/30 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-sm" style={{ backgroundColor: `${WA_GREEN}33`, boxShadow: `inset 0 0 0 1px ${WA_GREEN}80` }}>
                   {t.eyebrow}
                 </span>
 
                 <h1 className="font-display mt-4 text-3xl font-semibold leading-[1.1] tracking-tight text-white drop-shadow-sm sm:text-4xl lg:text-5xl">
                   {t.slogan1}
                   <br />
-                  <span className="text-emerald-300">{t.slogan2}</span>
+                  <span style={{ color: WA_GREEN }}>{t.slogan2}</span>
                 </h1>
 
                 <Typewriter
@@ -280,31 +304,50 @@ export default function ProLocoHomePage() {
             {t.closingTitle}
           </h2>
 
-          <div className="mx-auto mt-8 flex max-w-lg flex-col items-center gap-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 sm:flex-row sm:gap-6 sm:p-7">
-            <HeroRobot className="w-24 shrink-0 sm:w-28 [&_img]:w-full [&_img]:h-auto" />
+          <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-xl sm:p-8">
+            <div className="flex flex-col items-center gap-7 sm:flex-row sm:items-start sm:gap-8">
+              {/* The code, framed like the reference card's image — with the
+                  robot tucked in the corner so the mascot still introduces it. */}
+              <div className="relative shrink-0">
+                <span
+                  className="absolute -left-2 -top-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow"
+                  style={{ backgroundColor: WA_GREEN }}
+                >
+                  Live
+                </span>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <QRCode value={DEMO_WA_LINK} size={150} bgColor="#ffffff" fgColor="#0f172a" />
+                </div>
+                <HeroRobot className="pointer-events-none absolute -bottom-5 -right-6 w-16 [&_img]:w-full [&_img]:h-auto" />
+              </div>
 
-            <div className="min-w-0 flex-1 text-center sm:text-left">
-              <p className="font-display text-lg font-bold tracking-tight text-emerald-900">
-                {t.demoTitle}
-              </p>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-                {t.demoSub}
-              </p>
+              <div className="min-w-0 flex-1 text-center sm:text-left">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ backgroundColor: `${WA_GREEN}1f`, color: "#047857" }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: WA_GREEN }} />
+                  WhatsApp
+                </span>
 
-              {/* Phones get the link, desktops get the code. */}
-              <a
-                href={DEMO_WA_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-emerald-700 lg:hidden"
-              >
-                <MessageCircle className="h-4 w-4" />
-                {t.demoOpen}
-              </a>
-            </div>
+                <h3 className="font-display mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                  {t.demoTitle}
+                </h3>
+                <p className="mt-3 leading-relaxed text-slate-600">
+                  {t.demoSub}
+                </p>
 
-            <div className="hidden shrink-0 rounded-xl bg-white p-3 shadow-sm ring-1 ring-emerald-200/70 lg:block">
-              <QRCode value={DEMO_WA_LINK} size={104} bgColor="#ffffff" fgColor="#064e3b" />
+                <a
+                  href={DEMO_WA_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-6 inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03] lg:hidden"
+                  style={{ backgroundColor: WA_GREEN }}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  {t.demoOpen}
+                </a>
+              </div>
             </div>
           </div>
 
@@ -323,13 +366,24 @@ export default function ProLocoHomePage() {
             {t.closingBody}
           </p>
 
-          <a
-            href="#accedi"
-            className="mt-8 inline-flex items-center gap-1.5 font-medium text-emerald-700 transition-all hover:gap-2.5"
-          >
-            {t.closingCta}
-            <ChevronRight className="h-4 w-4" />
-          </a>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            <a
+              href="#accedi"
+              className="inline-flex items-center gap-1.5 font-medium text-emerald-700 transition-all hover:gap-2.5"
+            >
+              {t.closingCta}
+              <ChevronRight className="h-4 w-4" />
+            </a>
+
+            <button
+              type="button"
+              onClick={() => navigate("/contact")}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-emerald-700"
+            >
+              <Mail className="h-4 w-4" />
+              {t.infoCta}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -380,17 +434,17 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── What you can load ────────────────────────────────────── */}
-      <section className="border-t border-slate-100">
+      <section className="border-t border-slate-100 bg-emerald-950">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               {t.contentTitle}
             </h2>
-            <p className="mt-4 text-slate-600 leading-relaxed">
+            <p className="mt-4 leading-relaxed text-emerald-100/80">
               {t.contentBody1}
             </p>
-            <p className="mt-4 text-slate-600 leading-relaxed">
+            <p className="mt-4 leading-relaxed text-emerald-100/80">
               {t.contentBody2}
             </p>
           </div>
@@ -401,10 +455,13 @@ export default function ProLocoHomePage() {
               return (
                 <div
                   key={label}
-                  className="group flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 transition-all duration-200 hover:border-emerald-400 hover:bg-emerald-50/40 hover:shadow-sm"
+                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:border-white/25 hover:bg-white/10"
                 >
-                  <Icon className="h-5 w-5 text-emerald-600 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                  <span className="text-sm text-slate-700">{label}</span>
+                  <Icon
+                    className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    style={{ color: WA_GREEN }}
+                  />
+                  <span className="text-sm text-emerald-50">{label}</span>
                 </div>
               )
             })}
@@ -478,10 +535,145 @@ export default function ProLocoHomePage() {
         </div>
       </section>
 
+      {/* ── Privacy by design ────────────────────────────────────── */}
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+            <div className="flex flex-col items-center gap-7 sm:flex-row sm:items-start sm:gap-8">
+              <div className="shrink-0 rounded-2xl border border-slate-200 bg-emerald-50/50 p-4 shadow-sm">
+                <ShieldCheck className="h-24 w-24" style={{ color: WA_GREEN }} strokeWidth={1.3} />
+              </div>
+
+              <div className="min-w-0 flex-1 text-center sm:text-left">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ backgroundColor: `${WA_GREEN}1f`, color: "#047857" }}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {t.privacyBadge}
+                </span>
+
+                <h3 className="font-display mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                  {t.privacyTitle}
+                </h3>
+                <p className="mt-3 leading-relaxed text-slate-600">
+                  {t.privacyBody}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/privacy-by-design")}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.03]"
+                  style={{ backgroundColor: WA_GREEN }}
+                >
+                  {t.privacyCta}
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Survey ───────────────────────────────────────────────── */}
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
+        <div className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
+          <span className="inline-block rounded-full bg-emerald-100 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800">
+            {t.surveyEyebrow}
+          </span>
+          <h2 className="font-display mt-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {t.surveyTitle}
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl leading-relaxed text-slate-600">
+            {t.surveyBody}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/survey")}
+            className="mt-8 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 font-semibold text-white shadow-lg transition-colors duration-200"
+            style={{ backgroundColor: WA_GREEN }}
+          >
+            <ClipboardList className="h-5 w-5" />
+            {t.surveyCta}
+          </button>
+        </div>
+      </section>
+
+      {/* ── Closing CTA band ─────────────────────────────────────── */}
+      <section style={{ backgroundColor: WA_GREEN }}>
+        <div className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
+          <p className="text-lg font-medium leading-relaxed text-white sm:text-xl">
+            {t.ctaBand}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/contact")}
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 font-bold shadow-lg transition-transform duration-200 hover:scale-[1.03]"
+            style={{ color: "#047857" }}
+          >
+            {t.ctaBandBtn}
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </section>
+
       {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-100">
-        <div className="mx-auto max-w-6xl px-6 py-8 text-sm text-slate-500">
-          {t.footer}
+      <footer className="bg-slate-950 text-slate-400">
+        <div className="mx-auto max-w-6xl px-6 py-14">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="lg:col-span-2">
+              <span className="font-display text-xl font-bold text-white">
+                eChatbot<span style={{ color: WA_GREEN }}>.AI</span>
+              </span>
+              <p className="mt-3 max-w-sm text-sm leading-relaxed">
+                {t.footTagline}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-white">{t.footResources}</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <button type="button" onClick={() => navigate("/privacy-by-design")} className="transition-colors duration-200 hover:text-white">
+                    {t.privacyTitle}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigate("/survey")} className="transition-colors duration-200 hover:text-white">
+                    {t.surveyEyebrow}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigate("/contact")} className="transition-colors duration-200 hover:text-white">
+                    {t.ctaBandBtn}
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-white">{t.footLegal}</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <button type="button" onClick={() => navigate("/privacy")} className="transition-colors duration-200 hover:text-white">
+                    {t.footPrivacy}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => navigate("/terms")} className="transition-colors duration-200 hover:text-white">
+                    {t.footTerms}
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-12 flex flex-col gap-2 border-t border-white/10 pt-6 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span>{t.footer}</span>
+            <span className="text-slate-500">
+              © {new Date().getFullYear()} eChatbot.AI. All rights reserved.
+            </span>
+          </div>
         </div>
       </footer>
     </div>
