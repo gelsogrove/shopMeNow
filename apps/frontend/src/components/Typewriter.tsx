@@ -79,7 +79,7 @@ export function Typewriter({
             // Blinks while waiting and once finished; solid while typing, where
             // the moving text already shows where it is and a blink reads as a
             // glitch.
-            shown === 0 || done ? "animate-pulse" : "",
+            shown === 0 || done ? "animate-[caret_1s_steps(2,start)_infinite]" : "",
           ].join(" ")}
           style={{ height: "1em" }}
         />

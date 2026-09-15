@@ -721,3 +721,12 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Typewriter caret: a hard on/off blink, used by src/components/Typewriter.tsx
+   via animate-[caret_1s_steps(2,start)_infinite]. Kept outside @layer so the
+   arbitrary-value class can resolve it. */
+@keyframes caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
