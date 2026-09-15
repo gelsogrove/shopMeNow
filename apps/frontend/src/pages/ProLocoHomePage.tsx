@@ -337,10 +337,7 @@ export default function ProLocoHomePage() {
       {/* ── Pricing, straight from the database ──────────────────── */}
       <section className="border-t border-slate-100">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-          <h2 className="font-display text-center text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {t.pricingTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
+          <p className="mx-auto max-w-2xl text-center text-slate-600">
             {t.pricingSub}
           </p>
           <div className="mt-14">
@@ -386,8 +383,20 @@ export default function ProLocoHomePage() {
               </div>
 
               <div className="relative mx-auto shrink-0">
-                <div className="rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-slate-100">
-                  <QRCode value={DEMO_WA_LINK} size={208} bgColor="#ffffff" fgColor="#052e20" />
+                <div className="relative rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-slate-100">
+                  {/* level="H" (30% error correction) leaves enough redundancy
+                      for the centered WhatsApp mark to sit on top without
+                      breaking the scan (Andrea, 2026-09-15: "mi basterebbe
+                      avere il logo di whatsapp dentro il qrcode"). */}
+                  <QRCode value={DEMO_WA_LINK} size={208} bgColor="#ffffff" fgColor="#052e20" level="H" />
+                  <span
+                    className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md ring-4 ring-white"
+                    style={{ backgroundColor: WA_GREEN }}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-6 w-6 fill-white" aria-hidden="true">
+                      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.96 6.45 17.5 2 12.04 2Zm5.8 14.02c-.24.68-1.4 1.32-1.93 1.4-.49.08-1.11.11-1.79-.11-.41-.13-.95-.31-1.63-.6-2.87-1.24-4.74-4.12-4.89-4.31-.14-.19-1.17-1.55-1.17-2.96 0-1.4.74-2.09 1-2.38.26-.29.57-.36.76-.36.19 0 .38 0 .55.01.18.01.41-.07.64.49.24.58.81 2 .88 2.15.07.15.11.32.02.51-.09.19-.14.31-.27.48-.14.17-.29.37-.41.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.89 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.7-.81.88-1.09.18-.28.37-.23.62-.14.26.09 1.63.77 1.91.91.28.14.47.21.54.33.07.12.07.68-.17 1.36Z" />
+                    </svg>
+                  </span>
                 </div>
                 <span
                   className="absolute -right-3 -top-3 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"

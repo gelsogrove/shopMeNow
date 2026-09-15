@@ -19,6 +19,9 @@ export type HomeLang = "it" | "en" | "es" | "de" | "fr" | "ca"
  */
 export interface HomeCopy {
   audience: string
+  navPricing: string
+  navDemo: string
+  navContact: string
   eyebrow: string
   slogan1: string
   slogan2: string
@@ -106,8 +109,8 @@ const it: HomeCopy = {
   orDivider: "oppure",
   errBadCredentials: "Email o password non corretti.",
   errGeneric: "Accesso non riuscito. Riprova fra poco.",
-  benefitsTitle: "Cosa cambia per i vostri ospiti",
-  benefitsSub: "E per chi, in ufficio, risponde ogni giorno alle stesse domande. Sono molteplici i vantaggi: ve ne elenchiamo alcuni qui sotto.",
+  benefitsTitle: "Cosa cambia per i vostri ospiti — e per chi risponde in ufficio",
+  benefitsSub: "Sono molteplici i vantaggi: ve ne elenchiamo alcuni qui sotto.",
   benefits: [
     { title: "Ogni ospite nella sua lingua", body: "Un tedesco scrive in tedesco, un francese in francese. Voi scrivete i contenuti una volta sola: alla traduzione pensa l'assistente." },
     { title: "Nessuno aspetta il suo turno", body: "Cento turisti possono chiedere nello stesso momento, ognuno riceve la sua risposta. Allo sportello, invece, si fa la fila." },
@@ -116,9 +119,9 @@ const it: HomeCopy = {
     { title: "Risponde di domenica", body: "E il sabato, e a ferragosto, e alle undici di sera. Quando l'ufficio è chiuso le domande arrivano lo stesso — e trovano risposta." },
     { title: "Notifiche push", body: "La sagra di sabato, la strada chiusa, il concerto in piazza: solo agli ospiti che hanno dato il consenso, revocabile sempre." },
   ],
-  contentTitle: "Tutto il territorio, in un posto solo",
+  contentTitle: "Tutto il territorio in tasca",
   contentBody1: "Un albergo nuovo, un orario che cambia, la sagra di settembre: lo scrivete nel pannello e l'assistente lo sa subito. Senza chiamare nessuno.",
-  contentBody2: "E risponde solo con quello che avete caricato voi. Se un dato non c'è, lo dice: non lo inventa. Un nome, un numero o un orario che non è nelle vostre schede viene tolto dalla risposta prima che parta.",
+  contentBody2: "E risponde solo con quello che avete caricato voi. Se un dato non c'è, lo dice: non allucina.",
   contentTypes: ["Hotel e B&B", "Ristoranti e agriturismi", "Escursioni e rifugi", "Sagre ed eventi", "Prodotti tipici", "Borghi e punti panoramici", "Castelli e chiese", "Cenni storici", "Strutture sportive", "Numeri utili"],
   pricingTitle: "Prezzi chiari, nessuna sorpresa",
   pricingSub: "Il canone copre il servizio. I consumi si pagano a parte, solo quando li usate.",

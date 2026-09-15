@@ -244,6 +244,17 @@ const CLIPS: Scene[] = [
       de: "Ja, zwei Verleihe im Ort: der nächste ist 300 m entfernt 🚲 Heute wird das Wetter aber nicht gut — ich empfehle morgen früh",
     },
     link: { label: "noleggi.proloco.it/ebike", phone: "+39 0400 111 264" },
+    place: {
+      name: {
+        it: "Noleggio Bici",
+        en: "Bike Rental",
+        es: "Alquiler de Bicis",
+        ca: "Lloguer de Bicis",
+        fr: "Location de Vélos",
+        de: "Fahrradverleih",
+      },
+      address: "Via del Paese, 22",
+    },
   },
   {
     // action: skiing the slope
