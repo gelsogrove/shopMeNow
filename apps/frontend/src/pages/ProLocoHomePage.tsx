@@ -148,69 +148,6 @@ export default function ProLocoHomePage() {
 
   return (
     <div id="top" className="min-h-screen bg-white text-slate-900">
-      {/* ── Header ───────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <a href="#top" className="flex items-center gap-2 shrink-0">
-            <MessageCircle className="h-6 w-6 text-emerald-700" />
-            <span className="font-display text-lg font-bold tracking-tight text-emerald-800">
-              eChatbot<span className="text-slate-400">.AI</span>
-            </span>
-            <span className="hidden text-sm text-slate-500 lg:inline">
-              {t.audience}
-            </span>
-          </a>
-
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Language picker — the page itself proves the multilingual
-                claim it makes. Two controls, one per size: a native select on
-                phones (one tap, no horizontal room) and the flag row from sm
-                up, where six targets fit and read. */}
-            <label className="sm:hidden">
-              <span className="sr-only">{language}</span>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as typeof language)}
-                className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700"
-              >
-                {SUPPORTED_LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="hidden items-center gap-0.5 sm:flex">
-              {SUPPORTED_LANGUAGES.map((l) => (
-                <button
-                  key={l.code}
-                  type="button"
-                  onClick={() => setLanguage(l.code)}
-                  aria-label={l.name}
-                  aria-current={language === l.code}
-                  className={[
-                    "rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide transition-colors duration-200",
-                    language === l.code
-                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
-                  ].join(" ")}
-                >
-                  {l.code}
-                </button>
-              ))}
-            </div>
-
-            <a
-              href="#accedi"
-              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-            >
-              {t.loginCta}
-            </a>
-          </div>
-        </div>
-      </header>
-
       {/* ── Hero + login side by side ────────────────────────────── */}
       {/* A photo of the territory behind the hero, with a video layered on
           top when public/hero.mp4 exists — see HeroBackdrop for why the photo
@@ -435,15 +372,16 @@ export default function ProLocoHomePage() {
                         "📍 Dove possiamo andare a farci una passeggiata oggi?"
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-white/95 p-5 shadow-lg space-y-4 animate-in fade-in duration-500 delay-500">
+                    <div className="rounded-2xl bg-white/95 p-5 shadow-lg space-y-4" style={{ animation: 'fadeIn 0.5s ease-in 5s both' }}>
+                      <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
                       <p className="text-slate-900 leading-relaxed text-lg">
                         Oggi è sereno: vi consiglio il sentiero delle cascate, 40 minuti e ombra per tutto il percorso 🌲 Mettete scarpe chiuse, l'ultimo tratto vicino all'acqua è scivoloso
                       </p>
-                      {/* Video placeholder */}
-                      <div className="rounded-xl overflow-hidden bg-slate-200 aspect-video flex items-center justify-center border border-slate-300">
+                      {/* Video placeholder - 15 seconds */}
+                      <div className="rounded-xl overflow-hidden bg-slate-200 flex items-center justify-center border border-slate-300" style={{ aspectRatio: '16/9' }}>
                         <div className="text-center">
                           <div className="text-4xl mb-2">🎬</div>
-                          <p className="text-xs text-slate-600 font-medium">Video cascate</p>
+                          <p className="text-xs text-slate-600 font-medium">Video cascate (15s)</p>
                         </div>
                       </div>
                       <div className="space-y-2 pt-2 border-t border-slate-100">
