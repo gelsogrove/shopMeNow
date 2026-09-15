@@ -554,7 +554,7 @@ export function OnboardingWizardProLoco({ open, onClose }: Props) {
             <header className="bg-[#070d18]/90 backdrop-blur border-b border-white/10 shadow-sm sticky top-0 z-50 shrink-0">
               <div className="max-w-[727px] mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
                 <button onClick={onClose} className="flex items-center gap-1 shrink-0 hover:opacity-80 transition-opacity">
-                  <span className="font-display font-bold tracking-tight" style={{ color: '#25D366', fontSize: 24 }}>
+                  <span className="font-display font-bold tracking-tight" style={{ color: '#25D366', fontSize: 28 }}>
                     eChatbot<span className="text-white">.AI</span>
                   </span>
                 </button>

@@ -1084,7 +1084,7 @@ export function LoginPage() {
           <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
             {/* Left: Logo + Brand */}
             <div className="flex items-center justify-start gap-1">
-              <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 24 }}>eChatbot<span className="text-white">.AI</span></span>
+              <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 28 }}>eChatbot<span className="text-white">.AI</span></span>
             </div>
 
             {/* Right: Language Selector + Auth */}
