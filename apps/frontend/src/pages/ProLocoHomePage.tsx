@@ -190,23 +190,15 @@ export default function ProLocoHomePage() {
           is the load-bearing layer and the video only an enhancement. */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20">
+        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20 lg:pb-[19rem]">
         <div className="grid items-start gap-12 lg:grid-cols-[3fr_2fr] lg:gap-16">
           <div>
-            {/* The brand mascot, reusing the animated HeroRobot already built
-                for the other landing pages (Andrea, 2026-09-14: "usa il
-                robottino che avevamo prima verde"). Small and beside the
-                slogan, not above it: on this page the login form is the thing
-                that must stay above the fold. */}
-            {/* The robot sits beside the WHOLE block, not next to the eyebrow.
-                Pairing a 176px mascot with a 14px label left the label hanging
-                in space with nothing to relate to (Andrea, 2026-09-15:
-                "piccolo e fatto male e appeso nel nulla"). Now the eyebrow is
-                a chip above the headline, where it belongs, and the robot
-                balances the headline's mass. */}
-            <div className="flex items-start xl:gap-6">
-              <HeroRobot className="hidden w-48 shrink-0 xl:block [&_img]:w-full [&_img]:h-auto" />
-
+            {/* The mascot used to sit here, beside the headline. It moved to
+                the questions section below (Andrea, 2026-09-15: "robottino
+                mettilo sotto 'Ogni giorno, le stesse'"), where it introduces
+                the questions it is the one answering instead of competing with
+                the headline for the same width. */}
+            <div>
               <div className="min-w-0">
                 <span className="inline-flex items-center rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-300/30 backdrop-blur-sm">
                   {t.eyebrow}
@@ -290,7 +282,9 @@ export default function ProLocoHomePage() {
             {t.closingTitle}
           </h2>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-2.5 sm:gap-3">
+          <HeroRobot className="mx-auto mt-6 w-32 sm:w-40 [&_img]:w-full [&_img]:h-auto" />
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5 sm:gap-3">
             {t.closingQuestions.map((q) => (
               <span
                 key={q}

@@ -247,6 +247,9 @@ export function HeroBackdrop() {
   /** The bubble is hidden during the dissolve, so it never straddles two clips. */
   const [asking, setAsking] = useState(false)
   const { language } = useLanguage()
+  const [sentAt] = useState(() =>
+    new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+  )
 
   useEffect(() => {
     // Desktop only — see the note above CLIPS. matchMedia, not a resize
@@ -400,29 +403,54 @@ export function HeroBackdrop() {
           the page's own white so the section ends without a seam. */}
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white" />
 
-      {/* The question this clip provokes — see the note above CLIPS. */}
+      {/* The question this clip provokes, staged as a real WhatsApp exchange.
+          A plain white pill read as a tooltip, not as a message, and it sat in
+          the band where the veil fades to white so it half-disappeared
+          (Andrea, 2026-09-15: "non si vede la frase di whatsapp e non si
+          capisce che e' di whatsapp… dagli un tocco").
+
+          What makes it legible as WhatsApp, all of it borrowed from the real
+          client: the #ECE5DD thread paper, the outgoing bubble in #D9FDD3 with
+          its tail on the right, the timestamp and the BLUE double tick, and
+          the reply typing underneath. Moved higher (bottom-24) so it sits on
+          the dark part of the veil, and given a dark ring so it detaches from
+          whatever frame is playing behind it. */}
       {clips.length > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 hidden justify-center px-6 lg:flex">
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 hidden justify-center px-6 lg:flex">
           <div
             className={[
-              "flex max-w-md items-end gap-2.5 transition-all duration-700 ease-out",
+              "w-full max-w-sm rounded-2xl bg-[#ECE5DD] p-3 shadow-2xl shadow-slate-950/50 ring-1 ring-slate-950/10 transition-all duration-700 ease-out",
               asking ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
             ].join(" ")}
           >
-            <span className="rounded-2xl rounded-br-sm bg-white/95 px-4 py-2.5 text-sm font-medium text-slate-800 shadow-lg backdrop-blur-sm">
-              {clips[scene]?.ask[language] ?? clips[scene]?.ask.it}
-            </span>
-            {/* The assistant, mid-answer: three dots say "it is replying" in
-                every language, which a translated label could not. */}
-            <span className="flex shrink-0 items-center gap-1 rounded-2xl rounded-bl-sm bg-emerald-600/95 px-3 py-3 shadow-lg">
-              {[0, 1, 2].map((d) => (
-                <span
-                  key={d}
-                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/90"
-                  style={{ animationDelay: `${d * 140}ms` }}
-                />
-              ))}
-            </span>
+            {/* Outgoing: the guest's question. */}
+            <div className="flex justify-end">
+              <span className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-[13px] leading-snug text-slate-900 shadow-sm">
+                {clips[scene]?.ask[language] ?? clips[scene]?.ask.it}
+                <span className="ml-2 inline-flex translate-y-[3px] items-center gap-0.5 text-[10px] text-slate-500">
+                  {sentAt}
+                  {/* Read receipt: two ticks, in WhatsApp's blue. */}
+                  <svg viewBox="0 0 18 12" className="h-3 w-3 fill-none stroke-[#53BDEB] stroke-[1.8]" aria-hidden="true">
+                    <path d="M1 6.5 4 9.5 10 2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M7 6.5 10 9.5 16 2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </span>
+            </div>
+
+            {/* Incoming: the assistant, mid-answer. Three dots say "replying"
+                in every language, which a translated label could not. */}
+            <div className="mt-1.5 flex justify-start">
+              <span className="flex items-center gap-1 rounded-lg rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
+                {[0, 1, 2].map((d) => (
+                  <span
+                    key={d}
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400"
+                    style={{ animationDelay: `${d * 140}ms` }}
+                  />
+                ))}
+              </span>
+            </div>
           </div>
         </div>
       )}
