@@ -18,9 +18,12 @@ import { useCallback, useEffect, useRef, useState } from "react"
  * pushes 8MB of video before anything renders is worse than one that shows a
  * sharp photo instantly.
  *
- * The white gradient over the top is what keeps the hero readable: the copy
- * and the login form sit on this, and a busy frame under dark text is the
- * usual way these backgrounds go wrong.
+ * The DARK gradient over the top is what keeps the hero readable, and the
+ * hero copy is white because of it. The earlier near-opaque white veil was
+ * the usual failure of this pattern: it kept dark text legible by hiding the
+ * very footage it was laid over. Dark veil + light copy shows the video AND
+ * raises contrast; the login card stays solid white on purpose, because a
+ * frosted form over moving video is where these designs become unusable.
  *
  * HOW THE CROSS-FADE WORKS — two <video> elements, never one.
  * A single element that swaps its `src` must tear down the decoder and buy a
@@ -164,7 +167,7 @@ export function HeroBackdrop() {
   )
 
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <img src={POSTER_SRC} alt="" className="h-full w-full object-cover" />
 
       {sources.map((src, slot) =>

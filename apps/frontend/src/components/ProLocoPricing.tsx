@@ -91,7 +91,7 @@ export function ProLocoPricing() {
             <div
               key={plan.planType}
               className={[
-                "group relative flex flex-col rounded-2xl border p-7 transition-all duration-300",
+                "group relative flex flex-col rounded-2xl border p-7 transition-all duration-200",
                 // Lift on hover — the whole card is the affordance.
                 "hover:-translate-y-1 hover:shadow-xl",
                 featured

@@ -255,9 +255,9 @@ export default function ProLocoHomePage() {
       {/* A photo of the territory behind the hero, with a video layered on
           top when public/hero.mp4 exists — see HeroBackdrop for why the photo
           is the load-bearing layer and the video only an enhancement. */}
-      <section className="relative">
+      <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        <div className="mx-auto max-w-6xl px-6 pt-16 pb-20">
+        <div className="relative z-10 mx-auto max-w-6xl px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <div>
             {/* The brand mascot, reusing the animated HeroRobot already built
@@ -275,17 +275,17 @@ export default function ProLocoHomePage() {
               <HeroRobot className="hidden w-56 shrink-0 lg:block xl:w-72 [&_img]:w-full [&_img]:h-auto" />
 
               <div className="min-w-0">
-                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                <span className="inline-flex items-center rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-300/30 backdrop-blur-sm">
                   {t.eyebrow}
                 </span>
 
-                <h1 className="font-display mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl">
+                <h1 className="font-display mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white drop-shadow-sm sm:text-5xl">
                   {t.slogan1}
                   <br />
-                  <span className="text-emerald-700">{t.slogan2}</span>
+                  <span className="text-emerald-300">{t.slogan2}</span>
                 </h1>
 
-                <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-100/90">
                   {t.lede}
                 </p>
 
@@ -303,9 +303,9 @@ export default function ProLocoHomePage() {
                 ].map(({ Icon, label }) => (
                   <span
                     key={label}
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 font-medium text-emerald-800"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 font-medium text-white backdrop-blur-md"
                   >
-                    <Icon className="h-[18px] w-[18px] text-emerald-600" />
+                    <Icon className="h-[18px] w-[18px] text-emerald-300" />
                     {label}
                   </span>
                 ))}
@@ -317,7 +317,7 @@ export default function ProLocoHomePage() {
 
           {/* ── Login form, on the page ──────────────────────────── */}
           <div id="accedi" className="lg:pl-8">
-            <div className="rounded-2xl border border-slate-200 p-8 shadow-sm">
+            <div className="rounded-2xl border border-white/10 bg-white p-8 shadow-2xl shadow-slate-950/30">
               <h2 className="text-xl font-semibold text-slate-900">
                 {t.loginTitle}
               </h2>
@@ -409,7 +409,7 @@ export default function ProLocoHomePage() {
       {/* ── The questions they answer every day ─────────────────── */}
       <section className="border-t border-slate-100">
         <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20 text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             {t.closingTitle}
           </h2>
 
@@ -445,14 +445,14 @@ export default function ProLocoHomePage() {
           si compongono i menu a destra"). It brings its own dark stage, which
           sits deliberately between two white sections: the phone screen is
           what the eye should land on. */}
-      <section className="border-t border-slate-100">
-        <HomeShowcase lang="it" content={proLocoShowcaseContent} theme="light" />
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
+        <HomeShowcase lang={language} content={proLocoShowcaseContent} theme="light" />
       </section>
 
       {/* ── Benefits ─────────────────────────────────────────────── */}
-      <section className="border-t border-slate-100 bg-slate-50/50">
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="font-display text-3xl font-semibold tracking-tight text-center">
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+          <h2 className="font-display text-center text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             {t.benefitsTitle}
           </h2>
           <p className="mt-3 text-center text-slate-600 max-w-2xl mx-auto">
@@ -465,13 +465,13 @@ export default function ProLocoHomePage() {
               return (
                 <div
                   key={b.title}
-                  className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+                  className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
                 >
                   {/* Big tinted tile rather than a bare 24px glyph: at a
                       glance the six benefits now read as six things, and the
                       eye lands on the icon before the words. */}
-                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 transition-colors duration-300 group-hover:bg-emerald-600">
-                    <Icon className="h-7 w-7 text-emerald-600 transition-colors duration-300 group-hover:text-white" />
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 transition-colors duration-200 group-hover:bg-emerald-600">
+                    <Icon className="h-7 w-7 text-emerald-600 transition-colors duration-200 group-hover:text-white" />
                   </div>
                   <h3 className="font-semibold text-slate-900">{b.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -485,10 +485,11 @@ export default function ProLocoHomePage() {
       </section>
 
       {/* ── What you can load ────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      <section className="border-t border-slate-100">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="font-display text-3xl font-semibold tracking-tight">
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
               {t.contentTitle}
             </h2>
             <p className="mt-4 text-slate-600 leading-relaxed">
@@ -514,19 +515,20 @@ export default function ProLocoHomePage() {
             })}
           </div>
         </div>
+        </div>
       </section>
 
       {/* ── Real places from the workspace, not stock photos ─────── */}
-      <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <ProLocoGallery title={t.galleryTitle} subtitle={t.gallerySubtitle} />
         </div>
       </section>
 
       {/* ── Pricing, straight from the database ──────────────────── */}
       <section className="border-t border-slate-100">
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="text-center text-3xl font-semibold tracking-tight">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+          <h2 className="font-display text-center text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             {t.pricingTitle}
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
@@ -544,13 +546,13 @@ export default function ProLocoHomePage() {
           Loco". Not a promise: the product really has merchant-bought
           campaigns with their own push quota (Merchant / MerchantPush). */}
       <section className="border-t border-slate-100 bg-emerald-50/40">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-emerald-700 font-medium text-sm mb-3">
               {t.revenueEyebrow}
               </p>
-              <h2 className="font-display text-3xl font-semibold tracking-tight">
+              <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 {t.revenueTitle}
               </h2>
               <p className="mt-4 text-slate-600 leading-relaxed">

@@ -442,14 +442,12 @@ export function HomeShowcase({
       className={[
         "relative w-full overflow-hidden p-6 sm:p-8 lg:p-10",
         light
-          // Not pure white (Andrea, 2026-09-15: "con sfondo bianco non si
-          // capisce il layout grafico… lo spezziamo con qualche colore ma
-          // ovviamente non puo essere nero perche' il bordo del telefono poi
-          // non si vede"). A warm sand band breaks the white page WITHOUT
-          // going dark — the phone's near-black frame stays visible against
-          // it, which a dark stage destroyed. No border, no hard corner:
-          // the colour alone does the separating.
-          ? "bg-[#F6F2EA]"
+          // Transparent: the PAGE owns the colour rhythm (the Pro Loco section
+          // wrapping this paints the warm sand that breaks up the white, per
+          // Andrea 2026-09-15 "lo spezziamo con qualche colore"). Painting it
+          // here too gave two stacked sand layers and stopped the component
+          // being reusable on any other ground. No border, no hard corner.
+          ? "bg-transparent"
           : "rounded-3xl border border-white/10 bg-[#070d18] shadow-2xl",
       ].join(" ")}
     >
@@ -497,7 +495,7 @@ export function HomeShowcase({
                   context change (final Arabic exchange / loop restart) */}
               <div
                 ref={chatRef}
-                className="h-[760px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
+                className="h-[min(760px,70vh)] min-h-[420px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none" }}
               >
                 <div className="mt-auto flex min-h-full flex-col justify-end gap-2">

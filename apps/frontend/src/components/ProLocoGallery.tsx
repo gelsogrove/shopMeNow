@@ -131,9 +131,9 @@ export function ProLocoGallery({ title, subtitle }: ProLocoGalleryProps) {
         {CATEGORIES.map((cat) => (
           <div
             key={cat.label}
-            className="group flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-7 text-center transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+            className="group flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-7 text-center transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
           >
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors duration-300 group-hover:bg-emerald-600 group-hover:text-white">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors duration-200 group-hover:bg-emerald-600 group-hover:text-white">
               <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true">
                 {(() => {
                   const { fill, stroke, strokeWidth, strokeLinecap, strokeLinejoin } = STROKE
