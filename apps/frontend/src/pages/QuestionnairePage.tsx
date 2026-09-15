@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { SiteHeader } from "@/components/layout/SiteHeader"
+import { SiteFooter } from "@/components/layout/SiteFooter"
 import { SEO } from "@/components/SEO"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
@@ -1429,6 +1430,8 @@ export default function QuestionnairePage() {
           )}
         </div>
       </div>
+
+      <SiteFooter language={lang as any} />
     </div>
   )
 }

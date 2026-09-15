@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 /**
@@ -89,6 +90,17 @@ type Scene = {
    * what the rest of the page promises the product does NOT do.
    */
   reply: Record<string, string>
+  /**
+   * A follow-up message carrying a link and a phone number (Andrea,
+   * 2026-09-15: "metti anche un secondo messaggio, ecco il link del posto —
+   * ovviamente non e' cliccabile, e' giusto per far capire come funziona").
+   *
+   * It is a STILL: rendered as link-blue text but never an <a>, because this
+   * is a picture of a conversation, not one you can have. The numbers are
+   * invented and deliberately non-routable (the 0400 prefix does not exist in
+   * Italy) so nobody's real line rings.
+   */
+  link: { label: string; phone: string }
 }
 
 const CLIPS: Scene[] = [
@@ -111,6 +123,7 @@ const CLIPS: Scene[] = [
       fr: "Beau temps : le sentier des cascades, 40 min, à l'ombre 🌲",
       de: "Heute klar: der Wasserfallweg, 40 Min., durchgehend schattig 🌲",
     },
+    link: { label: "sentieri.proloco.it/cascate", phone: "+39 0400 111 221" },
   },
   {
     // indoors: somewhere warm when the weather turns
@@ -131,6 +144,7 @@ const CLIPS: Scene[] = [
       fr: "Le musée est ouvert jusqu'à 18h, et dégustation à 17h ☔",
       de: "Das Museum hat bis 18 Uhr offen, um 17 Uhr gibt es eine Verkostung ☔",
     },
+    link: { label: "museo.proloco.it/orari", phone: "+39 0400 111 232" },
   },
   {
     // action: a live gig — tonight's events
@@ -151,6 +165,7 @@ const CLIPS: Scene[] = [
       fr: "Oui, 21h sur la place : chœur de montagne, entrée libre 🎶",
       de: "Ja, 21 Uhr auf dem Platz: Bergchor, Eintritt frei 🎶",
     },
+    link: { label: "eventi.proloco.it/concerti", phone: "+39 0400 111 245" },
   },
   {
     // action: on the water — points at a rental business
@@ -171,6 +186,7 @@ const CLIPS: Scene[] = [
       fr: "Au centre sportif, ouvert 9h–18h. Voici le numéro 📞",
       de: "Im Sportzentrum, 9–18 Uhr geöffnet. Hier die Nummer 📞",
     },
+    link: { label: "sport.proloco.it/noleggi", phone: "+39 0400 111 258" },
   },
   {
     // action: cycling
@@ -191,6 +207,7 @@ const CLIPS: Scene[] = [
       fr: "Oui, deux loueurs au village. Le plus proche à 300 m 🚲",
       de: "Ja, zwei Verleihe im Ort. Der nächste ist 300 m entfernt 🚲",
     },
+    link: { label: "noleggi.proloco.it/ebike", phone: "+39 0400 111 264" },
   },
   {
     // action: skiing the slope
@@ -211,6 +228,7 @@ const CLIPS: Scene[] = [
       fr: "Dernière remontée à 16h30, retour avant 17h ⛷️",
       de: "Letzte Bergfahrt 16:30 Uhr, Rückkehr bis 17 Uhr ⛷️",
     },
+    link: { label: "impianti.proloco.it/orari", phone: "+39 0400 111 277" },
   },
   {
     // close: meat on the grill — where to eat the local food
@@ -224,13 +242,14 @@ const CLIPS: Scene[] = [
       de: "Wo isst man die regionalen Spezialitäten?",
     },
     reply: {
-      it: "Tre osterie in centro fanno piatti del posto. Prenoto per stasera? 🍽️",
-      en: "Three inns in the centre serve local dishes. Shall I book for tonight? 🍽️",
-      es: "Tres tabernas del centro sirven platos locales. ¿Reservo? 🍽️",
-      ca: "Tres tavernes del centre serveixen plats locals. Reservo? 🍽️",
-      fr: "Trois auberges au centre servent local. Je réserve ce soir ? 🍽️",
-      de: "Drei Gasthäuser im Zentrum kochen regional. Soll ich reservieren? 🍽️",
+      it: "Tre osterie in centro fanno piatti del posto: vi lascio indirizzi e numeri 🍽️",
+      en: "Three inns in the centre serve local dishes — here are the addresses and numbers 🍽️",
+      es: "Tres tabernas del centro sirven platos locales: os paso direcciones y teléfonos 🍽️",
+      ca: "Tres tavernes del centre serveixen plats locals: us passo adreces i telèfons 🍽️",
+      fr: "Trois auberges au centre servent local — voici adresses et numéros 🍽️",
+      de: "Drei Gasthäuser im Zentrum kochen regional — hier Adressen und Nummern 🍽️",
     },
+    link: { label: "osterie.proloco.it/tipici", phone: "+39 0400 111 283" },
   },
   {
     // wide: an alpine lake
@@ -251,6 +270,7 @@ const CLIPS: Scene[] = [
       fr: "Oui, 4 km plats, environ une heure. Poussettes possibles 🚶",
       de: "Ja, 4 km eben, etwa eine Stunde. Auch mit Kinderwagen 🚶",
     },
+    link: { label: "sentieri.proloco.it/lago", phone: "+39 0400 111 290" },
   },
   {
     // wide: a castle on the mountain
@@ -271,27 +291,19 @@ const CLIPS: Scene[] = [
       fr: "Ouvert jeudi et dimanche, 10h–17h. Visite guidée à 11h 🏰",
       de: "Donnerstag und Sonntag, 10–17 Uhr. Führung um 11 Uhr 🏰",
     },
+    link: { label: "castello.proloco.it/visite", phone: "+39 0400 111 305" },
   },
 ]
 
 
 
 /**
- * The assistant's opening message, shown above every exchange.
- *
- * Same text for every clip: a guest gets greeted once, and keeping it fixed
- * turns the bubble into one continuous conversation instead of eleven
- * unrelated ones. It also does the introducing — "Sono l'assistente della Pro
- * Loco" — so the questions below need no framing of their own.
+ * The guest the demo exchange is with (Andrea, 2026-09-15: "scrivi Ciao Luca,
+ * e poi la frase"). A name in front of the answer shows the assistant knows
+ * WHO is asking — on WhatsApp it always does, because the number is the
+ * identity. That is the difference from a web widget, and it costs one word.
  */
-const WELCOME: Record<string, string> = {
-  it: "Ciao e benvenuti! 👋 Sono l'assistente della Pro Loco. Vi do una mano con alloggi, sentieri, eventi e tutto il resto — a qualsiasi ora.",
-  en: "Hello and welcome! 👋 I'm the tourist office assistant. I can help with places to stay, trails, events and everything else — at any hour.",
-  es: "¡Hola y bienvenidos! 👋 Soy el asistente de la oficina de turismo. Os ayudo con alojamientos, rutas, eventos y todo lo demás — a cualquier hora.",
-  ca: "Hola i benvinguts! 👋 Sóc l'assistent de l'oficina de turisme. Us ajudo amb allotjaments, camins, esdeveniments i tota la resta — a qualsevol hora.",
-  fr: "Bonjour et bienvenue ! 👋 Je suis l'assistant de l'office de tourisme. Je vous aide pour les hébergements, les sentiers, les événements et le reste — à toute heure.",
-  de: "Hallo und willkommen! 👋 Ich bin der Assistent des Tourismusbüros. Ich helfe bei Unterkünften, Wegen, Veranstaltungen und allem anderen — zu jeder Zeit.",
-}
+const GUEST_NAME = "Luca"
 
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
 const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
@@ -332,6 +344,12 @@ export function HeroBackdrop() {
   const [answered, setAnswered] = useState(false)
   const replyTimer = useRef<number | null>(null)
   const { language } = useLanguage()
+  /** Where the page wants the thread drawn. */
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    setSlot(document.getElementById("hero-chat-slot"))
+  }, [])
+
   const [sentAt] = useState(() =>
     new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
   )
@@ -506,22 +524,15 @@ export function HeroBackdrop() {
           the reply typing underneath. Moved higher (bottom-24) so it sits on
           the dark part of the veil, and given a dark ring so it detaches from
           whatever frame is playing behind it. */}
-      {clips.length > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 hidden justify-center px-6 lg:flex">
+      {/* The thread is rendered into #hero-chat-slot, which the page places
+          in the hero's right column. See the note above. */}
+      {clips.length > 0 && slot && createPortal(
           <div
             className={[
               "w-full max-w-lg rounded-2xl bg-[#ECE5DD] p-3.5 shadow-2xl shadow-slate-950/50 ring-1 ring-slate-950/10 transition-all duration-700 ease-out",
               asking ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
             ].join(" ")}
           >
-            {/* Incoming: the welcome, always first — it opens the conversation
-                and introduces who is answering. */}
-            <div className="flex justify-start">
-              <span className="max-w-[92%] rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
-                {WELCOME[language] ?? WELCOME.it}
-              </span>
-            </div>
-
             {/* Outgoing: the guest's question. */}
             <div className="mt-1.5 flex justify-end">
               <span className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
@@ -541,9 +552,19 @@ export function HeroBackdrop() {
                 showed a bot that never delivers. */}
             <div className="mt-1.5 flex justify-start">
               {answered ? (
-                <span className="max-w-[90%] rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
-                  {clips[scene]?.reply[language] ?? clips[scene]?.reply.it}
-                </span>
+                <div className="flex max-w-[90%] flex-col gap-1.5">
+                  <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
+                    Ciao {GUEST_NAME}, {clips[scene]?.reply[language] ?? clips[scene]?.reply.it}
+                  </span>
+                  {/* Not an <a>: a still of a conversation, not one you can have. */}
+                  <span className="rounded-lg rounded-tl-sm bg-white px-3 py-2 text-sm leading-snug text-slate-900 shadow-sm">
+                    <span className="text-[#027EB5] underline">
+                      {clips[scene]?.link.label}
+                    </span>
+                    <br />
+                    <span className="text-slate-600">{clips[scene]?.link.phone}</span>
+                  </span>
+                </div>
               ) : (
                 <span className="flex items-center gap-1 rounded-lg rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
                   {[0, 1, 2].map((d) => (
@@ -557,8 +578,7 @@ export function HeroBackdrop() {
               )}
             </div>
           </div>
-        </div>
-      )}
+      , slot)}
 
     </div>
   )
