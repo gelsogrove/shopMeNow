@@ -5,6 +5,7 @@ import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import HeroRobot from "@/components/landing/HeroRobot"
 import { WIPModal } from "@/components/shared/WIPModal"
+import { FlagIcon } from "@/components/shared/FlagIcon"
 import { SEO } from "@/components/SEO"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -1092,10 +1093,10 @@ export function LoginPage() {
                   📱 Visible on mobile too: flag-only on small screens, flag+code from sm. */}
               <div className="flex items-center gap-0.5 sm:gap-1">
                 {([
-                  { code: "it", flag: "🇮🇹" },
-                  { code: "en", flag: "🇬🇧" },
-                  { code: "es", flag: "🇪🇸" },
-                  { code: "de", flag: "🇩🇪" },
+                  { code: "it", flag: "🇮🇹", name: "Italiano" },
+                  { code: "en", flag: "🇬🇧", name: "English" },
+                  { code: "es", flag: "🇪🇸", name: "Español" },
+                  { code: "de", flag: "🇩🇪", name: "Deutsch" },
                 ] as const).map((l) => (
                   <button
                     key={l.code}
@@ -1104,7 +1105,7 @@ export function LoginPage() {
                     aria-label={l.code}
                     className={`flex items-center rounded-lg px-1.5 py-1 transition-colors sm:px-2 ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                   >
-                    <span className="text-lg leading-none">{l.flag}</span>
+                    <FlagIcon flag={l.flag} name={l.name} className="text-lg leading-none" />
                   </button>
                 ))}
               </div>

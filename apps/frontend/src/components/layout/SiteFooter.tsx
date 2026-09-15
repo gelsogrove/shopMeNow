@@ -127,10 +127,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             <ul className="space-y-3">
               <li><Link to="/privacy-by-design" className="text-sm hover:text-green-500 transition-colors">{t.privacyDesign}</Link></li>
             </ul>
-            <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
-            <ul className="space-y-3">
-              <li><Link to="/tourism" className="text-sm hover:text-green-500 transition-colors">{t.tourism}</Link></li>
-            </ul>
           </div>
 
           {/* Company + Legal */}

@@ -174,7 +174,7 @@ export default function ProLocoHomePage() {
                     : "hover:bg-slate-50",
                 ].join(" ")}
               >
-                <FlagIcon flag={l.flag} />
+                <FlagIcon flag={l.flag} name={l.name} />
               </button>
             ))}
           </div>

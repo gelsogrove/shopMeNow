@@ -285,10 +285,10 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                 📱 Visible on mobile too: flag-only on small screens, flag+code from sm. */}
             <div className="flex items-center gap-0.5 sm:gap-1">
               {([
-                { code: "it", flag: "🇮🇹" },
-                { code: "en", flag: "🇬🇧" },
-                { code: "es", flag: "🇪🇸" },
-                { code: "de", flag: "🇩🇪" },
+                { code: "it", flag: "🇮🇹", name: "Italiano" },
+                { code: "en", flag: "🇬🇧", name: "English" },
+                { code: "es", flag: "🇪🇸", name: "Español" },
+                { code: "de", flag: "🇩🇪", name: "Deutsch" },
               ] as const).map((l) => (
                 <button
                   key={l.code}
@@ -296,7 +296,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                   onClick={() => setLanguage(l.code)}
                   className={`flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors sm:px-2 ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                 >
-                  <FlagIcon flag={l.flag} />
+                  <FlagIcon flag={l.flag} name={l.name} />
                   <span className="hidden text-xs font-semibold uppercase sm:inline">{l.code}</span>
                 </button>
               ))}
