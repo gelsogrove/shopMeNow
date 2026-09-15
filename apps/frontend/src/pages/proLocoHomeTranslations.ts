@@ -50,11 +50,6 @@ export interface HomeCopy {
   contentTypes: string[]
   pricingTitle: string
   pricingSub: string
-  revenueEyebrow: string
-  revenueTitle: string
-  revenueBody1: string
-  revenueBody2: string
-  revenueSteps: Array<{ t: string; d: string }>
   retentionEyebrow: string
   retentionTitle: string
   retentionBody1: string
@@ -128,10 +123,6 @@ const it: HomeCopy = {
   contentTypes: ["Hotel e B&B", "Ristoranti e agriturismi", "Escursioni e rifugi", "Sagre ed eventi", "Prodotti tipici", "Borghi e punti panoramici", "Castelli e chiese", "Cenni storici", "Strutture sportive", "Numeri utili"],
   pricingTitle: "Prezzi chiari, nessuna sorpresa",
   pricingSub: "Il canone copre il servizio. I consumi si pagano a parte, solo quando li usate.",
-  revenueEyebrow: "Modello economico",
-  revenueTitle: "Gli esercenti possono sponsorizzarsi sul canale",
-  revenueBody1: "Un albergo, un ristorante, un noleggio attrezzature — per esempio — possono sponsorizzarsi sul vostro canale, con un messaggio che arriva ai turisti che hanno dato il consenso. Voi decidete il prezzo, il sistema tiene il conto del numero di invii fatti.",
-  revenueBody2: "Per molti uffici turistici basta a coprire il costo del servizio. Quello che arriva dopo è guadagno.",
   retentionEyebrow: "Il messaggio giusto, al momento giusto",
   retentionTitle: "Mentre sono qui, e quando saranno tornati a casa.",
   retentionBody1: "Il visitatore che vi ha scritto una volta è il contatto più prezioso che avete: sa dov'è, si è trovato bene, e vi ha lasciato il numero. Durante la vacanza gli arriva quello che gli serve adesso; dopo, quello che lo riporta qui.",
@@ -149,11 +140,6 @@ const it: HomeCopy = {
     { q: "Quanto ci vuole per partire?", a: "Dipende quasi solo da quanto materiale avete già pronto. Con un elenco di eventi e strutture da importare si parte in pochi giorni; se il catalogo va costruito da zero, serve qualche settimana di raccolta dati." },
     { q: "I dati dei turisti dove finiscono?", a: "Restano vostri. I contatti e le conversazioni sono nel vostro spazio, separati da quelli di ogni altro ente, e la gestione è conforme al GDPR. Non vengono usati per addestrare modelli né ceduti a terzi." },
     { q: "Funziona anche se non siamo in montagna?", a: "Sì. L'assistente non sa niente della montagna in particolare: sa quello che c'è nel vostro catalogo. Mare, città d'arte, lago o borgo cambiano le schede, non il funzionamento." },
-  ],
-  revenueSteps: [
-    { t: "L'esercente compra un pacchetto", d: "Dieci, cinquanta, cento messaggi. Decidete voi il prezzo." },
-    { t: "Prepara il suo messaggio", d: "Testo e foto della sua offerta, che approvate prima dell'invio." },
-    { t: "Parte solo a chi ha acconsentito", d: "E ogni invio scala dal suo pacchetto, senza che dobbiate contare nulla." },
   ],
   closingBody: "Allo sportello e al telefono, spesso mentre c'è la fila. Da adesso l'assistente risponde per voi — con quello che avete caricato, nella lingua di chi chiede.",
   demoTitle: "Provate la demo — provare per credere! 🙂",
@@ -219,10 +205,6 @@ const en: HomeCopy = {
   contentTypes: ["Hotels and B&Bs", "Restaurants and farm stays", "Hikes and mountain huts", "Festivals and events", "Local produce", "Villages and viewpoints", "Castles and churches", "Local history", "Sports facilities", "Useful numbers"],
   pricingTitle: "Clear pricing, no surprises",
   pricingSub: "The subscription covers the service. Usage is billed separately, only when you use it.",
-  revenueEyebrow: "The business model",
-  revenueTitle: "Local businesses can sponsor themselves on the channel",
-  revenueBody1: "A hotel, a restaurant, an equipment rental — for example — can sponsor themselves on your channel, with a message that reaches visitors who opted in. You set the price, the system keeps count of how many messages have been sent.",
-  revenueBody2: "For many tourist offices it covers the cost of the service. What comes after that is income.",
   retentionEyebrow: "The right message, at the right moment",
   retentionTitle: "While they are here, and once they are back home.",
   retentionBody1: "A visitor who has written to you once is the most valuable contact you have: they know the place, they enjoyed it, and they left you their number. During the holiday they get what they need right now; afterwards, what brings them back.",
@@ -240,11 +222,6 @@ const en: HomeCopy = {
     { q: "How long before we're live?", a: "It depends almost entirely on how much material you already have. With a list of events and venues to import you're live in a few days; if the catalogue has to be built from scratch, allow a few weeks of data gathering." },
     { q: "Where does visitor data end up?", a: "It stays yours. Contacts and conversations sit in your own space, separate from every other organisation, and handling is GDPR-compliant. It is never used to train models or passed to third parties." },
     { q: "Does it work if we're not a mountain destination?", a: "Yes. The assistant knows nothing about mountains in particular: it knows what is in your catalogue. Seaside, art city, lake or village changes the entries, not how it works." },
-  ],
-  revenueSteps: [
-    { t: "The business buys a bundle", d: "Ten, fifty, a hundred messages. You set the price." },
-    { t: "They prepare their message", d: "Text and a photo of their offer, which you approve before it goes out." },
-    { t: "It only reaches those who opted in", d: "And each send comes off their bundle, with nothing for you to count." },
   ],
   closingBody: "At the desk and on the phone, usually with a queue waiting. From now on the assistant answers for you — from what you loaded, in the language they asked in.",
   demoTitle: "Try the demo",
@@ -310,10 +287,6 @@ const es: HomeCopy = {
   contentTypes: ["Hoteles y casas rurales", "Restaurantes y agroturismos", "Rutas y refugios", "Fiestas y eventos", "Productos típicos", "Pueblos y miradores", "Castillos e iglesias", "Historia local", "Instalaciones deportivas", "Teléfonos útiles"],
   pricingTitle: "Precios claros, sin sorpresas",
   pricingSub: "La cuota cubre el servicio. El consumo se paga aparte, solo cuando se usa.",
-  revenueEyebrow: "Modelo económico",
-  revenueTitle: "Los negocios pueden patrocinarse en el canal",
-  revenueBody1: "Un hotel, un restaurante, un alquiler de material — por ejemplo — pueden patrocinarse en vuestro canal, con un mensaje que llega a los turistas que dieron su consentimiento. Vosotros ponéis el precio, el sistema lleva la cuenta del número de envíos realizados.",
-  revenueBody2: "Para muchas oficinas de turismo basta para cubrir el coste del servicio. Lo que llega después es ganancia.",
   retentionEyebrow: "El mensaje justo, en el momento justo",
   retentionTitle: "Mientras están aquí, y cuando ya han vuelto a casa.",
   retentionBody1: "El visitante que os ha escrito una vez es el contacto más valioso que tenéis: conoce el lugar, se encontró a gusto y os dejó su número. Durante las vacaciones recibe lo que necesita ahora; después, lo que lo trae de vuelta.",
@@ -331,11 +304,6 @@ const es: HomeCopy = {
     { q: "¿Cuánto se tarda en empezar?", a: "Depende casi solo del material que ya tengáis. Con un listado de eventos y alojamientos por importar se empieza en pocos días; si el catálogo hay que construirlo de cero, harán falta unas semanas de recogida de datos." },
     { q: "¿Dónde acaban los datos de los turistas?", a: "Siguen siendo vuestros. Los contactos y las conversaciones están en vuestro espacio, separados de los de cualquier otra entidad, y la gestión cumple el RGPD. No se usan para entrenar modelos ni se ceden a terceros." },
     { q: "¿Funciona si no estamos en la montaña?", a: "Sí. El asistente no sabe nada de la montaña en particular: sabe lo que hay en vuestro catálogo. Costa, ciudad de arte, lago o pueblo cambian las fichas, no el funcionamiento." },
-  ],
-  revenueSteps: [
-    { t: "El negocio compra un paquete", d: "Diez, cincuenta, cien mensajes. El precio lo ponéis vosotros." },
-    { t: "Prepara su mensaje", d: "Texto y foto de su oferta, que aprobáis antes del envío." },
-    { t: "Solo llega a quien dio su consentimiento", d: "Y cada envío se descuenta de su paquete, sin que tengáis que contar nada." },
   ],
   closingBody: "En el mostrador y por teléfono, casi siempre con cola esperando. A partir de ahora responde el asistente — con lo que habéis cargado, en el idioma de quien pregunta.",
   demoTitle: "Probad la demo",
@@ -402,10 +370,6 @@ const ca: HomeCopy = {
   contentTypes: ["Hotels i cases rurals", "Restaurants i agroturismes", "Rutes i refugis", "Festes i esdeveniments", "Productes típics", "Pobles i miradors", "Castells i esglésies", "Història local", "Instal·lacions esportives", "Telèfons útils"],
   pricingTitle: "Preus clars, sense sorpreses",
   pricingSub: "La quota cobreix el servei. El consum es paga a part, només quan es fa servir.",
-  revenueEyebrow: "Model econòmic",
-  revenueTitle: "Els negocis poden patrocinar-se al canal",
-  revenueBody1: "Un hotel, un restaurant, un lloguer de material — per exemple — es poden patrocinar al vostre canal, amb un missatge que arriba als turistes que hi han donat el consentiment. Vosaltres poseu el preu, el sistema porta el compte del nombre d'enviaments fets.",
-  revenueBody2: "Per a moltes oficines de turisme n'hi ha prou per cobrir el cost del servei. El que arriba després és guany.",
   retentionEyebrow: "El missatge just, en el moment just",
   retentionTitle: "Mentre són aquí, i quan ja han tornat a casa.",
   retentionBody1: "El visitant que us ha escrit un cop és el contacte més valuós que teniu: coneix el lloc, s'hi va trobar bé i us ha deixat el número. Durant les vacances rep el que necessita ara; després, el que el fa tornar.",
@@ -423,11 +387,6 @@ const ca: HomeCopy = {
     { q: "Quant es triga a començar?", a: "Depèn gairebé només del material que ja tingueu. Amb un llistat d'actes i allotjaments per importar es comença en pocs dies; si el catàleg s'ha de construir de zero, calen unes setmanes de recollida de dades." },
     { q: "On acaben les dades dels turistes?", a: "Continuen sent vostres. Els contactes i les converses són al vostre espai, separats dels de qualsevol altra entitat, i la gestió compleix el RGPD. No s'usen per entrenar models ni es cedeixen a tercers." },
     { q: "Funciona si no som a la muntanya?", a: "Sí. L'assistent no sap res de la muntanya en particular: sap el que hi ha al vostre catàleg. Costa, ciutat d'art, llac o poble canvien les fitxes, no el funcionament." },
-  ],
-  revenueSteps: [
-    { t: "El negoci compra un paquet", d: "Deu, cinquanta, cent missatges. El preu el poseu vosaltres." },
-    { t: "Prepara el seu missatge", d: "Text i foto de la seva oferta, que aproveu abans de l'enviament." },
-    { t: "Només arriba a qui hi ha consentit", d: "I cada enviament es descompta del seu paquet, sense que hàgiu de comptar res." },
   ],
   closingBody: "Al taulell i per telèfon, gairebé sempre amb cua esperant. A partir d'ara respon l'assistent — amb el que heu carregat, en la llengua de qui pregunta.",
   demoTitle: "Proveu la demo",
@@ -493,10 +452,6 @@ const fr: HomeCopy = {
   contentTypes: ["Hôtels et chambres d'hôtes", "Restaurants et fermes-auberges", "Randonnées et refuges", "Fêtes et événements", "Produits du terroir", "Villages et points de vue", "Châteaux et églises", "Histoire locale", "Équipements sportifs", "Numéros utiles"],
   pricingTitle: "Des prix clairs, sans surprise",
   pricingSub: "L'abonnement couvre le service. La consommation est facturée à part, uniquement à l'usage.",
-  revenueEyebrow: "Modèle économique",
-  revenueTitle: "Les commerçants peuvent se sponsoriser sur le canal",
-  revenueBody1: "Un hôtel, un restaurant, un loueur de matériel — par exemple — peuvent se sponsoriser sur votre canal, avec un message qui atteint les visiteurs qui ont donné leur accord. Vous fixez le prix, le système compte le nombre d'envois effectués.",
-  revenueBody2: "Pour beaucoup d'offices de tourisme, cela suffit à couvrir le coût du service. Ce qui vient après est du gain.",
   retentionEyebrow: "Le bon message, au bon moment",
   retentionTitle: "Pendant qu'ils sont là, et une fois rentrés chez eux.",
   retentionBody1: "Le visiteur qui vous a écrit une fois est le contact le plus précieux que vous ayez : il connaît l'endroit, il s'y est plu, et il vous a laissé son numéro. Pendant les vacances, il reçoit ce dont il a besoin maintenant ; ensuite, ce qui le fait revenir.",
@@ -514,11 +469,6 @@ const fr: HomeCopy = {
     { q: "Combien de temps avant de démarrer ?", a: "Cela dépend presque uniquement du matériel dont vous disposez déjà. Avec une liste d'événements et d'hébergements à importer, on démarre en quelques jours ; s'il faut construire le catalogue de zéro, comptez quelques semaines de collecte." },
     { q: "Où vont les données des visiteurs ?", a: "Elles restent les vôtres. Les contacts et les conversations sont dans votre espace, séparés de ceux de tout autre organisme, et la gestion est conforme au RGPD. Elles ne servent jamais à entraîner des modèles ni ne sont cédées à des tiers." },
     { q: "Cela marche-t-il si nous ne sommes pas en montagne ?", a: "Oui. L'assistant ne sait rien de la montagne en particulier : il sait ce qui figure dans votre catalogue. Mer, ville d'art, lac ou village changent les fiches, pas le fonctionnement." },
-  ],
-  revenueSteps: [
-    { t: "Le commerçant achète un forfait", d: "Dix, cinquante, cent messages. C'est vous qui fixez le prix." },
-    { t: "Il prépare son message", d: "Texte et photo de son offre, que vous validez avant l'envoi." },
-    { t: "Il ne part qu'aux personnes consentantes", d: "Et chaque envoi est décompté de son forfait, sans rien à compter de votre côté." },
   ],
   closingBody: "Au guichet et au téléphone, le plus souvent avec la file qui attend. Désormais l'assistant répond pour vous — avec ce que vous avez saisi, dans la langue de celui qui demande.",
   demoTitle: "Essayez la démo",
@@ -584,10 +534,6 @@ const de: HomeCopy = {
   contentTypes: ["Hotels und Pensionen", "Restaurants und Almhütten", "Wanderungen und Schutzhütten", "Feste und Veranstaltungen", "Regionale Produkte", "Dörfer und Aussichtspunkte", "Burgen und Kirchen", "Ortsgeschichte", "Sportanlagen", "Wichtige Nummern"],
   pricingTitle: "Klare Preise, keine Überraschungen",
   pricingSub: "Die Gebühr deckt den Dienst. Der Verbrauch wird getrennt abgerechnet, nur bei Nutzung.",
-  revenueEyebrow: "Geschäftsmodell",
-  revenueTitle: "Betriebe können sich auf dem Kanal präsentieren",
-  revenueBody1: "Ein Hotel, ein Restaurant, ein Materialverleih — zum Beispiel — können sich auf Ihrem Kanal präsentieren, mit einer Nachricht an Gäste mit Einwilligung. Sie legen den Preis fest, das System zählt mit, wie viele Nachrichten gesendet wurden.",
-  revenueBody2: "Für viele Tourismusbüros deckt das die Kosten des Dienstes. Was danach kommt, ist Gewinn.",
   retentionEyebrow: "Die richtige Nachricht im richtigen Moment",
   retentionTitle: "Solange sie hier sind — und wenn sie wieder zu Hause sind.",
   retentionBody1: "Ein Gast, der Ihnen einmal geschrieben hat, ist der wertvollste Kontakt, den Sie haben: Er kennt den Ort, es hat ihm gefallen, und er hat Ihnen seine Nummer hinterlassen. Im Urlaub bekommt er, was er jetzt braucht; danach das, was ihn zurückholt.",
@@ -605,11 +551,6 @@ const de: HomeCopy = {
     { q: "Wie lange dauert es bis zum Start?", a: "Das hängt fast nur davon ab, wie viel Material Sie schon haben. Mit einer Liste von Veranstaltungen und Unterkünften zum Importieren starten Sie in wenigen Tagen; muss der Katalog von Grund auf entstehen, rechnen Sie mit einigen Wochen Datenerfassung." },
     { q: "Wo landen die Gästedaten?", a: "Sie bleiben Ihre. Kontakte und Gespräche liegen in Ihrem eigenen Bereich, getrennt von denen jeder anderen Einrichtung, und die Verarbeitung ist DSGVO-konform. Sie werden nicht zum Training von Modellen genutzt und nicht an Dritte weitergegeben." },
     { q: "Funktioniert es auch, wenn wir nicht in den Bergen liegen?", a: "Ja. Der Assistent weiß nichts über Berge im Besonderen: Er weiß, was in Ihrem Katalog steht. Meer, Kunststadt, See oder Dorf ändern die Einträge, nicht die Funktionsweise." },
-  ],
-  revenueSteps: [
-    { t: "Der Betrieb kauft ein Paket", d: "Zehn, fünfzig, hundert Nachrichten. Den Preis bestimmen Sie." },
-    { t: "Er bereitet seine Nachricht vor", d: "Text und Foto seines Angebots, das Sie vor dem Versand freigeben." },
-    { t: "Sie geht nur an Einwilligende", d: "Und jeder Versand wird von seinem Paket abgezogen, ohne dass Sie zählen müssen." },
   ],
   closingBody: "Am Schalter und am Telefon, meist mit wartender Schlange. Ab jetzt antwortet der Assistent für Sie — mit dem, was Sie eingetragen haben, in der Sprache des Gastes.",
   demoTitle: "Testen Sie die Demo",

@@ -236,12 +236,12 @@ const CLIPS: Scene[] = [
       de: "Wo können wir heute Fahrräder mieten?",
     },
     reply: {
-      it: "Sì, due noleggi in paese: il più vicino è a 300 m 🚲 Oggi però il tempo non promette bene, vi consiglio domani mattina",
-      en: "Yes, two rentals in the village: the nearest is 300 m away 🚲 Today's weather doesn't look good though — I'd suggest tomorrow morning",
-      es: "Sí, dos alquileres en el pueblo: el más cercano a 300 m 🚲 Pero hoy el tiempo no acompaña, os aconsejo mañana por la mañana",
-      ca: "Sí, dos lloguers al poble: el més proper a 300 m 🚲 Però avui el temps no acompanya, us aconsello demà al matí",
-      fr: "Oui, deux loueurs au village : le plus proche à 300 m 🚲 Mais la météo n'est pas bonne aujourd'hui, je conseille demain matin",
-      de: "Ja, zwei Verleihe im Ort: der nächste ist 300 m entfernt 🚲 Heute wird das Wetter aber nicht gut — ich empfehle morgen früh",
+      it: "Sì, due noleggi in paese 🚲 Oggi però il tempo non promette bene, vi consiglio domani mattina",
+      en: "Yes, two rentals in the village 🚲 Today's weather doesn't look good though — I'd suggest tomorrow morning",
+      es: "Sí, dos alquileres en el pueblo 🚲 Pero hoy el tiempo no acompaña, os aconsejo mañana por la mañana",
+      ca: "Sí, dos lloguers al poble 🚲 Però avui el temps no acompanya, us aconsello demà al matí",
+      fr: "Oui, deux loueurs au village 🚲 Mais la météo n'est pas bonne aujourd'hui, je conseille demain matin",
+      de: "Ja, zwei Verleihe im Ort 🚲 Heute wird das Wetter aber nicht gut — ich empfehle morgen früh",
     },
     link: { label: "noleggi.proloco.it/ebike", phone: "+39 0400 111 264" },
     place: {

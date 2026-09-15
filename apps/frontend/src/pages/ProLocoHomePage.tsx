@@ -424,49 +424,6 @@ export default function ProLocoHomePage() {
         </div>
       </section>
 
-      {/* ── Revenue: selling push to local merchants ─────────────── */}
-      {/* Andrea, 2026-09-14: "deve essere chiaro che si possono vendere i push
-          pubblicitari agli esercenti, una nuova entrata economica per le Pro
-          Loco". Not a promise: the product really has merchant-bought
-          campaigns with their own push quota (Merchant / MerchantPush). */}
-      <section className="border-t border-slate-100 bg-emerald-50/40">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="mb-4 inline-block rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-800 ring-1 ring-emerald-100">
-                {t.revenueEyebrow}
-              </span>
-              <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                {t.revenueTitle}
-              </h2>
-              <p className="mt-4 text-slate-600 leading-relaxed">
-                {t.revenueBody1}
-              </p>
-              <p className="mt-4 text-slate-600 leading-relaxed">
-                {t.revenueBody2}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {t.revenueSteps.map((step, i) => (
-                <div
-                  key={step.t}
-                  className="flex gap-4 rounded-xl bg-white border border-emerald-100 px-5 py-4"
-                >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-2xl font-bold text-white">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <h3 className="font-medium text-slate-900">{step.t}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{step.d}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── Privacy by design ────────────────────────────────────── */}
       {/* Same dark-card treatment as "Prova la demo" above, for visual
           consistency between the two full-bleed feature cards on the page
