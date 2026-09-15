@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 /**
- * The hero backdrop: muted clips of the territory playing one after the other,
- * with a still photo behind them (Andrea, 2026-09-15: "mi piacciono quei siti
- * dove hanno un video di background").
+ * The hero backdrop: muted clips of the territory cross-fading into one
+ * another, with a still photo behind them (Andrea, 2026-09-15: "mi piacciono
+ * quei siti dove hanno un video di background").
  *
  * 🚨 THE PHOTO IS NOT A PLACEHOLDER — it is the load-bearing layer.
  * The video is an enhancement painted on top, and it is skipped entirely when
@@ -21,6 +21,14 @@ import { useEffect, useState } from "react"
  * The white gradient over the top is what keeps the hero readable: the copy
  * and the login form sit on this, and a busy frame under dark text is the
  * usual way these backgrounds go wrong.
+ *
+ * HOW THE CROSS-FADE WORKS — two <video> elements, never one.
+ * A single element that swaps its `src` must tear down the decoder and buy a
+ * new first frame, and for those few hundred milliseconds there is nothing to
+ * show: the hero blinks back to the photo on every clip change. So both
+ * elements stay mounted and alternate. While A plays, B has ALREADY loaded the
+ * next clip; at the hand-over B starts and the two opacities cross. The viewer
+ * sees a dissolve, never a gap.
  */
 
 /**
@@ -43,14 +51,32 @@ const CLIPS = [
   "/hero/rafting.mp4",
   "/hero/food.mp4",
 ]
+
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
 const POSTER_SRC = "/sappada/bach-boutique-hotel.jpg"
+
+/**
+ * Seconds of overlap. The outgoing clip is still playing underneath for this
+ * long, which is what makes it a dissolve rather than a cut — and it is why
+ * the hand-over starts BEFORE the clip ends rather than on its 'ended' event.
+ */
+const FADE_SECONDS = 1.2
 
 export function HeroBackdrop() {
   /** The clips that actually exist on disk, in CLIPS order. */
   const [clips, setClips] = useState<string[]>([])
-  /** Which one is on screen. Advances on 'ended', wraps to 0. */
-  const [i, setI] = useState(0)
+  /** Which of the two <video> slots is currently in front. */
+  const [front, setFront] = useState(0)
+  /** Which clip each slot holds. Slot 0 opens on the first, slot 1 on the next. */
+  const [sources, setSources] = useState<[string | null, string | null]>([null, null])
+
+  const slotA = useRef<HTMLVideoElement>(null)
+  const slotB = useRef<HTMLVideoElement>(null)
+  const slots = [slotA, slotB]
+  /** Guards against the timeupdate handler firing the same hand-over twice. */
+  const swapping = useRef(false)
+  /** Index of the clip playing in front, so we know what to queue next. */
+  const playing = useRef(0)
 
   useEffect(() => {
     // Respect the OS "reduce motion" setting: a looping background is exactly
@@ -76,50 +102,115 @@ export function HeroBackdrop() {
     ).then((found) => {
       if (cancelled) return
       const available = found.filter((src): src is string => src !== null)
-      if (available.length > 0) setClips(available)
+      if (available.length === 0) return
+      // Slot 0 shows the first clip; slot 1 pre-loads the second (or the same
+      // one again when there is only one, so the loop still dissolves).
+      setSources([available[0], available[1 % available.length]])
+      setClips(available)
     })
     return () => {
       cancelled = true
     }
   }, [])
 
+  /**
+   * Hand over to the other slot: start it, bring it to the front, and queue
+   * the clip after next into the slot just vacated — so the next hand-over is
+   * again against a video that has already buffered.
+   */
+  const handOver = useCallback(() => {
+    if (swapping.current || clips.length === 0) return
+    swapping.current = true
+
+    const next = (front + 1) % 2
+    const nextVideo = slots[next].current
+    if (nextVideo) {
+      nextVideo.currentTime = 0
+      // Autoplay can still be refused (a background tab, an aggressive policy).
+      // Nothing to recover: the outgoing clip stays on screen under the photo.
+      nextVideo.play().catch(() => {})
+    }
+
+    playing.current = (playing.current + 1) % clips.length
+    setFront(next)
+
+    // Queue the one AFTER the incoming clip into the slot going to the back.
+    // Deferred past the fade so swapping the src cannot disturb a frame that
+    // is still visible underneath.
+    const upcoming = clips[(playing.current + 1) % clips.length]
+    window.setTimeout(() => {
+      setSources((cur) => {
+        const copy: [string | null, string | null] = [cur[0], cur[1]]
+        copy[front] = upcoming
+        return copy
+      })
+      swapping.current = false
+    }, FADE_SECONDS * 1000)
+  }, [clips, front])
+
+  /**
+   * Start the dissolve FADE_SECONDS before the end instead of waiting for
+   * 'ended': by the time that event fires the last frame is already frozen on
+   * screen, which reads as a stall.
+   */
+  const onTimeUpdate = useCallback(
+    (slot: number) => (e: React.SyntheticEvent<HTMLVideoElement>) => {
+      if (slot !== front) return
+      const v = e.currentTarget
+      if (!Number.isFinite(v.duration)) return
+      if (v.duration - v.currentTime <= FADE_SECONDS) handOver()
+    },
+    [front, handOver]
+  )
+
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      <img
-        src={POSTER_SRC}
-        alt=""
-        className="h-full w-full object-cover"
-      />
+      <img src={POSTER_SRC} alt="" className="h-full w-full object-cover" />
 
-      {clips.length > 0 && (
-        <video
-          // Remounting on the key restarts playback cleanly when the source
-          // changes; without it Safari keeps the previous frame on screen.
-          key={clips[i]}
-          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-1000"
-          src={clips[i]}
-          onCanPlay={(e) => {
-            e.currentTarget.style.opacity = "1"
-          }}
-          poster={POSTER_SRC}
-          autoPlay
-          muted
-          // Loop only when it is the single clip available; otherwise the
-          // sequence itself is the loop.
-          loop={clips.length === 1}
-          playsInline
-          preload="auto"
-          // Next clip, wrapping at the end.
-          onEnded={() => setI((n) => (n + 1) % clips.length)}
-          // A clip that fails mid-rotation must not freeze the hero: move on.
-          onError={() => setI((n) => (n + 1) % clips.length)}
-        />
+      {sources.map((src, slot) =>
+        src ? (
+          <video
+            key={slot}
+            ref={slots[slot]}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out"
+            style={{
+              opacity: slot === front ? 1 : 0,
+              transitionDuration: `${FADE_SECONDS}s`,
+            }}
+            src={src}
+            // Only the front slot autoplays on mount; the other is primed and
+            // started by handOver.
+            autoPlay={slot === 0}
+            muted
+            // A single clip loops on its own — there is nothing to cross to.
+            loop={clips.length === 1}
+            playsInline
+            preload="auto"
+            onTimeUpdate={onTimeUpdate(slot)}
+            // Belt and braces: if a clip is shorter than the fade, or metadata
+            // never arrives, 'ended' still moves the rotation along.
+            onEnded={() => slot === front && handOver()}
+            // A clip that fails mid-rotation must not freeze the hero.
+            onError={() => slot === front && handOver()}
+          />
+        ) : null
       )}
 
-      {/* Readability layer. Nearly opaque at the top where the heading and the
-          login form sit, clearing towards the bottom so the image is still
-          visible as an image. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/90 to-white" />
+      {/* Readability layer — DARK, not white.
+          A near-opaque white veil (from-white/95) left the video showing at
+          about 5%: technically playing, effectively invisible, which defeats
+          the point of shipping video at all (Andrea, 2026-09-15: "ovviamente
+          non troppe cose altrimenti nascondiamo il video giusto?").
+          Dark instead: the footage stays clearly visible while white copy on
+          top gains MORE contrast than dark copy ever had. Heaviest at the very
+          top (behind the header) and at the bottom (where the section hands
+          over to the white page below), lightest through the middle where the
+          picture does its work. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/35 to-slate-950/75" />
+
+      {/* The hand-off into the page: the last few hundred pixels resolve to
+          the page's own white so the section ends without a seam. */}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white" />
     </div>
   )
 }
