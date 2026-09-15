@@ -315,59 +315,12 @@ export default function ProLocoHomePage() {
         <HomeShowcase lang={language} content={proLocoShowcaseContent} theme="light" />
       </section>
 
-      {/* ── What you can load ────────────────────────────────────── */}
-      <section className="border-t border-slate-100" style={{ backgroundColor: GREEN_SURFACE }}>
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-              {t.contentTitle}
-            </h2>
-            <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
-              {t.contentBody1}
-            </p>
-            <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
-              {t.contentBody2}
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-3">
-            {t.contentTypes.map((label, i) => {
-              const Icon = CONTENT_ICONS[i]
-              return (
-                <div
-                  key={label}
-                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:border-white/25 hover:bg-white/10"
-                >
-                  <Icon
-                    className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110"
-                    style={{ color: WA_GREEN }}
-                  />
-                  <span className="text-sm text-emerald-50">{label}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-        </div>
-      </section>
-
-      {/* ── Pricing, straight from the database ──────────────────── */}
-      <section id="pricing" className="border-t border-slate-100 scroll-mt-24">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-          <p className="mx-auto max-w-2xl text-center text-slate-600">
-            {t.pricingSub}
-          </p>
-          <div className="mt-14">
-            <ProLocoPricing />
-          </div>
-        </div>
-      </section>
-
       {/* ── Try the demo ─────────────────────────────────────────── */}
       {/* White card like the rest of the page (Andrea, 2026-09-15: "non mi
           piace per nulla lo sfondo verde" — the dark GREEN_SURFACE card was
-          replaced site-wide for this and Privacy by design). */}
+          replaced site-wide for this and Privacy by design). Placed right
+          after the video/chat showcase, before Pricing (Andrea, 2026-09-15:
+          "lo metterei subito dopo i video"). */}
       <section id="prova" className="border-t border-slate-100 bg-[#F6F2EA] scroll-mt-24">
         <div className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
           <div className="overflow-hidden rounded-[2.5rem] bg-white shadow-xl ring-1 ring-slate-200">
@@ -418,6 +371,55 @@ export default function ProLocoHomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── What you can load ────────────────────────────────────── */}
+      <section className="border-t border-slate-100" style={{ backgroundColor: GREEN_SURFACE }}>
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              {t.contentTitle}
+            </h2>
+            <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
+              {t.contentBody1}
+            </p>
+            <p className="mt-4 leading-relaxed text-emerald-100/80" style={{ fontSize: 18 }}>
+              {t.contentBody2}
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            {t.contentTypes.map((label, i) => {
+              const Icon = CONTENT_ICONS[i]
+              return (
+                <div
+                  key={label}
+                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:border-white/25 hover:bg-white/10"
+                >
+                  <Icon
+                    className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    style={{ color: WA_GREEN }}
+                  />
+                  <span className="text-sm text-emerald-50">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        </div>
+      </section>
+
+      {/* ── Pricing, straight from the database ──────────────────── */}
+      <section id="pricing" className="border-t border-slate-100 scroll-mt-24">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+          <p className="mx-auto max-w-2xl text-center text-slate-600">
+            {t.pricingSub}
+          </p>
+          <div className="mt-14">
+            <ProLocoPricing />
           </div>
         </div>
       </section>
