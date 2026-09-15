@@ -18,6 +18,18 @@ import type { ShowcaseContent } from "./HomeShowcase"
  *
  * Italian only: this page is sold to Italian tourist offices. The chatbot
  * itself answers guests in their own language — which is what step 4 shows.
+ *
+ * 🚨 NO place names at all — not even invented ones (Andrea, 2026-09-15:
+ * "togli tutti i riferimenti a qualsiasi posto"). No town, no named refuge,
+ * no named waterfall, no phone number. The page is sold to ANY Pro Loco, so
+ * it must not read as one specific place's demo; and a real-looking phone
+ * number on a public landing page is somebody's line ringing.
+ *
+ * The answers stay concrete through DETAILS instead of names — "1h45 di
+ * salita, aperto fino a settembre", "venti minuti, ombra tutto il percorso".
+ * That is what shows the assistant is reading loaded content rather than
+ * improvising, which is the whole point of the demo. Keep it that way: if a
+ * line ever needs a name to make sense, rewrite the line, don't add a name.
  */
 export const proLocoShowcaseContent: ShowcaseContent = {
   title: "Accoglie, consiglia, ricorda.",
@@ -51,11 +63,6 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       desc: "Voi scrivete in italiano una volta sola. Lui risponde in tedesco, francese, inglese.",
     },
     {
-      icon: "📅",
-      title: "Prenota l'appuntamento",
-      desc: "Visite guidate, tavoli, noleggi: fissa l'orario e lo ricorda all'ospite.",
-    },
-    {
       icon: "🧭",
       title: "Percorsi guidati",
       desc: "Quando servono più risposte in fila, l'assistente conduce l'ospite passo per passo.",
@@ -77,7 +84,7 @@ export const proLocoShowcaseContent: ShowcaseContent = {
     {
       feature: 0,
       msgs: [
-        { role: "in", text: "Ciao! Veniamo a Sappada la settimana prossima 🏔️" },
+        { role: "in", text: "Ciao! Veniamo da voi la settimana prossima 🏔️" },
         {
           role: "out",
           text: "Ciao e benvenuti! 👋 Sono l'assistente della Pro Loco. Vi do una mano con alloggi, sentieri, eventi e tutto il resto — a qualsiasi ora.",
@@ -99,11 +106,11 @@ export const proLocoShowcaseContent: ShowcaseContent = {
         { role: "in", text: "Cerchiamo un rifugio dove mangiare in quota" },
         {
           role: "out",
-          text: "Rifugio Sorgenti del Piave — 1h45 di salita, aperto fino a settembre. Cucina casalinga, meglio prenotare: 0435 469…",
+          text: "Il rifugio in quota — 1h45 di salita, aperto fino a settembre. Cucina casalinga, meglio prenotare: trovate il numero sulla scheda.",
         },
         {
           role: "out",
-          text: "Se preferite qualcosa di più corto, le Cascatelle sono una passeggiata facile dal ponte di legno.",
+          text: "Se preferite qualcosa di più corto, la cascata è una passeggiata facile dal ponte di legno.",
         },
       ],
     },
@@ -112,11 +119,11 @@ export const proLocoShowcaseContent: ShowcaseContent = {
     {
       feature: 2,
       msgs: [
-        { role: "in", text: "Come sono le Cascatelle?" },
+        { role: "in", text: "Com'è il sentiero della cascata?" },
         {
           role: "out",
           image: true,
-          text: "Eccole 📸 Venti minuti a piedi, ombra tutto il percorso — perfette anche col caldo.",
+          text: "Eccola 📸 Venti minuti a piedi, ombra tutto il percorso — perfetta anche col caldo.",
         },
       ],
     },
@@ -129,38 +136,15 @@ export const proLocoShowcaseContent: ShowcaseContent = {
         { role: "in", text: "Guten Tag, gibt es hier einen Wanderweg für Kinder?" },
         {
           role: "out",
-          text: "Guten Tag! 👋 Ja — der Weg zu den Cascatelle ist flach und schattig, etwa 20 Minuten. Ideal mit Kindern.",
+          text: "Guten Tag! 👋 Ja — der Weg zum Wasserfall ist flach und schattig, etwa 20 Minuten. Ideal mit Kindern.",
           sub: "L'ospite scrive in tedesco, l'assistente risponde in tedesco. I contenuti restano scritti in italiano.",
         },
       ],
     },
 
-    // 5 — Appointment
+    // 5 — Flow: step-by-step
     {
       feature: 4,
-      reset: true,
-      msgs: [
-        { role: "in", text: "C'è una visita guidata al borgo?" },
-        {
-          role: "out",
-          text: "Sì, giovedì alle 10:00, ritrovo davanti alla chiesa. Vi segno in due?",
-        },
-        { role: "in", text: "Perfetto, sì" },
-        {
-          role: "out",
-          status: true,
-          text: "Appuntamento registrato…",
-        },
-        {
-          role: "out",
-          text: "Fatto ✅ Giovedì 24 alle 10:00, due posti. Vi mando un promemoria il giorno prima.",
-        },
-      ],
-    },
-
-    // 6 — Flow: step-by-step
-    {
-      feature: 5,
       reset: true,
       msgs: [
         { role: "in", text: "Vorrei un programma per i nostri giorni" },
@@ -179,19 +163,19 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       ],
     },
 
-    // 7 — End of stay: feedback
+    // 6 — End of stay: feedback
     {
-      feature: 6,
+      feature: 5,
       reset: true,
       msgs: [
         {
           role: "out",
-          text: "Buongiorno! Ieri siete ripartiti da Sappada 🏔️ Posso chiedervi com'è andata?",
+          text: "Buongiorno! Ieri siete ripartiti 🏔️ Posso chiedervi com'è andata?",
           sub: "Parte da solo il giorno dopo la partenza, una volta sola per vacanza.",
         },
         {
           role: "in",
-          text: "Benissimo! Bellissime le Cascatelle, peccato la pioggia di giovedì ⭐⭐⭐⭐",
+          text: "Benissimo! Bellissimo il sentiero della cascata, peccato la pioggia di giovedì ⭐⭐⭐⭐",
         },
         {
           role: "out",
@@ -200,15 +184,15 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       ],
     },
 
-    // 8 — Push campaign, months later
+    // 7 — Push campaign, months later
     {
-      feature: 7,
+      feature: 6,
       reset: true,
       msgs: [
         {
           role: "out",
           image: true,
-          text: "Il Carnevale di Sappada è dal 12 al 16 febbraio 🎭 Le maschere tradizionali sfilano per le borgate. Vi aspettiamo!",
+          text: "Il Carnevale è dal 12 al 16 febbraio 🎭 Le maschere tradizionali sfilano per le borgate. Vi aspettiamo!",
           sub: "Inviato solo a chi ha dato il consenso. Basta una parola per non riceverne più.",
         },
         { role: "in", text: "Che bello! Quest'anno veniamo d'inverno 😍" },

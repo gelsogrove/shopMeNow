@@ -442,9 +442,14 @@ export function HomeShowcase({
       className={[
         "relative w-full overflow-hidden p-6 sm:p-8 lg:p-10",
         light
-          // No border and no hard corner: on a white page the section should
-          // blend into what is above it, not sit in a box.
-          ? "bg-white"
+          // Not pure white (Andrea, 2026-09-15: "con sfondo bianco non si
+          // capisce il layout grafico… lo spezziamo con qualche colore ma
+          // ovviamente non puo essere nero perche' il bordo del telefono poi
+          // non si vede"). A warm sand band breaks the white page WITHOUT
+          // going dark — the phone's near-black frame stays visible against
+          // it, which a dark stage destroyed. No border, no hard corner:
+          // the colour alone does the separating.
+          ? "bg-[#F6F2EA]"
           : "rounded-3xl border border-white/10 bg-[#070d18] shadow-2xl",
       ].join(" ")}
     >
@@ -453,7 +458,7 @@ export function HomeShowcase({
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
 
       {/* Header — title + subtitle ABOVE the cards */}
-      <div className="relative mb-8 max-w-2xl">
+      <div className="relative mb-8 max-w-2xl lg:mx-auto lg:max-w-[61.4rem]">
         <h2
           className={[
             "font-display text-2xl font-bold leading-tight sm:text-3xl",
@@ -492,7 +497,7 @@ export function HomeShowcase({
                   context change (final Arabic exchange / loop restart) */}
               <div
                 ref={chatRef}
-                className="h-[560px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
+                className="h-[760px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none" }}
               >
                 <div className="mt-auto flex min-h-full flex-col justify-end gap-2">
