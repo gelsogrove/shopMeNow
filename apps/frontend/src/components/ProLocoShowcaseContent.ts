@@ -63,6 +63,11 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       desc: "Voi scrivete in italiano una volta sola. Lui risponde in tedesco, francese, inglese.",
     },
     {
+      icon: "📅",
+      title: "Prenota l'appuntamento",
+      desc: "Visite guidate, tavoli, noleggi: fissa l'orario e lo ricorda all'ospite.",
+    },
+    {
       icon: "🧭",
       title: "Percorsi guidati",
       desc: "Quando servono più risposte in fila, l'assistente conduce l'ospite passo per passo.",
@@ -141,9 +146,32 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       ],
     },
 
-    // 5 — Flow: step-by-step
+    // 5 — Appointment
     {
       feature: 4,
+      reset: true,
+      msgs: [
+        { role: "in", text: "C'è una visita guidata al borgo?" },
+        {
+          role: "out",
+          text: "Sì, giovedì alle 10:00, ritrovo davanti alla chiesa. Vi segno in due?",
+        },
+        { role: "in", text: "Perfetto, sì" },
+        {
+          role: "out",
+          status: true,
+          text: "Appuntamento registrato…",
+        },
+        {
+          role: "out",
+          text: "Fatto ✅ Giovedì 24 alle 10:00, due posti. Vi mando un promemoria il giorno prima.",
+        },
+      ],
+    },
+
+    // 6 — Flow: step-by-step
+    {
+      feature: 5,
       reset: true,
       msgs: [
         { role: "in", text: "Vorrei un programma per i nostri giorni" },
@@ -162,9 +190,9 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       ],
     },
 
-    // 6 — End of stay: feedback
+    // 7 — End of stay: feedback
     {
-      feature: 5,
+      feature: 6,
       reset: true,
       msgs: [
         {
@@ -183,9 +211,9 @@ export const proLocoShowcaseContent: ShowcaseContent = {
       ],
     },
 
-    // 7 — Push campaign, months later
+    // 8 — Push campaign, months later
     {
-      feature: 6,
+      feature: 7,
       reset: true,
       msgs: [
         {

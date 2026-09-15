@@ -528,7 +528,7 @@ const de: HomeCopy = {
   galleryTitle: "Ihre Region, wie sie wirklich ist",
   gallerySubtitle: "Jeder Eintrag kann eigene Fotos mitbringen: Der Gast sieht den Ort, bevor er ankommt.",
   audience: "für Tourismusverbände",
-  eyebrow: "Für Tourismusbüros",
+  eyebrow: "Nur für Tourismusbüros",
   slogan1: "Ihre Region antwortet",
   slogan2: "auf WhatsApp",
   lede: "Ein Assistent, der Wetter, die Wünsche des Gastes und Ihr lokales Wissen verbindet, um ihn durch den ganzen Urlaub zu begleiten — rund um die Uhr, in seiner Muttersprache, direkt über WhatsApp.",
