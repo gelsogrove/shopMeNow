@@ -3,6 +3,7 @@ import { HeroBackdrop } from "@/components/HeroBackdrop"
 import HeroRobot from "@/components/landing/HeroRobot"
 import { ProLocoGallery } from "@/components/ProLocoGallery"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
+import { Typewriter } from "@/components/Typewriter"
 import { proLocoShowcaseContent } from "@/components/ProLocoShowcaseContent"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
@@ -210,9 +211,11 @@ export default function ProLocoHomePage() {
                   <span className="text-emerald-300">{t.slogan2}</span>
                 </h1>
 
-                <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-100/90 sm:mt-6 sm:text-lg">
-                  {t.lede}
-                </p>
+                <Typewriter
+                  key={language}
+                  text={t.lede}
+                  className="mt-5 max-w-xl text-base leading-relaxed text-slate-100/90 sm:mt-6 sm:text-lg"
+                />
 
               {/* Pills, not loose icons: a 16px glyph over a photographic
                   backdrop has nothing to sit on and disappears (Andrea,
