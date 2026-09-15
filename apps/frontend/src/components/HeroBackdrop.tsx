@@ -9,8 +9,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
  * The video is an enhancement painted on top, and it is skipped entirely when
  * it would do more harm than good:
  *
- *   - no files on disk       → photo only (this is the state today: drop the
- *                              mp4s in public/hero/ and they start playing)
+ *   - a phone or tablet (< 1024px) → photo only: see the note above CLIPS
+ *   - no files on disk       → photo only (drop mp4s in public/hero/ and they
+ *                              join the rotation)
  *   - `prefers-reduced-motion` → photo only, no autoplay
  *   - a metered/slow connection (`saveData`, 2g/3g) → photo only
  *
@@ -42,17 +43,25 @@ import { useCallback, useEffect, useRef, useState } from "react"
  * that is worth coming back to in another month — which is exactly what the
  * push campaigns further down the page are for.
  *
- * Drop any of these at public/hero/ and they join the rotation. Missing files
- * are skipped, not awaited: the page never waits for a file that is not there,
- * and with NONE of them present the photo alone carries the hero exactly as
- * it does today. Order matters — this is the order they play in.
+ * These four ship in public/hero/ — 360p clips from coverr.co (free for
+ * commercial use, no attribution required), 4 MB for the whole set, which is
+ * less than the single hero video on the site this was modelled on. 360p is
+ * deliberate: the footage sits behind a dark veil and is motion-blurred, so
+ * resolution buys nothing a rural connection should pay for.
+ *
+ * 🚨 REPLACE THEM with the tenant's own footage when there is any — real
+ * Sappada beats generic mountains, and these are placeholders with a licence,
+ * not a final choice.
+ *
+ * Add or drop files freely: missing ones are skipped, not awaited, so the page
+ * never waits for a file that is not there, and with NONE present the photo
+ * alone carries the hero. Order matters — this is the order they play in.
  */
 const CLIPS = [
   "/hero/mountain.mp4",
   "/hero/ski.mp4",
-  "/hero/horse.mp4",
-  "/hero/rafting.mp4",
-  "/hero/food.mp4",
+  "/hero/forest.mp4",
+  "/hero/road.mp4",
 ]
 
 /** Already in the repo: a real hotel in Sappada with the mountains behind. */
@@ -82,6 +91,11 @@ export function HeroBackdrop() {
   const playing = useRef(0)
 
   useEffect(() => {
+    // Desktop only — see the note above CLIPS. matchMedia, not a resize
+    // listener: this is decided once, and a phone does not become a desktop.
+    const wide = window.matchMedia?.("(min-width: 1024px)").matches ?? true
+    if (!wide) return
+
     // Respect the OS "reduce motion" setting: a looping background is exactly
     // the kind of thing it is meant to stop.
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches

@@ -4,9 +4,6 @@ import HeroRobot from "@/components/landing/HeroRobot"
 import { ProLocoGallery } from "@/components/ProLocoGallery"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
 import { proLocoShowcaseContent } from "@/components/ProLocoShowcaseContent"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { SUPPORTED_LANGUAGES, useLanguage } from "@/contexts/LanguageContext"
@@ -22,7 +19,6 @@ import {
   Clock,
   Globe,
   Image,
-  Loader2,
   MapPin,
   MessageCircle,
   Mountain,
@@ -80,72 +76,9 @@ export default function ProLocoHomePage() {
     if (!localStorage.getItem("language")) setLanguage("it")
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    // Same order as LoginPage: storage is cleared BEFORE the call, so a
-    // failed login can never leave a previous session's workspace behind.
-    storage.clearAppState()
-
-    try {
-      const response = await auth.login({ email, password })
-
-      // A user with two-factor enabled must not be logged in here: the token
-      // is issued only after the code is verified.
-      if (response.data?.requires2FA) {
-        navigate("/auth/verify-2fa", {
-          state: {
-            userId: response.data.userId,
-            email: response.data.email,
-            provider: "email",
-          },
-        })
-        return
-      }
-
-      // 🚨 The session has to be STORED before navigating, exactly as
-      // LoginPage does. Without this the redirect fired with no token and no
-      // sessionId, the guarded route found nothing and bounced the user
-      // straight back to the landing page — a login that looked like it did
-      // nothing at all (found 2026-09-14).
-      if (response.data?.token) {
-        storage.setToken(response.data.token)
-      }
-      if (response.data?.sessionId) {
-        storage.setSessionId(response.data.sessionId)
-      }
-      if (response.data?.user) {
-        storage.setUser(response.data.user)
-      }
-
-      navigate("/workspace-selection")
-    } catch (err: any) {
-      logger.error("[ProLocoHome] login failed", err)
-      // Deliberately vague: a precise message would say whether the address
-      // exists, which is an account-enumeration hint.
-      setError(
-        err?.response?.status === 401
-          ? t.errBadCredentials
-          : t.errGeneric
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /**
-   * Google sign-in, mirroring LoginPage's flow exactly: storage cleared first,
-   * then the same three outcomes the backend can return — straight in, 2FA
-   * setup, or 2FA verification. Diverging here would mean a user who signs in
-   * from the landing page skips a step the other page enforces.
-   */
   const handleGoogle = async (credential: string | undefined) => {
     if (!credential) return
     setError("")
@@ -215,7 +148,7 @@ export default function ProLocoHomePage() {
               >
                 {SUPPORTED_LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>
-                    {l.flag} {l.code.toUpperCase()}
+                    {l.name}
                   </option>
                 ))}
               </select>
@@ -230,13 +163,13 @@ export default function ProLocoHomePage() {
                   aria-label={l.name}
                   aria-current={language === l.code}
                   className={[
-                    "rounded-md px-1.5 py-1 text-base transition-all",
+                    "rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide transition-colors duration-200",
                     language === l.code
-                      ? "bg-emerald-50 ring-1 ring-emerald-200"
-                      : "opacity-50 hover:opacity-100",
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
                   ].join(" ")}
                 >
-                  {l.flag}
+                  {l.code}
                 </button>
               ))}
             </div>
@@ -257,8 +190,8 @@ export default function ProLocoHomePage() {
           is the load-bearing layer and the video only an enhancement. */}
       <section className="relative isolate overflow-hidden">
         <HeroBackdrop />
-        <div className="relative z-10 mx-auto max-w-6xl px-6 pt-16 pb-20">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+        <div className="relative z-10 mx-auto max-w-7xl px-5 pt-10 pb-14 sm:px-6 sm:pt-16 sm:pb-20">
+        <div className="grid items-start gap-12 lg:grid-cols-[3fr_2fr] lg:gap-16">
           <div>
             {/* The brand mascot, reusing the animated HeroRobot already built
                 for the other landing pages (Andrea, 2026-09-14: "usa il
@@ -271,21 +204,21 @@ export default function ProLocoHomePage() {
                 "piccolo e fatto male e appeso nel nulla"). Now the eyebrow is
                 a chip above the headline, where it belongs, and the robot
                 balances the headline's mass. */}
-            <div className="flex items-start gap-6">
-              <HeroRobot className="hidden w-56 shrink-0 lg:block xl:w-72 [&_img]:w-full [&_img]:h-auto" />
+            <div className="flex items-start xl:gap-6">
+              <HeroRobot className="hidden w-48 shrink-0 xl:block [&_img]:w-full [&_img]:h-auto" />
 
               <div className="min-w-0">
                 <span className="inline-flex items-center rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-300/30 backdrop-blur-sm">
                   {t.eyebrow}
                 </span>
 
-                <h1 className="font-display mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-white drop-shadow-sm sm:text-5xl">
+                <h1 className="font-display mt-4 text-3xl font-semibold leading-[1.1] tracking-tight text-white drop-shadow-sm sm:text-4xl lg:text-5xl">
                   {t.slogan1}
                   <br />
                   <span className="text-emerald-300">{t.slogan2}</span>
                 </h1>
 
-                <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-100/90">
+                <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-100/90 sm:mt-6 sm:text-lg">
                   {t.lede}
                 </p>
 
@@ -293,7 +226,7 @@ export default function ProLocoHomePage() {
                   backdrop has nothing to sit on and disappears (Andrea,
                   2026-09-15: "icone in alto non si vedono"). The tinted chip
                   gives each one its own ground, and the icon grows with it. */}
-              <div className="mt-8 flex flex-wrap gap-2.5 text-sm">
+              <div className="mt-6 flex flex-wrap gap-2 text-xs sm:mt-8 sm:gap-2.5 sm:text-sm">
                 {[
                   { Icon: Globe, label: t.chipMulti },
                   { Icon: Clock, label: t.chip24 },
@@ -303,7 +236,7 @@ export default function ProLocoHomePage() {
                 ].map(({ Icon, label }) => (
                   <span
                     key={label}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 font-medium text-white backdrop-blur-md"
+                    className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 font-medium text-white backdrop-blur-md"
                   >
                     <Icon className="h-[18px] w-[18px] text-emerald-300" />
                     {label}
@@ -317,7 +250,7 @@ export default function ProLocoHomePage() {
 
           {/* ── Login form, on the page ──────────────────────────── */}
           <div id="accedi" className="lg:pl-8">
-            <div className="rounded-2xl border border-white/10 bg-white p-8 shadow-2xl shadow-slate-950/30">
+            <div className="rounded-2xl border border-white/10 bg-white p-6 shadow-2xl shadow-slate-950/30 sm:p-8">
               <h2 className="text-xl font-semibold text-slate-900">
                 {t.loginTitle}
               </h2>
@@ -325,72 +258,16 @@ export default function ProLocoHomePage() {
                 {t.loginSub}
               </p>
 
-              <form onSubmit={handleLogin} className="mt-6 space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">{t.email}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="username"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nome@proloco.it"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">{t.password}</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-
-                {error && (
-                  <p
-                    role="alert"
-                    className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2"
-                  >
-                    {error}
-                  </p>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+              {error && (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-md border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {t.loginLoading}
-                    </>
-                  ) : (
-                    t.loginCta
-                  )}
-                </Button>
+                  {error}
+                </p>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => navigate("/forgot-password")}
-                  className="w-full text-center text-sm text-slate-500 hover:text-emerald-700 transition-colors"
-                >
-                  {t.forgot}
-                </button>
-
-                {/* Google sign-in, same as the main LoginPage: many tourist
-                    offices run on a Gmail account and never set a password. */}
-                <div className="flex items-center gap-3 pt-2">
-                  <span className="h-px flex-1 bg-slate-200" />
-                  <span className="text-xs text-slate-500">{t.orDivider}</span>
-                  <span className="h-px flex-1 bg-slate-200" />
-                </div>
-
+              <div className="mt-6">
                 <div className="flex w-full justify-center [&>div]:w-full [&_iframe]:!w-full">
                   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
                     <GoogleLogin
@@ -399,7 +276,7 @@ export default function ProLocoHomePage() {
                     />
                   </GoogleOAuthProvider>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         </div>
