@@ -269,17 +269,6 @@ export default function ProLocoHomePage() {
         </div>
       </section>
 
-      {/* ── The conversation, playing ────────────────────────────── */}
-      {/* Reuses HomeShowcase, the animated WhatsApp phone from the existing
-          homepage (Andrea, 2026-09-14: "riutilizza lo schema della chat
-          iniziale che c'è ora che mi piace, che fa vedere che la chat parla e
-          si compongono i menu a destra"). It brings its own dark stage, which
-          sits deliberately between two white sections: the phone screen is
-          what the eye should land on. */}
-      <section className="border-t border-slate-100 bg-[#F6F2EA]">
-        <HomeShowcase lang={language} content={proLocoShowcaseContent} theme="light" />
-      </section>
-
       {/* ── Benefits ─────────────────────────────────────────────── */}
       <section className="border-t border-slate-100">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
@@ -313,6 +302,17 @@ export default function ProLocoHomePage() {
             })}
           </div>
         </div>
+      </section>
+
+      {/* ── The conversation, playing ────────────────────────────── */}
+      {/* Reuses HomeShowcase, the animated WhatsApp phone from the existing
+          homepage (Andrea, 2026-09-14: "riutilizza lo schema della chat
+          iniziale che c'è ora che mi piace, che fa vedere che la chat parla e
+          si compongono i menu a destra"). It brings its own dark stage, which
+          sits deliberately between two white sections: the phone screen is
+          what the eye should land on. */}
+      <section className="border-t border-slate-100 bg-[#F6F2EA]">
+        <HomeShowcase lang={language} content={proLocoShowcaseContent} theme="light" />
       </section>
 
       {/* ── What you can load ────────────────────────────────────── */}
@@ -416,13 +416,6 @@ export default function ProLocoHomePage() {
                     </svg>
                   </span>
                 </div>
-                <span
-                  className="absolute -right-3 -top-3 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg"
-                  style={{ backgroundColor: WA_GREEN_DEEP }}
-                >
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-                  Live
-                </span>
               </div>
             </div>
           </div>

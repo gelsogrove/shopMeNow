@@ -20,14 +20,14 @@ const PITCH: Record<string, { icon: typeof Star }> = {
   ENTERPRISE: { icon: Server },
 }
 
-/** The usage line under the plans. */
-const USAGE: Record<string, (m: string, p: string) => string> = {
-  it: (m, p) => `Consumi a parte: ${m} a messaggio · ${p} a notifica push. Si paga solo quello che si usa.`,
-  en: (m, p) => `Usage billed separately: ${m} per message · ${p} per push notification. You pay only for what you use.`,
-  es: (m, p) => `Consumos aparte: ${m} por mensaje · ${p} por notificación push. Se paga solo lo que se usa.`,
-  ca: (m, p) => `Consums a part: ${m} per missatge · ${p} per notificació push. Es paga només el que es fa servir.`,
-  fr: (m, p) => `Consommation à part : ${m} par message · ${p} par notification push. Vous ne payez que ce que vous utilisez.`,
-  de: (m, p) => `Verbrauch separat: ${m} pro Nachricht · ${p} pro Push-Nachricht. Sie zahlen nur, was Sie nutzen.`,
+/** The usage line under the plans, as [before, between, after] text around the two cost figures so they can be styled on their own. */
+const USAGE: Record<string, [string, string, string]> = {
+  it: ["Consumi a parte: ", " a messaggio · ", " a notifica push. Si paga solo quello che si usa."],
+  en: ["Usage billed separately: ", " per message · ", " per push notification. You pay only for what you use."],
+  es: ["Consumos aparte: ", " por mensaje · ", " por notificación push. Se paga solo lo que se usa."],
+  ca: ["Consums a part: ", " per missatge · ", " per notificació push. Es paga només el que es fa servir."],
+  fr: ["Consommation à part : ", " par message · ", " par notification push. Vous ne payez que ce que vous utilisez."],
+  de: ["Verbrauch separat: ", " pro Nachricht · ", " pro Push-Nachricht. Sie zahlen nur, was Sie nutzen."],
 }
 
 /** Button labels per language — the component had Italian literals only. */
@@ -153,12 +153,21 @@ export function ProLocoPricing() {
         })}
       </div>
 
-      {/* Usage costs, from the same rows — the numbers the system really bills. */}
-      {perMessage !== undefined && (
-        <p className="mt-8 text-center text-sm text-slate-500">
-          {(USAGE[language] ?? USAGE.it)(usd(perMessage), usd(perPush!))}
-        </p>
-      )}
+      {/* Usage costs, from the same rows — the numbers the system really bills.
+          Andrea, 2026-09-15: the two cost figures are 3px bigger and bold so
+          they stand out from the surrounding sentence. */}
+      {perMessage !== undefined && (() => {
+        const [before, between, after] = USAGE[language] ?? USAGE.it
+        return (
+          <p className="mt-8 text-center text-sm text-slate-500">
+            {before}
+            <span className="font-bold" style={{ fontSize: "17px" }}>{usd(perMessage)}</span>
+            {between}
+            <span className="font-bold" style={{ fontSize: "17px" }}>{usd(perPush!)}</span>
+            {after}
+          </p>
+        )
+      })()}
     </div>
   )
 }
