@@ -1,4 +1,5 @@
 import { HomeShowcase } from "@/components/HomeShowcase"
+import { HeroBackdrop } from "@/components/HeroBackdrop"
 import HeroRobot from "@/components/landing/HeroRobot"
 import { ProLocoGallery } from "@/components/ProLocoGallery"
 import { ProLocoPricing } from "@/components/ProLocoPricing"
@@ -219,7 +220,12 @@ export default function ProLocoHomePage() {
       </header>
 
       {/* ── Hero + login side by side ────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 pb-20">
+      {/* A photo of the territory behind the hero, with a video layered on
+          top when public/hero.mp4 exists — see HeroBackdrop for why the photo
+          is the load-bearing layer and the video only an enhancement. */}
+      <section className="relative">
+        <HeroBackdrop />
+        <div className="mx-auto max-w-6xl px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <div>
             {/* The brand mascot, reusing the animated HeroRobot already built
@@ -228,7 +234,7 @@ export default function ProLocoHomePage() {
                 slogan, not above it: on this page the login form is the thing
                 that must stay above the fold. */}
             <div className="mb-6 flex items-center gap-5">
-              <HeroRobot className="w-32 shrink-0 [&_img]:w-32 sm:[&_img]:w-40 [&_img]:h-auto" />
+              <HeroRobot className="w-44 shrink-0 [&_img]:w-44 sm:[&_img]:w-56 [&_img]:h-auto" />
               <p className="text-emerald-700 font-medium text-sm">
                 {t.eyebrow}
               </p>
@@ -344,6 +350,7 @@ export default function ProLocoHomePage() {
             </div>
           </div>
         </div>
+        </div>
       </section>
 
       {/* ── The conversation, playing ────────────────────────────── */}
@@ -354,7 +361,7 @@ export default function ProLocoHomePage() {
           sits deliberately between two white sections: the phone screen is
           what the eye should land on. */}
       <section className="border-t border-slate-100">
-        <HomeShowcase lang="it" content={proLocoShowcaseContent} />
+        <HomeShowcase lang="it" content={proLocoShowcaseContent} theme="light" />
       </section>
 
       {/* ── Benefits ─────────────────────────────────────────────── */}
@@ -367,14 +374,24 @@ export default function ProLocoHomePage() {
             {t.benefitsSub}
           </p>
 
-          <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12">
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {t.benefits.map((b, i) => {
               const Icon = BENEFIT_ICONS[i]
               return (
-                <div key={b.title} className="group">
-                  <Icon className="h-6 w-6 text-emerald-600 transition-transform duration-300 group-hover:scale-110" />
-                  <h3 className="mt-4 font-semibold text-slate-900">{b.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600 leading-relaxed">{b.body}</p>
+                <div
+                  key={b.title}
+                  className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+                >
+                  {/* Big tinted tile rather than a bare 24px glyph: at a
+                      glance the six benefits now read as six things, and the
+                      eye lands on the icon before the words. */}
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 transition-colors duration-300 group-hover:bg-emerald-600">
+                    <Icon className="h-7 w-7 text-emerald-600 transition-colors duration-300 group-hover:text-white" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900">{b.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    {b.body}
+                  </p>
                 </div>
               )
             })}

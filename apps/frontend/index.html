@@ -11,6 +11,18 @@
          it, which is a WCAG 1.4.4 failure and took away the only escape hatch
          on any screen that overflows (2026-09-14). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Inter: a typeface drawn FOR interfaces — taller x-height, open
+         apertures, and a real distinction between I, l and 1. The app was
+         falling back to whatever the browser picked, which at small sizes read
+         as mush (Andrea, 2026-09-15: "le font non sono fatte bene, non si
+         capiscono"). Preconnect first so the text does not reflow late. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <!-- Google Tag Manager -->
     <script>
       (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

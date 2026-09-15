@@ -134,6 +134,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Inter first, system fonts as the fallback if it fails to load. The
+       smoothing settings matter as much as the family: without them the same
+       text looks heavier and blurrier, which is what made small copy hard to
+       read. */
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+      "Roboto", "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "liga" 1, "kern" 1, "cv11" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   input:not([type="checkbox"]),

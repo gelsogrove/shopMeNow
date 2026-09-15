@@ -330,10 +330,21 @@ export interface ShowcaseContent {
 export function HomeShowcase({
   lang = "en",
   content,
+  theme = "dark",
 }: {
   lang?: Lang
   content?: ShowcaseContent
+  /**
+   * "light" drops the dark stage for a white one (Andrea, 2026-09-15: "non
+   * voglio i bordi, voglio una cosa più soft… faccio fatica a leggere… il
+   * bordo del cellulare su sfondo nero non si vede bene"). The Pro Loco page
+   * is white throughout, and the black slab both broke that and made the
+   * phone's own dark frame disappear into it. Default stays "dark" so the
+   * existing LoginPage is untouched.
+   */
+  theme?: "dark" | "light"
 }) {
+  const light = theme === "light"
   const c = content ?? buildContent(lang)
   const chatRef = useRef<HTMLDivElement>(null)
   const iRef = useRef(0) // driver's current flat message index (mutable, clickable)
@@ -427,22 +438,40 @@ export function HomeShowcase({
   }, [visible, typing])
 
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#070d18] p-6 shadow-2xl sm:p-8 lg:p-10">
+    <div
+      className={[
+        "relative w-full overflow-hidden p-6 sm:p-8 lg:p-10",
+        light
+          // No border and no hard corner: on a white page the section should
+          // blend into what is above it, not sit in a box.
+          ? "bg-white"
+          : "rounded-3xl border border-white/10 bg-[#070d18] shadow-2xl",
+      ].join(" ")}
+    >
       {/* Ambient glow */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl" style={{ background: `${WA_GREEN}26` }} />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
 
       {/* Header — title + subtitle ABOVE the cards */}
       <div className="relative mb-8 max-w-2xl">
-        <h2 className="text-2xl font-bold leading-tight text-white sm:text-3xl">{c.title}</h2>
-        <p className="mt-2 text-slate-400">{c.subtitle}</p>
+        <h2
+          className={[
+            "text-2xl font-bold leading-tight sm:text-3xl",
+            light ? "text-slate-900" : "text-white",
+          ].join(" ")}
+        >
+          {c.title}
+        </h2>
+        <p className={`mt-2 ${light ? "text-slate-600" : "text-slate-400"}`}>
+          {c.subtitle}
+        </p>
       </div>
 
       {/* Phone + capability cards */}
-      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[25rem_34rem] lg:justify-center">
+      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[26.4rem_34rem] lg:justify-center">
         {/* WhatsApp phone — live auto-play conversation on every size (mobile
             included), so the story plays the same as on desktop. */}
-        <div className="mx-auto w-full max-w-[400px] lg:sticky lg:top-24">
+        <div className="mx-auto w-full max-w-[422px] lg:sticky lg:top-24">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
               {/* header */}
@@ -510,7 +539,9 @@ export function HomeShowcase({
               style={
                 i === activeFeature
                   ? { borderColor: WA_GREEN, background: WA_GREEN, boxShadow: `0 14px 34px -10px ${WA_GREEN}aa` }
-                  : { borderColor: "rgba(255,255,255,0.10)", background: "rgba(15,23,42,0.40)" }
+                  : light
+                    ? { borderColor: "rgb(226,232,240)", background: "#fff" }
+                    : { borderColor: "rgba(255,255,255,0.10)", background: "rgba(15,23,42,0.40)" }
               }
             >
               <span
@@ -521,13 +552,17 @@ export function HomeShowcase({
               </span>
               <span>
                 <span
-                  className={`block font-bold ${i === activeFeature ? "" : "text-slate-200"}`}
+                  className={`block font-bold ${
+                    i === activeFeature ? "" : light ? "text-slate-900" : "text-slate-200"
+                  }`}
                   style={i === activeFeature ? { color: "#075E54" } : undefined}
                 >
                   {f.title}
                 </span>
                 <span
-                  className={`mt-0.5 block text-sm ${i === activeFeature ? "" : "text-slate-400"}`}
+                  className={`mt-0.5 block text-sm ${
+                    i === activeFeature ? "" : light ? "text-slate-600" : "text-slate-400"
+                  }`}
                   style={i === activeFeature ? { color: "#075E54" } : undefined}
                 >
                   {f.desc}
