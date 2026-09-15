@@ -547,11 +547,16 @@ export function OnboardingWizardProLoco({ open, onClose }: Props) {
             className="min-h-full flex flex-col"
             style={{ background: 'linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)' }}
           >
-            <header className="bg-white shadow-sm sticky top-0 z-50 shrink-0">
-              <div className="max-w-[727px] mx-auto px-3 sm:px-4 py-1 flex items-center justify-between gap-2">
+            {/* Dark header, same surface as the Pro Loco landing page's own
+                header — a white bar with a small green wordmark read as a
+                different, less finished product next to it (Andrea,
+                2026-09-15: "il logo e' diverseo... header non e' colorata"). */}
+            <header className="bg-[#070d18]/90 backdrop-blur border-b border-white/10 shadow-sm sticky top-0 z-50 shrink-0">
+              <div className="max-w-[727px] mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
                 <button onClick={onClose} className="flex items-center gap-1 shrink-0 hover:opacity-80 transition-opacity">
-                  <img src="/logo.png" alt="eChatbot" className="w-9 h-9 sm:w-12 sm:h-12" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                  <span className="text-base sm:text-xl font-bold text-green-600">eChatbot.AI</span>
+                  <span className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: '#25D366' }}>
+                    eChatbot<span className="text-white">.AI</span>
+                  </span>
                 </button>
                 <div className="flex items-center gap-3">
                   <LanguageSelector />

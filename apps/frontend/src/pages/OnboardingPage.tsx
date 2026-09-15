@@ -9,7 +9,7 @@
  */
 
 import { useNavigate } from 'react-router-dom'
-import { OnboardingWizardModal } from '@/components/OnboardingWizardModal'
+import { OnboardingWizardProLoco } from '@/components/OnboardingWizardProLoco'
 import { SEO } from '@/components/SEO'
 
 export default function OnboardingPage() {
@@ -28,7 +28,7 @@ export default function OnboardingPage() {
         url="/onboarding"
       />
       {/* The modal is always open — it fills the whole screen with its own header */}
-      <OnboardingWizardModal open={true} onClose={handleClose} />
+      <OnboardingWizardProLoco open={true} onClose={handleClose} />
     </>
   )
 }

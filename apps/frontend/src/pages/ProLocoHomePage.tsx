@@ -171,7 +171,7 @@ export default function ProLocoHomePage() {
 
           <div className="flex items-center justify-between gap-4 py-3">
             <a href="#top" className="flex items-center shrink-0 mr-auto">
-              <span className="font-display text-xl font-bold tracking-tight" style={{ color: "#25D366" }}>
+              <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 24 }}>
                 eChatbot<span className="text-white">.AI</span>
               </span>
             </a>
