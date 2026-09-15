@@ -269,7 +269,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
 
           {/* Left: Logo + Brand (identical to homepage) */}
           <Link to="/" className="flex items-center justify-start gap-1 hover:opacity-80 transition-opacity">
-            <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>
+            <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 24 }}>
               eChatbot<span className="text-white">.AI</span>
             </span>
           </Link>

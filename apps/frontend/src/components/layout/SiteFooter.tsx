@@ -114,7 +114,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
           {/* Logo + Description */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity">
-              <span className="text-xl font-bold" style={{ color: "#25D366" }}>eChatbot<span className="text-white">.AI</span></span>
+              <span className="font-display font-bold tracking-tight" style={{ color: "#25D366", fontSize: 24 }}>eChatbot<span className="text-white">.AI</span></span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
               {t.tagline}
